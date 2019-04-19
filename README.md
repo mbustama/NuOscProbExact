@@ -265,7 +265,7 @@ The parameter `case` can take any of the same values as listed [above](#oscillat
 
 ### Oscillations in matter
 
-For oscillation in matter, we proceed in an analogous way as for oscillations in vacuum.  To compute the Hamiltonian in matter, we can use the routine `hamiltonian_matter` in the module `hamiltonians3nu`.  First, we need to compute `h_vacuum`, and then pass it to `hamiltionian_matter`, together with the matter parameter $$A = sqrt(2.0)*VCC*$$
+For oscillation in matter, we proceed in an analogous way as for oscillations in vacuum.  To compute the Hamiltonian in matter, we can use the routine `hamiltonian_matter` in the module `hamiltonians3nu`.  First, we need to compute `h_vacuum`, and then pass it to `hamiltionian_matter`, together with the matter parameter ![eqn](https://latex.codecogs.com/gif.download?%5Cdpi%7B120%7D%20A%20%3D%20%5Csqrt%7B2%7D%20V_%7B%5Crm%20CC%7D%20n_e)
 ```python
 import oscprob3nu
 import hamiltonians3nu
