@@ -106,7 +106,7 @@ This returns
 
 As expected, `Pem == Pme`, `Pet == Pte`, `Pmt == Ptm`, `Pee + Pem + Pet = 1`, , `Pme + Pmm + Pmt = 1`, and `Pte + Ptm + Ptt = 1`.
 
-### Proper example
+### Oscillations in vacuum: single energy and baseline
 
 Now let's compute the probabilities in vacuum.  To do this, we can use the routine
 ```python
@@ -133,7 +133,7 @@ Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( \
                                                     np.multiply(1./energy, h_vacuum_energy_indep),
                                                     baseline*CONV_KM_TO_INV_EV)
 
-print("Pee = %4.3f, Pem = %4.3f, Pet = %4.3f, Pme = %4.3f, Pmm = %4.3f, Pmt = %4.3f, Pte = %4.3f, Ptm = %4.3f, Ptt = %4.3f" \
+print("Pee = %6.5f, Pem = %6.5f, Pet = %6.5f, Pme = %6.5f, Pmm = %6.5f, Pmt = %6.5f, Pte = %6.5f, Ptm = %6.5f, Ptt = %6.5f" \
     % (Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt))
 ````
 Thus returns
