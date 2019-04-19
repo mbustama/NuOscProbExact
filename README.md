@@ -76,7 +76,8 @@ The only input parameters given to `oscprob3nu.py` is the Hamiltonian, in the fo
 ```python
 hamiltonian = [[H11, H12, H13], [H21, H22, H23], [H31, H32, H33]]
 ```
-Beware: if you feed the code a non-Hermitian matrix, it will output nonsensical results.
+
+> **Important:** If you feed the code a non-Hermitian matrix, it will output nonsensical results
 
 Most of the time, you will be only interested in computing oscillation probabilities.  The function to compute probabilities is `probabilities_3nu`.  It takes in `hamiltonian` and `L` as input parameters and returns the list of probabilities Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt.
 
