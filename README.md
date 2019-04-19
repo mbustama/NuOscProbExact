@@ -339,15 +339,45 @@ print("Pte = %6.5f, Ptm = %6.5f, Ptt = %6.5f" % (Pte, Ptm, Ptt))
 ````
 This returns
 ```shell
-Pee = 0.96711, Pem = 0.01593, Pet = 0.01695
-Pme = 0.01823, Pmm = 0.64417, Pmt = 0.33761
-Pte = 0.01466, Ptm = 0.33990, Ptt = 0.64544
 ```
 
 
 ### Oscillations in a Lorentz invariance-violating (LIV) background
 
+For oscillation LIV, we can use the routine `hamiltonian_liv` in the module `hamiltonians3nu`.  As before, first, we need to compute `h_vacuum`, and then pass it to `hamiltonian_liv`, together with the vector `liv_params` containing the LIV parameters:
+```python
+liv_params = [Lambda, b1, b2, b3, s12_liv, s23_liv, s13_liv, dCP_liv]
+```
+This routine is called as
+```python
+hamiltonian_liv(h_vacuum, liv_params)
+```
 
+In the example below, we set `liv_params` to its default value pulled from `globaldefs`:
+```python
+import oscprob3nu
+import hamiltonians3nu
+from globaldefs import *
+
+energy = 1.e9     # Neutrino energy [eV]
+baseline = 1.3e3  # Baseline [km]
+
+h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_vacuum_energy_independent(  S12_BF, S23_BF,
+                                                                                S13_BF, DCP_BF,
+                                                                                D21_BF, D31_BF)
+h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
+h_liv = hamiltonians3nu.hamiltonian_liv(h_vacuum, LIV_PARAMS_TEST)
+
+Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( \
+                                                h_liv, baseline*CONV_KM_TO_INV_EV)
+
+print("Pee = %6.5f, Pem = %6.5f, Pet = %6.5f" % (Pee, Pem, Pet))
+print("Pme = %6.5f, Pmm = %6.5f, Pmt = %6.5f" % (Pme, Pmm, Pmt))
+print("Pte = %6.5f, Ptm = %6.5f, Ptt = %6.5f" % (Pte, Ptm, Ptt))
+````
+This returns
+```shell
+```
 
 ### Arbitrary Hamiltonians
 
