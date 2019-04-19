@@ -28,11 +28,13 @@ Because **NuOscProbExact** is written fully in Python, no compilation or linking
    ```shell
    cd /home/MyProjects
    ```
+
 2. From there, fetch the code from the GitHub repository with
    ```shell
    git clone https://github.com/mbustama/NuOscProbExact.git
    ```
    (Alternatively, you can download the zip file from GitHub and uncompress it.)
+
    Doing this will create the directory `/home/MyProjects/NuOscProbExact`, with the following file structure:
    ```
    /NuOscProbExact/run_testsuite.py    Run this to create test plots of the probabilities
@@ -49,6 +51,7 @@ Because **NuOscProbExact** is written fully in Python, no compilation or linking
        ../oscprob3nu_tests.py          Routines to generate three-flavor probability tests plots
    ```
    Now you are ready to start using **NuOscProbExact**.
+
 3. (Optional) Run the test suite
    ```shell
    cd /home/MyProjects/NuOscProbExact
@@ -58,6 +61,19 @@ Because **NuOscProbExact** is written fully in Python, no compilation or linking
 
 
 ## Quick start
+
+There are only two core modules: `oscprobn2nu.py` and `oscprob3nu.py`.  Each one is stand-alone (except for the dependencies described [above](#requirements)).  To use either in your code, copy it to your project's working directory (or add their location to the paths where your environment looks for modules).
+
+In the examples below, we focus on `oscprob3nu.py`, but they apply to `oscprob2nu.py` as well.
+
+### Trivial example
+
+The only input given to `oscprob3nu.py` is a 3x3 Hermitian matrix.  (For `oscprob2nu.py`, it is a 2x2 Hermitian matrix.)  If you feed a non-Hermitian matrix to the code, it will output nonsensical results.
+
+If you are not interested in the inner workings,
+
+Let's  arbitrary 3x3 Hermitian
+
 
 
 ## Bundled test suite
