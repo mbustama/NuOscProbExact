@@ -31,7 +31,7 @@ Code to compute exact two- and three-neutrino oscillation probabilities using SU
 ## Bundled test suite
 
 
-## Documentation
+## Documentation and help
 
 All of the modules provided in **NuOscProbExact** have been documented using Python docstrings.
 
@@ -49,8 +49,16 @@ import oscprob3nu
 
 help(oscprob3nu.hamiltonian_3nu_coefficients)
 ```
-This will print to screen a description of what the function does (in this example, `oscprob3nu.hamiltonian_3nu_coefficients`), of its input paramters, and of the values that it returns.
+This will print to screen a description of what the function does (in this example, `oscprob3nu.hamiltonian_3nu_coefficients`), a list and description of its input parameters, and a description of the values that it returns.
 
 
 ## Citing
+
+If you use **NuOscProbExact** in your work, we ask you that you please cite the following paper: Mauricio Bustamante, *Exact neutrino oscillation probabilities with arbitrary time-independent Hamiltonians*, arXiv:1904.XXXXX.
+
+Please consider using the LaTeX or BibTeX entries provided by INSPIRE.
+
+
+
+
 
