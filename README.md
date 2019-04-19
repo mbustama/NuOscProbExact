@@ -403,8 +403,8 @@ h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_vacuum_energy_independent(  
 h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
 h_mymodel = h_vacuum + hamiltonian_mymodel(mymodel_parameters)
 
-Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( \
-                                                h_mymodel, baseline*CONV_KM_TO_INV_EV)
+Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( h_mymodel,
+                                                                            baseline*CONV_KM_TO_INV_EV)
 
 ```
 Though we do not show it here, `hamiltonian_mymodel` could also depend on `energy`.
