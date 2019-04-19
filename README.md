@@ -95,7 +95,9 @@ Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu(hamil
 
 ### Trivial example
 
-We starting by passing `probabilities_3nu` an arbitrary Hamiltonian and baseline:
+#### Three-neutrino oscillations
+
+As a first, trivial example, we pass `probabilities_3nu` an arbitrary Hamiltonian and baseline:
 ```python
 import oscprob3nu
 
@@ -121,6 +123,30 @@ Pte = 0.24358, Ptm = 0.58146, Ptt = 0.17497
 ```
 
 As expected, `Pem == Pme`, `Pet == Pte`, `Pmt == Ptm`, `Pee + Pem + Pet = 1`, `Pme + Pmm + Pmt = 1`, and `Pte + Ptm + Ptt = 1`.
+
+#### Two-neutrino oscillations
+
+In this case, we use `probabilities_2nu`:
+```python
+import oscprob2nu
+
+hamiltonian = [
+                [1.0+0.0j, 0.0+2.0j],
+                [0.0-2.0j, 3.0+0.0j]
+]
+
+L = 1.0
+
+Pee, Pem, Pme, Pmm = oscprob2nu.probabilities_2nu(hamiltonian, L)
+
+print("Pee = %6.5f, Pem = %6.5f" % (Pee, Pem))
+print("Pme = %6.5f, Pmm = %6.5f" % (Pme, Pmm))
+```
+This returns
+```shell
+```
+
+As expected, `Pem == Pme` and `Pee + Pem = 1`.
 
 
 ### Oscillations in vacuum: fixed energy and baseline
