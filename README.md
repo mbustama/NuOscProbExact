@@ -182,8 +182,10 @@ prob_et = [x[2] for x in lst_prob]  # Pet
 To visualize the data:
 
 
-Alternatively, you can automatically produce plots of probability using following function from the `oscprob3nu_tests` module:
+Alternatively, you can automatically produce plots of probability using the following function from the `oscprob3nu_tests` module:
 ```python
+import oscprob3nu_tests
+
 case = 'vacuum'
 plot_probability_3nu_vs_l(  case, energy_nu=1.e7,
                             output_filename='prob_3nu_vacuum_vs_l', output_format='pdf',
