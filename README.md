@@ -116,7 +116,26 @@ that is provided in the `hamiltonians3nu.py` module.  The input parameters `s12`
 
 > **Important:** The function `hamiltonian_vacuum_energy_independent` returns the Hamiltonian in vacuum **without** the *1/E* prefactor, where *E* is the neutrino energy.  It was done in this way so that, if we wish to compute the probabilities at different energies, we need compute `hamiltonian_vacuum_energy_independent` only once, and then multiply it by a varying *1/E* prefactor.
 
+```python
+import oscprob3nu
+import hamiltonians3nu
+from globaldefs import *
 
+h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_vacuum_energy_independent(  S12_BF, S23_BF,
+                                                                                S13_BF, DCP_BF,
+                                                                                D21_BF, D31_BF)
+
+energy = 1.e9     # Neutrino energy [eV]
+baseline = 1.3e3  # Baseline [km]
+
+
+Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = [oscprob3nu.probabilities_3nu( \
+                                                    np.multiply(1./energy, h_vacuum_energy_indep),
+                                                    baseline*CONV_KM_TO_INV_EV) \
+                                                for x in energy_nu]
+
+print(Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt)
+````
 
 
 ## Documentation and help
