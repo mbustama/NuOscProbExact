@@ -190,7 +190,9 @@ case = 'vacuum'
 plot_probability_3nu_vs_l(  case, energy_nu=1.e7,
                             output_filename='prob_3nu_vacuum_vs_l', output_format='pdf',
                             log10_l_min=0.0, log10_l_max=log10(5.e2), log10_l_npts=6000,
-                            plot_prob_ee=True, plot_prob_em=True, plot_prob_et=True)
+                            plot_prob_ee=True, plot_prob_em=True, plot_prob_et=True,
+                            plot_prob_me=False, plot_prob_mm=False, plot_prob_mt=False,
+                            plot_prob_te=False, plot_prob_tm=False, plot_prob_tt=False)
 ```
 The parameter `case` be:
 * `vacuum`: for oscillations in vacuum, assuming the default values of mixing parameters from the `globaldefs` module
