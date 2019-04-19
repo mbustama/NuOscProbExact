@@ -85,6 +85,8 @@ Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu(hamil
 
 > **Important:** If you feed the code a non-Hermitian matrix, it will output nonsensical results
 
+> **About units:** The code does not assume units for any of the model parameters, so you need to make sure that you input values with the correct units.  The module `globaldefs` contains conversion factors which might come in handy.
+
 
 ### Trivial example
 
@@ -349,8 +351,28 @@ Pte = 0.01466, Ptm = 0.33990, Ptt = 0.64544
 
 ### Arbitrary Hamiltonians
 
-Of course, you can supply your custom Hamiltonian and compute the associated oscillation probabilities.
+Of course, you can supply your custom Hamiltonian and compute the associated oscillation probabilities; see [Trivial example](#trivial-example).
 
+Usually, you will want to add an extra term to the vacuum Hamiltonian.  To do that, take a cue from the examples above.  Your code should be something like this:
+```python
+import oscprob3nu
+import hamiltonians3nu
+from globaldefs import *
+
+energy = 1.e9     # Neutrino energy [eV]
+baseline = 1.3e3  # Baseline [km]
+
+h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_vacuum_energy_independent(  S12_BF, S23_BF,
+                                                                                S13_BF, DCP_BF,
+                                                                                D21_BF, D31_BF)
+h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
+h_mymodel = h_vacuum + hamiltonian_mymodel(mymodel_parameters)
+
+Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( \
+                                                h_mymodel, baseline*CONV_KM_TO_INV_EV)
+
+```
+In this example, the function `hamiltonian_mymodel` should return a 3x3 matrix.
 
 
 ## Documentation and help
