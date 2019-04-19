@@ -25,29 +25,29 @@ Code to compute exact two- and three-neutrino oscillation probabilities using SU
 Because **NuOscProbExact** is written fully in Python, no compilation or linking is necessary.  The installation amounts to fetching the files from GitHub and is simple.
 
 1. In the file system where you would like to install **NuOscProbExact**, go to the directory where you would like the code to be downloaded, *e.g.*,
-```
-cd /home/MyProjects
-```
+   ```shell
+   cd /home/MyProjects
+   ```
 2. From there, fetch the code from the GitHub repository with
-```
-git clone https://github.com/mbustama/NuOscProbExact.git
-```
-(Alternatively, you can download the zip file from GitHub and uncompress it.)  Doing this will create the directory `/home/MyProjects/NuOscProbExact`, with the following file structure:
-```
-/NuOscProbExact/run_testsuite.py    Run this to create test plots of the probabilities
-/NuOscProbExact/src                 Contains the main source files
-    ../hamiltonians2nu.py           Routines to compute example two-flavor Hamiltonians
-    ../hamiltonians3nu.py           Routines to compute example three-flavor Hamiltonians
-    ../globaldefs.py                Physical constants
-    ../oscprob2nu.py                Routines to compute the two-flavor probabilities
-    ../oscprob3nu.py                Routines to compute the three-flavor probabilities
-/NuOscProbExact/test                Contains the source files to run the test suite
-    ../matplotlibrc                 Customized matplotlib style file
-    ../oscprob3nu_plotpaper.py      Routine to generate the plot shown in the paper
-    ../oscprob3nu_tests.py          Routines to generate three-flavor probability tests plots
-```
+   ```shell
+   git clone https://github.com/mbustama/NuOscProbExact.git
+   ```
+   (Alternatively, you can download the zip file from GitHub and uncompress it.)  Doing this will create the directory `/home/MyProjects/NuOscProbExact`, with the following file structure:
+   ```shell
+   /NuOscProbExact/run_testsuite.py    Run this to create test plots of the probabilities
+   /NuOscProbExact/src                 Contains the main source files
+       ../hamiltonians2nu.py           Routines to compute example two-flavor Hamiltonians
+       ../hamiltonians3nu.py           Routines to compute example three-flavor Hamiltonians
+       ../globaldefs.py                Physical constants
+       ../oscprob2nu.py                Routines to compute the two-flavor probabilities
+       ../oscprob3nu.py                Routines to compute the three-flavor probabilities
+   /NuOscProbExact/test                Contains the source files to run the test suite
+       ../matplotlibrc                 Customized matplotlib style file
+       ../oscprob3nu_plotpaper.py      Routine to generate the plot shown in the paper
+       ../oscprob3nu_tests.py          Routines to generate three-flavor probability tests plots
+   ```
 3. (Optional) Run the test suite
-   ```shellsession
+   ```shell
    cd /home/MyProjects/NuOscProbExact
    python run_testsuite.py
    ```
