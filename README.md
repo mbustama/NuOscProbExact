@@ -68,19 +68,22 @@ Instructions:
 
 There are only two core modules: `oscprobn2nu.py` and `oscprob3nu.py`.  Each one is stand-alone (except for the dependencies described [above](#requirements)).  To use either in your code, copy it to your project's working directory (or add their location to the paths where your environment looks for modules).
 
-In the examples below, we focus on `oscprob3nu.py`, but what we show applies to `oscprob2nu.py` as well.
+In the examples below, we focus on `oscprob3nu`, but what we show applies to `oscprob2nu` as well.
 
 
 ### Basics
 
-The only input parameters given to `oscprob3nu.py` is the Hamiltonian, in the form of a 3x3 Hermitian matrix, and the baseline.  (For `oscprob2nu.py`, it is a 2x2 Hermitian matrix.)  The Hamiltonian is passed to the routines as a list, *i.e.*,
+Most of the time, you will be only interested in computing oscillation probabilities.  The function to compute probabilities is `probabilities_3nu` in the module `oscprob3nu`.  It takes as input parameters the `hamiltonian`, in the form of a 3x3 Hermitian matrix, and the baseline `L`.  (For `oscprob2nu`, `hamiltonian` is a 2x2 Hermitian matrix.)
+
+This function returns the list of probabilities Pee (nu_e --> nu_e), Pem (nu_e --> nu_mu), Pet (nu_e --> nu_tau), Pme (nu_mu --> nu_e), Pmm (nu_mu --> nu_mu), Pmt (nu_mu --> nu_tau), Pte (nu_tau --> nu_e), Ptm (nu_tau --> nu_mu), (nu_tau --> nu_tau), *i.e.*,
 ```python
+import oscprob3nu
+
 hamiltonian = [[H11, H12, H13], [H21, H22, H23], [H31, H32, H33]]
+Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu(hamiltonian, L)
 ```
 
 > **Important:** If you feed the code a non-Hermitian matrix, it will output nonsensical results
-
-Most of the time, you will be only interested in computing oscillation probabilities.  The function to compute probabilities is `probabilities_3nu`.  It takes in `hamiltonian` and `L` as input parameters and returns the list of probabilities Pee (nu_e --> nu_e), Pem (nu_e --> nu_mu), Pet (nu_e --> nu_tau), Pme (nu_mu --> nu_e), Pmm (nu_mu --> nu_mu), Pmt (nu_mu --> nu_tau), Pte (nu_tau --> nu_e), Ptm (nu_tau --> nu_mu), (nu_tau --> nu_tau).
 
 
 ### Trivial example
@@ -286,7 +289,7 @@ h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
 h_matter = hamiltonians3nu.hamiltonian_matter(h_vacuum, VCC_EARTH_CRUST)
 
 Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( \
-                                                h_vacuum, baseline*CONV_KM_TO_INV_EV)
+                                                h_matter, baseline*CONV_KM_TO_INV_EV)
 
 print("Pee = %6.5f, Pem = %6.5f, Pet = %6.5f" % (Pee, Pem, Pet))
 print("Pme = %6.5f, Pmm = %6.5f, Pmt = %6.5f" % (Pme, Pmm, Pmt))
@@ -294,9 +297,9 @@ print("Pte = %6.5f, Ptm = %6.5f, Ptt = %6.5f" % (Pte, Ptm, Ptt))
 ````
 This returns
 ```shell
-Pee = 0.96711, Pem = 0.01593, Pet = 0.01695
-Pme = 0.01823, Pmm = 0.64417, Pmt = 0.33761
-Pte = 0.01466, Ptm = 0.33990, Ptt = 0.64544
+Pee = 0.99981, Pem = 0.00010, Pet = 0.00009
+Pme = 0.00011, Pmm = 0.65964, Pmt = 0.34025
+Pte = 0.00008, Ptm = 0.34026, Ptt = 0.65966
 ```
 
 ### Oscillations in matter with non-standard interactions (NSI)
@@ -310,6 +313,7 @@ This routine is called as
 hamiltonian_nsi(h_vacuum, VCC, eps)
 ```
 
+In the example below, we set `eps` to its default value pulled from `globaldefs`:
 ```python
 import oscprob3nu
 import hamiltonians3nu
@@ -322,10 +326,10 @@ h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_vacuum_energy_independent(  
                                                                                 S13_BF, DCP_BF,
                                                                                 D21_BF, D31_BF)
 h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
-h_nsi = hamiltonians3nu.hamiltonian_nsi(h_vacuum, VCC_EARTH_CRUST)
+h_nsi = hamiltonians3nu.hamiltonian_nsi(h_vacuum, VCC_EARTH_CRUST, EPS_TEST)
 
 Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( \
-                                                h_vacuum, baseline*CONV_KM_TO_INV_EV)
+                                                h_nsi, baseline*CONV_KM_TO_INV_EV)
 
 print("Pee = %6.5f, Pem = %6.5f, Pet = %6.5f" % (Pee, Pem, Pet))
 print("Pme = %6.5f, Pmm = %6.5f, Pmt = %6.5f" % (Pme, Pmm, Pmt))
@@ -344,6 +348,8 @@ Pte = 0.01466, Ptm = 0.33990, Ptt = 0.64544
 
 
 ### Arbitrary Hamiltonians
+
+Of course, you can supply your custom Hamiltonian and compute the associated oscillation probabilities.
 
 
 
