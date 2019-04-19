@@ -29,7 +29,7 @@ Code to compute exact two- and three-neutrino oscillation probabilities using SU
 
 Because **NuOscProbExact** is written fully in Python, no compilation or linking is necessary.  The installation amounts to fetching the files from GitHub and is simple.
 
-> **Python 2 compatibility:** The code was written and tested using Python 3.  Yet, because the core modules `oscprob2nu.py` and `oscprob3nu.py` use only native Python functions and popular modules, they might also run in Python 2.  However, this is currently untested.
+> **Python 2 compatibility:** The code was written and tested using Python 3.  Yet, because the core modules `oscprob2nu` and `oscprob3nu` use only native Python functions and popular modules, they might also run in Python 2.  However, this is currently untested.
 
 Instructions:
 
@@ -78,7 +78,7 @@ In the examples below, we focus on `oscprob3nu`, but what we show applies to `os
 
 ### Basics
 
-Most of the time, you will be only interested in computing oscillation probabilities.  The function to compute probabilities is `probabilities_3nu` in the module `oscprob3nu`.  It takes as input parameters the `hamiltonian`, in the form of a 3x3 Hermitian matrix, and the baseline `L`.  (For `oscprob2nu`, `hamiltonian` is a 2x2 Hermitian matrix.)
+Most of the time, you will be only interested in computing oscillation probabilities.  The function to compute three-neutrino probabilities is `probabilities_3nu` in the module `oscprob3nu`.  It takes as input parameters the `hamiltonian`, in the form of a 3x3 Hermitian matrix, and the baseline `L`.  (For `oscprob2nu`, `hamiltonian` is a 2x2 Hermitian matrix.)
 
 This function returns the list of probabilities Pee (nu_e --> nu_e), Pem (nu_e --> nu_mu), Pet (nu_e --> nu_tau), Pme (nu_mu --> nu_e), Pmm (nu_mu --> nu_mu), Pmt (nu_mu --> nu_tau), Pte (nu_tau --> nu_e), Ptm (nu_tau --> nu_mu), (nu_tau --> nu_tau), *i.e.*,
 ```python
@@ -95,10 +95,9 @@ Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu(hamil
 
 ### Trivial example
 
-Let's feed it an arbitrary Hamiltonian and baseline:
+We starting by passing `probabilities_3nu` an arbitrary Hamiltonian and baseline:
 ```python
 import oscprob3nu
-import cmath
 
 hamiltonian = [
                 [1.0+0.0j, 0.0+2.0j, 0.0-1.0j],
@@ -121,7 +120,7 @@ Pme = 0.41369, Pmm = 0.00485, Pmt = 0.58146
 Pte = 0.24358, Ptm = 0.58146, Ptt = 0.17497
 ```
 
-As expected, `Pem == Pme`, `Pet == Pte`, `Pmt == Ptm`, `Pee + Pem + Pet = 1`, , `Pme + Pmm + Pmt = 1`, and `Pte + Ptm + Ptt = 1`.
+As expected, `Pem == Pme`, `Pet == Pte`, `Pmt == Ptm`, `Pee + Pem + Pet = 1`, `Pme + Pmm + Pmt = 1`, and `Pte + Ptm + Ptt = 1`.
 
 
 ### Oscillations in vacuum: fixed energy and baseline
@@ -130,9 +129,9 @@ Now let's compute the probabilities in vacuum.  To do this, we can use the routi
 ```python
 hamiltonian_vacuum_energy_independent(s12, s23, s13, dCP, D21, D31)
 ```
-that is provided in the `hamiltonians3nu.py` module.  The input parameters `s12`, `s23`, `s13`, `dCP`, `D21`, and `D31` are, respectively, sin(theta_12), sin(theta_23), sin(theta_13), delta_CP, Delta m_21^2, and Delta m_31^2.  For this example, we set them to their current best-fit values, which we pull from `globaldefs.py` (see that file for more information about these values).
+that is provided in the `hamiltonians3nu` module.  The input parameters `s12`, `s23`, `s13`, `dCP`, `D21`, and `D31` are, respectively, sin(theta_12), sin(theta_23), sin(theta_13), delta_CP, Delta m_21^2, and Delta m_31^2.  For this example, we set them to their current best-fit values, which we pull from `globaldefs` (inspect that file for more information about these values).
 
-> **Important:** The function `hamiltonian_vacuum_energy_independent` returns the Hamiltonian in vacuum **without** the *1/E* prefactor, where *E* is the neutrino energy.  It was done in this way so that, if we wish to compute the probabilities at different energies, we need compute `hamiltonian_vacuum_energy_independent` only once, and then multiply it by a varying *1/E* prefactor.
+> **Important:** The function `hamiltonian_vacuum_energy_independent` returns the Hamiltonian in vacuum **without** the *1/E* prefactor, where *E* is the neutrino energy.  It was done in this way so that, if we wish to compute the probabilities at different energies, we need to compute `hamiltonian_vacuum_energy_independent` only once, and then multiply it by a varying *1/E* prefactor.
 
 ```python
 import oscprob3nu
@@ -142,13 +141,13 @@ from globaldefs import *
 energy = 1.e9     # Neutrino energy [eV]
 baseline = 1.3e3  # Baseline [km]
 
-h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_vacuum_energy_independent(  S12_BF, S23_BF,
-                                                                                S13_BF, DCP_BF,
-                                                                                D21_BF, D31_BF)
+h_vacuum_energy_indep = hamiltonians3nu.hamiltonian3nu_vacuum_energy_independent(   S12_BF, S23_BF,
+                                                                                    S13_BF, DCP_BF,
+                                                                                    D21_BF, D31_BF)
 h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
 
-Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( \
-                                                h_vacuum, baseline*CONV_KM_TO_INV_EV)
+Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( h_vacuum,
+                                                                            baseline*CONV_KM_TO_INV_EV)
 
 print("Pee = %6.5f, Pem = %6.5f, Pet = %6.5f" % (Pee, Pem, Pet))
 print("Pme = %6.5f, Pmm = %6.5f, Pmt = %6.5f" % (Pme, Pmm, Pmt))
@@ -182,9 +181,9 @@ log10_l_val = np.linspace(log10_l_min, log10_l_max, log10_l_npts)  # [km]
 l_val = [CONV_KM_TO_INV_EV*10.**x for x in log10_l_val]
 
 
-h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_vacuum_energy_independent(  S12_BF, S23_BF,
-                                                                                S13_BF, DCP_BF,
-                                                                                D21_BF, D31_BF)
+h_vacuum_energy_indep = hamiltonians3nu.hamiltonian3nu_vacuum_energy_independent( S12_BF, S23_BF,
+                                                                                  S13_BF, DCP_BF,
+                                                                                  D21_BF, D31_BF)
 h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
 
 # Each element of prob: [Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt]
@@ -289,11 +288,11 @@ from globaldefs import *
 energy = 1.e9     # Neutrino energy [eV]
 baseline = 1.3e3  # Baseline [km]
 
-h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_vacuum_energy_independent(  S12_BF, S23_BF,
-                                                                                S13_BF, DCP_BF,
-                                                                                D21_BF, D31_BF)
+h_vacuum_energy_indep = hamiltonians3nu.hamiltonian3nu_vacuum_energy_independent(   S12_BF, S23_BF,
+                                                                                    S13_BF, DCP_BF,
+                                                                                    D21_BF, D31_BF)
 h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
-h_matter = hamiltonians3nu.hamiltonian_matter(h_vacuum, VCC_EARTH_CRUST)
+h_matter = hamiltonians3nu.hamiltonian3nu_matter(h_vacuum, VCC_EARTH_CRUST)
 
 Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( h_matter,
                                                                             baseline*CONV_KM_TO_INV_EV)
@@ -329,11 +328,11 @@ from globaldefs import *
 energy = 1.e9     # Neutrino energy [eV]
 baseline = 1.3e3  # Baseline [km]
 
-h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_vacuum_energy_independent(  S12_BF, S23_BF,
-                                                                                S13_BF, DCP_BF,
-                                                                                D21_BF, D31_BF)
+h_vacuum_energy_indep = hamiltonians3nu.hamiltonian3nu_vacuum_energy_independent(   S12_BF, S23_BF,
+                                                                                    S13_BF, DCP_BF,
+                                                                                    D21_BF, D31_BF)
 h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
-h_nsi = hamiltonians3nu.hamiltonian_nsi(h_vacuum, VCC_EARTH_CRUST, EPS_TEST)
+h_nsi = hamiltonians3nu.hamiltonian3nu_nsi(h_vacuum, VCC_EARTH_CRUST, EPS_TEST)
 
 Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( h_nsi,
                                                                             baseline*CONV_KM_TO_INV_EV)
@@ -367,11 +366,11 @@ from globaldefs import *
 energy = 1.e9     # Neutrino energy [eV]
 baseline = 1.3e3  # Baseline [km]
 
-h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_vacuum_energy_independent(  S12_BF, S23_BF,
-                                                                                S13_BF, DCP_BF,
-                                                                                D21_BF, D31_BF)
+h_vacuum_energy_indep = hamiltonians3nu.hamiltonian3nu_vacuum_energy_independent(   S12_BF, S23_BF,
+                                                                                    S13_BF, DCP_BF,
+                                                                                    D21_BF, D31_BF)
 h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
-h_liv = hamiltonians3nu.hamiltonian_liv(h_vacuum, LIV_PARAMS_TEST)
+h_liv = hamiltonians3nu.hamiltonian3nu_liv(h_vacuum, LIV_PARAMS_TEST)
 
 Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( h_liv,
                                                                             baseline*CONV_KM_TO_INV_EV)
@@ -397,9 +396,9 @@ from globaldefs import *
 energy = 1.e9     # Neutrino energy [eV]
 baseline = 1.3e3  # Baseline [km]
 
-h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_vacuum_energy_independent(  S12_BF, S23_BF,
-                                                                                S13_BF, DCP_BF,
-                                                                                D21_BF, D31_BF)
+h_vacuum_energy_indep = hamiltonians3nu.hamiltonian3nu_vacuum_energy_independent(   S12_BF, S23_BF,
+                                                                                    S13_BF, DCP_BF,
+                                                                                    D21_BF, D31_BF)
 h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
 h_mymodel = h_vacuum + hamiltonian_mymodel(mymodel_parameters)
 
