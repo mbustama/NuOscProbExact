@@ -108,7 +108,7 @@ Now let's compute the probabilities in vacuum.  To do this, we can use the routi
 ```python
 hamiltonian_vacuum_energy_independent(s12, s23, s13, dCP, D21, D31)
 ```
-to compute the Hamiltonian in vacuum that is provided in the `hamiltonians3nu.py` module.  The input parameters `s12`, `s23`, `s13`, `dCP`, `D21`, and `D31` are $\sin$
+to compute the Hamiltonian in vacuum that is provided in the `hamiltonians3nu.py` module.  The input parameters `s12`, `s23`, `s13`, `dCP`, `D21`, and `D31` are $$\sin$$
 
 
 ## Documentation and help
