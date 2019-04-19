@@ -79,7 +79,7 @@ hamiltonian = [[H11, H12, H13], [H21, H22, H23], [H31, H32, H33]]
 
 > **Important:** If you feed the code a non-Hermitian matrix, it will output nonsensical results
 
-Most of the time, you will be only interested in computing oscillation probabilities.  The function to compute probabilities is `probabilities_3nu`.  It takes in `hamiltonian` and `L` as input parameters and returns the list of probabilities Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt.
+Most of the time, you will be only interested in computing oscillation probabilities.  The function to compute probabilities is `probabilities_3nu`.  It takes in `hamiltonian` and `L` as input parameters and returns the list of probabilities Pee (nu_e --> nu_e), Pem (nu_e --> nu_mu), Pet (nu_e --> nu_tau), Pme (nu_mu --> nu_e), Pmm (nu_mu --> nu_mu), Pmt (nu_mu --> nu_tau), Pte (nu_tau --> nu_e), Ptm (nu_tau --> nu_mu), (nu_tau --> nu_tau).
 
 ### Trivial example
 
