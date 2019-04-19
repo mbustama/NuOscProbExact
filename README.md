@@ -351,9 +351,9 @@ Pte = 0.01466, Ptm = 0.33990, Ptt = 0.64544
 
 ### Arbitrary Hamiltonians
 
-Of course, you can supply your custom Hamiltonian and compute the associated oscillation probabilities; see [Trivial example](#trivial-example).
+Of course, you can supply your custom Hamiltonian and compute the associated oscillation probabilities; see [Trivial example](#trivial-example) above.  Usually, you will want to add an extra term from your preferred model to the vacuum Hamiltonian.  To do that, take a cue from the examples above.
 
-Usually, you will want to add an extra term from your model to the vacuum Hamiltonian.  To do that, take a cue from the examples above.  In example below, the function `hamiltonian_mymodel`, supplied by you, should return a 3x3 matrix.  Your code should be something like this:
+In the following example, the function `hamiltonian_mymodel`, supplied by you, should return a 3x3 matrix:
 ```python
 import oscprob3nu
 import hamiltonians3nu
@@ -372,7 +372,7 @@ Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( \
                                                 h_mymodel, baseline*CONV_KM_TO_INV_EV)
 
 ```
-In principle, `hamiltonian_mymodel` could also depend on `energy`.
+Though we do not show it here, `hamiltonian_mymodel` could also depend on `energy`.
 
 
 ## Documentation and help
