@@ -194,7 +194,7 @@ oscprob3nu_tests.plot_probability_3nu_vs_l( case, energy_nu=1.e7,
                                             plot_prob_me=False, plot_prob_mm=False, plot_prob_mt=False,
                                             plot_prob_te=False, plot_prob_tm=False, plot_prob_tt=False)
 ```
-The parameter `case` be:
+The parameter `case` can take any of the following values:
 * `vacuum`: for oscillations in vacuum, assuming the default values of mixing parameters from the `globaldefs` module
 * `matter`: for oscillations in constant matter, assuming the density of the Earth's crust as set in `globaldefs`
 * `nsi`: for oscillations in matter with non-standard interactions, with the NSI strengh parameters fixed to the default values in `globaldefs`
