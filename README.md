@@ -4,9 +4,9 @@ Code to compute exact two- and three-neutrino oscillation probabilities using SU
 
 ## What is NuOscProbExact?
 
-**NuOscProbExact** is a Python implementation of the method to compute exact two-flavor and three-flavor neutrino oscillation probabilities for arbitrary time-independent Hamiltonians presented in the paper [1904.XXXXX](https://arxiv.org/abs/1904.XXXXX).  The method relies on expansions of the Hamiltonian and time-evolution operators in terms of SU(2) and SU(3) matrices in order to obtain concise, analytical, and exact expressions for the probabilities, that are also easy to implement and evaluate.  For details of the method, see the paper above.
+**NuOscProbExact** is a Python implementation of the method to compute exact two-flavor and three-flavor neutrino oscillation probabilities for arbitrary time-independent Hamiltonians presented in the paper [arXiv:1904.XXXXX](https://arxiv.org/abs/1904.XXXXX).  The method relies on expansions of the Hamiltonian and time-evolution operators in terms of SU(2) and SU(3) matrices in order to obtain concise, analytical, and exact expressions for the probabilities, that are also easy to implement and evaluate.  For details of the method, see the paper above.
 
-**NuOscProbExact** was developed by Mauricio Bustamante, who also authored the paper [1904.XXXXX](https://arxiv.org/abs/1904.XXXXX).  If you use NuOscProbExact in your work, please follow the directions on [Citing](#citing).
+**NuOscProbExact** was developed by Mauricio Bustamante, who also authored the paper [arXiv:1904.XXXXX](https://arxiv.org/abs/1904.XXXXX).  If you use NuOscProbExact in your work, please follow the directions on [Citing](#citing).
 
 
 ## Requirements
@@ -33,7 +33,7 @@ Code to compute exact two- and three-neutrino oscillation probabilities using SU
 
 ## Documentation and help
 
-All of the modules provided in **NuOscProbExact** have been documented using Python docstrings.
+All of the modules provided in **NuOscProbExact** have been documented using Python docstrings.  These are human-readable by opening the source `.py` files.  Alternatively, they can be printed from within an interactive Python session.
 
 To view the documentation of a module from within an interactive Python session, run, *e.g.*,
 ```python
@@ -54,7 +54,7 @@ This will print to screen a description of what the function does (in this examp
 
 ## Citing
 
-If you use **NuOscProbExact** in your work, we ask you that you please cite the following paper: Mauricio Bustamante, *Exact neutrino oscillation probabilities with arbitrary time-independent Hamiltonians*, arXiv:1904.XXXXX.
+If you use **NuOscProbExact** in your work, we ask you that you please cite the following paper: Mauricio Bustamante, *Exact neutrino oscillation probabilities with arbitrary time-independent Hamiltonians*, [arXiv:1904.XXXXX](https://arxiv.org/abs/1904.XXXXX).
 
 Please consider using the LaTeX or BibTeX entries provided by INSPIRE.
 
