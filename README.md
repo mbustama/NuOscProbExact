@@ -76,9 +76,12 @@ Beware: if you feed the code a non-Hermitian matrix, it will output nonsensical 
 
 Most of the time, you will be only interested in computing oscillation probabilities.  The function to compute probabilities is `probabilities_3nu`.  It takes in `hamiltonian` and `L` as input parameters and returns the list of probabilities Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt.
 
+### Trivial example
+
 Let's feed it an arbitrary Hamiltonian and baseline:
 ```python
 import oscprob3nu
+import cmath
 
 hamiltonian = [
                 [1.0+0.0j, 0.0+2.0j, 0.0-1.0j],
@@ -88,8 +91,7 @@ hamiltonian = [
 
 L = 1.0
 
-Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = \
-    oscprob3nu.probabilities_3nu(hamiltonian, L)
+Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu(hamiltonian, L)
 
 print(Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt)
 ```
@@ -98,10 +100,15 @@ This returns
 0.34273219409368394 0.41369161015283334 0.24357619575348258 0.41369161015283334 0.004850413766622646 0.5814579760805438 0.24357619575348258 0.5814579760805438 0.17496582816597364
 ```
 
-As expected, `Pem == Pme`, `Pet == Pte`, `Pmt == Ptm`, `Pee + Pem + Pet = 1`, , `Pme + Pmm + Pmt = 1`, and `Pte + Ptm + Ptt = 1`.  This is always true.
+As expected, `Pem == Pme`, `Pet == Pte`, `Pmt == Ptm`, `Pee + Pem + Pet = 1`, , `Pme + Pmm + Pmt = 1`, and `Pte + Ptm + Ptt = 1`.
 
+### Proper example
 
-## Bundled test suite
+Now let's compute the probabilities in vacuum.  To do this, we can use the routine
+```python
+hamiltonian_vacuum_energy_independent(s12, s23, s13, dCP, D21, D31)
+```
+to compute the Hamiltonian in vacuum that is provided in the `hamiltonians3nu.py` module.  The input parameters `s12`, `s23`, `s13`, `dCP`, `D21`, and `D31` are $\sin$
 
 
 ## Documentation and help
