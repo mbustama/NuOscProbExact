@@ -187,7 +187,7 @@ Alternatively, you can automatically produce plots of probability using the foll
 import oscprob3nu_tests
 
 case = 'vacuum'
-oscprob3nu_tests.plot_probability_3nu_vs_l( case, energy_nu=1.e7,
+oscprob3nu_tests.plot_probability_3nu_vs_l( case, energy=1.e7,
                                             output_filename='prob_3nu_vacuum_vs_l', output_format='pdf',
                                             log10_l_min=0.0, log10_l_max=log10(5.e2), log10_l_npts=6000,
                                             plot_prob_ee=True, plot_prob_em=True, plot_prob_et=True,
