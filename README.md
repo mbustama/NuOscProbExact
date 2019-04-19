@@ -6,7 +6,7 @@ Code to compute exact two- and three-neutrino oscillation probabilities using SU
 
 **NuOscProbExact** is a Python implementation of the method to compute exact two-flavor and three-flavor neutrino oscillation probabilities for arbitrary time-independent Hamiltonians presented in the paper [arXiv:1904.XXXXX](https://arxiv.org/abs/1904.XXXXX).  The method relies on expansions of the Hamiltonian and time-evolution operators in terms of SU(2) and SU(3) matrices in order to obtain concise, analytical, and exact expressions for the probabilities, that are also easy to implement and evaluate.  For details of the method, see the paper above.
 
-**NuOscProbExact** was developed by Mauricio Bustamante, who also authored the paper [arXiv:1904.XXXXX](https://arxiv.org/abs/1904.XXXXX).  If you use NuOscProbExact in your work, please follow the directions on [Citing](#citing).
+**NuOscProbExact** was developed by Mauricio Bustamante, who also authored the paper [arXiv:1904.XXXXX](https://arxiv.org/abs/1904.XXXXX).  If you use it in your work, please follow the directions on [Citing](#citing).
 
 
 ## Requirements
@@ -180,6 +180,22 @@ prob_et = [x[2] for x in lst_prob]  # Pet
 ```
 
 To visualize the data:
+
+
+Alternatively, you can automatically produce plots of probability using following function from the `oscprob3nu_tests` module:
+```python
+case = 'vacuum'
+plot_probability_3nu_vs_l(  case, energy_nu=1.e7,
+                            output_filename='prob_3nu_vacuum_vs_l', output_format='pdf',
+                            log10_l_min=0.0, log10_l_max=log10(5.e2), log10_l_npts=6000,
+                            plot_prob_ee=True, plot_prob_em=True, plot_prob_et=True)
+```
+The parameter `case` be:
+* `vacuum`: for oscillations in vacuum, assuming the default values of mixing parameters from the `globaldefs` module
+* `matter`: for oscillations in constant matter, assuming the density of the Earth's crust as set in `globaldefs`
+* `nsi`: for oscillations in matter with non-standard interactions, with the NSI strengh parameters fixed to the default values in `globaldefs`
+* `liv`: for oscillations in a CPT-odd Lorentz invariance-violating (LIV) background, with the LIV parameters fixed to the default values in `globaldefs`
+For more information about these cases, refer to the paper [arXiv:1904.XXXXX](https://arxiv.org/abs/1904.XXXXX) and inspect the contents of the file `globaldefs.py`.
 
 
 ### Oscillations in vacuum: fixed baseline, varying energy
