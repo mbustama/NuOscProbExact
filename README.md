@@ -78,7 +78,11 @@ In the examples below, we focus on `oscprob3nu`, but what we show applies to `os
 
 ### Basics
 
-Most of the time, you will be only interested in computing oscillation probabilities.  The function to compute three-neutrino probabilities is `probabilities_3nu` in the module `oscprob3nu`.  It takes as input parameters the `hamiltonian`, in the form of a 3x3 Hermitian matrix, and the baseline `L`.  (For `oscprob2nu`, `hamiltonian` is a 2x2 Hermitian matrix.)
+Most of the time, you will be only interested in computing oscillation probabilities.
+
+#### Three-neutrino oscillations
+
+The function to compute three-neutrino probabilities is `probabilities_3nu` in the module `oscprob3nu`.  It takes as input parameters the `hamiltonian`, in the form of a 3x3 Hermitian matrix, and the baseline `L`.
 
 This function returns the list of probabilities Pee (nu_e --> nu_e), Pem (nu_e --> nu_mu), Pet (nu_e --> nu_tau), Pme (nu_mu --> nu_e), Pmm (nu_mu --> nu_mu), Pmt (nu_mu --> nu_tau), Pte (nu_tau --> nu_e), Ptm (nu_tau --> nu_mu), (nu_tau --> nu_tau), *i.e.*,
 ```python
@@ -86,6 +90,18 @@ import oscprob3nu
 
 hamiltonian = [[H11, H12, H13], [H21, H22, H23], [H31, H32, H33]]
 Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu(hamiltonian, L)
+```
+
+#### Two-neutrino oscillations
+
+The function to compute two-neutrino probabilities is `probabilities_2nu` in the module `oscprob2nu`.  It takes as input parameters the `hamiltonian`, in the form of a 2x2 Hermitian matrix, and the baseline `L`.
+
+This function returns the list of probabilities Pee (nu_e --> nu_e), Pem (nu_e --> nu_mu), Pme (nu_mu --> nu_e), and Pmm (nu_mu --> nu_mu), *i.e.*,
+```python
+import oscprob2nu
+
+hamiltonian = [[H11, H12], [H21, H22]]
+Pee, Pem, Pme, Pmm = oscprob2nu.probabilities_2nu(hamiltonian, L)
 ```
 
 > **Important:** If you feed the code a non-Hermitian matrix, it will output nonsensical results
