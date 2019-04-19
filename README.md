@@ -179,9 +179,9 @@ h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
 
 # Each element of prob: [Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt]
 prob = [oscprob3nu.probabilities_3nu(h_vacuum, l) for l in l_val]
-prob_ee = [x[0] for x in lst_prob]  # Pee
-prob_em = [x[1] for x in lst_prob]  # Pem
-prob_et = [x[2] for x in lst_prob]  # Pet
+prob_ee = [x[0] for x in prob]  # Pee
+prob_em = [x[1] for x in prob]  # Pem
+prob_et = [x[2] for x in prob]  # Pet
 ```
 
 To visualize the data:
@@ -238,9 +238,9 @@ h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_vacuum_energy_independent(  
 # Each element of prob: [Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt]
 prob = [oscprob3nu.probabilities_3nu( np.multiply(1./x/1.e9, h_vacuum_energy_indep), baseline) \
         for x in energy]
-prob_ee = [x[0] for x in lst_prob]  # Pee
-prob_em = [x[1] for x in lst_prob]  # Pem
-prob_et = [x[2] for x in lst_prob]  # Pet
+prob_ee = [x[0] for x in prob]  # Pee
+prob_em = [x[1] for x in prob]  # Pem
+prob_et = [x[2] for x in prob]  # Pet
 ```
 
 To visualize the data:
