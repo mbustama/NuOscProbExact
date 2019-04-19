@@ -64,16 +64,41 @@ Because **NuOscProbExact** is written fully in Python, no compilation or linking
 
 There are only two core modules: `oscprobn2nu.py` and `oscprob3nu.py`.  Each one is stand-alone (except for the dependencies described [above](#requirements)).  To use either in your code, copy it to your project's working directory (or add their location to the paths where your environment looks for modules).
 
-In the examples below, we focus on `oscprob3nu.py`, but they apply to `oscprob2nu.py` as well.
+In the examples below, we focus on `oscprob3nu.py`, but what we show applies to `oscprob2nu.py` as well.
 
-### Trivial example
+### Basics
 
-The only input given to `oscprob3nu.py` is a 3x3 Hermitian matrix.  (For `oscprob2nu.py`, it is a 2x2 Hermitian matrix.)  If you feed a non-Hermitian matrix to the code, it will output nonsensical results.
+The only input parameters given to `oscprob3nu.py` is the Hamiltonian, in the form of a 3x3 Hermitian matrix, and the baseline.  (For `oscprob2nu.py`, it is a 2x2 Hermitian matrix.)  The Hamiltonian is passed to the routines as a list, *i.e.*,
+```python
+hamiltonian = [[H11, H12, H13], [H21, H22, H23], [H31, H32, H33]]
+```
+Beware: if you feed the code a non-Hermitian matrix, it will output nonsensical results.
 
-If you are not interested in the inner workings,
+Most of the time, you will be only interested in computing oscillation probabilities.  The function to compute probabilities is `probabilities_3nu`.  It takes in `hamiltonian` and `L` as input parameters and returns the list of probabilities Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt.
 
-Let's  arbitrary 3x3 Hermitian
+Let's feed it an arbitrary Hamiltonian and baseline:
+```python
+import oscprob3nu
 
+hamiltonian = [
+                [1.0+0.0j, 0.0+2.0j, 0.0-1.0j],
+                [0.0-2.0j, 3.0+0.0j, 3.0+0.0j],
+                [0.0+1.0j, 3.0-0.0j, 5.0+0.0j]
+]
+
+L = 1.0
+
+Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = \
+    oscprob3nu.probabilities_3nu(hamiltonian, L)
+
+print(Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt)
+```
+This returns
+```shell
+0.34273219409368394 0.41369161015283334 0.24357619575348258 0.41369161015283334 0.004850413766622646 0.5814579760805438 0.24357619575348258 0.5814579760805438 0.17496582816597364
+```
+
+As expected, `Pem == Pme`, `Pet == Pte`, `Pmt == Ptm`, `Pee + Pem + Pet = 1`, , `Pme + Pmm + Pmt = 1`, and `Pte + Ptm + Ptt = 1`.  This is always true.
 
 
 ## Bundled test suite
