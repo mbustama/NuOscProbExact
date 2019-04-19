@@ -237,7 +237,7 @@ h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_vacuum_energy_independent(  
                                                                                 D21_BF, D31_BF)
 
 # Each element of prob: [Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt]
-prob = [oscprob3nu.probabilities_3nu( np.multiply(1./x/1.e9, h_vacuum_energy_indep), baseline) \
+prob = [oscprob3nu.probabilities_3nu(np.multiply(1./x/1.e9, h_vacuum_energy_indep), baseline) \
         for x in energy]
 prob_ee = [x[0] for x in prob]  # Pee
 prob_em = [x[1] for x in prob]  # Pem
@@ -262,6 +262,20 @@ oscprob3nu_tests.plot_probability_3nu_vs_energy(
 ```
 The parameter `case` can take any of the same values as listed [above](#oscillations-in-vacuum-fixed-energy-varying-baseline).
 
+
+### Oscillations in matter
+
+
+
+### Oscillations in matter with non-standard interactions (NSI)
+
+
+
+### Oscillations in a Lorentz invariance-violating (LIV) background
+
+
+
+### Arbitrary Hamiltonians
 
 
 
