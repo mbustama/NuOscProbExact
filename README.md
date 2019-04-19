@@ -28,14 +28,13 @@ Because **NuOscProbExact** is written fully in Python, no compilation or linking
 ```
 cd /home/MyProjects
 ```
-
-1. From there, fetch the code from the GitHub repository with
+2. From there, fetch the code from the GitHub repository with
 ```
 git clone https://github.com/mbustama/NuOscProbExact.git
 ```
 Doing this will create the directory `/home/MyProjects/NuOscProbExact`, with the following file structure:
 ```
-/NuOscProbExact/run_testsuite.py    Run this to create test plots of the probabilities (see bullet point below)
+/NuOscProbExact/run_testsuite.py    Run this to create test plots of the probabilities
 /NuOscProbExact/src                 Contains the main source files
     ../hamiltonians2nu.py           Routines to compute example two-flavor Hamiltonians
     ../hamiltonians3nu.py           Routines to compute example three-flavor Hamiltonians
@@ -43,8 +42,7 @@ Doing this will create the directory `/home/MyProjects/NuOscProbExact`, with the
     ../oscprob2nu.py                Routines to compute the two-flavor probabilities
     ../oscprob3nu.py                Routines to compute the three-flavor probabilities
 ```
-
-1. (Optional) Run the test suite
+3. (Optional) Run the test suite
 ```
 cd /home/MyProjects/NuOscProbExact
 python run_testsuite.py
