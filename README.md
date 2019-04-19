@@ -129,14 +129,17 @@ energy = 1.e9     # Neutrino energy [eV]
 baseline = 1.3e3  # Baseline [km]
 
 
-Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = [oscprob3nu.probabilities_3nu( \
+Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( \
                                                     np.multiply(1./energy, h_vacuum_energy_indep),
-                                                    baseline*CONV_KM_TO_INV_EV) \
-                                                for x in energy_nu]
+                                                    baseline*CONV_KM_TO_INV_EV)
 
-print(Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt)
+print("Pee = %4.3f, Pem = %4.3f, Pet = %4.3f, Pme = %4.3f, Pmm = %4.3f, Pmt = %4.3f, Pte = %4.3f, Ptm = %4.3f, Ptt = %4.3f" \
+    % (Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt))
 ````
-
+Thus returns
+```shell
+Pee = 0.96711, Pem = 0.01593, Pet = 0.01695, Pme = 0.01823, Pmm = 0.64417, Pmt = 0.33761, Pte = 0.01466, Ptm = 0.33990, Ptt = 0.64544
+```
 
 ## Documentation and help
 
