@@ -265,7 +265,9 @@ The parameter `case` can take any of the same values as listed [above](#oscillat
 
 ### Oscillations in matter
 
-For oscillation in matter, we proceed in an analogous way as for oscillations in vacuum.  To compute the Hamiltonian in matter, we can use the routine `hamiltonian_matter` in the module `hamiltonians3nu`.  First, we need to compute `h_vacuum`, and then pass it to `hamiltionian_matter`, together with the matter parameter ![eqn](https://latex.codecogs.com/gif.download?%5Cdpi%7B120%7D%20A%20%3D%20%5Csqrt%7B2%7D%20V_%7B%5Crm%20CC%7D%20n_e)
+For oscillation in matter, we proceed in an analogous way as for oscillations in vacuum.  To compute the Hamiltonian in matter, we can use the routine `hamiltonian_matter` in the module `hamiltonians3nu`.  First, we need to compute `h_vacuum`, and then pass it to `hamiltionian_matter`, together with the neutrino-electron charged-current potential `VCC`, with VCC = sqrt(2.0) * G_F * n_e.
+
+In the example below, we set the matter potential to `VCC_EARTH_CRUST`, which is computed using the electron density of the crust of the Earth, and is read from the `globaldefs`.
 ```python
 import oscprob3nu
 import hamiltonians3nu
@@ -278,7 +280,7 @@ h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_vacuum_energy_independent(  
                                                                                 S13_BF, DCP_BF,
                                                                                 D21_BF, D31_BF)
 h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
-h_matter = hamiltonian_matter(h_vacuum, A)
+h_matter = hamiltonians3nu.hamiltonian_matter(h_vacuum, VCC_EARTH_CRUST)
 
 Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( \
                                                 h_vacuum, baseline*CONV_KM_TO_INV_EV)
@@ -293,9 +295,6 @@ Pee = 0.96711, Pem = 0.01593, Pet = 0.01695
 Pme = 0.01823, Pmm = 0.64417, Pmt = 0.33761
 Pte = 0.01466, Ptm = 0.33990, Ptt = 0.64544
 ```
-that is provided in the `hamiltonians3nu.py` module.  The input parameters `s12`, `s23`, `s13`, `dCP`, `D21`, and `D31` are, respectively, sin(theta_12), sin(theta_23), sin(theta_13), delta_CP, Delta m_21^2, and Delta m_31^2.  For this example, we set them to their current best-fit values, which we pull from `globaldefs.py` (see that file for more information about these values).
-
-
 
 ### Oscillations in matter with non-standard interactions (NSI)
 
