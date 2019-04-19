@@ -97,16 +97,21 @@ L = 1.0
 
 Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu(hamiltonian, L)
 
-print(Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt)
+print("Pee = %6.5f, Pem = %6.5f, Pet = %6.5f" % (Pee, Pem, Pet))
+print("Pme = %6.5f, Pmm = %6.5f, Pmt = %6.5f" % (Pme, Pmm, Pmt))
+print("Pte = %6.5f, Ptm = %6.5f, Ptt = %6.5f" % (Pte, Ptm, Ptt))
 ```
 This returns
 ```shell
-0.34273219409368394 0.41369161015283334 0.24357619575348258 0.41369161015283334 0.004850413766622646 0.5814579760805438 0.24357619575348258 0.5814579760805438 0.17496582816597364
+Pee = 0.34273, Pem = 0.41369, Pet = 0.24358
+Pme = 0.41369, Pmm = 0.00485, Pmt = 0.58146
+Pte = 0.24358, Ptm = 0.58146, Ptt = 0.17497
 ```
 
 As expected, `Pem == Pme`, `Pet == Pte`, `Pmt == Ptm`, `Pee + Pem + Pet = 1`, , `Pme + Pmm + Pmt = 1`, and `Pte + Ptm + Ptt = 1`.
 
-### Oscillations in vacuum: single energy and baseline
+
+### Oscillations in vacuum: fixed energy and baseline
 
 Now let's compute the probabilities in vacuum.  To do this, we can use the routine
 ```python
@@ -121,27 +126,64 @@ import oscprob3nu
 import hamiltonians3nu
 from globaldefs import *
 
-h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_vacuum_energy_independent(  S12_BF, S23_BF,
-                                                                                S13_BF, DCP_BF,
-                                                                                D21_BF, D31_BF)
-
 energy = 1.e9     # Neutrino energy [eV]
 baseline = 1.3e3  # Baseline [km]
 
+h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_vacuum_energy_independent(  S12_BF, S23_BF,
+                                                                                S13_BF, DCP_BF,
+                                                                                D21_BF, D31_BF)
+h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
 
 Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( \
-                                                    np.multiply(1./energy, h_vacuum_energy_indep),
-                                                    baseline*CONV_KM_TO_INV_EV)
+                                                h_vacuum, baseline*CONV_KM_TO_INV_EV)
 
-print("Pee = %6.5f, Pem = %6.5f, Pet = %6.5f, Pme = %6.5f, Pmm = %6.5f, Pmt = %6.5f, Pte = %6.5f, " \
-    + "Ptm = %6.5f, Ptt = %6.5f" % (Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt))
+print("Pee = %6.5f, Pem = %6.5f, Pet = %6.5f" % (Pee, Pem, Pet))
+print("Pme = %6.5f, Pmm = %6.5f, Pmt = %6.5f" % (Pme, Pmm, Pmt))
+print("Pte = %6.5f, Ptm = %6.5f, Ptt = %6.5f" % (Pte, Ptm, Ptt))
 ````
-Thus returns
+This returns
 ```shell
-Pee = 0.96711, Pem = 0.01593, Pet = 0.01695,
-Pme = 0.01823, Pmm = 0.64417, Pmt = 0.33761,
-sPte = 0.01466, Ptm = 0.33990, Ptt = 0.64544
+Pee = 0.96711, Pem = 0.01593, Pet = 0.01695
+Pme = 0.01823, Pmm = 0.64417, Pmt = 0.33761
+Pte = 0.01466, Ptm = 0.33990, Ptt = 0.64544
 ```
+
+### Oscillations in vacuum: fixed energy, varying baseline
+
+Now we fix the energy at, say 10 MeV, and vary the baseline between 1 and 500 km.  We use a fine grid in `L` so that the oscillations are clearly rendered.
+
+```python
+import oscprob3nu
+import hamiltonians3nu
+from globaldefs import *
+
+energy = 1.e7     # Neutrino energy [eV]
+
+# Baselines, L
+log10_l_min = 0.0          # log10 [km]
+log10_l_max = log10(5.e2)  # log10 [km]
+log10_l_npts = 6000
+log10_l_val = np.linspace(log10_l_min, log10_l_max, log10_l_npts)  # [km]
+l_val =[CONV_KM_TO_INV_EV*10.**x for x in log10_l_val]
+
+
+h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_vacuum_energy_independent(  S12_BF, S23_BF,
+                                                                                S13_BF, DCP_BF,
+                                                                                D21_BF, D31_BF)
+h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
+
+# Each element of prob: [Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt]
+prob = [oscprob3nu.probabilities_3nu(h_vacuum, l) for l in l_val]
+prob_ee = [x[0] for x in lst_prob]  # Pee
+prob_em = [x[1] for x in lst_prob]  # Pem
+prob_et = [x[2] for x in lst_prob]  # Pet
+```
+
+To visualize the data:
+
+
+### Oscillations in vacuum: fixed baseline, varying energy
+
 
 ## Documentation and help
 
