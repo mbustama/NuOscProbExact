@@ -1,3 +1,8 @@
+| arXiv |
+|:-----:|
+|[![arXiv](https://img.shields.io/badge/arXiv-1904.XXXXX-orange.svg)](https://arXiv.org/abs/1904.XXXXX)
+
+
 # NuOscProbExact
 Code to compute exact two- and three-neutrino oscillation probabilities using SU(2) and SU(3) expansions
 
