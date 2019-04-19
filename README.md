@@ -47,7 +47,7 @@ git clone https://github.com/mbustama/NuOscProbExact.git
     ../oscprob3nu_tests.py          Routines to generate three-flavor probability tests plots
 ```
 3. (Optional) Run the test suite
-   ```
+   ```shell
    cd /home/MyProjects/NuOscProbExact
    python run_testsuite.py
    ```
