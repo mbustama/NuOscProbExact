@@ -347,3 +347,17 @@ print(Pme+Pmm+Pmt)
 print(Pte+Ptm+Ptt)
 """
 
+
+
+hamiltonian = [
+                [1.0+0.0j, 0.0+2.0j, 0.0-1.0j],
+                [0.0-2.0j, 3.0+0.0j, 3.0+0.0j],
+                [0.0+1.0j, 3.0-0.0j, 5.0+0.0j]
+]
+
+L = 1.0
+
+Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = \
+    probabilities_3nu(hamiltonian, L)
+
+print(Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt)

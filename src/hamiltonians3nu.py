@@ -18,9 +18,9 @@ Last modified: 2019/04/17 17:14
 
 from numpy import *
 import numpy as np
-from pylab import *
-from matplotlib import *
-import matplotlib as mpl
+# from pylab import *
+# from matplotlib import *
+# import matplotlib as mpl
 import cmath
 import cmath as cmath
 import copy as cp
