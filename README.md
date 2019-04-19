@@ -222,29 +222,6 @@ h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
 h1, h2, h3, h4, h5, h6, h7, h8 = oscprob3nu.hamiltonian_3nu_coefficients(h_vacuum)
 u0, u1, u2, u3, u4, u5, u6, u7, u8 = oscprob3nu.evolution_operator_3nu_u_coefficients(h_vacuum, baseline*CONV_KM_TO_INV_EV)
 evol_op = oscprob3nu.evolution_operator_3nu(h_vacuum, baseline*CONV_KM_TO_INV_EV)
-
-print("h1 = %4.3f+%4.3fi, h2 = %4.3f+%4.3fi, h3 = %4.3f+%4.3fi, h4 = %4.3f+%4.3fi" % \
-    (h1.real, h1.imag, h2.real, h2.imag, h3.real, h3.imag, h4.real, h4.imag))
-print("h5 = %4.3f+%4.3fi, h6 = %4.3f+%4.3fi, h7 = %4.3f+%4.3fi, h8 = %4.3f+%4.3fi" % \
-    (h5.real, h5.imag, h6.real, h6.imag, h7.real, h7.imag, h8.real, h8.imag))
-print()
-print("u0 = %4.3f+%4.3fi, u1 = %4.3f+%4.3fi, u2 = %4.3f+%4.3fi, u3 = %4.3f+%4.3fi, u4 = %4.3f+%4.3fi" % \
-    (u0.real, u0.imag, u1.real, u1.imag, u2.real, u2.imag, u3.real, u3.imag, u4.real, u4.imag))
-print("u5 = %4.3f+%4.3fi, u6 = %4.3f+%4.3fi, u7 = %4.3f+%4.3fi, u8 = %4.3f+%4.3fi" % \
-    (u5.real, u5.imag, u6.real, u6.imag, u7.real, u7.imag, u8.real, u8.imag))
-print()
-print("U3 = [[%4.3f+%4.3fi, %4.3f+%4.3fi, %4.3f+%4.3fi]" % \
-    (evol_op[0][0].real, evol_op[0][0].imag,
-    evol_op[0][1].real, evol_op[0][1].imag,
-    evol_op[0][2].real, evol_op[0][2].imag))
-print("      [%4.3f+%4.3fi, %4.3f+%4.3fi, %4.3f+%4.3fi]" % \
-    (evol_op[1][0].real, evol_op[1][0].imag,
-    evol_op[1][1].real, evol_op[1][1].imag,
-    evol_op[1][2].real, evol_op[1][2].imag))
-print("      [%4.3f+%4.3fi, %4.3f+%4.3fi, %4.3f+%4.3fi]]" % \
-    (evol_op[2][0].real, evol_op[2][0].imag,
-    evol_op[2][1].real, evol_op[2][1].imag,
-    evol_op[2][2].real, evol_op[2][2].imag))
 ```
 
 
