@@ -265,7 +265,7 @@ The parameter `case` can take any of the same values as listed [above](#oscillat
 
 ### Oscillations in matter
 
-For oscillation in matter, we proceed in an analogous way as for oscillations in vacuum.  To compute the Hamiltonian in matter, we can use the routine `hamiltonian_matter` in the module `hamiltonians3nu`.  First, we need to compute `h_vacuum`, and then pass it to `hamiltionian_matter`, together with the neutrino-electron charged-current potential `VCC`, with VCC = sqrt(2.0) * G_F * n_e.
+For oscillation in matter, we proceed in an analogous way as for oscillations in vacuum.  To compute the Hamiltonian in matter, we can use the routine `hamiltonian_matter` in the module `hamiltonians3nu`.  First, we need to compute `h_vacuum`, and then pass it to `hamiltonian_matter`, together with the neutrino-electron charged-current potential `VCC`, with V_CC = sqrt(2.0) * G_F * n_e.
 
 In the example below, we set the matter potential to `VCC_EARTH_CRUST`, which is computed using the electron density of the crust of the Earth, and is read from the `globaldefs`.
 ```python
@@ -297,6 +297,11 @@ Pte = 0.01466, Ptm = 0.33990, Ptt = 0.64544
 ```
 
 ### Oscillations in matter with non-standard interactions (NSI)
+
+For oscillation in matter with NSI, we can use the routine `hamiltonian_nsi` in the module `hamiltonians3nu`.  First, we need to compute `h_vacuum`, and then pass it to `hamiltonian_nsi`, together with `VCC`, and with a vector `eps` containing the NSI strength paramters
+```python
+eps = [eps_ee, eps_em, eps_et, eps_mm, eps_mt, eps_tt]
+```
 
 
 
