@@ -70,6 +70,7 @@ There are only two core modules: `oscprobn2nu.py` and `oscprob3nu.py`.  Each one
 
 In the examples below, we focus on `oscprob3nu.py`, but what we show applies to `oscprob2nu.py` as well.
 
+
 ### Basics
 
 The only input parameters given to `oscprob3nu.py` is the Hamiltonian, in the form of a 3x3 Hermitian matrix, and the baseline.  (For `oscprob2nu.py`, it is a 2x2 Hermitian matrix.)  The Hamiltonian is passed to the routines as a list, *i.e.*,
@@ -80,6 +81,7 @@ hamiltonian = [[H11, H12, H13], [H21, H22, H23], [H31, H32, H33]]
 > **Important:** If you feed the code a non-Hermitian matrix, it will output nonsensical results
 
 Most of the time, you will be only interested in computing oscillation probabilities.  The function to compute probabilities is `probabilities_3nu`.  It takes in `hamiltonian` and `L` as input parameters and returns the list of probabilities Pee (nu_e --> nu_e), Pem (nu_e --> nu_mu), Pet (nu_e --> nu_tau), Pme (nu_mu --> nu_e), Pmm (nu_mu --> nu_mu), Pmt (nu_mu --> nu_tau), Pte (nu_tau --> nu_e), Ptm (nu_tau --> nu_mu), (nu_tau --> nu_tau).
+
 
 ### Trivial example
 
@@ -151,9 +153,11 @@ Pte = 0.01466, Ptm = 0.33990, Ptt = 0.64544
 
 ### Oscillations in vacuum: fixed energy, varying baseline
 
-Now we fix the energy at, say 10 MeV, and vary the baseline between 1 and 500 km.  We use a fine grid in `L` so that the oscillations are clearly rendered.
+Now we fix the energy at, say, 10 MeV, and vary the baseline between 1 and 500 km.  We use a fine grid in `L` so that the oscillations are clearly rendered.
 
 ```python
+import numpy as np
+
 import oscprob3nu
 import hamiltonians3nu
 from globaldefs import *
@@ -188,8 +192,8 @@ Alternatively, you can automatically produce plots of probability using the foll
 import oscprob3nu_tests
 
 case = 'vacuum'
-oscprob3nu_tests.plot_probability_3nu_vs_l( case, energy=1.e7,
-                                            output_filename='prob_3nu_vacuum_vs_l', output_format='pdf',
+oscprob3nu_tests.plot_probability_3nu_vs_baseline( case, energy=1.e7,
+                                            output_filename='prob_3nu_vacuum_vs_baseline', output_format='pdf',
                                             log10_l_min=0.0, log10_l_max=log10(5.e2), log10_l_npts=6000,
                                             plot_prob_ee=True, plot_prob_em=True, plot_prob_et=True,
                                             plot_prob_me=False, plot_prob_mm=False, plot_prob_mt=False,
@@ -205,6 +209,58 @@ For more information about these cases, refer to the paper [arXiv:1904.XXXXX](ht
 
 
 ### Oscillations in vacuum: fixed baseline, varying energy
+
+Now we fix the baseline at, say, 1300 km, and vary the energy between 100 MeV and 10 GeV.
+
+```python
+import numpy as np
+
+import oscprob3nu
+import hamiltonians3nu
+from globaldefs import *
+
+baseline = 1.3e3                       # Baseline [km]
+baseline = baseline*CONV_KM_TO_INV_EV  # [eV^{-1}]
+
+# Neutrino energies
+log10_energy_min = -1.0 # [GeV]
+log10_energy_max = 1.0  # [GeV]
+log10_energy_npts = 200
+log10_energy = np.linspace( log10_energy_min,
+                            log10_energy_max,
+                            log10_energy_npts)
+energy = [10.**x for x in log10_energy] # [GeV]
+
+h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_vacuum_energy_independent(  S12_BF, S23_BF,
+                                                                                S13_BF, DCP_BF,
+                                                                                D21_BF, D31_BF)
+
+# Each element of prob: [Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt]
+prob = [oscprob3nu.probabilities_3nu( np.multiply(1./x/1.e9, h_vacuum_energy_indep), baseline) \
+        for x in energy]
+prob_ee = [x[0] for x in lst_prob]  # Pee
+prob_em = [x[1] for x in lst_prob]  # Pem
+prob_et = [x[2] for x in lst_prob]  # Pet
+```
+
+To visualize the data:
+
+
+Alternatively, you can automatically produce plots of probability using the following function from the `oscprob3nu_tests` module:
+```python
+import oscprob3nu_tests
+
+case = 'vacuum'
+oscprob3nu_tests.plot_probability_3nu_vs_energy( case, baseline=1.3e3,
+                                            output_filename='prob_3nu_vacuum_vs_energy', output_format='pdf',
+                                            log10_energy_min=-1.0, log10_energy_max=1.0, log10_l_npts=200,
+                                            plot_prob_ee=True, plot_prob_em=True, plot_prob_et=True,
+                                            plot_prob_me=False, plot_prob_mm=False, plot_prob_mt=False,
+                                            plot_prob_te=False, plot_prob_tm=False, plot_prob_tt=False)
+```
+The parameter `case` can take any of the same values as listed [above](#oscillations-in-vacuum-fixed-energy-varying-baseline).
+
+
 
 
 ## Documentation and help
