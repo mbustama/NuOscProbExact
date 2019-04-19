@@ -133,12 +133,14 @@ Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( \
                                                     np.multiply(1./energy, h_vacuum_energy_indep),
                                                     baseline*CONV_KM_TO_INV_EV)
 
-print("Pee = %6.5f, Pem = %6.5f, Pet = %6.5f, Pme = %6.5f, Pmm = %6.5f, Pmt = %6.5f, Pte = %6.5f, Ptm = %6.5f, Ptt = %6.5f" \
-    % (Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt))
+print("Pee = %6.5f, Pem = %6.5f, Pet = %6.5f, Pme = %6.5f, Pmm = %6.5f, Pmt = %6.5f, Pte = %6.5f, " \
+    + "Ptm = %6.5f, Ptt = %6.5f" % (Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt))
 ````
 Thus returns
 ```shell
-Pee = 0.96711, Pem = 0.01593, Pet = 0.01695, Pme = 0.01823, Pmm = 0.64417, Pmt = 0.33761, Pte = 0.01466, Ptm = 0.33990, Ptt = 0.64544
+Pee = 0.96711, Pem = 0.01593, Pet = 0.01695,
+Pme = 0.01823, Pmm = 0.64417, Pmt = 0.33761,
+sPte = 0.01466, Ptm = 0.33990, Ptt = 0.64544
 ```
 
 ## Documentation and help
