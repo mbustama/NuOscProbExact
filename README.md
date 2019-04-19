@@ -335,8 +335,8 @@ h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_vacuum_energy_independent(  
 h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
 h_nsi = hamiltonians3nu.hamiltonian_nsi(h_vacuum, VCC_EARTH_CRUST, EPS_TEST)
 
-Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( \
-                                                h_nsi, baseline*CONV_KM_TO_INV_EV)
+Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( h_nsi,
+                                                                            baseline*CONV_KM_TO_INV_EV)
 
 print("Pee = %6.5f, Pem = %6.5f, Pet = %6.5f" % (Pee, Pem, Pet))
 print("Pme = %6.5f, Pmm = %6.5f, Pmt = %6.5f" % (Pme, Pmm, Pmt))
@@ -373,8 +373,8 @@ h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_vacuum_energy_independent(  
 h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
 h_liv = hamiltonians3nu.hamiltonian_liv(h_vacuum, LIV_PARAMS_TEST)
 
-Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( \
-                                                h_liv, baseline*CONV_KM_TO_INV_EV)
+Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( h_liv,
+                                                                            baseline*CONV_KM_TO_INV_EV)
 
 print("Pee = %6.5f, Pem = %6.5f, Pet = %6.5f" % (Pee, Pem, Pet))
 print("Pme = %6.5f, Pmm = %6.5f, Pmt = %6.5f" % (Pme, Pmm, Pmt))
