@@ -195,6 +195,7 @@ The parameter `case` be:
 * `matter`: for oscillations in constant matter, assuming the density of the Earth's crust as set in `globaldefs`
 * `nsi`: for oscillations in matter with non-standard interactions, with the NSI strengh parameters fixed to the default values in `globaldefs`
 * `liv`: for oscillations in a CPT-odd Lorentz invariance-violating (LIV) background, with the LIV parameters fixed to the default values in `globaldefs`
+
 For more information about these cases, refer to the paper [arXiv:1904.XXXXX](https://arxiv.org/abs/1904.XXXXX) and inspect the contents of the file `globaldefs.py`.
 
 
