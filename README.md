@@ -108,7 +108,9 @@ Now let's compute the probabilities in vacuum.  To do this, we can use the routi
 ```python
 hamiltonian_vacuum_energy_independent(s12, s23, s13, dCP, D21, D31)
 ```
-to compute the Hamiltonian in vacuum that is provided in the `hamiltonians3nu.py` module.  The input parameters `s12`, `s23`, `s13`, `dCP`, `D21`, and `D31` are, respectively, sin(theta_12), sin(theta_23), sin(theta_13), delta_CP, Delta m_21^2, and Delta m_31^2.
+that is provided in the `hamiltonians3nu.py` module.  The input parameters `s12`, `s23`, `s13`, `dCP`, `D21`, and `D31` are, respectively, sin(theta_12), sin(theta_23), sin(theta_13), delta_CP, Delta m_21^2, and Delta m_31^2.  For this example, we set them to their current best-fit values, which we pull from `globaldefs.py` (see that file for more information about these values).
+
+> **Important:** The function `hamiltonian_vacuum_energy_independent` returns the Hamiltonian in vacuum **without** the *1/E* prefactor, where *E* is the neutrino energy.  It was done in this way so that, if we wish to compute the probabilities at different energies, we need compute `hamiltonian_vacuum_energy_independent` only once, and then multiply it by a varying *1/E* prefactor.
 
 
 ## Documentation and help
