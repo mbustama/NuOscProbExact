@@ -265,7 +265,10 @@ The parameter `case` can take any of the same values as listed [above](#oscillat
 
 ### Oscillations in matter
 
-For oscillation in matter, we proceed in an analogous way as for oscillations in vacuum.  To compute the Hamiltonian in matter, we can use the routine `hamiltonian_matter` in the module `hamiltonians3nu`.  First, we need to compute `h_vacuum`, and then pass it to `hamiltonian_matter`, together with the neutrino-electron charged-current potential `VCC`, with V_CC = sqrt(2.0) * G_F * n_e.
+For oscillation in matter, we proceed in an analogous way as for oscillations in vacuum.  To compute the Hamiltonian in matter, we can use the routine `hamiltonian_matter` in the module `hamiltonians3nu`.  First, we need to compute `h_vacuum`, and then pass it to `hamiltonian_matter`, together with the neutrino-electron charged-current potential `VCC`, with V_CC = sqrt(2.0) * G_F * n_e.  This routine is called as:
+```python
+hamiltonian_matter(h_vacuum, VCC)
+```
 
 In the example below, we set the matter potential to `VCC_EARTH_CRUST`, which is computed using the electron density of the crust of the Earth, and is read from the `globaldefs`.
 ```python
@@ -298,11 +301,42 @@ Pte = 0.01466, Ptm = 0.33990, Ptt = 0.64544
 
 ### Oscillations in matter with non-standard interactions (NSI)
 
-For oscillation in matter with NSI, we can use the routine `hamiltonian_nsi` in the module `hamiltonians3nu`.  First, we need to compute `h_vacuum`, and then pass it to `hamiltonian_nsi`, together with `VCC`, and with a vector `eps` containing the NSI strength paramters
+For oscillation in matter with NSI, we can use the routine `hamiltonian_nsi` in the module `hamiltonians3nu`.  First, we need to compute `h_vacuum`, and then pass it to `hamiltonian_nsi`, together with `VCC`, and with a vector `eps` containing the NSI strength parameters,
 ```python
 eps = [eps_ee, eps_em, eps_et, eps_mm, eps_mt, eps_tt]
 ```
+This routine is called as
+```python
+hamiltonian_nsi(h_vacuum, VCC, eps)
+```
 
+```python
+import oscprob3nu
+import hamiltonians3nu
+from globaldefs import *
+
+energy = 1.e9     # Neutrino energy [eV]
+baseline = 1.3e3  # Baseline [km]
+
+h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_vacuum_energy_independent(  S12_BF, S23_BF,
+                                                                                S13_BF, DCP_BF,
+                                                                                D21_BF, D31_BF)
+h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
+h_nsi = hamiltonians3nu.hamiltonian_nsi(h_vacuum, VCC_EARTH_CRUST)
+
+Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( \
+                                                h_vacuum, baseline*CONV_KM_TO_INV_EV)
+
+print("Pee = %6.5f, Pem = %6.5f, Pet = %6.5f" % (Pee, Pem, Pet))
+print("Pme = %6.5f, Pmm = %6.5f, Pmt = %6.5f" % (Pme, Pmm, Pmt))
+print("Pte = %6.5f, Ptm = %6.5f, Ptt = %6.5f" % (Pte, Ptm, Ptt))
+````
+This returns
+```shell
+Pee = 0.96711, Pem = 0.01593, Pet = 0.01695
+Pme = 0.01823, Pmm = 0.64417, Pmt = 0.33761
+Pte = 0.01466, Ptm = 0.33990, Ptt = 0.64544
+```
 
 
 ### Oscillations in a Lorentz invariance-violating (LIV) background
