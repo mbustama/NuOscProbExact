@@ -204,7 +204,7 @@ Pme = 0.01823, Pmm = 0.64417, Pmt = 0.33761
 Pte = 0.01466, Ptm = 0.33990, Ptt = 0.64544
 ```
 
-Sometimes, you might be interested also in returning the coefficients `h1`, ..., `h8` of the expansion of the Hamiltonian in terms of Gell-Mann matrices, the coefficients `u0`, ..., `u8` of the SU(3) expansion of the associated time-evolution operator, or the time-evolution operator `U3` itself, as a 3x3 matrix.  See the paper [arXiv:1904.XXXXX](https://arxiv.org/abs/1904.XXXXX) for details on these quantities.
+Sometimes, you might be interested also in returning the coefficients `h1`, ..., `h8` of the expansion of the Hamiltonian in terms of Gell-Mann matrices, the coefficients `u0`, ..., `u8` of the SU(3) expansion of the associated time-evolution operator, or the time-evolution operator `evol_operator` itself, as a 3x3 matrix.  See the paper [arXiv:1904.XXXXX](https://arxiv.org/abs/1904.XXXXX) for details on these quantities.
 ```python
 
 import oscprob3nu
@@ -224,6 +224,51 @@ u0, u1, u2, u3, u4, u5, u6, u7, u8 = oscprob3nu.evolution_operator_3nu_u_coeffic
                                                                             h_vacuum,
                                                                             baseline*CONV_KM_TO_INV_EV)
 evol_op = oscprob3nu.evolution_operator_3nu(h_vacuum, baseline*CONV_KM_TO_INV_EV)
+```
+
+#### Two-neutrino oscillations
+
+To compute the two-neutrino oscillation probabilities in vacuum, we can use the routine
+```python
+hamiltonian_2nu_vacuum_energy_independent(sth, Dm)
+```
+that is provided in the `hamiltonians2nu` module.  The input parameters `sth`, and `Dm` are, respectively, sin(theta), and Delta m^2.  For this example, we set them to current best-fit values for atmospheric neutrinos.
+
+```python
+import oscprob2nu
+import hamiltonians2nu
+from globaldefs import *
+
+energy = 1.e9     # Neutrino energy [eV]
+baseline = 1.3e3  # Baseline [km]
+
+h_vacuum_energy_indep = hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(STH_BF, DM_BF)
+h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
+
+Pee, Pem, Pme, Pmm = oscprob3nu.probabilities_2nu(h_vacuum, baseline*CONV_KM_TO_INV_EV)
+
+print("Pee = %6.5f, Pem = %6.5f" % (Pee, Pem))
+print("Pme = %6.5f, Pmm = %6.5f" % (Pme, Pmm))
+````
+This returns
+```shell
+```
+
+We can also return the coefficients `h1`, `h2`, `h3` of the expansion of the Hamiltonian in terms of Pauli matrices, or the time-evolution operator `evol_operator` itself, as a 2x2 matrix.
+```python
+
+import oscprob2nu
+import hamiltonians2nu
+from globaldefs import *
+
+energy = 1.e9     # Neutrino energy [eV]
+baseline = 1.3e3  # Baseline [km]
+
+h_vacuum_energy_indep = hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(STH_BF, DM_BF)
+h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
+
+h1, h2, h3 = oscprob2nu.hamiltonian_2nu_coefficients(h_vacuum)
+evol_op = oscprob2nu.evolution_operator_2nu(h_vacuum, baseline*CONV_KM_TO_INV_EV)
 ```
 
 
