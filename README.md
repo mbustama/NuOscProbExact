@@ -242,7 +242,7 @@ from globaldefs import *
 energy = 1.e9     # Neutrino energy [eV]
 baseline = 1.3e3  # Baseline [km]
 
-h_vacuum_energy_indep = hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(STH_BF, DM_BF)
+h_vacuum_energy_indep = hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(S23_BF, D31_BF)
 h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
 
 Pee, Pem, Pme, Pmm = oscprob3nu.probabilities_2nu(h_vacuum, baseline*CONV_KM_TO_INV_EV)
@@ -264,7 +264,7 @@ from globaldefs import *
 energy = 1.e9     # Neutrino energy [eV]
 baseline = 1.3e3  # Baseline [km]
 
-h_vacuum_energy_indep = hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(STH_BF, DM_BF)
+h_vacuum_energy_indep = hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(S23_BF, D31_BF)
 h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
 
 h1, h2, h3 = oscprob2nu.hamiltonian_2nu_coefficients(h_vacuum)
