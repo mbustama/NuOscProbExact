@@ -391,7 +391,7 @@ For oscillation in matter, we proceed in an analogous way as for oscillations in
 hamiltonian_matter(h_vacuum, VCC)
 ```
 
-In the example below, we set the matter potential to `VCC_EARTH_CRUST`, which is computed using the electron density of the crust of the Earth, and is read from the `globaldefs`.
+In the example below, we set the matter potential to `VCC_EARTH_CRUST`, which is computed using the electron density of the crust of the Earth, and is read from `globaldefs`.
 ```python
 import oscprob3nu
 import hamiltonians3nu
