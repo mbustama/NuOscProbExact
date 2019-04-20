@@ -272,7 +272,7 @@ evol_op = oscprob2nu.evolution_operator_2nu(h_vacuum, baseline*CONV_KM_TO_INV_EV
 ```
 
 
-### Oscillations in vacuum: fixed energy, varying baseline
+### Three-neutrino oscillations in vacuum: fixed energy, varying baseline
 
 Now we fix the energy at, say, 10 MeV, and vary the baseline between 1 and 500 km.  We use a fine grid in `L` so that the oscillations are clearly rendered.
 
