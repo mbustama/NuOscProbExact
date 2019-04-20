@@ -220,8 +220,9 @@ h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independen
 h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
 
 h1, h2, h3, h4, h5, h6, h7, h8 = oscprob3nu.hamiltonian_3nu_coefficients(h_vacuum)
-u0, u1, u2, u3, u4, u5, u6, u7, u8 = oscprob3nu.evolution_operator_3nu_u_coefficients(  h_vacuum,
-                                                                                        baseline*CONV_KM_TO_INV_EV)
+u0, u1, u2, u3, u4, u5, u6, u7, u8 = oscprob3nu.evolution_operator_3nu_u_coefficients(  \
+                                                                                    h_vacuum,
+                                                                                    baseline*CONV_KM_TO_INV_EV)
 evol_op = oscprob3nu.evolution_operator_3nu(h_vacuum, baseline*CONV_KM_TO_INV_EV)
 ```
 
