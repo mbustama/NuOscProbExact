@@ -518,7 +518,7 @@ Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( h_my
                                                                             baseline*CONV_KM_TO_INV_EV)
 
 ```
-Though we do not show it here, `hamiltonian_mymodel` could also depend on `energy`.  The code for two-neutrino oscillations is analogous, but `hamiltonian_mymodel` should be a 2x2 matrix instead.
+Though we do not show it here, `hamiltonian_mymodel` could also depend on `energy`.  The code for two-neutrino oscillations is analogous, but `hamiltonian_mymodel` should return a 2x2 matrix instead.
 
 
 ## Documentation and help
