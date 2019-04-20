@@ -32,7 +32,7 @@ from globaldefs import *
 def plot_probability_vs_energy_compare(output_format='pdf'):
 
     # Baseline (DUNE)
-    l = 1.3e3/CONV_KM_TO_INV_EV # [eV^{-1}]
+    l = 1.3e3*CONV_KM_TO_INV_EV # [eV^{-1}]
 
     # Neutrino energies
     log10_energy_nu_min = log10(1.e-1) # [GeV]
@@ -56,9 +56,12 @@ def plot_probability_vs_energy_compare(output_format='pdf'):
     fig.subplots_adjust(hspace=0.05, wspace=0.05)
 
     h_vacuum_energy_indep = \
-        hamiltonians3nu.hamiltonian_vacuum_energy_independent(  S12_BF, S23_BF,
-                                                                S13_BF, DCP_BF,
-                                                                D21_BF, D31_BF)
+        hamiltonians3nu.hamiltonian3nu_vacuum_energy_independent(   S12_BF,
+                                                                    S23_BF,
+                                                                    S13_BF,
+                                                                    DCP_BF,
+                                                                    D21_BF,
+                                                                    D31_BF)
 
     # eps_ee, eps_em, eps_et, eps_mm, eps_mt, eps_tt
     eps = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
@@ -68,14 +71,14 @@ def plot_probability_vs_energy_compare(output_format='pdf'):
                     for x in energy_nu]
 
     prob_matter = [oscprob3nu.probabilities_3nu( \
-                    hamiltonians3nu.hamiltonian_matter( \
+                    hamiltonians3nu.hamiltonian3nu_matter( \
                         np.multiply(1./x/1.e9, h_vacuum_energy_indep),
-                                    A_EARTH_CRUST),
+                                    VCC_EARTH_CRUST),
                         l)
                     for x in energy_nu]
 
     prob_nsi = [oscprob3nu.probabilities_3nu( \
-                    hamiltonians3nu.hamiltonian_nsi( \
+                    hamiltonians3nu.hamiltonian3nu_nsi( \
                         np.multiply(1./x/1.e9, h_vacuum_energy_indep),
                                     A_EARTH_CRUST, eps),
                         l)

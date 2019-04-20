@@ -15,11 +15,11 @@ Last modified: 2019/04/17 17:14
 """
 
 import oscprob3nu
-import oscprob3nuhamiltonians
+import hamiltonians3nu
 from globaldefs import *
 
 
-def plot_probability_3nu_vs_l(case, energy_nu=1.e6, output_format='pdf'):
+def plot_probability_3nu_vs_l(case, energy=1.e6, output_format='pdf'):
 
     # Baselines, L
     log10_l_min = 0.0 # [km]
@@ -29,8 +29,8 @@ def plot_probability_3nu_vs_l(case, energy_nu=1.e6, output_format='pdf'):
     l_val =[10.**x for x in log10_l_val]
 
     if (case == 'vacuum'):
-        hamiltonian = (1./energy_nu) \
-            * hamiltonian_vacuum_energy_independent(s12, s23, s13, dCP, D21,
+        hamiltonian = (1./energy) \
+            * hamiltonian3nu_vacuum_energy_independent(s12, s23, s13, dCP, D21,
                                                     D31)
         label_case = r'Vacuum'
         filename_output = 'prob_3nu_vacuum_vs_l'
@@ -117,7 +117,7 @@ def plot_probability_3nu_vacuum_vs_l(output_format='pdf'):
     # Hamiltonian evaluated at a single energy; in the case of vacuum
     # oscillations we only need to evaluate it once
     hamiltonian_matrix = (1./energy_nu) \
-        * hamiltonian_vacuum_energy_independent(s12, s23, s13, dCP, D21, D31)
+        * hamiltonian3nu_vacuum_energy_independent(s12, s23, s13, dCP, D21, D31)
 
     # Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt
     lst_prob = [oscprob3nu.probabilities_3nu(   hamiltonian_matrix,
@@ -276,8 +276,8 @@ def plot_probability_3nu_matter_vs_l(output_format='pdf'):
 
     # Hamiltonian evaluated at a single energy
     h_vacuum = (1./energy_nu) \
-        * hamiltonian_vacuum_energy_independent(s12, s23, s13, dCP, D21, D31)
-    h_matter = hamiltonian_matter(h_vacuum, A_EARTH_CRUST)
+        * hamiltonian3nu_vacuum_energy_independent(s12, s23, s13, dCP, D21, D31)
+    h_matter = hamiltonian3nu_matter(h_vacuum, A_EARTH_CRUST)
 
     # Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt
     lst_prob = [oscprob3nu.probabilities_3nu(   hamiltonian_matrix,
