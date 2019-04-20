@@ -384,7 +384,7 @@ oscprob3nu_tests.plot_probability_3nu_vs_energy(
 The parameter `case` can take any of the same values as listed [above](#oscillations-in-vacuum-fixed-energy-varying-baseline).
 
 
-### Oscillations in matter
+### Three-neutrino oscillations in matter
 
 For oscillation in matter, we proceed in an analogous way as for oscillations in vacuum.  To compute the Hamiltonian in matter, we can use the routine `hamiltonian_matter` in the module `hamiltonians3nu`.  First, we need to compute `h_vacuum`, and then pass it to `hamiltonian_matter`, together with the neutrino-electron charged-current potential `VCC`, with V_CC = sqrt(2.0) * G_F * n_e.  This routine is called as:
 ```python
