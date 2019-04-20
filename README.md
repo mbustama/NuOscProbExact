@@ -330,7 +330,7 @@ The parameter `case` can take any of the following values:
 For more information about these cases, refer to the paper [arXiv:1904.XXXXX](https://arxiv.org/abs/1904.XXXXX) and inspect the contents of the file `globaldefs.py`.
 
 
-### Oscillations in vacuum: fixed baseline, varying energy
+### Three-neutrino oscillations in vacuum: fixed baseline, varying energy
 
 Now we fix the baseline at, say, 1300 km, and vary the energy between 100 MeV and 10 GeV.
 
@@ -420,7 +420,7 @@ Pme = 0.00011, Pmm = 0.65964, Pmt = 0.34025
 Pte = 0.00008, Ptm = 0.34026, Ptt = 0.65966
 ```
 
-### Oscillations in matter with non-standard interactions (NSI)
+### Three-neutrino oscillations in matter with non-standard interactions (NSI)
 
 For oscillation in matter with NSI, we can use the routine `hamiltonian_nsi` in the module `hamiltonians3nu`.  First, we need to compute `h_vacuum`, and then pass it to `hamiltonian_nsi`, together with `VCC`, and with a vector `eps` containing the NSI strength parameters,
 ```python
@@ -458,7 +458,7 @@ This returns
 ```
 
 
-### Oscillations in a Lorentz invariance-violating (LIV) background
+### Three-neutrino oscillations in a Lorentz invariance-violating (LIV) background
 
 For oscillation LIV, we can use the routine `hamiltonian_liv` in the module `hamiltonians3nu`.  As before, first, we need to compute `h_vacuum`, and then pass it to `hamiltonian_liv`, together with the vector `liv_params` containing the LIV parameters:
 ```python
@@ -518,7 +518,7 @@ Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( h_my
                                                                             baseline*CONV_KM_TO_INV_EV)
 
 ```
-Though we do not show it here, `hamiltonian_mymodel` could also depend on `energy`.
+Though we do not show it here, `hamiltonian_mymodel` could also depend on `energy`.  The code for two-neutrino oscillations is analogous, but `hamiltonian_mymodel` should be a 2x2 matrix instead.
 
 
 ## Documentation and help
