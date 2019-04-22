@@ -3,7 +3,7 @@
 
 __version__ = "0.1"
 __author__ = "Mauricio Bustamante"
-__email__ = "mbustamante@nbi.ku.dk"
+__email__ = "mbustamante@gmail.com"
 
 
 """
@@ -59,5 +59,25 @@ DCP_BF = 217./180.*np.pi # [rad]
 D21_BF = 7.39e-5 # [eV^2]
 D31_BF = 2.525e-3 # [eV^2]
 
+# NSI parameters
+# Compatible with the 2sigma LMA+COHERENT ranges from 1805.04530
+EPS_EE = 0.06
+EPS_EM = -0.06
+EPS_ET = 0.0#-0.6
+EPS_MM = 0.0#0.6
+EPS_MT = -0.06
+EPS_TT = 0.0#0.6
+EPS_2 = [EPS_EE, EPS_EM, EPS_MM]
+EPS_3 = [EPS_EE, EPS_EM, EPS_ET, EPS_MM, EPS_MT, EPS_TT]
 
+# LIV parameters
+# Compatible with 90% C.L. upper limits on c^(4) from 1709.03434
+SXI12 = 0.0
+SXI23 = 0.0
+SXI13 = 0.0
+DXICP = 0.0
+B1 = 1.e-9 #0.0
+B2 = 1.e-9 #1.e-16
+B3 = 5.e-9 #0.0
+LAMBDA = 1.e12 # [eV]
 

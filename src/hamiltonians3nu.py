@@ -3,7 +3,7 @@
 
 __version__ = "0.1"
 __author__ = "Mauricio Bustamante"
-__email__ = "mbustamante@nbi.ku.dk"
+__email__ = "mbustamante@gmail.com"
 
 
 """
@@ -93,11 +93,11 @@ def hamiltonian_3nu_vacuum_energy_independent(s12, s23, s13, dCP, D21, D31,
     else:
 
         # PMNS matrix
-        U = np.array(pmns_mixing_matrix(s12, s23, s13, dCP))
+        R = np.array(pmns_mixing_matrix(s12, s23, s13, dCP))
         # Mass matrix
         M2 = np.array([[0.0, 0.0, 0.0], [0.0, D21, 0.0], [0.0, 0.0, D31]])
         # Hamiltonian
-        H = list(f*np.matmul(U, np.matmul(M2, np.conj(matrix.transpose(U)))))
+        H = list(f*np.matmul(R, np.matmul(M2, np.conj(matrix.transpose(R)))))
 
     return H
 
@@ -147,11 +147,13 @@ def probabilities_3nu_std(U, D21, D31, energy_nu, l):
 ########################################################################
 
 
-def hamiltonian_3nu_matter(h_vacuum, VCC):
+def hamiltonian_3nu_matter(h_vacuum_energy_independent, energy, VCC):
 
-    h_matter = cp.deepcopy(h_vacuum)
+    h_matter = cp.deepcopy(h_vacuum_energy_independent)
+    h_matter = np.multiply(1.0/energy, h_matter)
 
-    # Add the matter potential to the ee term to find the matter Hamiltonian
+    # Add the matter potential to the ee term to find the matter
+    # Hamiltonian
     h_matter[0][0] += VCC
 
     return h_matter
@@ -163,9 +165,10 @@ def hamiltonian_3nu_matter(h_vacuum, VCC):
 ########################################################################
 
 
-def hamiltonian_3nu_nsi(h_vacuum, VCC, eps):
+def hamiltonian_3nu_nsi(h_vacuum_energy_independent, energy, VCC, eps):
 
-    h_nsi = cp.deepcopy(h_vacuum)
+    h_nsi = cp.deepcopy(h_vacuum_energy_independent)
+    h_nsi = np.multiply(1.0/energy, h_nsi)
 
     eps_ee, eps_em, eps_et, eps_mm, eps_mt, eps_tt = eps
 
@@ -188,6 +191,34 @@ def hamiltonian_3nu_nsi(h_vacuum, VCC, eps):
 ########################################################################
 # Oscillations in a Lorentz-violating background
 ########################################################################
+
+def hamiltonian_3nu_liv(h_vacuum_energy_independent, energy, sxi12, sxi23,
+                        sxi13, dxiCP, b1, b2, b3, Lambda):
+
+    h_liv = cp.deepcopy(h_vacuum_energy_independent)
+    h_liv = np.multiply(1.0/energy, h_liv)
+
+    f = energy/Lambda
+    # PMNS-like mixing matrix
+    R = np.array(pmns_mixing_matrix(sxi12, sxi23, sxi13, dxiCP))
+    # B matrix
+    B = np.array([[b1, 0.0, 0.0], [0.0, b2, 0.0], [0.0, 0.0, b3]])
+    # LIV term
+    H = list(f*np.matmul(R, np.matmul(B, np.conj(matrix.transpose(R)))))
+
+    # print(H)
+
+    h_liv[0][0] += H[0][0]
+    h_liv[0][1] += H[0][1]
+    h_liv[0][2] += H[0][2]
+    h_liv[1][0] += H[1][0]
+    h_liv[1][1] += H[1][1]
+    h_liv[1][2] += H[1][2]
+    h_liv[2][0] += H[2][0]
+    h_liv[2][1] += H[2][1]
+    h_liv[2][2] += H[2][2]
+
+    return h_liv
 
 
 
