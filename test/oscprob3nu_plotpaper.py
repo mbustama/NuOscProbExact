@@ -1,19 +1,28 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
+r"""Produce the plot of probabilities vs. energy shown in the paper.
+
+Contains a routine to generate and save the plot of three-neutrino
+probabilities vs. energy that is included in the paper.
+
+Routine listings
+----------------
+
+    * plot_probability_vs_energy_compare - Generates and saves the plot
+
+References
+----------
+
+.. [1] Mauricio Bustamante, "Exact neutrino oscillation probabilities
+   with arbitrary time-independent Hamiltonians", arXiv:1904.XXXXX.
+
+Created: 2019/04/17 18:08
+Last modified: 2019/04/22 20:36
+"""
 
 __version__ = "0.1"
 __author__ = "Mauricio Bustamante"
 __email__ = "mbustamante@nbi.ku.dk"
 
-
-"""
-3nuplotpaper.py:
-    Routine to generate the plot of probability vs. neutrino energy
-    included in the paper
-
-Created: 2019/04/17 18:08
-Last modified: 2019/04/17 18:08
-"""
 
 from numpy import *
 import numpy as np
@@ -29,8 +38,26 @@ import hamiltonians3nu
 from globaldefs import *
 
 
-def plot_probability_vs_energy_compare(output_format='pdf'):
+def plot_probability_vs_energy_compare(output_format='pdf',
+    output_path='./fig/'):
+    r"""Generates and saves a plot of 3nu probabilities vs. energy.
 
+    Generates and saves a plot of three-neutrino probabilities vs.
+    energy for oscillations in vacuum, matter, with NSI, and with
+    CPT-odd LIV.  This is the same plot that is included in the paper.
+
+    Parameters
+    ----------
+    output_format : str, optional
+        File extension of the plot to save (e.g., 'pdf', 'png', 'jpg').
+    output_path : str, optional
+        File path where to save the plot.
+
+    Returns
+    -------
+    None
+        The plot is generated and saved.
+    """
     # Baseline (DUNE)
     l = 1.3e3*CONV_KM_TO_INV_EV # [eV^{-1}]
 
@@ -173,13 +200,13 @@ def plot_probability_vs_energy_compare(output_format='pdf'):
             ax.set_yticks(ax_yticks_minor, minor=True)
             ax.set_ylim([0.0, 1.0])
 
-        pylab.savefig('../fig/prob_vs_energy_compare.'+output_format,
+        pylab.savefig(output_path+'prob_vs_energy_compare.'+output_format,
             bbox_inches='tight', dpi=300)
 
     return
 
 
-plot_probability_vs_energy_compare()
+# plot_probability_vs_energy_compare(output_format='pdf', output_path='../fig/')
 
 # help(oscprob3nu)
 # print(oscprob3nu.__doc__)

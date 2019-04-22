@@ -13,7 +13,7 @@ Routine listings
     * star - Returns the SU(3) product :math:`(h * h)_k`
     * su3_invariants - Returns the SU(3) invariants :math:`|h|^2, <L>`
     * psi_roots - Returns the roots of the characteristic equation
-    * evolution_operator_3nu__u_coefficients - Returns the :math:`u_k`
+    * evolution_operator_3nu_u_coefficients - Returns the :math:`u_k`
     * evolution_operator_3nu - Returns evolution operator :math:`U_3`
     * probabilities_3nu - Returns the oscillation probabilities
 

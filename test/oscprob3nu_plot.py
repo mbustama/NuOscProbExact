@@ -241,7 +241,7 @@ def plot_probability_3nu_vs_baseline(
         horizontalalignment='left', rotation=0, zorder=2 )
 
     pylab.savefig(output_path+output_filename+'.'+output_format,
-        bbox_inches='tight', dpi=300)
+        bbox_inches='tight', dpi=100)
 
     plt.close()
 

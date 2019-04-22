@@ -8,14 +8,11 @@ exponential expansion.
 Routine listings
 ----------------
 
-    * hamiltonian_3nu_coefficients - Returns coefficients of Hamiltonian
-    * tensor_d - Returns the value of the tensor :math:`d_{i,jk}`
-    * star - Returns the SU(3) product :math:`(h * h)_k`
-    * su3_invariants - Returns the SU(3) invariants :math:`|h|^2, <L>`
-    * psi_roots - Returns the roots of the characteristic equation
-    * evolution_operator_3nu__u_coefficients - Returns the :math:`u_k`
-    * evolution_operator_3nu - Returns evolution operator :math:`U_3`
-    * probabilities_3nu - Returns the oscillation probabilities
+    * hamiltonian_2nu_coefficients - Returns coefficients of Hamiltonian
+    * modulus - Returns the modulus of a vector
+    * evolution_operator_2nu_u_coefficients - Returns the :math:`u_k`
+    * evolution_operator_2nu - Returns evolution operator :math:`U_2`
+    * probabilities_2nu - Returns the oscillation probabilities
 
 References
 ----------
@@ -24,7 +21,7 @@ References
    with arbitrary time-independent Hamiltonians", arXiv:1904.XXXXX.
 
 Created: 2019/04/20 19:07
-Last modified: 2019/04/20 19:07
+Last modified: 2019/04/22 20:33
 """
 
 __version__ = "0.3"
