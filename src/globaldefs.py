@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-r"""Contains physical constants
+r"""Contains physical constants and unit-conversion constants.
 
 This module contains contains values of physical constants and
-unit-conversio factors used by the various modules of NuOscProbExact.
+unit-conversion factors used by the various modules of NuOscProbExact.
 The core modules oscprob2nu.py and oscprob3nu.py do not require these
 constants.
 
