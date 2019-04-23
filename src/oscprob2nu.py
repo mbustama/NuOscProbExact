@@ -96,7 +96,7 @@ def modulus(h_coeffs):
     Parameters
     ----------
     h_coeffs : array_like
-        Eight-component vector
+        Eight-component vector.
 
     Returns
     -------
@@ -119,9 +119,9 @@ def evolution_operator_2nu_u_coefficients(hamiltonian_matrix, L):
     Parameters
     ----------
     hamiltonian_matrix : list
-        2x2 Hamiltonian, [[H11,H12],[H21,H22]]
+        2x2 Hamiltonian, [[H11,H12],[H21,H22]].
     L : float
-        Baseline
+        Baseline.
 
     Returns
     -------
@@ -167,9 +167,9 @@ def evolution_operator_2nu(hamiltonian_matrix, L):
     Parameters
     ----------
     hamiltonian_matrix : list
-        2x2 Hamiltonian, [[H11,H12],[H21,H22]]
+        2x2 Hamiltonian, [[H11,H12],[H21,H22]].
     L : float
-        Baseline
+        Baseline.
 
     Returns
     -------
@@ -209,9 +209,9 @@ def probabilities_2nu(hamiltonian_matrix, L):
     Parameters
     ----------
     hamiltonian_matrix : list
-        2x2 Hamiltonian, [[H11,H12],[H21,H22]]
+        2x2 Hamiltonian, [[H11,H12],[H21,H22]].
     L : float
-        Baseline
+        Baseline.
 
     Returns
     -------
