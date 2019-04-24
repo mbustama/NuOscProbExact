@@ -358,7 +358,7 @@ oscprob3nu_tests.plot_probability_3nu_vs_baseline(
 ```
 The function `plot_probability_3nu_vs_baseline` assumes that `energy` is in GeV and the (log10) of the baselines `log10_l_min` and `log_l_max` are in km.  The function call above produces the following plot:
 
-<img align="middle" class="center" src="https://github.com/mbustama/NuOscProbExact/blob/master/img/prob_3nu_vacuum_vs_baseline_ee_em_et.png" width="400" />
+<img align="middle" class="center" src="https://github.com/mbustama/NuOscProbExact/blob/master/img/prob_3nu_vacuum_vs_baseline_ee_em_et.png" width="400"/>
 
 The parameter `case` can take any of the following values:
 * `vacuum`: for oscillations in vacuum, assuming the default values of mixing parameters from the `globaldefs` module
@@ -404,8 +404,22 @@ prob_em = [x[1] for x in prob]  # Pem
 prob_et = [x[2] for x in prob]  # Pet
 ```
 
-To visualize the data:
+To plot the data:
+```python
+from pylab import *
+from matplotlib import *
+import matplotlib as mpl
 
+fig = plt.figure(figsize=[9,9])
+ax = fig.add_subplot(1,1,1)
+ax.set_xlabel(r'Neutrino energy $E$ [km]', fontsize=25)
+ax.set_ylabel(r'Three-neutrino probability', fontsize=25)
+ax.legend(loc='center right', frameon=False)
+
+ax.plot(energy, prob_ee, label=r'$P_{\nu_e \to \nu_e}$', color='C0', zorder=1)
+ax.plot(energy, prob_em, label=r'$P_{\nu_e \to \nu_\mu}$', color='C1', zorder=1)
+ax.plot(energy, prob_et, label=r'$P_{\nu_e \to \nu_\tau}$', color='C2', zorder=1)
+````
 
 Alternatively, you can automatically produce plots of probability using the following function from the `oscprob3nu_tests` module:
 ```python
@@ -413,13 +427,18 @@ import oscprob3nu_tests
 
 case = 'vacuum'
 oscprob3nu_tests.plot_probability_3nu_vs_energy(
-                                    case, baseline=1.3e3,
-                                    output_filename='prob_3nu_vacuum_vs_energy', output_format='pdf',
-                                    log10_energy_min=-1.0, log10_energy_max=1.0, log10_l_npts=200,
-                                    plot_prob_ee=True, plot_prob_em=True, plot_prob_et=True,
-                                    plot_prob_me=False, plot_prob_mm=False, plot_prob_mt=False,
-                                    plot_prob_te=False, plot_prob_tm=False, plot_prob_tt=False)
+                case, baseline=1.e3,
+                log10_energy_min=-1.0, log10_energy_max=1.0, log10_energy_npts=200,
+                plot_prob_ee=True, plot_prob_em=True, plot_prob_et=True,
+                plot_prob_me=False, plot_prob_mm=False, plot_prob_mt=False,
+                plot_prob_te=False, plot_prob_tm=False, plot_prob_tt=False,
+                output_filename='prob_3nu_vacuum_vs_energy_ee_em_et', output_format='png',
+                legend_loc='center right', legend_ncol=1, path_save='../fig/')
 ```
+The function `plot_probability_3nu_vs_energy` assumes that `baseline` is in km and the (log10) of the energies `log10_energy_min` and `log_energy_max` are in GeV.  The function call above produces the following plot:
+
+<img align="middle" class="center" src="https://github.com/mbustama/NuOscProbExact/blob/master/img/prob_3nu_vacuum_vs_energy_ee_em_et.png" width="400"/>
+
 The parameter `case` can take any of the same values as listed [above](#oscillations-in-vacuum-fixed-energy-varying-baseline).
 
 
