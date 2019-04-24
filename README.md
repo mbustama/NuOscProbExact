@@ -392,9 +392,9 @@ log10_energy = np.linspace( log10_energy_min,
                             log10_energy_npts)
 energy = [10.**x for x in log10_energy] # [GeV]
 
-h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_vacuum_energy_independent(  S12_BF, S23_BF,
-                                                                                S13_BF, DCP_BF,
-                                                                                D21_BF, D31_BF)
+h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(  S12_BF, S23_BF,
+                                                                                    S13_BF, DCP_BF,
+                                                                                    D21_BF, D31_BF)
 
 # Each element of prob: [Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt]
 prob = [oscprob3nu.probabilities_3nu(np.multiply(1./x/1.e9, h_vacuum_energy_indep), baseline) \
@@ -435,7 +435,7 @@ oscprob3nu_tests.plot_probability_3nu_vs_energy(
                 output_filename='prob_3nu_vacuum_vs_energy_ee_em_et', output_format='png',
                 legend_loc='center right', legend_ncol=1, path_save='../fig/')
 ```
-The function `plot_probability_3nu_vs_energy` assumes that `baseline` is in km and the (log10) of the energies `log10_energy_min` and `log_energy_max` are in GeV.  The function call above produces the following plot:
+The function `plot_probability_3nu_vs_energy` assumes that `baseline` is in km and the (log10) of the energies `log10_energy_min` and `log10_energy_max` are in GeV.  The function call above produces the following plot:
 
 <img align="middle" class="center" src="https://github.com/mbustama/NuOscProbExact/blob/master/img/prob_3nu_vacuum_vs_energy_ee_em_et.png" width="400"/>
 
@@ -444,9 +444,9 @@ The parameter `case` can take any of the same values as listed [above](#oscillat
 
 ### Three-neutrino oscillations in matter
 
-For oscillation in matter, we proceed in an analogous way as for oscillations in vacuum.  To compute the Hamiltonian in matter, we can use the routine `hamiltonian_matter` in the module `hamiltonians3nu`.  First, we need to compute `h_vacuum`, and then pass it to `hamiltonian_matter`, together with the neutrino-electron charged-current potential `VCC`, with V_CC = sqrt(2.0) * G_F * n_e.  This routine is called as:
+For oscillation in matter, we proceed in an analogous way as for oscillations in vacuum.  To compute the Hamiltonian in matter, we can use the routine `hamiltonian_matter` in the module `hamiltonians3nu`.  First, we need to compute the energy-independent `h_vacuum_energy_independent`, and then pass it to `hamiltonian_3nu_matter`, together with the `energy` and the neutrino-electron charged-current potential `VCC`, with V_CC = sqrt(2.0) * G_F * n_e.  This routine is called as:
 ```python
-hamiltonian_matter(h_vacuum, VCC)
+hamiltonian_3nu_matter(h_vacuum_energy_independent, energy, VCC)
 ```
 
 In the example below, we set the matter potential to `VCC_EARTH_CRUST`, which is computed using the electron density of the crust of the Earth, and is read from `globaldefs`.
@@ -461,8 +461,7 @@ baseline = 1.3e3  # Baseline [km]
 h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(  S12_BF, S23_BF,
                                                                                     S13_BF, DCP_BF,
                                                                                     D21_BF, D31_BF)
-h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
-h_matter = hamiltonians3nu.hamiltonian_3nu_matter(h_vacuum, VCC_EARTH_CRUST)
+h_matter = hamiltonians3nu.hamiltonian_3nu_matter(h_vacuum_energy_indep, energy, VCC_EARTH_CRUST)
 
 Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( h_matter,
                                                                             baseline*CONV_KM_TO_INV_EV)
@@ -480,16 +479,16 @@ Pte = 0.00008, Ptm = 0.34026, Ptt = 0.65966
 
 ### Three-neutrino oscillations in matter with non-standard interactions (NSI)
 
-For oscillation in matter with NSI, we can use the routine `hamiltonian_nsi` in the module `hamiltonians3nu`.  First, we need to compute `h_vacuum`, and then pass it to `hamiltonian_nsi`, together with `VCC`, and with a vector `eps` containing the NSI strength parameters,
+For oscillation in matter with NSI, we can use the routine `hamiltonian_3nu_nsi` in the module `hamiltonians3nu`.  First, we need to compute `h_vacuum_energy_independent`, and then pass it to `hamiltonian_nsi`, together with `energy`, `VCC`, and a vector `eps` containing the NSI strength parameters, *i.e.*,
 ```python
 eps = [eps_ee, eps_em, eps_et, eps_mm, eps_mt, eps_tt]
 ```
 This routine is called as
 ```python
-hamiltonian_nsi(h_vacuum, VCC, eps)
+hamiltonian_3nu_nsi(h_vacuum_energy_independent, energy, VCC, eps)
 ```
 
-In the example below, we set `eps` to its default value pulled from `globaldefs`:
+In the example below, we set `eps` to its default value `EPS_3` pulled from `globaldefs`:
 ```python
 import oscprob3nu
 import hamiltonians3nu
@@ -501,8 +500,7 @@ baseline = 1.3e3  # Baseline [km]
 h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(  S12_BF, S23_BF,
                                                                                     S13_BF, DCP_BF,
                                                                                     D21_BF, D31_BF)
-h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
-h_nsi = hamiltonians3nu.hamiltonian_3nu_nsi(h_vacuum, VCC_EARTH_CRUST, EPS_TEST)
+h_nsi = hamiltonians3nu.hamiltonian_3nu_nsi(h_vacuum_energy_independent, energy, VCC_EARTH_CRUST, EPS_3)
 
 Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( h_nsi,
                                                                             baseline*CONV_KM_TO_INV_EV)
@@ -518,16 +516,14 @@ This returns
 
 ### Three-neutrino oscillations in a Lorentz invariance-violating (LIV) background
 
-For oscillation LIV, we can use the routine `hamiltonian_liv` in the module `hamiltonians3nu`.  As before, first, we need to compute `h_vacuum`, and then pass it to `hamiltonian_liv`, together with the vector `liv_params` containing the LIV parameters:
-```python
-liv_params = [Lambda, b1, b2, b3, s12_liv, s23_liv, s13_liv, dCP_liv]
-```
+For oscillation LIV, we can use the routine `hamiltonian_3nu_liv` in the module `hamiltonians3nu`.  As before, first, we need to compute `h_vacuum_energy_independent`, and then pass it to `hamiltonian_3nu_liv`, together with `energy` and the following LIV parameters: `sxi12` (sin(xi_12)), `sxi23` (sin(xi_23)), `sxi13` (sin(xi_13)), `dxiCP` (new CP-violation phase), `b1` (first eigenvalue of the LIV operator), `b2` (second eigenvalue), `b3` (third eigenvalue), and `Lambda` (energy scale of LIV).
+
 This routine is called as
 ```python
-hamiltonian_liv(h_vacuum, liv_params)
+hamiltonian_3nu_liv(h_vacuum_energy_independent, energy, sxi12, sxi23, sxi13, dxiCP, b1, b2, b3, Lambda)
 ```
 
-In the example below, we set `liv_params` to its default value pulled from `globaldefs`:
+In the example below, we set the LIV parameters to their default values pulled from `globaldefs`:
 ```python
 import oscprob3nu
 import hamiltonians3nu
@@ -539,8 +535,9 @@ baseline = 1.3e3  # Baseline [km]
 h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(  S12_BF, S23_BF,
                                                                                     S13_BF, DCP_BF,
                                                                                     D21_BF, D31_BF)
-h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
-h_liv = hamiltonians3nu.hamiltonian_3nu_liv(h_vacuum, LIV_PARAMS_TEST)
+h_liv = hamiltonians3nu.hamiltonian_3nu_liv(h_vacuum_energy_indep, energy,
+                                            SXI12, SXI23, SXI13, DXICP,
+                                            B1, B2, B3, LAMBDA)
 
 Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( h_liv,
                                                                             baseline*CONV_KM_TO_INV_EV)
