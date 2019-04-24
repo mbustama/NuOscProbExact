@@ -46,6 +46,7 @@ Instructions:
 
    Doing this will create the directory `/home/MyProjects/NuOscProbExact`, with the following file structure:
    ```
+   /NuOscProbExact/README.md           The file that you are reading
    /NuOscProbExact/run_testsuite.py    Run this to create test plots of the probabilities
    /NuOscProbExact/fig                 Contains plots generate by the test suite (initially empyty)
    /NuOscProbExact/src                 Contains the main source files
@@ -56,8 +57,9 @@ Instructions:
        ../oscprob3nu.py                Routines to compute the three-flavor probabilities
    /NuOscProbExact/test                Contains the source files to run the test suite
        ../matplotlibrc                 Customized matplotlib style file
+       ../oscprob2nu_plot.py           Routines to generate two-flavor probability test plots
+       ../oscprob3nu_plot.py           Routines to generate three-flavor probability test plots
        ../oscprob3nu_plotpaper.py      Routine to generate the plot shown in the paper
-       ../oscprob3nu_tests.py          Routines to generate three-flavor probability tests plots
    ```
    Now you are ready to start using **NuOscProbExact**.
 
