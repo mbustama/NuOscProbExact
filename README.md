@@ -339,7 +339,7 @@ oscprob3nu_tests.plot_probability_3nu_vs_baseline(
                 output_filename='prob_3nu_vacuum_vs_baseline', output_format='png',
                 legend_loc='center left', legend_ncol=1, path_save='../fig/')
 ```
-The routine assumes that `energy` is in GeV and the (log10) of the baselines `log10_l_min` and `log_l_max` are in km.  See the documentation of the function for further details.
+The function `plot_probability_3nu_vs_baseline` assumes that `energy` is in GeV and the (log10) of the baselines `log10_l_min` and `log_l_max` are in km.  See the documentation of the function for further details.
 
 The parameter `case` can take any of the following values:
 * `vacuum`: for oscillations in vacuum, assuming the default values of mixing parameters from the `globaldefs` module
