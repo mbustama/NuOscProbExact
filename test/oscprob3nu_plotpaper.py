@@ -79,7 +79,7 @@ def plot_probability_vs_energy_compare(output_format='pdf',
     mpl.rcParams['ps.fonttype']=42
     mpl.rcParams['pdf.fonttype']=42
 
-    fig, axes = plt.subplots(3, 1, figsize=[8,12])
+    fig, axes = plt.subplots(3, 1, figsize=[8,15])
     fig.subplots_adjust(hspace=0.05, wspace=0.05)
 
     h_vacuum_energy_indep = \
@@ -141,17 +141,17 @@ def plot_probability_vs_energy_compare(output_format='pdf',
             p_liv = [x[4] for x in prob_liv]
 
             ylabel = r'$P_{\nu_\mu \to \nu_\mu}$'
-            ax.set_xlabel(r'Neutrino energy [GeV]', fontsize=25)
+            ax.set_xlabel(r'Neutrino energy [GeV]', fontsize=27)
 
-        ax.set_ylabel(ylabel, fontsize=25)
+        ax.set_ylabel(ylabel, fontsize=27)
 
-        ax.plot(energy_nu, p_vacuum, color='C0', ls='-', lw=2., zorder=1,
+        ax.plot(energy_nu, p_vacuum, color='C0', ls='-', lw=3.0, zorder=1,
             label=r'Vacuum')
-        ax.plot(energy_nu, p_matter, color='C1', ls='--', lw=2., zorder=1,
+        ax.plot(energy_nu, p_matter, color='C1', ls='--', lw=3.0, zorder=1,
             label=r'Matter')
-        ax.plot(energy_nu, p_nsi, color='C2', ls=':', lw=2.5, zorder=1,
+        ax.plot(energy_nu, p_nsi, color='C2', ls=':', lw=3.0, zorder=1,
             label=r'NSI')
-        ax.plot(energy_nu, p_liv, color='C3', ls='-.', lw=2.0, zorder=1,
+        ax.plot(energy_nu, p_liv, color='C3', ls='-.', lw=3.0, zorder=1,
             label=r'CPT-odd LIV')
 
         ax.tick_params('both', length=10, width=2, which='major')
@@ -206,7 +206,7 @@ def plot_probability_vs_energy_compare(output_format='pdf',
     return
 
 
-# plot_probability_vs_energy_compare(output_format='pdf', output_path='../fig/')
+plot_probability_vs_energy_compare(output_format='pdf', output_path='../fig/')
 
 # help(oscprob3nu)
 # print(oscprob3nu.__doc__)
