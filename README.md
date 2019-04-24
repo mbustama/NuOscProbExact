@@ -71,16 +71,21 @@ Instructions:
    Doing this will generate plots of the two-neutrino and three-neutrino probabilities *vs.* distance and *vs.* energy, for different oscillation scenarios.  It will also generate the plot of probabilities *vs.* energy that is included in the paper.  The plots are stored in the `NuOscProbExact/fig` directory.  The code `run_testsuite.py` calls routines defined in `oscprob2nu_plot.py`, `oscprob3nu_plot.py`, and `oscprob3nu_plotpaper.py`, located in the `NuOscProbExact/test/` directory.  Inspecting these files may help you in coding your own project.
 
 
-## Usage
+## Usage and examples
 
-There are only two core modules: `oscprobn2nu.py` and `oscprob3nu.py`.  Each one is stand-alone (except for the dependencies described [above](#requirements)).  To use either in your code, copy it to your project's working directory (or add their location to the paths where your environment looks for modules).
+There are only two core modules: `oscprobn2nu.py` and `oscprob3nu.py`.  Each one is stand-alone (except for the dependencies described [above](#requirements)).  To use either module in your code, copy it to your project's working directory, or add their location to the paths where your environment looks for modules, *e.g.*,
+```python
+import sys
 
-In the examples below, we focus on `oscprob3nu`, but what we show applies to `oscprob2nu` as well.
+sys.path.append('../src')
+```
+
+In the examples below, we focus mostly on `oscprob3nu`, but what we show applies to `oscprob2nu` as well.
 
 
 ### Basics
 
-Most of the time, you will be only interested in computing oscillation probabilities.
+Most of the time, you will be only interested in computing oscillation probabilities, not in the intermediate steps of the method.  The functions to compute and return the probabilities are `probabilities_3nu`, for the three-neutrino case, and `probabilities_2nu`, for the two-neutrino case.  Below, we show how to use them.
 
 #### Three-neutrino oscillations
 
