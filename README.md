@@ -18,11 +18,11 @@ Code to compute exact two- and three-neutrino oscillation probabilities using SU
 
 **NuOscProbExact** is fully written in Python 3.  It uses standard modules that are available, sometimes by default, as part of most Python installations, either stand-alone or via Anaconda:
 
-* The two core modules (`oscprob2nu.py` and `oscprob3nu.py`) require only `numpy` and `cmath`.  These are the bare minimum requirements.
+* **Bare minimum requirements:** The two core modules (`oscprob2nu.py` and `oscprob3nu.py`) require only `numpy` and `cmath`.  These are the bare minimum requirements.
 
-* The modules containing example Hamiltonians (`hamiltonians2nu.py` and `hamiltonians3nu.py`) require only `numpy`, `cmath`, and `copy`
+* **To use sample Hamiltonians:** The modules containing example Hamiltonians (`hamiltonians2nu.py` and `hamiltonians3nu.py`) require only `numpy`, `cmath`, and `copy`
 
-* The modules containing the test suites (`oscprob2nu_tests.py`, `oscprob3nu_tests.py`, `oscprob3nu_plotpaper.py`, and `oscprob_testsuite.py`) require only `numpy`, `cmath`, `copy`, and `matplotlib`
+* **To run the test suite:** The modules containing the test suites (`oscprob2nu_plot.py`, `oscprob3nu_plot.py`, `oscprob3nu_plotpaper.py`, and `run_testsuite.py`) require only `numpy`, `cmath`, `copy`, and `matplotlib`
 
 
 ## Installation
