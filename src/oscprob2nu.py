@@ -79,9 +79,9 @@ def hamiltonian_2nu_coefficients(hamiltonian_matrix):
     H22 = hamiltonian_matrix[1][1]
 
     # h0 = (H11+H22)/2.0  # Not used
-    h1 = H12
-    h2 = 0.0+0.0j
-    h3 = (H11-H22)/2.0+0.0j
+    h1 = H12.real
+    h2 = -H12.imag
+    h3 = (H11-H22)/2.0
 
     return [h1, h2, h3]
 
