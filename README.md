@@ -273,6 +273,9 @@ This returns
 Like in the three-neutrino case, we can also return the coefficients `h1`, `h2`, `h3` of the expansion of the Hamiltonian in terms of Pauli matrices (Table I in the paper), or the time-evolution operator `evol_operator` itself, as a 2x2 matrix (Eq. (5) in the paper).
 ```python
 import numpy as np
+from pylab import *
+from matplotlib import *
+import matplotlib as mpl
 
 import oscprob2nu
 import hamiltonians2nu
@@ -322,10 +325,24 @@ prob_em = [x[1] for x in prob]  # Pem
 prob_et = [x[2] for x in prob]  # Pet
 ```
 
-To visualize the data:
+To plot the data:
+```python
+from pylab import *
+from matplotlib import *
+import matplotlib as mpl
 
+fig = plt.figure(figsize=[9,9])
+ax = fig.add_subplot(1,1,1)
+ax.set_xlabel(r'Baseline $L$ [km]', fontsize=25)
+ax.set_ylabel(r'Three-neutrino probability', fontsize=25)
+ax.legend(loc='center left', frameon=False)
 
-Alternatively, you can automatically produce plots of probability using the following function from the `oscprob3nu_tests` module:
+ax.plot(l_val, prob_ee, label=r'$P_{\nu_e \to \nu_e}$', color='C0', zorder=1)
+ax.plot(l_val, prob_em, label=r'$P_{\nu_e \to \nu_\mu}$', color='C1', zorder=1)
+ax.plot(l_val, prob_et, label=r'$P_{\nu_e \to \nu_\tau}$', color='C2', zorder=1)
+````
+
+Alternatively, you can automatically produce plots of probability *vs.* baseline using the following function from the `oscprob3nu_tests` module:
 ```python
 import oscprob3nu_tests
 
@@ -336,10 +353,11 @@ oscprob3nu_tests.plot_probability_3nu_vs_baseline(
                 plot_prob_ee=True, plot_prob_em=True, plot_prob_et=True,
                 plot_prob_me=False, plot_prob_mm=False, plot_prob_mt=False,
                 plot_prob_te=False, plot_prob_tm=False, plot_prob_tt=False,
-                output_filename='prob_3nu_vacuum_vs_baseline', output_format='png',
+                output_filename='prob_3nu_vacuum_vs_baseline_ee_em_et', output_format='png',
                 legend_loc='center left', legend_ncol=1, path_save='../fig/')
 ```
-The function `plot_probability_3nu_vs_baseline` assumes that `energy` is in GeV and the (log10) of the baselines `log10_l_min` and `log_l_max` are in km.  See the documentation of the function for further details.
+The function `plot_probability_3nu_vs_baseline` assumes that `energy` is in GeV and the (log10) of the baselines `log10_l_min` and `log_l_max` are in km.  The function call above produces the following plot:
+![prob_3nu_vacuum_vs_baseline_ee_em_et.png](https://github.com/mbustama/NuOscProbExact/blob/master/img/prob_3nu_vacuum_vs_baseline_ee_em_et.png)
 
 The parameter `case` can take any of the following values:
 * `vacuum`: for oscillations in vacuum, assuming the default values of mixing parameters from the `globaldefs` module
@@ -347,7 +365,7 @@ The parameter `case` can take any of the following values:
 * `nsi`: for oscillations in matter with non-standard interactions, with the NSI strengh parameters fixed to the default values in `globaldefs`
 * `liv`: for oscillations in a CPT-odd Lorentz invariance-violating (LIV) background, with the LIV parameters fixed to the default values in `globaldefs`
 
-For more information about these cases, see the paper [arXiv:1904.XXXXX](https://arxiv.org/abs/1904.XXXXX).
+For more information about these cases, see the paper [arXiv:1904.XXXXX](https://arxiv.org/abs/1904.XXXXX).  For more information about how to use `plot_probability_3nu_vs_baseline`, see the documentation of the function in the `oscprob3nu_tests` module.
 
 
 ### Three-neutrino oscillations in vacuum: fixed baseline, varying energy
