@@ -91,7 +91,7 @@ Most of the time, you will be only interested in computing oscillation probabili
 
 The function to compute three-neutrino probabilities is `probabilities_3nu` in the module `oscprob3nu`.  It takes as input parameters the `hamiltonian`, in the form of a 3x3 Hermitian matrix, and the baseline `L`.
 
-This function returns the list of probabilities Pee (nu_e --> nu_e), Pem (nu_e --> nu_mu), Pet (nu_e --> nu_tau), Pme (nu_mu --> nu_e), Pmm (nu_mu --> nu_mu), Pmt (nu_mu --> nu_tau), Pte (nu_tau --> nu_e), Ptm (nu_tau --> nu_mu), (nu_tau --> nu_tau), *i.e.*,
+This function returns the list of probabilities `Pee` (nu_e --> nu_e), `Pem` (nu_e --> nu_mu), `Pet` (nu_e --> nu_tau), `Pme` (nu_mu --> nu_e), `Pmm` (nu_mu --> nu_mu), `Pmt` (nu_mu --> nu_tau), `Pte` (nu_tau --> nu_e), `Ptm` (nu_tau --> nu_mu), and `Ptt` (nu_tau --> nu_tau), *i.e.*,
 ```python
 import oscprob3nu
 
