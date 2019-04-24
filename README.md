@@ -594,7 +594,7 @@ import oscprob3nu
 
 help(oscprob3nu.hamiltonian_3nu_coefficients)
 ```
-This will print to screen a description of what the function does (in this example, `oscprob3nu.hamiltonian_3nu_coefficients`), a list and description of its input parameters, and a description of the values that it returns.
+This will print to screen a description of what the function does (in the example above, `oscprob3nu.hamiltonian_3nu_coefficients`), a list and description of its input parameters, and a description of the values that it returns.
 
 
 ## Citing
