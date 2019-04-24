@@ -105,7 +105,7 @@ Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu(hamil
 
 The function to compute two-neutrino probabilities is `probabilities_2nu` in the module `oscprob2nu`.  It takes as input parameters the `hamiltonian`, in the form of a 2x2 Hermitian matrix, and the baseline `L`.
 
-This function returns the list of probabilities `Pee` (nu_e --> nu_e), `Pem` (nu_e --> nu_mu), `Pme` (nu_mu --> nu_e), and `Pmm` (nu_mu --> nu_mu).  (These probabilities could also be `Pmm`, `Pmt`, `Pmt`, and `Ptt` instead, depending on what Hamiltonian you feed fed to `probabilities_2nu`.)
+This function returns the list of probabilities `Pee` (nu_e --> nu_e), `Pem` (nu_e --> nu_mu), `Pme` (nu_mu --> nu_e), and `Pmm` (nu_mu --> nu_mu).  (These probabilities could also be `Pmm`, `Pmt`, `Pmt`, and `Ptt` instead, depending on what Hamiltonian you pass to `probabilities_2nu`.)
 
 To use it, call
 ```python
@@ -117,7 +117,7 @@ Pee, Pem, Pme, Pmm = oscprob2nu.probabilities_2nu(hamiltonian, L)
 
 > **Important:** If you feed the code a non-Hermitian matrix, it will output nonsensical results
 
-> **About units:** The code does not assume units for any of the model parameters, so you need to make sure that you input values with the correct units.  The module `globaldefs` contains conversion factors which might come in handy.
+> **About the units:** The code in the modules `oscprob3nu` and `osprob2nu` does not assume units for any of the model parameters, so you need to make sure that you pass values with the correct units.  The module `globaldefs` contains conversion factors which might come in handy for this.
 
 
 ### Trivial example
