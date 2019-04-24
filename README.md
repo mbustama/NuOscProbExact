@@ -217,7 +217,7 @@ Pme = 0.01823, Pmm = 0.64417, Pmt = 0.33761
 Pte = 0.01466, Ptm = 0.33990, Ptt = 0.64544
 ```
 
-Sometimes, you might be interested also in returning the coefficients `h1`, ..., `h8` of the expansion of the Hamiltonian in terms of Gell-Mann matrices (Table II in the paper), the coefficients `u0`, ..., `u8` of the SU(3) expansion of the associated time-evolution operator (Eqs. (13) and (14) in the paper), or the time-evolution operator `evol_operator` itself, as a 3x3 matrix (Eq. (15) in the paper).  See the paper [arXiv:1904.XXXXX](https://arxiv.org/abs/1904.XXXXX) for details on these quantities.  The module `oscprob3nu` has funtions to do this:
+Sometimes, you might be interested also in returning the coefficients `h1`, ..., `h8` of the expansion of the Hamiltonian in terms of Gell-Mann matrices (Table II in the paper), the coefficients `u0`, ..., `u8` of the SU(3) expansion of the associated time-evolution operator (Eqs. (13) and (14) in the paper), or the time-evolution operator `evol_operator` itself, as a 3x3 matrix (Eq. (15) in the paper).  See the paper [arXiv:1904.XXXXX](https://arxiv.org/abs/1904.XXXXX) for details on these quantities.  The module `oscprob3nu` has functions to do this:
 ```python
 import numpy as np
 
@@ -303,9 +303,9 @@ from globaldefs import *
 energy = 1.e7     # Neutrino energy [eV]
 
 # Baselines, L
-log10_l_min = 0.0          # log10 [km]
-log10_l_max = log10(5.e2)  # log10 [km]
-log10_l_npts = 6000
+log10_l_min = 0.0  # log10 [km]
+log10_l_max = 3.0  # log10 [km]
+log10_l_npts = 1000
 log10_l_val = np.linspace(log10_l_min, log10_l_max, log10_l_npts)  # [km]
 l_val = [CONV_KM_TO_INV_EV*10.**x for x in log10_l_val]
 
@@ -331,15 +331,15 @@ import oscprob3nu_tests
 
 case = 'vacuum'
 oscprob3nu_tests.plot_probability_3nu_vs_baseline(
-                case, energy=1.e7,
-                log10_l_min=0.0, log10_l_max=log10(5.e2), log10_l_npts=6000,
+                case, energy=1.e-2,
+                log10_l_min=0.0, log10_l_max=3.0, log10_l_npts=1000,
                 plot_prob_ee=True, plot_prob_em=True, plot_prob_et=True,
                 plot_prob_me=False, plot_prob_mm=False, plot_prob_mt=False,
                 plot_prob_te=False, plot_prob_tm=False, plot_prob_tt=False,
-                output_filename='prob_3nu_vacuum_vs_baseline', output_format='pdf',
+                output_filename='prob_3nu_vacuum_vs_baseline', output_format='png',
                 legend_loc='center left', legend_ncol=1, path_save='../fig/')
 ```
-The routine assumes that `energy` is in GeV and the (log10) of the baselines `log10_l_min` and `log_l_max` are in  km.
+The routine assumes that `energy` is in GeV and the (log10) of the baselines `log10_l_min` and `log_l_max` are in km.  See the documentation of the function for further details.
 
 The parameter `case` can take any of the following values:
 * `vacuum`: for oscillations in vacuum, assuming the default values of mixing parameters from the `globaldefs` module
@@ -347,7 +347,7 @@ The parameter `case` can take any of the following values:
 * `nsi`: for oscillations in matter with non-standard interactions, with the NSI strengh parameters fixed to the default values in `globaldefs`
 * `liv`: for oscillations in a CPT-odd Lorentz invariance-violating (LIV) background, with the LIV parameters fixed to the default values in `globaldefs`
 
-For more information about these cases, refer to the paper [arXiv:1904.XXXXX](https://arxiv.org/abs/1904.XXXXX) and inspect the contents of the file `globaldefs.py`.
+For more information about these cases, see the paper [arXiv:1904.XXXXX](https://arxiv.org/abs/1904.XXXXX).
 
 
 ### Three-neutrino oscillations in vacuum: fixed baseline, varying energy
