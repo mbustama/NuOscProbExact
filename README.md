@@ -124,7 +124,7 @@ Pee, Pem, Pme, Pmm = oscprob2nu.probabilities_2nu(hamiltonian, L)
 
 #### Three-neutrino oscillations
 
-As a first, trivial example, we pass `probabilities_3nu` an arbitrary Hamiltonian and baseline:
+As a first, trivial example, we pass an arbitrary Hamiltonian and baseline to `probabilities_3nu`:
 ```python
 import oscprob3nu
 
@@ -180,15 +180,17 @@ As expected, `Pem == Pme` and `Pee + Pem = 1`.
 
 #### Three-neutrino oscillations
 
-Now let us compute the three-neutrino oscillation probabilities in vacuum.  To do this, we can use the routine
+Now we compute the three-neutrino oscillation probabilities in vacuum.  To do this, we can use the routine
 ```python
 hamiltonian_3nu_vacuum_energy_independent(s12, s23, s13, dCP, D21, D31)
 ```
-that is provided in the `hamiltonians3nu` module.  The input parameters `s12`, `s23`, `s13`, `dCP`, `D21`, and `D31` are, respectively, sin(theta_12), sin(theta_23), sin(theta_13), delta_CP, Delta m_21^2, and Delta m_31^2.  For this example, we set them to their current best-fit values, which we pull from `globaldefs` (inspect that file for more information about these values).
+that is provided in the `hamiltonians3nu` module.  It returns the 3x3 Hamiltonian for oscillations in vacuum.  The input parameters `s12`, `s23`, `s13`, `dCP`, `D21`, and `D31` are, respectively, sin(theta_12), sin(theta_23), sin(theta_13), delta_CP, Delta m_21^2, and Delta m_31^2.  For this example, we set them to their current best-fit values, which we pull from `globaldefs` (inspect that file for more information about these values).
 
-> **Important:** The function `hamiltonian_3nu_vacuum_energy_independent` returns the Hamiltonian in vacuum **without** the *1/E* prefactor, where *E* is the neutrino energy.  It was done in this way so that, if we wish to compute the probabilities at different energies, we need to compute `hamiltonian_3nu_vacuum_energy_independent` only once, and then multiply it by a varying *1/E* prefactor.
+> **Important:** The function `hamiltonian_3nu_vacuum_energy_independent` returns the Hamiltonian in vacuum **without** multiplying it by the *1/E* prefactor, where *E* is the neutrino energy.  It was done in this way so that, if we wish to compute the probabilities at different energies, we need to compute `hamiltonian_3nu_vacuum_energy_independent` only once, and then multiply it by a varying *1/E* prefactor.
 
 ```python
+import numpy as np
+
 import oscprob3nu
 import hamiltonians3nu
 from globaldefs import *
@@ -215,8 +217,9 @@ Pme = 0.01823, Pmm = 0.64417, Pmt = 0.33761
 Pte = 0.01466, Ptm = 0.33990, Ptt = 0.64544
 ```
 
-Sometimes, you might be interested also in returning the coefficients `h1`, ..., `h8` of the expansion of the Hamiltonian in terms of Gell-Mann matrices, the coefficients `u0`, ..., `u8` of the SU(3) expansion of the associated time-evolution operator, or the time-evolution operator `evol_operator` itself, as a 3x3 matrix.  See the paper [arXiv:1904.XXXXX](https://arxiv.org/abs/1904.XXXXX) for details on these quantities.
+Sometimes, you might be interested also in returning the coefficients `h1`, ..., `h8` of the expansion of the Hamiltonian in terms of Gell-Mann matrices (Table II in the paper), the coefficients `u0`, ..., `u8` of the SU(3) expansion of the associated time-evolution operator (Eqs. (13) and (14) in the paper), or the time-evolution operator `evol_operator` itself, as a 3x3 matrix (Eq. (15) in the paper).  See the paper [arXiv:1904.XXXXX](https://arxiv.org/abs/1904.XXXXX) for details on these quantities.  The module `oscprob3nu` has funtions to do this:
 ```python
+import numpy as np
 
 import oscprob3nu
 import hamiltonians3nu
@@ -234,18 +237,20 @@ h1, h2, h3, h4, h5, h6, h7, h8 = oscprob3nu.hamiltonian_3nu_coefficients(h_vacuu
 u0, u1, u2, u3, u4, u5, u6, u7, u8 = oscprob3nu.evolution_operator_3nu_u_coefficients(  \
                                                                             h_vacuum,
                                                                             baseline*CONV_KM_TO_INV_EV)
-evol_op = oscprob3nu.evolution_operator_3nu(h_vacuum, baseline*CONV_KM_TO_INV_EV)
+evol_operator = oscprob3nu.evolution_operator_3nu(h_vacuum, baseline*CONV_KM_TO_INV_EV)
 ```
 
 #### Two-neutrino oscillations
 
 To compute the two-neutrino oscillation probabilities in vacuum, we can use the routine
 ```python
-hamiltonian_2nu_vacuum_energy_independent(sth, Dm)
+hamiltonian_2nu_vacuum_energy_independent(sth, Dm2)
 ```
-that is provided in the `hamiltonians2nu` module.  The input parameters `sth`, and `Dm` are, respectively, sin(theta), and Delta m^2.  For this example, we set them to current best-fit values for atmospheric neutrinos.
+that is provided in the `hamiltonians2nu` module.  The input parameters `sth`, and `Dm2` are, respectively, sin(theta), and Delta m^2.  For this example, we set them to current best-fit values for atmospheric neutrinos.
 
 ```python
+import numpy as np
+
 import oscprob2nu
 import hamiltonians2nu
 from globaldefs import *
@@ -265,8 +270,9 @@ This returns
 ```shell
 ```
 
-We can also return the coefficients `h1`, `h2`, `h3` of the expansion of the Hamiltonian in terms of Pauli matrices, or the time-evolution operator `evol_operator` itself, as a 2x2 matrix.
+Like in the three-neutrino case, we can also return the coefficients `h1`, `h2`, `h3` of the expansion of the Hamiltonian in terms of Pauli matrices (Table I in the paper), or the time-evolution operator `evol_operator` itself, as a 2x2 matrix (Eq. (5) in the paper).
 ```python
+import numpy as np
 
 import oscprob2nu
 import hamiltonians2nu
@@ -279,7 +285,7 @@ h_vacuum_energy_indep = hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independen
 h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
 
 h1, h2, h3 = oscprob2nu.hamiltonian_2nu_coefficients(h_vacuum)
-evol_op = oscprob2nu.evolution_operator_2nu(h_vacuum, baseline*CONV_KM_TO_INV_EV)
+evol_operator = oscprob2nu.evolution_operator_2nu(h_vacuum, baseline*CONV_KM_TO_INV_EV)
 ```
 
 
