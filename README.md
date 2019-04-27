@@ -218,9 +218,9 @@ print("Pte = %6.5f, Ptm = %6.5f, Ptt = %6.5f" % (Pte, Ptm, Ptt))
 ````
 This returns
 ```shell
-Pee = 0.96711, Pem = 0.01593, Pet = 0.01695
-Pme = 0.01823, Pmm = 0.64417, Pmt = 0.33761
-Pte = 0.01466, Ptm = 0.33990, Ptt = 0.64544
+Pee = 0.92768, Pem = 0.01432, Pet = 0.05800
+Pme = 0.04023, Pmm = 0.37887, Pmt = 0.58090
+Pte = 0.03210, Ptm = 0.60680, Ptt = 0.36110
 ```
 
 Sometimes, you might be interested also in returning the coefficients `h1`, ..., `h8` of the expansion of the Hamiltonian in terms of Gell-Mann matrices (Table II in the paper), the coefficients `u0`, ..., `u8` of the SU(3) expansion of the associated time-evolution operator (Eqs. (13) and (14) in the paper), or the time-evolution operator `evol_operator` itself, as a 3x3 matrix (Eq. (15) in the paper).  See the paper [arXiv:1904.XXXXX](https://arxiv.org/abs/1904.XXXXX) for details on these quantities.  The module `oscprob3nu` has functions to do this:
@@ -267,13 +267,15 @@ baseline = 1.3e3  # Baseline [km]
 h_vacuum_energy_indep = hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(S23_BF, D31_BF)
 h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
 
-Pee, Pem, Pme, Pmm = oscprob3nu.probabilities_2nu(h_vacuum, baseline*CONV_KM_TO_INV_EV)
+Pee, Pem, Pme, Pmm = oscprob2nu.probabilities_2nu(h_vacuum, baseline*CONV_KM_TO_INV_EV)
 
 print("Pee = %6.5f, Pem = %6.5f" % (Pee, Pem))
 print("Pme = %6.5f, Pmm = %6.5f" % (Pme, Pmm))
 ````
 This returns
 ```shell
+Pee = 0.29595, Pem = 0.70405
+Pme = 0.70405, Pmm = 0.29595
 ```
 
 Like in the three-neutrino case, we can also return the coefficients `h1`, `h2`, `h3` of the expansion of the Hamiltonian in terms of Pauli matrices (Table I in the paper), or the time-evolution operator `evol_operator` itself, as a 2x2 matrix (Eq. (5) in the paper).
@@ -346,6 +348,7 @@ ax.legend(loc='center left', frameon=False)
 ax.plot(l_val, prob_ee, label=r'$P_{\nu_e \to \nu_e}$', color='C0', zorder=1)
 ax.plot(l_val, prob_em, label=r'$P_{\nu_e \to \nu_\mu}$', color='C1', zorder=1)
 ax.plot(l_val, prob_et, label=r'$P_{\nu_e \to \nu_\tau}$', color='C2', zorder=1)
+plt.show()
 ````
 
 Alternatively, you can automatically produce plots of probability *vs.* baseline using the following function from the `oscprob3nu_tests` module:
