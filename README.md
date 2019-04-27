@@ -162,8 +162,8 @@ In this case, we use `probabilities_2nu`:
 import oscprob2nu
 
 hamiltonian = [
-                [1.0+0.0j, 0.0+2.0j],
-                [0.0-2.0j, 3.0+0.0j]
+                [1.0+0.0j, 1.0+2.0j],
+                [1.0-2.0j, 3.0+0.0j]
 ]
 
 L = 1.0
@@ -175,6 +175,8 @@ print("Pme = %6.5f, Pmm = %6.5f" % (Pme, Pmm))
 ```
 This returns
 ```shell
+Pee = 0.93213, Pem = 0.06787
+Pme = 0.06787, Pmm = 0.93213
 ```
 
 As expected, `Pem == Pme` and `Pee + Pem = 1`.
