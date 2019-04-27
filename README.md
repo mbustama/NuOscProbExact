@@ -318,7 +318,7 @@ log10_l_min = 0.0  # log10 [km]
 log10_l_max = 3.0  # log10 [km]
 log10_l_npts = 1000
 log10_l_val = np.linspace(log10_l_min, log10_l_max, log10_l_npts)  # [km]
-l_val = [CONV_KM_TO_INV_EV*10.**x for x in log10_l_val]
+l_val = [10.**x for x in log10_l_val]
 
 
 h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(  S12_BF, S23_BF,
@@ -327,7 +327,7 @@ h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independen
 h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
 
 # Each element of prob: [Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt]
-prob = [oscprob3nu.probabilities_3nu(h_vacuum, l) for l in l_val]
+prob = [oscprob3nu.probabilities_3nu(h_vacuum, CONV_KM_TO_INV_EV*l) for l in l_val]
 prob_ee = [x[0] for x in prob]  # Pee
 prob_em = [x[1] for x in prob]  # Pem
 prob_et = [x[2] for x in prob]  # Pet
@@ -341,13 +341,18 @@ import matplotlib as mpl
 
 fig = plt.figure(figsize=[9,9])
 ax = fig.add_subplot(1,1,1)
-ax.set_xlabel(r'Baseline $L$ [km]', fontsize=25)
-ax.set_ylabel(r'Three-neutrino probability', fontsize=25)
-ax.legend(loc='center left', frameon=False)
 
 ax.plot(l_val, prob_ee, label=r'$P_{\nu_e \to \nu_e}$', color='C0', zorder=1)
 ax.plot(l_val, prob_em, label=r'$P_{\nu_e \to \nu_\mu}$', color='C1', zorder=1)
 ax.plot(l_val, prob_et, label=r'$P_{\nu_e \to \nu_\tau}$', color='C2', zorder=1)
+
+ax.set_xlabel(r'Baseline $L$ [km]', fontsize=25)
+ax.set_ylabel(r'Three-neutrino probability', fontsize=25)
+ax.legend(loc='center left', frameon=False)
+ax.set_xlim([10.**log10_l_min, 10.**log10_l_max])
+ax.set_xscale('log')
+ax.set_ylim([0.0, 1.0])
+
 plt.show()
 ````
 
@@ -421,13 +426,19 @@ import matplotlib as mpl
 
 fig = plt.figure(figsize=[9,9])
 ax = fig.add_subplot(1,1,1)
-ax.set_xlabel(r'Neutrino energy $E$ [km]', fontsize=25)
-ax.set_ylabel(r'Three-neutrino probability', fontsize=25)
-ax.legend(loc='center right', frameon=False)
 
 ax.plot(energy, prob_ee, label=r'$P_{\nu_e \to \nu_e}$', color='C0', zorder=1)
 ax.plot(energy, prob_em, label=r'$P_{\nu_e \to \nu_\mu}$', color='C1', zorder=1)
 ax.plot(energy, prob_et, label=r'$P_{\nu_e \to \nu_\tau}$', color='C2', zorder=1)
+
+ax.set_xlabel(r'Neutrino energy $E$ [GeV]', fontsize=25)
+ax.set_ylabel(r'Three-neutrino probability', fontsize=25)
+ax.legend(loc='center right', frameon=False)
+ax.set_xlim([10.**log10_energy_min, 10.**log10_energy_max])
+ax.set_xscale('log')
+ax.set_ylim([0.0, 1.0])
+
+plt.show()
 ````
 
 Alternatively, you can automatically produce plots of probability using the following function from the `oscprob3nu_tests` module:
@@ -481,9 +492,9 @@ print("Pte = %6.5f, Ptm = %6.5f, Ptt = %6.5f" % (Pte, Ptm, Ptt))
 ````
 This returns
 ```shell
-Pee = 0.99981, Pem = 0.00010, Pet = 0.00009
-Pme = 0.00011, Pmm = 0.65964, Pmt = 0.34025
-Pte = 0.00008, Ptm = 0.34026, Ptt = 0.65966
+Pee = 0.93875, Pem = 0.01048, Pet = 0.05077
+Pme = 0.03387, Pmm = 0.37847, Pmt = 0.58766
+Pte = 0.02738, Ptm = 0.61105, Ptt = 0.36157
 ```
 
 ### Three-neutrino oscillations in matter with non-standard interactions (NSI)
@@ -509,7 +520,7 @@ baseline = 1.3e3  # Baseline [km]
 h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(  S12_BF, S23_BF,
                                                                                     S13_BF, DCP_BF,
                                                                                     D21_BF, D31_BF)
-h_nsi = hamiltonians3nu.hamiltonian_3nu_nsi(h_vacuum_energy_independent, energy, VCC_EARTH_CRUST, EPS_3)
+h_nsi = hamiltonians3nu.hamiltonian_3nu_nsi(h_vacuum_energy_indep, energy, VCC_EARTH_CRUST, EPS_3)
 
 Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( h_nsi,
                                                                             baseline*CONV_KM_TO_INV_EV)
@@ -520,6 +531,9 @@ print("Pte = %6.5f, Ptm = %6.5f, Ptt = %6.5f" % (Pte, Ptm, Ptt))
 ````
 This returns
 ```shell
+Pee = 0.92668, Pem = 0.01549, Pet = 0.05783
+Pme = 0.03793, Pmm = 0.35375, Pmt = 0.60832
+Pte = 0.03539, Ptm = 0.63077, Ptt = 0.33385
 ```
 
 
@@ -557,6 +571,9 @@ print("Pte = %6.5f, Ptm = %6.5f, Ptt = %6.5f" % (Pte, Ptm, Ptt))
 ````
 This returns
 ```shell
+Pee = 0.92721, Pem = 0.05299, Pet = 0.01980
+Pme = 0.05609, Pmm = 0.25288, Pmt = 0.69103
+Pte = 0.01670, Ptm = 0.69412, Ptt = 0.28917
 ```
 
 ### Arbitrary Hamiltonians
