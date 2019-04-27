@@ -42,6 +42,12 @@ import cmath
 import cmath as cmath
 
 
+SQRT3 = sqrt(3.0)
+r"""float: Module-level constant
+
+Constant equal to sqrt(3.0).
+"""
+
 SQRT3_INV = 1./sqrt(3.0)
 r"""float: Module-level constant
 
@@ -105,7 +111,7 @@ def hamiltonian_3nu_coefficients(hamiltonian_matrix):
     h5 = -H13.imag
     h6 = H23.real
     h7 = -H23.imag
-    h8 = (H11+H22-2.0*H33)*sqrt(3.0)/6.0
+    h8 = (H11+H22-2.0*H33)*SQRT3/6.0
 
     return [h1, h2, h3, h4, h5, h6, h7, h8]
 
@@ -281,7 +287,7 @@ def psi_roots(h2, h3):
         The three roots [psi1, psi2, psi3]
     """
     pre = 2.0*sqrt(h2)*SQRT3_INV
-    chi = cmath.acos(-sqrt(3.0)*h3*pow(h2,-1.5))
+    chi = cmath.acos(-SQRT3*h3*pow(h2,-1.5))
 
     roots = [pre*cmath.cos((chi+2.*np.pi*m)/3.0) for m in [1,2,3]]
 
@@ -384,9 +390,9 @@ def evolution_operator_3nu(hamiltonian_matrix, L):
         evolution_operator_3nu_u_coefficients(hamiltonian_matrix, L)
 
     evolution_operator = [
-                            [u0+1.j*(u3+u8/sqrt(3.)), 1.j*u1+u2, 1.j*u4+u5],
-                            [1.j*u1-u2, u0-1.j*(u3-u8/sqrt(3.)), 1.j*u6+u7],
-                            [1.j*u4-u5, 1.j*u6-u7, u0-1.j*2.*u8/sqrt(3.)]
+                            [u0+1.j*(u3+u8/SQRT3), 1.j*u1+u2, 1.j*u4+u5],
+                            [1.j*u1-u2, u0-1.j*(u3-u8/SQRT3), 1.j*u6+u7],
+                            [1.j*u4-u5, 1.j*u6-u7, u0-1.j*2.*u8/SQRT3]
     ]
 
     return evolution_operator

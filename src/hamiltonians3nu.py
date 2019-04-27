@@ -205,7 +205,7 @@ def J(U, alpha, beta, k, j):
     return np.conj(U[alpha][k])*U[beta][k]*U[alpha][j]*np.conj(U[beta][j])
 
 
-def probabilities_3nu_std(U, D21, D31, energy, L):
+def probabilities_3nu_vacuum_std(U, D21, D31, energy, L):
     r"""Returns 3nu oscillation vacuum probabilities, std. computation.
 
     Returns the probabilities for three-neutrino oscillations in vacuum,
@@ -232,9 +232,9 @@ def probabilities_3nu_std(U, D21, D31, energy, L):
         Ptt].
     """
     D32 = D31-D21
-    arg21 = D21*L/energy/2.0
-    arg31 = D31*L/energy/2.0
-    arg32 = D32*L/energy/2.0
+    arg21 = 2.54*D21*L/energy#/2.0
+    arg31 = 2.54*D31*L/energy#/2.0
+    arg32 = 2.54*D32*L/energy#/2.0
     s21 = sin(arg21)
     s31 = sin(arg31)
     s32 = sin(arg32)
@@ -287,6 +287,111 @@ def hamiltonian_3nu_matter(h_vacuum_energy_independent, energy, VCC):
     h_matter[0][0] += VCC
 
     return h_matter
+
+
+def probabilities_3nu_matter_zs(U, D21, D31, energy, L):
+    r"""Returns 3nu oscillation vacuum probabilities, std. computation.
+
+    Returns the probabilities for three-neutrino oscillations in vacuum,
+    computed using the standard analytical expression of the
+    probabilities.
+
+    Parameters
+    ----------
+    U : list
+        3x3 PMNS complex mixing matrix.
+    D21 : float
+        Mass-squared difference Delta m^2_21.
+    D31 : float
+        Mass-squared difference Delta m^2_31.
+    energy : float
+        Neutrino energy.
+    L : float
+        Baseline.
+
+    Returns
+    -------
+    list
+        List of probabilities [Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm,
+        Ptt].
+    """
+    s13sq = s13*s13
+    c13sq = 1.-s13sq
+    s12sq = s12*s12
+    c12sq = 1.-s12sq
+    s23sq = s23*s23
+    c23sq = 1.-s23sq
+    cosdCP = cos(dCP)
+    expdCP = complex(cos(dCP), sin(dCP))
+    expmdCP = complex(cos(dCP), -sin(dCP))
+
+    A = D21 + D31 + a
+    B = Dm21*D31 + a*(D31*c13sq+D21*(c13sq*c12sq+s13sq))
+    C = a*D21*D31*c13sq*c12sq
+    A2 = A*A
+    t1 = 2.*A2*A-9.*A*B+27.*C
+    t2 = 2.*pow(A2-3.*B, 1.5)
+    S = cos(arccos(t1/t2)/3.)
+
+    t3 = A/3.
+    t4 = sqrt(A*A-3.*B)*S
+    t5 = sqrt(1.-S*S)
+    t6 = sqrt(3.)/3.*t4*t5
+
+    m1sq = t3 - t4/3. - t6
+    m2sq = t3 - t4/3. + t6
+    m3sq = t3 + 2./3.*t4
+
+    D21m = 2.*t6
+    D31m = t4+t6
+    D32m = D31m-D21m
+
+    alpha = D31*c13sq + D21*(c13sq*c12sq+s13sq)
+    beta = D21*D31*c13sq*c12sq
+    E = (D31*(m3sq-D21) - D21*(m3sq-D31)*s12sq)*c13*s13
+    F = D21*(m3sq-D31)*c12*s12*c13
+
+    t7 = - (m2sq*m2sq - alpha*m2sq + beta)*D31m
+    t8 = D32m*(m1sq*m1sq - alpha*m1sq + beta) \
+            - D31m*(m2sq*m2sq - alpha*m2sq + beta)
+    s12sqm = t7/t8
+
+    t9 = m3sq*m3sq - alpha*m3sq + beta
+    t10 = D31m*D32m
+    s13sqm = t9/t10
+
+    t11 = E*E*s23sq + F*F*c23sq + 2.*E*F*c23*s23*cosdCP
+    t12 = E*E+F*F
+    s23sqm = t11/t12
+
+    t13 = (E*E*expmdCP - F*F*expdCP)*c23*s23 + E*F*(c23sq-s23sq)
+    t14 = E*E*s23sq + F*F*c23sq + 2.0*E*F*c23*s23*cosdCP
+    t15 = E*E*c23sq + F*F*s23sq - 2.0*E*F*c23*s23*cosdCP
+    expmdCPm = t13 / sqrt(t14*t15)
+
+
+    D32 = D31-D21
+    arg21 = D21*L/energy/2.0
+    arg31 = D31*L/energy/2.0
+    arg32 = D32*L/energy/2.0
+    s21 = sin(arg21)
+    s31 = sin(arg31)
+    s32 = sin(arg32)
+    ss21 = pow(sin(arg21/2.0), 2.0)
+    ss31 = pow(sin(arg31/2.0), 2.0)
+    ss32 = pow(sin(arg32/2.0), 2.0)
+
+    # Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt
+    prob = [delta(alpha, beta) \
+            - 4.0 * ( J(U, alpha, beta, 1, 0).real*ss21
+                    + J(U, alpha, beta, 2, 0).real*ss31
+                    + J(U, alpha, beta, 2, 1).real*ss32 ) \
+            + 2.0 * ( J(U, alpha, beta, 1, 0).imag*s21
+                    + J(U, alpha, beta, 2, 0).imag*s31
+                    + J(U, alpha, beta, 2, 1).imag*s32 ) \
+            for alpha in [0,1,2] for beta in [0,1,2]]
+
+    return prob
 
 
 def hamiltonian_3nu_nsi(h_vacuum_energy_independent, energy, VCC, eps):

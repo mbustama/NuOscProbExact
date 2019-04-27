@@ -7,7 +7,7 @@ vs. baseline and vs. energy.  Also generates the plot included in the
 paper.
 
 Created: 2019/04/22 16:23
-Last modified: 2019/04/22 20:21
+Last modified: 2019/04/27 17:19
 """
 
 from __future__ import print_function
@@ -25,6 +25,7 @@ sys.path.append('./test')
 
 import oscprob2nu_plot
 import oscprob3nu_plot
+import oscprob2nu_plotpaper
 import oscprob3nu_plotpaper
 
 
@@ -193,9 +194,16 @@ for case in ['vacuum', 'matter', 'nsi', 'liv']:
 
 print()
 
-print('Generating plot in paper... ', end='')
-oscprob3nu_plotpaper.plot_probability_vs_energy_compare(output_format='png',
-  output_path='./fig/')
+print('Generating 2nu plot in paper... ', end='')
+oscprob2nu_plotpaper.plot_probability_2nu_vs_energy_compare( \
+    output_format='png', output_path='./fig/')
+print('Done')
+
+print()
+
+print('Generating 3nu plot in paper... ', end='')
+oscprob3nu_plotpaper.plot_probability_3nu_vs_energy_compare( \
+    output_format='png', output_path='./fig/')
 print('Done')
 
 

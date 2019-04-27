@@ -90,7 +90,7 @@ def hamiltonian_2nu_vacuum_energy_independent(sth, Dm2,
     c2th = cos(2.0*th)
     s2th = sin(2.0*th)
 
-    f = 1./2.
+    f = 1./4.
 
     if not compute_matrix_multiplication:
 
@@ -111,6 +111,43 @@ def hamiltonian_2nu_vacuum_energy_independent(sth, Dm2,
         H = list(f*np.matmul(R, np.matmul(M2, matrix.transpose(R))))
 
     return H
+
+
+def probabilities_2nu_vacuum_std(sth, Dm2, energy, L):
+    r"""Returns 2nu oscillation vacuum probabilities, std. computation.
+
+    Returns the probabilities for two-neutrino oscillations in vacuum,
+    computed using the standard analytical expression of the
+    probabilities.
+
+    Parameters
+    ----------
+    sth : float
+        Sin(theta).
+    Dm2 : float
+        Mass-squared difference Delta m^2.
+    energy : float
+        Neutrino energy.
+    L : float
+        Baseline.
+
+    Returns
+    -------
+    list
+        List of probabilities [Pee, Pem, Pme, Pmm].
+    """
+    arg = 1.27*Dm2*L/energy#/4.0
+    cth = sqrt(1.0-sth*sth)
+    s2th = 2.0*sth*cth
+
+    Pem = s2th*s2th * pow(sin(arg), 2.0)
+    Pme = Pem
+    Pee = 1.0-Pem
+    Pmm = 1.0-Pme
+
+    prob = [Pee, Pem, Pme, Pmm]
+
+    return prob
 
 
 def hamiltonian_2nu_matter(h_vacuum_energy_independent, energy, VCC):
@@ -139,10 +176,58 @@ def hamiltonian_2nu_matter(h_vacuum_energy_independent, energy, VCC):
     h_matter = cp.deepcopy(h_vacuum_energy_independent)
     h_matter = np.multiply(1.0/energy, h_matter)
 
-    # Add the matter potential to the ee term to find the matter Hamiltonian
+    # Add the matter potential to the ee term to find the matter
+    # Hamiltonian
     h_matter[0][0] += VCC
 
     return h_matter
+
+
+def probabilities_2nu_matter_std(sth, Dm2, VCC, energy, L):
+    r"""Returns 2nu oscillation matter probabilities, std. computation.
+
+    Returns the probabilities for two-neutrino oscillations in matter,
+    computed using the standard analytical expression of the
+    probabilities.
+
+    Parameters
+    ----------
+    sth : float
+        Sin(theta).
+    Dm2 : float
+        Mass-squared difference Delta m^2.
+    VCC : float
+        Potential due to charged-current interactions of nu_e with
+        electrons.
+    energy : float
+        Neutrino energy.
+    L : float
+        Baseline.
+
+    Returns
+    -------
+    list
+        List of probabilities [Pee, Pem, Pme, Pmm].
+    """
+    x = 2.0*VCC*(energy*1.e9)/Dm2
+    cth = sqrt(1.0-sth*sth)
+    s2th = 2.0*sth*cth
+    s2thsq = s2th*s2th
+    c2th = sqrt(1.0-s2thsq)
+
+    Dm2m = Dm2*sqrt(s2thsq+pow(c2th-x, 2.0))
+    s2thmsq = s2thsq / (s2thsq+pow(c2th-x, 2.0))
+
+    arg = 1.27*Dm2m*L/energy#/4.0
+
+    Pem = s2thmsq * pow(sin(arg), 2.0)
+    Pme = Pem
+    Pee = 1.0-Pem
+    Pmm = 1.0-Pme
+
+    prob = [Pee, Pem, Pme, Pmm]
+
+    return prob
 
 
 def hamiltonian_2nu_nsi(h_vacuum_energy_independent, energy, VCC, eps):

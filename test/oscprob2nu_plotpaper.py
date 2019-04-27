@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
-r"""Produce the plot of 3nu probabilities vs. energy shown in the paper.
+r"""Produce the plot of 2nu probabilities vs. energy shown in the paper.
 
-Contains a routine to generate and save the plot of three-neutrino
+Contains a routine to generate and save the plot of two-neutrino
 probabilities vs. energy that is included in the paper.
 
 Routine listings
 ----------------
 
-    * plot_probability_3nu_vs_energy_compare - Generates, saves the plot
+    * plot_probability_2nu_vs_energy_compare - Generates, saves the plot
 
 References
 ----------
@@ -15,8 +15,8 @@ References
 .. [1] Mauricio Bustamante, "Exact neutrino oscillation probabilities
    with arbitrary time-independent Hamiltonians", arXiv:1904.XXXXX.
 
-Created: 2019/04/17 18:08
-Last modified: 2019/04/22 20:36
+Created: 2019/04/26 21:20
+Last modified: 2019/04/26 21:20
 """
 
 __version__ = "0.1"
@@ -33,16 +33,16 @@ import matplotlib as mpl
 import sys
 sys.path.append('../src')
 
-import oscprob3nu
-import hamiltonians3nu
+import oscprob2nu
+import hamiltonians2nu
 from globaldefs import *
 
 
-def plot_probability_3nu_vs_energy_compare(output_format='pdf',
+def plot_probability_2nu_vs_energy_compare(output_format='pdf',
     output_path='./fig/'):
-    r"""Generates and saves a plot of 3nu probabilities vs. energy.
+    r"""Generates and saves a plot of 2nu probabilities vs. energy.
 
-    Generates and saves a plot of three-neutrino probabilities vs.
+    Generates and saves a plot of two-neutrino probabilities vs.
     energy for oscillations in vacuum, matter, with NSI, and with
     CPT-odd LIV.  This is the same plot that is included in the paper.
 
@@ -63,7 +63,7 @@ def plot_probability_3nu_vs_energy_compare(output_format='pdf',
 
     # Neutrino energies
     log10_energy_nu_min = log10(5.e-1) # [GeV]
-    log10_energy_nu_max = log10(3.e1) # [GeV]
+    log10_energy_nu_max = log10(4.e1) # [GeV]
     log10_energy_nu_npts = 400
     log10_energy_nu = np.linspace(  log10_energy_nu_min,
                                     log10_energy_nu_max,
@@ -83,43 +83,43 @@ def plot_probability_3nu_vs_energy_compare(output_format='pdf',
     fig.subplots_adjust(hspace=0.05, wspace=0.05)
 
     h_vacuum_energy_indep = \
-        hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(  S12_BF,
-                                                                    S23_BF,
-                                                                    S13_BF,
-                                                                    DCP_BF,
-                                                                    D21_BF,
+        hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(  S23_BF,
                                                                     D31_BF)
 
-    prob_vacuum = [oscprob3nu.probabilities_3nu( \
+    prob_vacuum = [oscprob2nu.probabilities_2nu( \
                     np.multiply(1./x/1.e9, h_vacuum_energy_indep), l) \
                     for x in energy_nu]
 
     # Uncomment to compare to the probability computed with the standard
     # ocillation formula in vacuum
-    # U = hamiltonians3nu.pmns_mixing_matrix(S12_BF, S23_BF, S13_BF, DCP_BF)
-    # prob_vacuum_std = [hamiltonians3nu.probabilities_3nu_vacuum_std( \
-    #                     U, D21_BF, D31_BF, x, l/CONV_KM_TO_INV_EV) \
+    # prob_vacuum_std = [hamiltonians2nu.probabilities_2nu_vacuum_std( \
+    #                     S23_BF, D31_BF, x, l/CONV_KM_TO_INV_EV) \
     #                 for x in energy_nu]
 
-    prob_matter = [oscprob3nu.probabilities_3nu( \
-                    hamiltonians3nu.hamiltonian_3nu_matter( \
+    prob_matter = [oscprob2nu.probabilities_2nu( \
+                    hamiltonians2nu.hamiltonian_2nu_matter( \
                         h_vacuum_energy_indep, x*1.e9, VCC_EARTH_CRUST), l)
                     for x in energy_nu]
 
-    # eps = eps_ee, eps_em, eps_et, eps_mm, eps_mt, eps_tt
-    prob_nsi = [oscprob3nu.probabilities_3nu( \
-                    hamiltonians3nu.hamiltonian_3nu_nsi( \
-                        h_vacuum_energy_indep, x*1.e9, VCC_EARTH_CRUST, EPS_3),
+    # Uncomment to compare to the probability computed with the standard
+    # ocillation formula in matter
+    # prob_matter_std = [hamiltonians2nu.probabilities_2nu_matter_std( \
+    #                     S23_BF, D31_BF, VCC_EARTH_CRUST, x, l/CONV_KM_TO_INV_EV) \
+    #                 for x in energy_nu]
+
+    prob_nsi = [oscprob2nu.probabilities_2nu( \
+                    hamiltonians2nu.hamiltonian_2nu_nsi( \
+                        h_vacuum_energy_indep, x*1.e9, VCC_EARTH_CRUST, EPS_2),
                         l)
                 for x in energy_nu]
 
-    prob_liv = [oscprob3nu.probabilities_3nu( \
-                    hamiltonians3nu.hamiltonian_3nu_liv( \
-                        h_vacuum_energy_indep, x*1.e9, SXI12, SXI23, SXI13,
-                        DXICP, B1, B2, B3, LAMBDA), l)
+    prob_liv = [oscprob2nu.probabilities_2nu( \
+                    hamiltonians2nu.hamiltonian_2nu_liv( \
+                        h_vacuum_energy_indep, x*1.e9, SXI12, B1, B3, LAMBDA),
+                        l)
                 for x in energy_nu]
 
-    # Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt
+    # Pee, Pem, Pmm
     for i, ax in enumerate(np.array(axes).reshape((1,3))[0]):
 
         if (i == 0): # Pee
@@ -127,6 +127,7 @@ def plot_probability_3nu_vs_energy_compare(output_format='pdf',
             p_vacuum = [x[0] for x in prob_vacuum]
             # p_vacuum_std = [x[0] for x in prob_vacuum_std]
             p_matter = [x[0] for x in prob_matter]
+            # p_matter_std = [x[0] for x in prob_matter_std]
             p_nsi = [x[0] for x in prob_nsi]
             p_liv = [x[0] for x in prob_liv]
 
@@ -134,21 +135,23 @@ def plot_probability_3nu_vs_energy_compare(output_format='pdf',
 
         elif (i == 1): # Pme
 
-            p_vacuum = [x[3] for x in prob_vacuum]
-            # p_vacuum_std = [x[3] for x in prob_vacuum_std]
-            p_matter = [x[3] for x in prob_matter]
-            p_nsi = [x[3] for x in prob_nsi]
-            p_liv = [x[3] for x in prob_liv]
+            p_vacuum = [x[2] for x in prob_vacuum]
+            # p_vacuum_std = [x[2] for x in prob_vacuum_std]
+            p_matter = [x[2] for x in prob_matter]
+            # p_matter_std = [x[2] for x in prob_matter_std]
+            p_nsi = [x[2] for x in prob_nsi]
+            p_liv = [x[2] for x in prob_liv]
 
             ylabel = r'$P_{\nu_\mu \to \nu_e}$'
 
         elif (i == 2): # Pmm
 
-            p_vacuum = [x[4] for x in prob_vacuum]
-            # p_vacuum_std = [x[4] for x in prob_vacuum_std]
-            p_matter = [x[4] for x in prob_matter]
-            p_nsi = [x[4] for x in prob_nsi]
-            p_liv = [x[4] for x in prob_liv]
+            p_vacuum = [x[3] for x in prob_vacuum]
+            # p_vacuum_std = [x[3] for x in prob_vacuum_std]
+            p_matter = [x[3] for x in prob_matter]
+            # p_matter_std = [x[3] for x in prob_matter_std]
+            p_nsi = [x[3] for x in prob_nsi]
+            p_liv = [x[3] for x in prob_liv]
 
             ylabel = r'$P_{\nu_\mu \to \nu_\mu}$'
             ax.set_xlabel(r'Neutrino energy [GeV]', fontsize=27)
@@ -161,6 +164,8 @@ def plot_probability_3nu_vs_energy_compare(output_format='pdf',
             # label=r'Vacuum std.')
         ax.plot(energy_nu, p_matter, color='C1', ls='--', lw=3.0, zorder=1,
             label=r'Matter')
+        # ax.plot(energy_nu, p_matter_std, color='b', ls='--', lw=3.0, zorder=1,
+            # label=r'Matter std.')
         ax.plot(energy_nu, p_nsi, color='C2', ls=':', lw=3.0, zorder=1,
             label=r'NSI')
         ax.plot(energy_nu, p_liv, color='C3', ls='-.', lw=3.0, zorder=1,
@@ -182,25 +187,26 @@ def plot_probability_3nu_vs_energy_compare(output_format='pdf',
         if (i == 0):
 
             ax.set_xticklabels([])
-            ax_yticks_major = np.array([0.85, 0.90, 0.95, 1.00])
+            ax_yticks_major = np.array([0.00, 0.25, 0.50, 0.75, 1.00])
             ax.set_yticks(ax_yticks_major, minor=False)
-            ax_yticks_minor = np.array([0.86, 0.87, 0.88, 0.89,
-                                        0.91, 0.92, 0.93, 0.94, 0.96, 0.97,
-                                        0.98, 0.99])
+            ax_yticks_minor = np.array([0.05, 0.10, 0.15, 0.20, 0.30, 0.35,
+                                        0.40, 0.45, 0.55, 0.60, 0.65, 0.70,
+                                        0.80, 0.85, 0.90, 0.95])
             ax.set_yticks(ax_yticks_minor, minor=True)
-            ax.set_ylim([0.85, 1.00])
+            ax.set_ylim([0.0, 1.0])
             ax.legend(loc='lower right', ncol=1, frameon=False,
                 columnspacing=1.)
 
         elif (i == 1):
 
             ax.set_xticklabels([])
-            ax_yticks_major = np.array([0.00, 0.05, 0.10])
+            ax_yticks_major = np.array([0.00, 0.25, 0.50, 0.75])
             ax.set_yticks(ax_yticks_major, minor=False)
-            ax_yticks_minor = np.array([0.01, 0.02, 0.03, 0.04, 0.06, 0.07,
-                                        0.08, 0.09, 0.11, 0.12])
+            ax_yticks_minor = np.array([0.05, 0.10, 0.15, 0.20, 0.30, 0.35,
+                                        0.40, 0.45, 0.55, 0.60, 0.65, 0.70,
+                                        0.80, 0.85, 0.90, 0.95])
             ax.set_yticks(ax_yticks_minor, minor=True)
-            ax.set_ylim([0.00, 0.12])
+            ax.set_ylim([0.0, 1.])
 
         elif (i == 2):
 
@@ -212,11 +218,11 @@ def plot_probability_3nu_vs_energy_compare(output_format='pdf',
             ax.set_yticks(ax_yticks_minor, minor=True)
             ax.set_ylim([0.0, 1.0])
 
-        pylab.savefig(output_path+'prob_3nu_vs_energy_compare.'+output_format,
+        pylab.savefig(output_path+'prob_2nu_vs_energy_compare.'+output_format,
             bbox_inches='tight', dpi=300)
 
     return
 
-plot_probability_3nu_vs_energy_compare( output_format='pdf',
+plot_probability_2nu_vs_energy_compare( output_format='pdf',
                                         output_path='../fig/')
 
