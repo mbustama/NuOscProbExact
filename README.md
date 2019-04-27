@@ -72,7 +72,7 @@ Instructions:
    cd /home/MyProjects/NuOscProbExact
    python run_testsuite.py
    ```
-   Doing this will generate plots of the two-neutrino and three-neutrino probabilities *vs.* distance and *vs.* energy, for different oscillation scenarios.  It will also generate the plot of probabilities *vs.* energy that is included in the paper.  The plots are stored in the `NuOscProbExact/fig` directory.  The code `run_testsuite.py` calls routines defined in `oscprob2nu_plot.py`, `oscprob3nu_plot.py`, and `oscprob3nu_plotpaper.py`, located in the `NuOscProbExact/test/` directory.  Inspecting these files may help you in coding your own project.
+   Doing this will generate plots of the two-neutrino and three-neutrino probabilities *vs.* distance and *vs.* energy, for different oscillation scenarios.  It will also generate the plot of two-neutrino and three-neutrino probabilities *vs.* energy that are included in the paper.  The plots are stored in the `NuOscProbExact/fig` directory.  The code `run_testsuite.py` calls routines defined in `oscprob2nu_plot.py`, `oscprob3nu_plot.py`, `oscprob2nu_plotpaper.py`, and `oscprob3nu_plotpaper.py`, located in the `NuOscProbExact/test/` directory.  Inspecting these files may help you in coding your own project.
 
 
 ## Usage and examples
