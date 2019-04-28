@@ -153,7 +153,7 @@ Pme = 0.41369, Pmm = 0.00485, Pmt = 0.58146
 Pte = 0.24358, Ptm = 0.58146, Ptt = 0.17497
 ```
 
-As expected, `Pem == Pme`, `Pet == Pte`, `Pmt == Ptm`, `Pee + Pem + Pet = 1`, `Pme + Pmm + Pmt = 1`, and `Pte + Ptm + Ptt = 1`.
+As expected, `Pme + Pmm + Pmt = 1`, and `Pte + Ptm + Ptt = 1`.
 
 #### Two-neutrino oscillations
 
