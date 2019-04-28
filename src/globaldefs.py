@@ -102,7 +102,7 @@ Units: [g cm^{-3}]
 #                             * ELECTRON_FRACTION_EARTH_CRUST \
 #                             / pow(CONV_CM_TO_INV_EV, 3.0)
 NUM_DENSITY_E_EARTH_CRUST = DENSITY_MATTER_CRUST_G_PER_CM3 * CONV_G_TO_EV \
-                            / (MASS_PROTON+MASS_NEUTRON) \
+                            / ((MASS_PROTON+MASS_NEUTRON)/2.0) \
                             * ELECTRON_FRACTION_EARTH_CRUST \
                             / pow(CONV_CM_TO_INV_EV, 3.0)
 r"""float: Module-level constant
