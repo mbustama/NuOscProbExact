@@ -19,7 +19,8 @@ Created: 2019/04/21 15:00
 Last modified: 2019/04/23 21:04
 """
 
-__version__ = "0.1"
+
+__version__ = "1.0"
 __author__ = "Mauricio Bustamante"
 __email__ = "mbustamante@gmail.com"
 

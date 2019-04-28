@@ -24,7 +24,8 @@ Created: 2019/04/20 19:07
 Last modified: 2019/04/22 20:33
 """
 
-__version__ = "0.3"
+
+__version__ = "1.0"
 __author__ = "Mauricio Bustamante"
 __email__ = "mbustamante@gmail.com"
 
@@ -242,60 +243,3 @@ def probabilities_2nu(hamiltonian_matrix, L):
     Pmm = 1.0-Pme
 
     return Pee, Pem, Pme, Pmm
-
-
-
-
-# hamiltonian_matrix = [
-#                         [1.0+0.0j, 0.0+2.0j],
-#                         [0.0-2.0j, 3.0+0.0j]
-# ]
-
-
-# h_coeffs = hamiltonian_2nu_coefficients(hamiltonian_matrix)
-# print("h = ", h_coeffs)
-# print()
-
-
-
-# u_coeffs = evolution_operator_2nu_u_coefficients(hamiltonian_matrix, 1.0)
-# print("u = ", u_coeffs)
-# u0, u1, u2, u3 = u_coeffs
-# print()
-
-
-# u = np.array(evolution_operator_2nu(hamiltonian_matrix, 1.0))
-# udag = np.conj(matrix.transpose(u))
-
-# print(u)
-# print(udag)
-# print(np.matmul(u,udag))
-# print(u @ udag)
-# print()
-# print(abs(u[0][0])**2.0)
-# print(abs(u[0][1])**2.0)
-
-
-# HH = np.array([np.multiply(h_coeffs[i], sigma[i]) for i in range(0,3)])
-# print(HH.sum(axis=0))
-# print()
-
-# UU = np.array([ np.multiply(u_coeffs[0], identity),
-#                 np.multiply(1.0j*u_coeffs[1], sigma_1),
-#                 np.multiply(1.0j*u_coeffs[2], sigma_2),
-#                 np.multiply(1.0j*u_coeffs[3], sigma_3)]).sum(axis=0)
-# UUdag = np.conj(matrix.transpose(UU))
-# print(UU)
-# print(UU @ UUdag)
-# print()
-
-
-"""
-Pee, Pem, Pme, Pmm = \
-    probabilities_2nu(hamiltonian_matrix, 1.0)
-
-print(Pee, Pem, Pme, Pmm)
-print(Pee+Pem)
-print(Pme+Pmm)
-"""
-

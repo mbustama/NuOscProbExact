@@ -31,7 +31,8 @@ Created: 2019/04/11 15:36
 Last modified: 2019/04/20 18:47
 """
 
-__version__ = "0.3"
+
+__version__ = "1.0"
 __author__ = "Mauricio Bustamante"
 __email__ = "mbustamante@gmail.com"
 
@@ -124,16 +125,16 @@ def tensor_d(i, j, k):
     Parameters
     ----------
     i : int
-        First index
+        First index.
     j : int
-        Second index
+        Second index.
     k : int
-        Third index
+        Third index.
 
     Returns
     -------
     float
-        Value of the tensor d_ijk
+        Value of the tensor d_ijk.
     """
     ip1 = i+1
     jp1 = j+1
@@ -225,14 +226,14 @@ def star(i, h_coeffs):
     Parameters
     ----------
     i : int
-        Index of the star product
+        Index of the star product.
     h_coeffs : array_like
-        Eight-component vector
+        Eight-component vector.
 
     Returns
     -------
     float
-        Star product (h*h)_i
+        Star product (h*h)_i.
     """
     res = sum([tensor_d(i,j,k)*h_coeffs[j]*h_coeffs[k]
             for j in range(0,8) for k in range(0,8)])
@@ -249,14 +250,14 @@ def su3_invariants(h_coeffs):
     Parameters
     ----------
     h_coeffs : array_like
-        Eight-component vector
+        Eight-component vector.
 
     Returns
     -------
     h2 : float
-        SU(3) invariant |h|^2
+        SU(3) invariant |h|^2.
     h3 : float
-        SU(3) invariant <h>
+        SU(3) invariant <h>.
     """
     # h2 = |h|^2
     h2 = sum([h*h for h in h_coeffs])
@@ -277,14 +278,14 @@ def psi_roots(h2, h3):
     Parameters
     ----------
     h2 : float
-        SU(3) invariant |h|^2
+        SU(3) invariant |h|^2.
     h3 : float
-        SU(3) invariant <h>
+        SU(3) invariant <h>.
 
     Returns
     -------
     roots : list
-        The three roots [psi1, psi2, psi3]
+        The three roots [psi1, psi2, psi3].
     """
     pre = 2.0*sqrt(h2)*SQRT3_INV
     chi = cmath.acos(-SQRT3*h3*pow(h2,-1.5))
@@ -304,14 +305,14 @@ def evolution_operator_3nu_u_coefficients(hamiltonian_matrix, L):
     Parameters
     ----------
     hamiltonian_matrix : list
-        3x3 Hamiltonian, [[H11,H12,H13],[H21,H22,H23],[H31,H32,H33]]
+        3x3 Hamiltonian, [[H11,H12,H13],[H21,H22,H23],[H31,H32,H33]].
     L : float
-        Baseline
+        Baseline.
 
     Returns
     -------
     list
-        The nine coefficients [u0, u1, u2, u3, u4, u5, u6, u7, u8]
+        The nine coefficients [u0, u1, u2, u3, u4, u5, u6, u7, u8].
 
     Example
     -------
@@ -363,9 +364,9 @@ def evolution_operator_3nu(hamiltonian_matrix, L):
     Parameters
     ----------
     hamiltonian_matrix : list
-        3x3 Hamiltonian, [[H11,H12,H13],[H21,H22,H23],[H31,H32,H33]]
+        3x3 Hamiltonian, [[H11,H12,H13],[H21,H22,H23],[H31,H32,H33]].
     L : float
-        Baseline
+        Baseline.
 
     Returns
     -------
@@ -407,15 +408,15 @@ def probabilities_3nu(hamiltonian_matrix, L):
     Parameters
     ----------
     hamiltonian_matrix : list
-        3x3 Hamiltonian, [[H11,H12,H13],[H21,H22,H23],[H31,H32,H33]]
+        3x3 Hamiltonian, [[H11,H12,H13],[H21,H22,H23],[H31,H32,H33]].
     L : float
-        Baseline
+        Baseline.
 
     Returns
     -------
     list
         Three-neutrino probabilities
-        Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt
+        Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt.
 
     Example
     -------
@@ -444,90 +445,3 @@ def probabilities_3nu(hamiltonian_matrix, L):
     Ptt = abs(U[2][2])**2.
 
     return Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt
-
-
-
-# hamiltonian_matrix = [
-#                         [1.0, -2.0j, 1.0j],
-#                         [2.0j, 3.0, 3.0j],
-#                         [-1.0j, -3.0j, 4.0]
-# ]
-
-# hamiltonian_matrix = [
-#                         [1.0+0.0j, 0.0+2.0j, 0.0-1.0j],
-#                         [0.0-2.0j, 3.0+0.0j, 3.0+0.0j],
-#                         [0.0+1.0j, 3.0-0.0j, 5.0+0.0j]
-# ]
-
-# hamiltonian_matrix = [
-#                         [1.0, 0.0, 0.0],
-#                         [0.0, 3.0, 3.0],
-#                         [0.0, 3.0, 5.0]
-# ]
-
-# h_coeffs = hamiltonian_3nu_coefficients(hamiltonian_matrix)
-# print("h = ", h_coeffs)
-# print()
-
-
-# print(np.array(hamiltonian_matrix))
-# print()
-
-# HH = np.array([np.multiply(h_coeffs[i], lambda_matrix[i]) for i in range(0,8)])
-# print(HH.sum(axis=0))
-# print()
-
-# quit()
-
-# h2, h3 = su3_invariants(h_coeffs)
-# print("h2 = ", h2)
-# print("h3 = ", h3)
-# print()
-
-# # print([star(i, h_coeffs) for i in range(0,8)])
-
-# phi = phi_roots(I2, I3)
-# print(phi)
-
-
-# u_coeffs = evolution_operator_3nu_u_coefficients(hamiltonian_matrix, 1.0)
-# print("u = ", u_coeffs)
-# print()
-
-
-# u = np.array(evolution_operator_3nu(hamiltonian_matrix, 1.0))
-# udag = np.conj(matrix.transpose(u))
-
-# print(u)
-# print(udag)
-# print(np.matmul(u,udag))
-# print(u @ udag)
-
-
-
-
-"""
-Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = \
-    probabilities_3nu(hamiltonian_matrix, 1.0)
-
-print(Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt)
-print(Pee+Pem+Pet)
-print(Pme+Pmm+Pmt)
-print(Pte+Ptm+Ptt)
-"""
-
-
-"""
-hamiltonian = [
-                [1.0+0.0j, 0.0+2.0j, 0.0-1.0j],
-                [0.0-2.0j, 3.0+0.0j, 3.0+0.0j],
-                [0.0+1.0j, 3.0-0.0j, 5.0+0.0j]
-]
-
-L = 1.0
-
-Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = \
-    probabilities_3nu(hamiltonian, L)
-
-print(Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt)
-"""

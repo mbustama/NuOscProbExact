@@ -15,7 +15,8 @@ Created: 2019/04/22 18:35
 Last modified: 2019/04/22 19:31
 """
 
-__version__ = "0.1"
+
+__version__ = "1.0"
 __author__ = "Mauricio Bustamante"
 __email__ = "mbustamante@gmail.com"
 
@@ -435,4 +436,3 @@ def plot_probability_2nu_vs_energy(
     plt.close()
 
     return
-

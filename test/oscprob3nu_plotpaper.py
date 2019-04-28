@@ -19,7 +19,8 @@ Created: 2019/04/17 18:08
 Last modified: 2019/04/22 20:36
 """
 
-__version__ = "0.1"
+
+__version__ = "1.0"
 __author__ = "Mauricio Bustamante"
 __email__ = "mbustamante@nbi.ku.dk"
 
@@ -217,6 +218,6 @@ def plot_probability_3nu_vs_energy_compare(output_format='pdf',
 
     return
 
-plot_probability_3nu_vs_energy_compare( output_format='pdf',
-                                        output_path='../fig/')
+# plot_probability_3nu_vs_energy_compare( output_format='pdf',
+                                        # output_path='../fig/')
 

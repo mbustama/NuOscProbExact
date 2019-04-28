@@ -10,9 +10,10 @@ Created: 2019/04/22 16:23
 Last modified: 2019/04/27 17:19
 """
 
+
 from __future__ import print_function
 
-__version__ = "0.1"
+__version__ = "1.0"
 __author__ = "Mauricio Bustamante"
 __email__ = "mbustamante@gmail.com"
 
@@ -205,7 +206,3 @@ print('Generating 3nu plot in paper... ', end='')
 oscprob3nu_plotpaper.plot_probability_3nu_vs_energy_compare( \
     output_format='png', output_path='./fig/')
 print('Done')
-
-
-
-

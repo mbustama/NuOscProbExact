@@ -11,7 +11,7 @@ Last modified: 2019/04/27 16:55
 """
 
 
-__version__ = "0.1"
+__version__ = "1.0"
 __author__ = "Mauricio Bustamante"
 __email__ = "mbustamante@gmail.com"
 
