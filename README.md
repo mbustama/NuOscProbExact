@@ -613,8 +613,7 @@ h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independen
                                                                                 S13_NO_BF, DCP_NO_BF,
                                                                                 D21_NO_BF, D31_NO_BF)
 
-# EPS_3 is the 3x3 matrix of NSI strength parameters, read from
-# globaldefs; see that file to find the values
+# EPS_3 is the 3x3 matrix of NSI strength parameters, read from globaldefs; see that file for the values
 h_nsi = hamiltonians3nu.hamiltonian_3nu_nsi(h_vacuum_energy_indep, energy, VCC_EARTH_CRUST, EPS_3)
 
 Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( h_nsi,
@@ -654,8 +653,8 @@ h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independen
                                                                                     S13_BF, DCP_BF,
                                                                                     D21_BF, D31_BF)
 
-# The values of the LIV parameters (SXI12, SXI23, SXI13, DXICP, B1, B2,
-# B3, LAMBDA) are read from globaldefs
+# The values of the LIV parameters (SXI12, SXI23, SXI13, DXICP, B1, B2, B3, LAMBDA) are read
+# from globaldefs
 h_liv = hamiltonians3nu.hamiltonian_3nu_liv(h_vacuum_energy_indep, energy,
                                             SXI12, SXI23, SXI13, DXICP,
                                             B1, B2, B3, LAMBDA)
