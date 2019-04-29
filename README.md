@@ -104,7 +104,7 @@ Instructions:
    ```shell
    python example_2nu_trivial.py
    ```
-   Inspecting the example files and reading their description below will help you to learn how to use `NuOscProbExact` in your own project.
+   Inspecting the example files and reading their description below will help you to learn how to use **NuOscProbExact** in your own project.
 
 4. (Optional) Run the test suite
    ```shell
