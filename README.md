@@ -349,10 +349,9 @@ Pme = 0.70405, Pmm = 0.29595
 
 Like in the three-neutrino case, we can also return the coefficients `h1`, `h2`, `h3` of the expansion of the Hamiltonian in terms of Pauli matrices (Table I in the paper), or the time-evolution operator `evol_operator` itself, as a 2x2 matrix (Eq. (5) in the paper).
 ```python
+# Find this example in NuOscProbeExact/test/example_2nu_vacuum_coefficients.py
+
 import numpy as np
-from pylab import *
-from matplotlib import *
-import matplotlib as mpl
 
 import oscprob2nu
 import hamiltonians2nu
@@ -361,11 +360,29 @@ from globaldefs import *
 energy = 1.e9     # Neutrino energy [eV]
 baseline = 1.3e3  # Baseline [km]
 
-h_vacuum_energy_indep = hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(S23_BF, D31_BF)
+h_vacuum_energy_indep = hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(S23_NO_BF, D31_NO_BF)
 h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
 
 h1, h2, h3 = oscprob2nu.hamiltonian_2nu_coefficients(h_vacuum)
+print('h1: {:.4e}'.format(h1))
+print('h2: {:.4e}'.format(h2))
+print('h3: {:.4e}'.format(h3))
+print()
+
 evol_operator = oscprob2nu.evolution_operator_2nu(h_vacuum, baseline*CONV_KM_TO_INV_EV)
+print('U2 = ')
+with np.printoptions(precision=3, suppress=True):
+    print(np.array(evol_operator))
+```
+This returns
+```shell
+h1: -6.2270e-13
+h2: -0.0000e+00
+h3: -1.0352e-13
+
+U2 =
+[[-0.526-0.139j -0.   -0.839j]
+ [ 0.   -0.839j -0.526+0.139j]]
 ```
 
 
