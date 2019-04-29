@@ -131,6 +131,7 @@ Pee, Pem, Pme, Pmm = oscprob2nu.probabilities_2nu(hamiltonian, L)
 
 As a first, trivial example, we pass an arbitrary Hamiltonian and baseline to `probabilities_3nu`:
 ```python
+# Find this example in NuOscProbeExact/test/example_3nu_trivial.py
 import oscprob3nu
 
 hamiltonian = [
@@ -160,6 +161,7 @@ As expected, `Pme + Pmm + Pmt = 1`, and `Pte + Ptm + Ptt = 1`.
 
 In this case, we use `probabilities_2nu`:
 ```python
+# Find this example in NuOscProbeExact/test/example_2nu_trivial.py
 import oscprob2nu
 
 hamiltonian = [
@@ -205,11 +207,15 @@ from globaldefs import *
 energy = 1.e9     # Neutrino energy [eV]
 baseline = 1.3e3  # Baseline [km]
 
-h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(  S12_BF, S23_BF,
-                                                                                    S13_BF, DCP_BF,
-                                                                                    D21_BF, D31_BF)
+# Use the NuFit 4.0 best-fit values of the mixing parameters pulled from globaldefs
+# NO means "normal ordering"; change NO to IO if you want to use inverted ordering
+h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent( \
+                                                                                S12_NO_BF, S23_NO_BF,
+                                                                                S13_NO_BF, DCP_NO_BF,
+                                                                                D21_NO_BF, D31_NO_BF)
 h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
 
+# CONV_KM_TO_INV_EV is pulled from globaldefs; it converts km to eV^{-1}
 Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( h_vacuum,
                                                                             baseline*CONV_KM_TO_INV_EV)
 
@@ -224,6 +230,8 @@ Pme = 0.04023, Pmm = 0.37887, Pmt = 0.58090
 Pte = 0.03210, Ptm = 0.60680, Ptt = 0.36110
 ```
 
+> **About `globaldefs`**: This module contains physical constants and unit-conversion constants that are used in the examples and that you can use in your code.
+
 Sometimes, you might be interested also in returning the coefficients `h1`, ..., `h8` of the expansion of the Hamiltonian in terms of Gell-Mann matrices (Table II in the paper), the coefficients `u0`, ..., `u8` of the SU(3) expansion of the associated time-evolution operator (Eqs. (13) and (14) in the paper), or the time-evolution operator `evol_operator` itself, as a 3x3 matrix (Eq. (15) in the paper).  See the paper [arXiv:1904.XXXXX](https://arxiv.org/abs/1904.XXXXX) for details on these quantities.  The module `oscprob3nu` has functions to do this:
 ```python
 import numpy as np
@@ -235,15 +243,12 @@ from globaldefs import *
 energy = 1.e9     # Neutrino energy [eV]
 baseline = 1.3e3  # Baseline [km]
 
-# Use the NuFit 4.0 best-fit values of the mixing parameters pulled from globaldefs
-# NO means "normal ordering"; change NO to IO if you want to use inverted ordering
 h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent( \
                                                                                 S12_NO_BF, S23_NO_BF,
                                                                                 S13_NO_BF, DCP_NO_BF,
                                                                                 D21_NO_BF, D31_NO_BF)
 h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
 
-# CONV_KM_TO_INV_EV is pulled from globaldefs; it converts km to eV^{-1}
 h1, h2, h3, h4, h5, h6, h7, h8 = oscprob3nu.hamiltonian_3nu_coefficients(h_vacuum)
 u0, u1, u2, u3, u4, u5, u6, u7, u8 = oscprob3nu.evolution_operator_3nu_u_coefficients(  \
                                                                             h_vacuum,
