@@ -84,12 +84,12 @@ def plot_probability_3nu_vs_energy_compare(output_format='pdf',
     fig.subplots_adjust(hspace=0.05, wspace=0.05)
 
     h_vacuum_energy_indep = \
-        hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(  S12_BF,
-                                                                    S23_BF,
-                                                                    S13_BF,
-                                                                    DCP_BF,
-                                                                    D21_BF,
-                                                                    D31_BF)
+        hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(  S12_NO_BF,
+                                                                    S23_NO_BF,
+                                                                    S13_NO_BF,
+                                                                    DCP_NO_BF,
+                                                                    D21_NO_BF,
+                                                                    D31_NO_BF)
 
     prob_vacuum = [oscprob3nu.probabilities_3nu( \
                     np.multiply(1./x/1.e9, h_vacuum_energy_indep), l) \
@@ -97,7 +97,10 @@ def plot_probability_3nu_vs_energy_compare(output_format='pdf',
 
     # Uncomment to compare to the probability computed with the standard
     # ocillation formula in vacuum
-    # U = hamiltonians3nu.pmns_mixing_matrix(S12_BF, S23_BF, S13_BF, DCP_BF)
+    # U = hamiltonians3nu.pmns_mixing_matrix( S12_NO_BF,
+    #                                         S23_NO_BF,
+    #                                         S13_NO_BF,
+    #                                         DCP_NO_BF)
     # prob_vacuum_std = [hamiltonians3nu.probabilities_3nu_vacuum_std( \
     #                     U, D21_BF, D31_BF, x, l/CONV_KM_TO_INV_EV) \
     #                 for x in energy_nu]

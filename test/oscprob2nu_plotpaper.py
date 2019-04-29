@@ -84,8 +84,8 @@ def plot_probability_2nu_vs_energy_compare(output_format='pdf',
     fig.subplots_adjust(hspace=0.05, wspace=0.05)
 
     h_vacuum_energy_indep = \
-        hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(  S23_BF,
-                                                                    D31_BF)
+        hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(  S23_NO_BF,
+                                                                    D31_NO_BF)
 
     prob_vacuum = [oscprob2nu.probabilities_2nu( \
                     np.multiply(1./x/1.e9, h_vacuum_energy_indep), l) \
@@ -94,7 +94,7 @@ def plot_probability_2nu_vs_energy_compare(output_format='pdf',
     # Uncomment to compare to the probability computed with the standard
     # ocillation formula in vacuum
     # prob_vacuum_std = [hamiltonians2nu.probabilities_2nu_vacuum_std( \
-    #                     S23_BF, D31_BF, x, l/CONV_KM_TO_INV_EV) \
+    #                     S23_NO_BF, D31_NO_BF, x, l/CONV_KM_TO_INV_EV) \
     #                 for x in energy_nu]
 
     prob_matter = [oscprob2nu.probabilities_2nu( \
@@ -105,7 +105,8 @@ def plot_probability_2nu_vs_energy_compare(output_format='pdf',
     # Uncomment to compare to the probability computed with the standard
     # ocillation formula in matter
     # prob_matter_std = [hamiltonians2nu.probabilities_2nu_matter_std( \
-    #                     S23_BF, D31_BF, VCC_EARTH_CRUST, x, l/CONV_KM_TO_INV_EV) \
+    #                     S23_NO_BF, D31_NO_BF, VCC_EARTH_CRUST, x,
+    #                     l/CONV_KM_TO_INV_EV) \
     #                 for x in energy_nu]
 
     prob_nsi = [oscprob2nu.probabilities_2nu( \

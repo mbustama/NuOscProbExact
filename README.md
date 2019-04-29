@@ -407,9 +407,10 @@ log10_l_val = np.linspace(log10_l_min, log10_l_max, log10_l_npts)  # [km]
 l_val = [10.**x for x in log10_l_val]
 
 
-h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(  S12_BF, S23_BF,
-                                                                                    S13_BF, DCP_BF,
-                                                                                    D21_BF, D31_BF)
+h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent( \
+                                                                                S12_NO_BF, S23_NO_BF,
+                                                                                S13_NO_BF, DCP_NO_BF,
+                                                                                D21_NO_BF, D31_NO_BF)
 h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
 
 # Each element of prob: [Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt]
@@ -492,9 +493,10 @@ log10_energy = np.linspace( log10_energy_min,
                             log10_energy_npts)
 energy = [10.**x for x in log10_energy] # [GeV]
 
-h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(  S12_BF, S23_BF,
-                                                                                    S13_BF, DCP_BF,
-                                                                                    D21_BF, D31_BF)
+h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent( \
+                                                                                S12_NO_BF, S23_NO_BF,
+                                                                                S13_NO_BF, DCP_NO_BF,
+                                                                                D21_NO_BF, D31_NO_BF)
 
 # Each element of prob: [Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt]
 prob = [oscprob3nu.probabilities_3nu(np.multiply(1./x/1.e9, h_vacuum_energy_indep), baseline) \
