@@ -332,12 +332,12 @@ def plot_probability_3nu_vs_energy(
     energy_val =[10.**x for x in log10_energy_val]
 
     h_vacuum_energy_independent = \
-        hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(  S12_BF,
-                                                                    S23_BF,
-                                                                    S13_BF,
-                                                                    DCP_BF,
-                                                                    D21_BF,
-                                                                    D31_BF)
+        hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(  S12_NO_BF,
+                                                                    S23_NO_BF,
+                                                                    S13_NO_BF,
+                                                                    DCP_NO_BF,
+                                                                    D21_NO_BF,
+                                                                    D31_NO_BF)
 
     if (case.lower() == 'vacuum'):
 
