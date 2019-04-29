@@ -60,7 +60,15 @@ Instructions:
        ../oscprob2nu.py                Routines to compute the two-flavor probabilities
        ../oscprob3nu.py                Routines to compute the three-flavor probabilities
    /NuOscProbExact/test                Contains the source files to run the test suite
-       ../matplotlibrc                 Customized matplotlib style file
+       ../example_2nu_trivial.py       Two-flavor trivial example
+       ../example_2nu_vacuum.py        Two-flavor example for oscillations in vacuum
+       ../example_2nu_vacuum_coeffs.py Two-flavor example for coefficients for oscillations in vacuum
+       ../example_3nu_liv.py           Three-flavor example for oscillations with LIV
+       ../example_3nu_matter.py        Three-flavor example for oscillations in matter
+       ../example_3nu_nsi.py           Three-flavor example for oscillations in matter with NSI
+       ../example_3nu_trivial.py       Three-flavor trivial example
+       ../example_3nu_vacuum.py        Three-flavor example for oscillations in vacuum
+       ../example_3nu_vacuum_coeffs.py Three-flavor example for coefficients for oscillations in vacuum
        ../oscprob2nu_plot.py           Routines to generate two-flavor probability test plots
        ../oscprob3nu_plot.py           Routines to generate three-flavor probability test plots
        ../oscprob2nu_plotpaper.py      Routine to generate the two-flavor plot shown in the paper
@@ -73,7 +81,12 @@ Instructions:
    cd /home/MyProjects/NuOscProbExact
    python run_testsuite.py
    ```
-   Doing this will generate plots of the two-neutrino and three-neutrino probabilities *vs.* distance and *vs.* energy, for different oscillation scenarios.  It will also generate the plot of two-neutrino and three-neutrino probabilities *vs.* energy that are included in the paper.  The plots are stored in the `NuOscProbExact/fig` directory.  The code `run_testsuite.py` calls routines defined in `oscprob2nu_plot.py`, `oscprob3nu_plot.py`, `oscprob2nu_plotpaper.py`, and `oscprob3nu_plotpaper.py`, located in the `NuOscProbExact/test/` directory.  Inspecting these files may help you in coding your own project.
+   Doing this will do three things:
+   * Run all the example files contained in the directory `test/` (and also shown below in this README);
+   * Generate plots of the two-neutrino and three-neutrino probabilities *vs.* distance and *vs.* energy, for different oscillation scenarios; and
+   * Generate the plots of two-neutrino and three-neutrino probabilities *vs.* energy that are included in the paper.
+
+   The plots are stored in the `NuOscProbExact/fig` directory.  The code `run_testsuite.py` calls routines defined in `oscprob2nu_plot.py`, `oscprob3nu_plot.py`, `oscprob2nu_plotpaper.py`, and `oscprob3nu_plotpaper.py`, located in the `NuOscProbExact/test/` directory.  Inspecting these files may help you in coding your own project.
 
 
 ## Usage and examples
