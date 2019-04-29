@@ -555,8 +555,10 @@ For oscillation in matter, we proceed in an analogous way as for oscillations in
 hamiltonian_3nu_matter(h_vacuum_energy_independent, energy, VCC)
 ```
 
-In the example below, we set the matter potential to `VCC_EARTH_CRUST`, which is computed using the electron density of the crust of the Earth, and is read from `globaldefs`.
+In the example below, we set the matter potential to `VCC_EARTH_CRUST`, which is computed using the averaage electron density of the crust of the Earth (3 g cm^{-3}), and is read from `globaldefs`.
 ```python
+# Find this example in NuOscProbeExact/test/example_3nu_matter.py
+
 import oscprob3nu
 import hamiltonians3nu
 from globaldefs import *
@@ -564,9 +566,11 @@ from globaldefs import *
 energy = 1.e9     # Neutrino energy [eV]
 baseline = 1.3e3  # Baseline [km]
 
-h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(  S12_BF, S23_BF,
-                                                                                    S13_BF, DCP_BF,
-                                                                                    D21_BF, D31_BF)
+h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent( \
+                                                                                S12_NO_BF, S23_NO_BF,
+                                                                                S13_NO_BF, DCP_NO_BF,
+                                                                                D21_NO_BF, D31_NO_BF)
+# Units of VCC_EARTH_CRUST: [eV]
 h_matter = hamiltonians3nu.hamiltonian_3nu_matter(h_vacuum_energy_indep, energy, VCC_EARTH_CRUST)
 
 Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( h_matter,
@@ -578,9 +582,9 @@ print("Pte = %6.5f, Ptm = %6.5f, Ptt = %6.5f" % (Pte, Ptm, Ptt))
 ````
 This returns
 ```shell
-Pee = 0.93875, Pem = 0.01048, Pet = 0.05077
-Pme = 0.03387, Pmm = 0.37847, Pmt = 0.58766
-Pte = 0.02738, Ptm = 0.61105, Ptt = 0.36157
+Pee = 0.95262, Pem = 0.00623, Pet = 0.04115
+Pme = 0.02590, Pmm = 0.37644, Pmt = 0.59766
+Pte = 0.02148, Ptm = 0.61733, Ptt = 0.36119
 ```
 
 ### Three-neutrino oscillations in matter with non-standard interactions (NSI)
