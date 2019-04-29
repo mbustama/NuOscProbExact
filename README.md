@@ -235,11 +235,14 @@ from globaldefs import *
 energy = 1.e9     # Neutrino energy [eV]
 baseline = 1.3e3  # Baseline [km]
 
-h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(  S12_BF, S23_BF,
-                                                                                    S13_BF, DCP_BF,
-                                                                                    D21_BF, D31_BF)
+# Use the NuFit 4.0 best-fit values of the mixing parameters pulled from globaldefs
+# NO means "normal ordering"; change NO to IO if you want to use inverted ordering
+h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(  S12_NO_BF, S23_NO_BF,
+                                                                                    S13_NO_BF, DCP_NO_BF,
+                                                                                    D21_NO_BF, D31_NO_BF)
 h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
 
+# CONV_KM_TO_INV_EV is pulled from globaldefs; it converts km to eV^{-1}
 h1, h2, h3, h4, h5, h6, h7, h8 = oscprob3nu.hamiltonian_3nu_coefficients(h_vacuum)
 u0, u1, u2, u3, u4, u5, u6, u7, u8 = oscprob3nu.evolution_operator_3nu_u_coefficients(  \
                                                                             h_vacuum,
