@@ -131,7 +131,8 @@ Pee, Pem, Pme, Pmm = oscprob2nu.probabilities_2nu(hamiltonian, L)
 
 As a first, trivial example, we pass an arbitrary Hamiltonian and baseline to `probabilities_3nu`:
 ```python
-# Find this example in NuOscProbeExact/test/example_3nu_trivial.py
+# Find this example in NuOscProbExact/test/example_3nu_trivial.py
+
 import oscprob3nu
 
 hamiltonian = [
@@ -161,7 +162,8 @@ As expected, `Pme + Pmm + Pmt = 1`, and `Pte + Ptm + Ptt = 1`.
 
 In this case, we use `probabilities_2nu`:
 ```python
-# Find this example in NuOscProbeExact/test/example_2nu_trivial.py
+# Find this example in NuOscProbExact/test/example_2nu_trivial.py
+
 import oscprob2nu
 
 hamiltonian = [
