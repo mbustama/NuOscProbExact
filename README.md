@@ -281,6 +281,7 @@ print('u8: {:.4f}'.format(u8))
 print()
 
 evol_operator = oscprob3nu.evolution_operator_3nu(h_vacuum, baseline*CONV_KM_TO_INV_EV)
+print('U3 = ')
 with np.printoptions(precision=3, suppress=True):
     print(np.array(evol_operator))
 ```
@@ -321,6 +322,8 @@ hamiltonian_2nu_vacuum_energy_independent(sth, Dm2)
 that is provided in the `hamiltonians2nu` module.  The input parameters `sth`, and `Dm2` are, respectively, sin(theta), and Delta m^2.  For this example, we set them to current best-fit values for atmospheric neutrinos.
 
 ```python
+# Find this example in NuOscProbeExact/test/example_2nu_vacuum.py
+
 import numpy as np
 
 import oscprob2nu
@@ -330,7 +333,7 @@ from globaldefs import *
 energy = 1.e9     # Neutrino energy [eV]
 baseline = 1.3e3  # Baseline [km]
 
-h_vacuum_energy_indep = hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(S23_BF, D31_BF)
+h_vacuum_energy_indep = hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(S23_NO_BF, D31_NO_BF)
 h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
 
 Pee, Pem, Pme, Pmm = oscprob2nu.probabilities_2nu(h_vacuum, baseline*CONV_KM_TO_INV_EV)
