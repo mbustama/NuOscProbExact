@@ -601,6 +601,8 @@ hamiltonian_3nu_nsi(h_vacuum_energy_independent, energy, VCC, eps)
 
 In the example below, we set `eps` to its default value `EPS_3` pulled from `globaldefs`:
 ```python
+# Find this example in NuOscProbeExact/test/example_3nu_nsi.py
+
 import oscprob3nu
 import hamiltonians3nu
 from globaldefs import *
@@ -642,6 +644,8 @@ hamiltonian_3nu_liv(h_vacuum_energy_independent, energy, sxi12, sxi23, sxi13, dx
 
 In the example below, we set the LIV parameters to their default values pulled from `globaldefs`:
 ```python
+# Find this example in NuOscProbeExact/test/example_3nu_liv.py
+
 import oscprob3nu
 import hamiltonians3nu
 from globaldefs import *
