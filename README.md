@@ -9,6 +9,24 @@ Code to compute exact two- and three-neutrino oscillation probabilities using SU
 
 1. [What is NuOscProbExact?](#what-is-nuoscprobexact)
 
+2. [Requirements](#requirements)
+
+3. [Installation](#installation)
+
+4. [Usage and examples](#usage-and-examples)
+   1. [Basics](#basics)
+   2. [Trivial example](#trivial-example)
+   3. [Oscillations in vacuum: fixed energy and baseline](#oscillations-in-vacuum-fixed-energy-and-baseline)
+   4. [Three-neutrino oscillations in vacuum: fixed energy, varying baseline](#three-neutrino-oscillations-in-vacuum-fixed-energy-varying-baseline)
+   5. [Three-neutrino oscillations in vacuum: fixed baseline, varying energy](#three-neutrino-oscillations-in-vacuum-fixed-baseline-varying-energy)
+   6. [Three-neutrino oscillations in matter](#three-neutrino-oscillations-in-matter)
+   7. [Three-neutrino oscillations in matter with non-standard interactions (NSI)](#three-neutrino-oscillations-in-matter-with-non-standard-interactions-nsi)
+   8. [Three-neutrino oscillations in a Lorentz invariance-violating (LIV) background](#three-neutrino-oscillations-in-a-lorentz-invariance-violating-liv-background)
+   9. [Arbitrary Hamiltonians](#arbitrary-hamiltonians)
+
+5. [Documentation and help](#documentation-and-help)
+
+6. [Citing](#citing)
 
 
 ## What is NuOscProbExact?
