@@ -570,6 +570,7 @@ h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independen
                                                                                 S12_NO_BF, S23_NO_BF,
                                                                                 S13_NO_BF, DCP_NO_BF,
                                                                                 D21_NO_BF, D31_NO_BF)
+
 # Units of VCC_EARTH_CRUST: [eV]
 h_matter = hamiltonians3nu.hamiltonian_3nu_matter(h_vacuum_energy_indep, energy, VCC_EARTH_CRUST)
 
@@ -607,9 +608,13 @@ from globaldefs import *
 energy = 1.e9     # Neutrino energy [eV]
 baseline = 1.3e3  # Baseline [km]
 
-h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(  S12_BF, S23_BF,
-                                                                                    S13_BF, DCP_BF,
-                                                                                    D21_BF, D31_BF)
+h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent( \
+                                                                                S12_NO_BF, S23_NO_BF,
+                                                                                S13_NO_BF, DCP_NO_BF,
+                                                                                D21_NO_BF, D31_NO_BF)
+
+# EPS_3 is the 3x3 matrix of NSI strength parameters, read from
+# globaldefs; see that file to find the values
 h_nsi = hamiltonians3nu.hamiltonian_3nu_nsi(h_vacuum_energy_indep, energy, VCC_EARTH_CRUST, EPS_3)
 
 Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( h_nsi,
@@ -621,9 +626,9 @@ print("Pte = %6.5f, Ptm = %6.5f, Ptt = %6.5f" % (Pte, Ptm, Ptt))
 ````
 This returns
 ```shell
-Pee = 0.92668, Pem = 0.01549, Pet = 0.05783
-Pme = 0.03793, Pmm = 0.35375, Pmt = 0.60832
-Pte = 0.03539, Ptm = 0.63077, Ptt = 0.33385
+Pee = 0.92494, Pem = 0.01758, Pet = 0.05749
+Pme = 0.03652, Pmm = 0.32524, Pmt = 0.63824
+Pte = 0.03855, Ptm = 0.65718, Ptt = 0.30427
 ```
 
 
@@ -648,6 +653,9 @@ baseline = 1.3e3  # Baseline [km]
 h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(  S12_BF, S23_BF,
                                                                                     S13_BF, DCP_BF,
                                                                                     D21_BF, D31_BF)
+
+# The values of the LIV parameters (SXI12, SXI23, SXI13, DXICP, B1, B2,
+# B3, LAMBDA) are read from globaldefs
 h_liv = hamiltonians3nu.hamiltonian_3nu_liv(h_vacuum_energy_indep, energy,
                                             SXI12, SXI23, SXI13, DXICP,
                                             B1, B2, B3, LAMBDA)
