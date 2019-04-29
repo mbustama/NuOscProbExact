@@ -200,6 +200,8 @@ that is provided in the `hamiltonians3nu` module.  It returns the 3x3 Hamiltonia
 > **Important:** The function `hamiltonian_3nu_vacuum_energy_independent` returns the Hamiltonian in vacuum **without** multiplying it by the *1/E* prefactor, where *E* is the neutrino energy.  It was done in this way so that, if we wish to compute the probabilities at different energies, we need to compute `hamiltonian_3nu_vacuum_energy_independent` only once, and then multiply it by a varying *1/E* prefactor.
 
 ```python
+# Find this example in NuOscProbeExact/test/example_3nu_vacuum.py
+
 import numpy as np
 
 import oscprob3nu
@@ -236,6 +238,8 @@ Pte = 0.03210, Ptm = 0.60680, Ptt = 0.36110
 
 Sometimes, you might be interested also in returning the coefficients `h1`, ..., `h8` of the expansion of the Hamiltonian in terms of Gell-Mann matrices (Table II in the paper), the coefficients `u0`, ..., `u8` of the SU(3) expansion of the associated time-evolution operator (Eqs. (13) and (14) in the paper), or the time-evolution operator `evol_operator` itself, as a 3x3 matrix (Eq. (15) in the paper).  See the paper [arXiv:1904.XXXXX](https://arxiv.org/abs/1904.XXXXX) for details on these quantities.  The module `oscprob3nu` has functions to do this:
 ```python
+# Find this example in NuOscProbeExact/test/example_3nu_vacuum_coefficients.py
+
 import numpy as np
 
 import oscprob3nu
@@ -252,11 +256,61 @@ h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independen
 h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
 
 h1, h2, h3, h4, h5, h6, h7, h8 = oscprob3nu.hamiltonian_3nu_coefficients(h_vacuum)
+print('h1: {:.4e}'.format(h1))
+print('h2: {:.4e}'.format(h2))
+print('h3: {:.4e}'.format(h3))
+print('h4: {:.4e}'.format(h4))
+print('h5: {:.4e}'.format(h5))
+print('h6: {:.4e}'.format(h6))
+print('h7: {:.4e}'.format(h7))
+print('h8: {:.4e}'.format(h8))
+print()
+
 u0, u1, u2, u3, u4, u5, u6, u7, u8 = oscprob3nu.evolution_operator_3nu_u_coefficients(  \
                                                                             h_vacuum,
                                                                             baseline*CONV_KM_TO_INV_EV)
+print('u0: {:.4f}'.format(u0))
+print('u1: {:.4f}'.format(u1))
+print('u2: {:.4f}'.format(u2))
+print('u3: {:.4f}'.format(u3))
+print('u4: {:.4f}'.format(u4))
+print('u5: {:.4f}'.format(u5))
+print('u6: {:.4f}'.format(u6))
+print('u7: {:.4f}'.format(u7))
+print('u8: {:.4f}'.format(u8))
+print()
+
 evol_operator = oscprob3nu.evolution_operator_3nu(h_vacuum, baseline*CONV_KM_TO_INV_EV)
+with np.printoptions(precision=3, suppress=True):
+    print(np.array(evol_operator))
 ```
+This returns
+```shell
+h1: -1.0187e-13
+h2: -8.4997e-14
+h3: -3.4583e-13+0.0000e+00j
+h4: -1.0848e-13
+h5: -7.2033e-14
+h6: 5.9597e-13
+h7: 1.5392e-15
+h8: -8.2865e-14+0.0000e+00j
+
+u0: -0.3794+0.5072j
+u1: 0.0318+0.1167j
+u2: -0.0257+0.1095j
+u3: -0.1270+0.4507j
+u4: -0.1066+0.1569j
+u5: -0.0217+0.0928j
+u6: 0.1383-0.7580j
+u7: 0.0093-0.0040j
+u8: -0.0323+0.1084j
+
+[[-0.893+0.362j -0.142+0.141j -0.179-0.014j]
+ [-0.091-0.078j  0.009+0.615j  0.767+0.134j]
+ [-0.135-0.199j  0.749+0.142j -0.254+0.545j]]
+```
+
+
 
 #### Two-neutrino oscillations
 
