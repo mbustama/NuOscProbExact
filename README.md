@@ -100,7 +100,7 @@ Instructions:
    Now you are ready to start using **NuOscProbExact**.
 
 3. (Optional, recommended) Run the examples
-   Inside the directory `test/`, we provide several example files to get you started.  We also elaborate on these example later in this README, and show the output thay you should expect from them.  To run any of the example, just pass it to your Python interpreter, *e.g.*,
+   Inside the directory `test/`, we provide several example files to get you started.  We also elaborate on these examples later in this README, and show the output thay you should expect from them.  To run any of the examples, just execute, *e.g.*,
    ```shell
    python example_2nu_trivial.py
    ```
