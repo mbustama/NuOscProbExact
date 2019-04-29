@@ -99,17 +99,23 @@ Instructions:
    ```
    Now you are ready to start using **NuOscProbExact**.
 
-3. (Optional) Run the test suite
+3. (Optional, recommended) Run the examples
+   Inside the directory `test/`, we provide several example files to get you started.  We also elaborate on these example later in this README, and show the output thay you should expect from them.  To run any of the example, just pass it to your Python interpreter, *e.g.*,
+   ```shell
+   python example_2nu_trivial.py
+   ```
+   Inspecting the example files and their explanation below will help you to learn how to use `NuOscProbExact` in your own project.
+
+4. (Optional) Run the test suite
    ```shell
    cd /home/MyProjects/NuOscProbExact
    python run_testsuite.py
    ```
-   Doing this will do three things:
-   * Run all the example files contained in the directory `test/` (see above; also shown below in this README);
+   Doing this will do the following:
    * Generate plots of the two-neutrino and three-neutrino probabilities *vs.* distance and *vs.* energy, for different oscillation scenarios; and
    * Generate the plots of two-neutrino and three-neutrino probabilities *vs.* energy that are included in the paper.
 
-   The plots are stored in the `NuOscProbExact/fig` directory.  The code `run_testsuite.py` calls routines defined in `oscprob2nu_plot.py`, `oscprob3nu_plot.py`, `oscprob2nu_plotpaper.py`, and `oscprob3nu_plotpaper.py`, located in the `NuOscProbExact/test/` directory.  Inspecting these files may help you in coding your own project.
+   The plots are stored in the `fig/` directory.  The code `run_testsuite.py` calls routines defined in `oscprob2nu_plot.py`, `oscprob3nu_plot.py`, `oscprob2nu_plotpaper.py`, and `oscprob3nu_plotpaper.py`, located in the `NuOscProbExact/test/` directory.  Inspecting these files may help you in coding your own project.
 
 
 ## Usage and examples
