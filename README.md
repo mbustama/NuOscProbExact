@@ -276,6 +276,8 @@ Pme = 0.04023, Pmm = 0.37887, Pmt = 0.58090
 Pte = 0.03210, Ptm = 0.60680, Ptt = 0.36110
 ```
 
+> **Anti-neutrino probabilities**: All of the examples shown in this README (and in the files inside the `fig/` directory) are for neutrinos, not anti-neutrinos.  If you wish to compute probabilities for anti-neutrinos, a simple way to do this is to pass `-dCP` instead of `dCP` to `hamiltonian_3nu_vacuum_energy_independent` (or to `hamiltonian_2nu_vacuum_energy_independent`).
+
 > **About `globaldefs`**: This module contains physical constants and unit-conversion constants that are used in the examples and that you can use in your code.
 
 Sometimes, you might be interested also in returning the coefficients `h1`, ..., `h8` of the expansion of the Hamiltonian in terms of Gell-Mann matrices (Table II in the paper), the coefficients `u0`, ..., `u8` of the SU(3) expansion of the associated time-evolution operator (Eqs. (13) and (14) in the paper), or the time-evolution operator `evol_operator` itself, as a 3x3 matrix (Eq. (15) in the paper).  See the paper [arXiv:1904.XXXXX](https://arxiv.org/abs/1904.XXXXX) for details on these quantities.  The module `oscprob3nu` has functions to do this:
