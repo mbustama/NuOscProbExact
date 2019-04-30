@@ -776,7 +776,20 @@ This will print to screen a description of what the function does (in the exampl
 
 If you use **NuOscProbExact** in your work, we ask you that you please cite the following paper: Mauricio Bustamante, *Exact neutrino oscillation probabilities: a fast general-purpose computation method for two and three neutrino flavors* ([arXiv:1904.12391](http://arxiv.org/abs/1904.12391)).
 
-If you are citing **NuOscProbExact** in a document that will be uploaded to the arXiv, please consider using the LaTeX or BibTeX entries provided by INSPIRE.
+If you are citing **NuOscProbExact** in a document that will be uploaded to the arXiv, please consider using the LaTeX or BibTeX entries provided by INSPIRE ([link here](http://inspirehep.net/record/1731803/export/hx)):
+```
+@article{Bustamante:2019ggq,
+      author         = "Bustamante, Mauricio",
+      title          = "{Exact neutrino oscillation probabilities: a fast
+                        general-purpose computation method for two and three
+                        neutrino flavors}",
+      year           = "2019",
+      eprint         = "1904.12391",
+      archivePrefix  = "arXiv",
+      primaryClass   = "hep-ph",
+      SLACcitation   = "%%CITATION = ARXIV:1904.12391;%%"
+}
+```
 
 
 
