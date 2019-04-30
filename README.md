@@ -5,6 +5,8 @@
 # NuOscProbExact
 Code to compute exact two- and three-neutrino oscillation probabilities using SU(2) and SU(3) expansions
 
+> **In the works:** We are working on optimizing the code to run faster, using Cython
+
 ## Contents
 
 1. [What is NuOscProbExact?](#what-is-nuoscprobexact)
