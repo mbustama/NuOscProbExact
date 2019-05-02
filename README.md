@@ -244,7 +244,7 @@ that is provided in the `hamiltonians3nu` module.  It returns the 3x3 Hamiltonia
 > **Important:** The function `hamiltonian_3nu_vacuum_energy_independent` returns the Hamiltonian in vacuum **without** multiplying it by the *1/E* prefactor, where *E* is the neutrino energy.  It was done in this way so that, if we wish to compute the probabilities at different energies, we need to compute `hamiltonian_3nu_vacuum_energy_independent` only once, and then multiply it by a varying *1/E* prefactor.
 
 ```python
-# Find this example in NuOscProbeExact/test/example_3nu_vacuum.py
+# Find this example in NuOscProbExact/test/example_3nu_vacuum.py
 
 import numpy as np
 
@@ -286,7 +286,7 @@ Sometimes, you might be interested also in returning the coefficients `h1`, ...,
 
 The module `oscprob3nu` has functions to do this:
 ```python
-# Find this example in NuOscProbeExact/test/example_3nu_vacuum_coefficients.py
+# Find this example in NuOscProbExact/test/example_3nu_vacuum_coefficients.py
 
 import numpy as np
 
@@ -370,7 +370,7 @@ hamiltonian_2nu_vacuum_energy_independent(sth, Dm2)
 that is provided in the `hamiltonians2nu` module.  The input parameters `sth`, and `Dm2` are, respectively, sin(theta), and Delta m^2.  For this example, we set them to current best-fit values for atmospheric neutrinos.
 
 ```python
-# Find this example in NuOscProbeExact/test/example_2nu_vacuum.py
+# Find this example in NuOscProbExact/test/example_2nu_vacuum.py
 
 import numpy as np
 
@@ -397,7 +397,7 @@ Pme = 0.70405, Pmm = 0.29595
 
 Like in the three-neutrino case, we can also return the coefficients `h1`, `h2`, `h3` of the expansion of the Hamiltonian in terms of Pauli matrices (Table I in the paper), or the time-evolution operator `evol_operator` itself, as a 2x2 matrix (Eq. (5) in the paper).
 ```python
-# Find this example in NuOscProbeExact/test/example_2nu_vacuum_coefficients.py
+# Find this example in NuOscProbExact/test/example_2nu_vacuum_coefficients.py
 
 import numpy as np
 
@@ -607,7 +607,7 @@ hamiltonian_3nu_matter(h_vacuum_energy_independent, energy, VCC)
 
 In the example below, we set the matter potential to `VCC_EARTH_CRUST`, which is computed using the averaage electron density of the crust of the Earth (3 g cm^{-3}), and is read from `globaldefs`.
 ```python
-# Find this example in NuOscProbeExact/test/example_3nu_matter.py
+# Find this example in NuOscProbExact/test/example_3nu_matter.py
 
 import oscprob3nu
 import hamiltonians3nu
@@ -651,7 +651,7 @@ hamiltonian_3nu_nsi(h_vacuum_energy_independent, energy, VCC, eps)
 
 In the example below, we set `eps` to its default value `EPS_3` pulled from `globaldefs`:
 ```python
-# Find this example in NuOscProbeExact/test/example_3nu_nsi.py
+# Find this example in NuOscProbExact/test/example_3nu_nsi.py
 
 import oscprob3nu
 import hamiltonians3nu
@@ -694,7 +694,7 @@ hamiltonian_3nu_liv(h_vacuum_energy_independent, energy, sxi12, sxi23, sxi13, dx
 
 In the example below, we set the LIV parameters to their default values pulled from `globaldefs`:
 ```python
-# Find this example in NuOscProbeExact/test/example_3nu_liv.py
+# Find this example in NuOscProbExact/test/example_3nu_liv.py
 
 import oscprob3nu
 import hamiltonians3nu
