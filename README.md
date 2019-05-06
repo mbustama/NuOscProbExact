@@ -33,7 +33,7 @@ Code to compute exact two- and three-neutrino oscillation probabilities using SU
 
 ## What is NuOscProbExact?
 
-**NuOscProbExact** is a Python implementation of the method to compute exact two-flavor and three-flavor neutrino oscillation probabilities for arbitrary time-independent Hamiltonians presented in the paper *Exact neutrino oscillation probabilities: a fast general-purpose computation method for two and three neutrino flavors* ([arXiv:1904.12391](http://arxiv.org/abs/1904.12391)).
+**NuOscProbExact** is a Python implementation of the method developed by [Ohlsson & Snellman](https://arxiv.org/abs/hep-ph/9910546) to compute exact two-flavor and three-flavor neutrino oscillation probabilities for arbitrary time-independent Hamiltonians.  The method was revisited and the code presented in the paper *NuOscProbExact: a general-purpose code to compute exact two-flavor and three-flavor neutrino oscillation probabilities* ([arXiv:1904.12391](http://arxiv.org/abs/1904.12391)).
 
 The method relies on expansions of the Hamiltonian and time-evolution operators in terms of SU(2) and SU(3) matrices in order to obtain concise, analytical, and exact expressions for the probabilities, that are also easy to implement and evaluate.  For details of the method, see the paper above.
 
@@ -776,15 +776,15 @@ This will print to screen a description of what the function does (in the exampl
 
 ## Citing
 
-If you use **NuOscProbExact** in your work, we ask you that you please cite the following paper: Mauricio Bustamante, *Exact neutrino oscillation probabilities: a fast general-purpose computation method for two and three neutrino flavors* ([arXiv:1904.12391](http://arxiv.org/abs/1904.12391)).
+If you use **NuOscProbExact** in your work, we ask you that you please cite the following paper: Mauricio Bustamante, *NuOscProbExact: a general-purpose code to compute exact two-flavor and three-flavor neutrino oscillation probabilities* ([arXiv:1904.12391](http://arxiv.org/abs/1904.12391)).
 
 If you are citing **NuOscProbExact** in a document that will be uploaded to the arXiv, please consider using the LaTeX or BibTeX entries provided by INSPIRE ([link here](http://inspirehep.net/record/1731803/export/hx)):
 ```
 @article{Bustamante:2019ggq,
       author         = "Bustamante, Mauricio",
-      title          = "{Exact neutrino oscillation probabilities: a fast
-                        general-purpose computation method for two and three
-                        neutrino flavors}",
+      title          = "{NuOscProbExact: a general-purpose code to compute
+                        exact two-flavor and three-flavor neutrino
+                        oscillation probabilities}",
       year           = "2019",
       eprint         = "1904.12391",
       archivePrefix  = "arXiv",
