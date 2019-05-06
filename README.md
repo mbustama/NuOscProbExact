@@ -33,11 +33,11 @@ Code to compute exact two- and three-neutrino oscillation probabilities using SU
 
 ## What is NuOscProbExact?
 
-**NuOscProbExact** is a Python implementation of the method developed by [Ohlsson & Snellman](https://arxiv.org/abs/hep-ph/9910546) to compute exact two-flavor and three-flavor neutrino oscillation probabilities for arbitrary time-independent Hamiltonians.  The method was revisited and the code presented in the paper *NuOscProbExact: a general-purpose code to compute exact two-flavor and three-flavor neutrino oscillation probabilities* ([arXiv:1904.12391](http://arxiv.org/abs/1904.12391)).
+**NuOscProbExact** is a Python implementation of the method developed by [Ohlsson & Snellman](https://arxiv.org/abs/hep-ph/9910546) to compute exact two-flavor and three-flavor neutrino oscillation probabilities for arbitrary time-independent Hamiltonians.  The method was revisited and the code presented in the paper *NuOscProbExact: a general-purpose code to compute exact two-flavor and three-flavor neutrino oscillation probabilities* ([arXiv:1904.12391](http://arxiv.org/abs/1904.12391)), by Mauricio Bustamante.
 
 The method relies on expansions of the Hamiltonian and time-evolution operators in terms of SU(2) and SU(3) matrices in order to obtain concise, analytical, and exact expressions for the probabilities, that are also easy to implement and evaluate.  For details of the method, see the paper above.
 
-**NuOscProbExact** was developed by Mauricio Bustamante, who also authored the paper [arXiv:1904.12391](http://arxiv.org/abs/1904.12391).  If you use it in your work, please follow the directions on [Citing](#citing).
+**NuOscProbExact** was developed by Mauricio Bustamante.  If you use it in your work, please follow the directions on [Citing](#citing).
 
 
 ## Requirements
