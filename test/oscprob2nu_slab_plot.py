@@ -131,23 +131,23 @@ def plot_probability_2nu_vs_baseline(
 
     length = 10**log10_l_max - 10**log10_l_min
 
-    if (case.lower() == 'matterslabs'):
+    if (case.lower() == 'slabs_matter'):
         hamiltonian_matrices = [h_earthcrust, h_earthcore]
         slabs_initial = np.multiply(CONV_KM_TO_INV_EV,[10**log10_l_min, 10**log10_l_min + length/2])
         width_final_slab = CONV_KM_TO_INV_EV*length/2
-        label_case = r'MatterSlabs'
+        label_case = r'slabs_matter'
         
-    elif (case.lower() == 'nsimatterslabs'):
+    elif (case.lower() == 'slabs_nsi'):
         hamiltonian_matrices = [h_nsi_earthcrust, h_nsi_earthcore]
         slabs_initial = np.multiply(CONV_KM_TO_INV_EV,[10**log10_l_min, 10**log10_l_min + length/2])
         width_final_slab = CONV_KM_TO_INV_EV*length/2
-        label_case = r'NSIMatterSlabs'
+        label_case = r'slabs_nsi'
         
-    elif (case.lower() == 'castlewall'):
+    elif (case.lower() == 'slabs_castle_wall'):
         hamiltonian_matrices = [h_earthcrust, h_earthcore, h_earthcrust]
         slabs_initial = np.multiply(CONV_KM_TO_INV_EV,[10**log10_l_min, 10**log10_l_min + length*3/10, 10**log10_l_min + length*7/10])
         width_final_slab = CONV_KM_TO_INV_EV*length*3/10
-        label_case = r'Castlewall'
+        label_case = r'slabs_castle_wall'
         
 
     # Each element of prob: [Pee, Pem, Pmm]
@@ -339,7 +339,7 @@ def plot_probability_2nu_vs_energy(
         
     h_vacuum_energy_indep = hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(sth, Dm2)
 
-    if (case.lower() == 'matterslabs'):
+    if (case.lower() == 'slabs_matter'):
         
         slabs_initial = np.multiply(CONV_KM_TO_INV_EV,[10**log10_l_min, 10**log10_l_min + length/2])
         width_final_slab = CONV_KM_TO_INV_EV*length/2
@@ -351,9 +351,9 @@ def plot_probability_2nu_vs_energy(
              slabs_initial, width_final_slab,
              baseline) for e in energy_val]
         
-        label_case = r'MatterSlabs'
+        label_case = r'slabs_matter'
     
-    if (case.lower() == 'nsimatterslabs'):
+    if (case.lower() == 'slabs_nsi'):
         
         slabs_initial = np.multiply(CONV_KM_TO_INV_EV,[10**log10_l_min, 10**log10_l_min + length/2])
         width_final_slab = CONV_KM_TO_INV_EV*length/2
@@ -365,9 +365,9 @@ def plot_probability_2nu_vs_energy(
              slabs_initial, width_final_slab,
              baseline) for e in energy_val]
         
-        label_case = r'NSIMatterSlabs'
+        label_case = r'slabs_nsi'
     
-    if (case.lower() == 'castlewall'):
+    if (case.lower() == 'slabs_castle_wall'):
         
         slabs_initial = np.multiply(CONV_KM_TO_INV_EV,[10**log10_l_min, 10**log10_l_min + length*3/10,
                                                        10**log10_l_min + length*7/10])
@@ -382,7 +382,7 @@ def plot_probability_2nu_vs_energy(
             slabs_initial, width_final_slab,
             baseline) for e in energy_val]
         
-        label_case = r'Castlewall'
+        label_case = r'slabs_castle_wall'
         
     for p in prob:
         for x in p:

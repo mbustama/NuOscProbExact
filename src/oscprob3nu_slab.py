@@ -2,7 +2,7 @@
 """
 Created on Wed Sep  7 16:15:05 2022
 
-@author: Gianfranco
+@author: Gianfranco Colone
 """
 
 import numpy as np
@@ -14,7 +14,7 @@ unit_matrix_3=[
     [1,0,0],
     [0,1,0],    
     [0,0,1]
-    ]
+]
 
 def evolution_operator_3nu_slabs(hamiltonian_matrices, slab_start, 
     width_final_slab, L):
@@ -46,11 +46,9 @@ def evolution_operator_3nu_slabs(hamiltonian_matrices, slab_start,
     slab_start = [x for x in slab_start if x < L]
     num_slabs = len(slab_start)
 
-
     # Find the end coordinates of the slabs
     slab_end = [slab_start[i+1] if (i < num_slabs-1) else L
         for i in range(num_slabs)]
-
 
     # Multiply the evolution operator of each slab
     U = unit_matrix_3
@@ -63,9 +61,11 @@ def evolution_operator_3nu_slabs(hamiltonian_matrices, slab_start,
     return U
 
     
-def probabilities_3nu_slabs(hamiltonian_matrices, slabs_initial, width_final_slab, L):
+def probabilities_3nu_slabs(hamiltonian_matrices, slabs_initial, 
+    width_final_slab, L):
     
-    U = evolution_operator_3nu_slabs(hamiltonian_matrices, slabs_initial, width_final_slab, L)
+    U = evolution_operator_3nu_slabs(hamiltonian_matrices, slabs_initial, 
+        width_final_slab, L)
 
     Pee = abs(U[0][0])**2.
     Pem = abs(U[1][0])**2.
