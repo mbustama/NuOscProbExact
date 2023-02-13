@@ -24,11 +24,12 @@ References
    :math:`\lambda`-matrices, :math:`d`- and math`f`-tensors, octets, and
    parametrizations of SU(3)", Commun. Math. Phys. 11, 77 (1968).
 
-.. [2] Mauricio Bustamante, "Exact neutrino oscillation probabilities
-   with arbitrary time-independent Hamiltonians", arXiv:1904.XXXXX.
+.. [2] Mauricio Bustamante, "NuOscProbExact: a general-purpose code to compute
+   exact two-flavor and three-flavor neutrino oscillation probabilities", 
+   arXiv:1904.12391.
 
-Created: 2019/04/11 15:36
-Last modified: 2019/04/20 18:47
+Created: 2019/04/11 15:36 (Mauricio Bustamante)
+Last modified: 2023/02/13 13:44 (Mauricio Bustamante)
 """
 
 

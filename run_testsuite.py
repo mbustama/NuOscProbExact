@@ -22,6 +22,7 @@ from numpy import *
 
 import sys
 import os
+import argparse
 sys.path.append('./src')
 sys.path.append('./test')
 
@@ -33,7 +34,7 @@ import oscprob2nu_slab_plot
 import oscprob3nu_slab_plot
 
 
-def plot_testsuite_probability_2nu():
+def plot_testsuite_probability_2nu(output_format='png'):
 
     os.makedirs('./fig/prob_2nu/vs_baseline', exist_ok=True)
     os.makedirs('./fig/prob_2nu/vs_energy', exist_ok=True)
@@ -60,7 +61,7 @@ def plot_testsuite_probability_2nu():
                         plot_prob_ee=True, plot_prob_em=True, plot_prob_mm=False,
                         output_filename='prob_2nu_'+case+'_vs_baseline_'
                             +filename_end[prob],
-                        output_format='png', 
+                        output_format=output_format, 
                         output_path='./fig/prob_2nu/vs_baseline/',
                         legend_loc='center left', legend_ncol=1)
             print('Done')
@@ -81,7 +82,7 @@ def plot_testsuite_probability_2nu():
                         plot_prob_ee=True, plot_prob_em=True, plot_prob_mm=False,
                         output_filename='prob_2nu_'+case+'_vs_energy_'
                             +filename_end[prob],
-                        output_format='png', 
+                        output_format=output_format, 
                         output_path='./fig/prob_2nu/vs_energy/',
                         legend_loc='center right', legend_ncol=1)
             print('Done')
@@ -92,7 +93,7 @@ def plot_testsuite_probability_2nu():
     return
 
 
-def plot_testsuite_probability_3nu():
+def plot_testsuite_probability_3nu(output_format='png'):
 
     os.makedirs('./fig/prob_3nu/vs_baseline', exist_ok=True)
     os.makedirs('./fig/prob_3nu/vs_energy', exist_ok=True)
@@ -139,7 +140,7 @@ def plot_testsuite_probability_3nu():
                         plot_prob_tt=plot_prob_tt,
                         output_filename='prob_3nu_'+case+'_vs_baseline_'
                             +filename_end[prob],
-                        output_format='png', 
+                        output_format=output_format, 
                         output_path='./fig/prob_3nu/vs_baseline/',
                         legend_loc='center left', legend_ncol=1)
             print('Done')
@@ -172,7 +173,7 @@ def plot_testsuite_probability_3nu():
                         plot_prob_tt=plot_prob_tt,
                         output_filename='prob_3nu_'+case+'_vs_energy_'
                             +filename_end[prob],
-                        output_format='png', 
+                        output_format=output_format, 
                         output_path='./fig/prob_3nu/vs_energy/',
                         legend_loc='center right', legend_ncol=1)
             print('Done')
@@ -183,20 +184,20 @@ def plot_testsuite_probability_3nu():
     return
 
 
-def plot_testsuite_plots_paper():
+def plot_testsuite_plots_paper(output_format='png'):
 
     os.makedirs('./fig/paper', exist_ok=True)
 
     print('Generating 2nu plot in paper... ', end='')
     oscprob2nu_plotpaper.plot_probability_2nu_vs_energy_compare( \
-        output_format='png', output_path='./fig/paper/')
+        output_format=output_format, output_path='./fig/paper/')
     print('Done')
 
     print()
 
     print('Generating 3nu plot in paper... ', end='')
     oscprob3nu_plotpaper.plot_probability_3nu_vs_energy_compare( \
-        output_format='png', output_path='./fig/paper/')
+        output_format=output_format, output_path='./fig/paper/')
     print('Done')
 
     print()
@@ -204,7 +205,7 @@ def plot_testsuite_plots_paper():
     return
 
 
-def plot_testsuite_probability_2nu_slabs():
+def plot_testsuite_probability_2nu_slabs(output_format='png'):
 
     # Need to split the directory creation like this to avoid problems with long
     # paths
@@ -234,7 +235,7 @@ def plot_testsuite_probability_2nu_slabs():
                         plot_prob_ee=True, plot_prob_em=True, plot_prob_mm=False,
                         output_filename='prob_2nu_'+case+'_vs_baseline_'
                             +filename_end[prob],
-                        output_format='png', 
+                        output_format=output_format, 
                         output_path='./fig/prob_2nu_slabs/vs_baseline/',
                         legend_loc='center left', legend_ncol=1)
             print('Done')
@@ -255,7 +256,7 @@ def plot_testsuite_probability_2nu_slabs():
                         plot_prob_ee=True, plot_prob_em=True, plot_prob_mm=False,
                         output_filename='prob_2nu_'+case+'_vs_energy_'
                             +filename_end[prob],
-                        output_format='png', 
+                        output_format=output_format, 
                         output_path='./fig/prob_2nu_slabs/vs_energy/',
                         legend_loc='center right', legend_ncol=1)
             print('Done')
@@ -266,7 +267,7 @@ def plot_testsuite_probability_2nu_slabs():
     return
 
 
-def plot_testsuite_probability_3nu_slabs():
+def plot_testsuite_probability_3nu_slabs(output_format='png'):
 
     # Need to split the directory creation like this to avoid problems with long
     # paths
@@ -316,7 +317,7 @@ def plot_testsuite_probability_3nu_slabs():
                         plot_prob_tt=plot_prob_tt,
                         output_filename='prob_3nu_'+case+'_vs_baseline_'
                              +filename_end[prob],
-                        output_format='png', 
+                        output_format=output_format, 
                         output_path='./fig/prob_3nu_slabs/vs_baseline/',
                         legend_loc='center left', legend_ncol=1)
             print('Done')
@@ -349,7 +350,7 @@ def plot_testsuite_probability_3nu_slabs():
                         plot_prob_tt=plot_prob_tt,
                         output_filename='prob_3nu_'+case+'_vs_energy_'+
                             filename_end[prob],
-                        output_format='png', 
+                        output_format=output_format, 
                         output_path='./fig/prob_3nu_slabs/vs_energy/',
                         legend_loc='center right', legend_ncol=1)
             print('Done')
@@ -361,6 +362,7 @@ def plot_testsuite_probability_3nu_slabs():
 
 
 def main():
+
     print('NuOscProbExact: Running test suite (plots will be stored in ./fig)')
     print()
     plot_testsuite_probability_2nu()
@@ -368,6 +370,8 @@ def main():
     plot_testsuite_plots_paper()
     plot_testsuite_probability_2nu_slabs()
     plot_testsuite_probability_3nu_slabs()
+    
+    return
 
 
 if __name__ == '__main__':
