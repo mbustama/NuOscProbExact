@@ -67,25 +67,25 @@ print()
 
 print('Generating plots of 2nu probability vs. baseline (time-dependent Hamiltonian):')
 
-# print('    Pee (time-dependent Hamiltonian calculation)... ', end='')
-# oscprob2nu_td_plot.plot_probability_2nu_td_vs_baseline(
-#             '12', energy=1.e-2,
-#             log10_l_min=log10(5.e1), log10_l_max=3.0, log10_l_npts=3000,
-#             plot_prob_ee=True, plot_prob_em=False, plot_prob_mm=False,
-#             output_filename='prob_2nu_td_vacuum_matter_vs_baseline_ee',
-#             output_format='png', output_path='./fig/',
-#             legend_loc='lower left', legend_ncol=1)
-# print('Done')
+print('    Pee (time-dependent Hamiltonian calculation)... ', end='')
+oscprob2nu_td_plot.plot_probability_2nu_td_vs_baseline(
+            '12', energy=1.e-2,
+            log10_l_min=log10(5.e1), log10_l_max=3.0, log10_l_npts=3000,
+            plot_prob_ee=True, plot_prob_em=False, plot_prob_mm=False,
+            output_filename='prob_2nu_td_vacuum_matter_vs_baseline_ee',
+            output_format='png', output_path='./fig/',
+            legend_loc='lower left', legend_ncol=1)
+print('Done')
 
-# print('    Pem (time-dependent Hamiltonian calculation)... ', end='')
-# oscprob2nu_td_plot.plot_probability_2nu_td_vs_baseline(
-#             '12', energy=1.e-2,
-#             log10_l_min=log10(5.e1), log10_l_max=3.0, log10_l_npts=3000,
-#             plot_prob_ee=False, plot_prob_em=True, plot_prob_mm=False,
-#             output_filename='prob_2nu_td_vacuum_matter_vs_baseline_em',
-#             output_format='png', output_path='./fig/',
-#             legend_loc='upper left', legend_ncol=1)
-# print('Done')
+print('    Pem (time-dependent Hamiltonian calculation)... ', end='')
+oscprob2nu_td_plot.plot_probability_2nu_td_vs_baseline(
+            '12', energy=1.e-2,
+            log10_l_min=log10(5.e1), log10_l_max=3.0, log10_l_npts=3000,
+            plot_prob_ee=False, plot_prob_em=True, plot_prob_mm=False,
+            output_filename='prob_2nu_td_vacuum_matter_vs_baseline_em',
+            output_format='png', output_path='./fig/',
+            legend_loc='upper left', legend_ncol=1)
+print('Done')
 
 print('    Pmm (time-dependent Hamiltonian calculation)... ', end='')
 oscprob2nu_td_plot.plot_probability_2nu_td_vs_baseline(
