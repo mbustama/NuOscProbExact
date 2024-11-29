@@ -1,18 +1,19 @@
 # -*- coding: utf-8 -*-
-r"""Routines to plot two-neutrino flavor-transition probabilities.
+r"""Routines to plot two-neutrino flavor-transition probabilities (t-dep. H).
 
 This module contains contains routines to plot two-neutrino
-oscillation probabilities vs. the neutrino baseline and energy.  These
-routines are used by run_testsuite.py to produce a suite of test plots.
+oscillation probabilities vs. the neutrino baseline and energy for time-
+dependent Hamiltonians.  These routines are used by run_testsuite.py to 
+produce a suite of test plots.
 
 Routine listings
 ----------------
 
-    * plot_probability_2nu_vs_baseline - Plot probabilities vs. baseline
-    * plot_probability_2nu_vs_energy - Plot probabilities vs. energy
+    * plot_probability_2nu_td_vs_baseline - Plot probabilities vs. baseline
+    * plot_probability_2nu_td_vs_energy - Plot probabilities vs. energy
 
-Created: 2019/04/22 18:35
-Last modified: 2019/04/22 19:31
+Created: 2024/11/28 21:00
+Last modified: 2024/11/29 01:15
 """
 
 
@@ -33,16 +34,18 @@ sys.path.append('../test')
 
 import oscprob2nu
 import hamiltonians2nu
+import oscprob2nu_td
+import hamiltonians2nu_td
 from globaldefs import *
 
 
-def plot_probability_2nu_vs_baseline(
+def plot_probability_2nu_td_vs_baseline(
                 case, sector, energy=1.e-1,
                 log10_l_min=0.0, log10_l_max=3.0, log10_l_npts=6000,
                 plot_prob_ee=True, plot_prob_em=True, plot_prob_mm=False,
-                output_filename='prob_vs_baseline', output_format='pdf',
-                output_path='../fig/', legend_loc='center left',
-                legend_ncol=1):
+                output_filename='prob_td_vs_baseline', 
+                output_format='pdf', output_path='../fig/', 
+                legend_loc='center left', legend_ncol=1):
     r"""Generates and saves a plot of 2nu probabilities vs. baseline.
 
     Generates a plot of two-neutrino oscillation probabilities vs.
@@ -125,13 +128,14 @@ def plot_probability_2nu_vs_baseline(
         color_em = 'C5'
         color_mm = 'C8'
 
-    h_vacuum_energy_independent = \
-        hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(sth, Dm2)
+    h_vacuum_func = lambda l: np.multiply(1./energy/1.e9, 
+        hamiltonians2nu_td.hamiltonian_2nu_vacuum_energy_independent_td(l,
+        sth, Dm2))
 
     if (case.lower() == 'vacuum'):
 
-        hamiltonian = np.multiply(1./energy/1.e9, h_vacuum_energy_independent)
-        label_case = r'Vacuum'
+        h_func = h_vacuum_func
+        label_case = r'Vacuum ($t$-dep. calc.)'
 
     elif (case.lower() == 'matter'):
 
@@ -139,7 +143,7 @@ def plot_probability_2nu_vs_baseline(
                                                 h_vacuum_energy_independent,
                                                 energy*1.e9,
                                                 VCC_EARTH_CRUST)
-        label_case = r'Matter (constant density)'
+        label_case = r'Matter (constant density, $t$-dep. calc.)'
 
     elif (case.lower() == 'nsi'):
 
@@ -161,9 +165,9 @@ def plot_probability_2nu_vs_baseline(
 
 
     # Each element of prob: [Pee, Pem, Pmm]
-    prob = [oscprob2nu.probabilities_2nu(   hamiltonian,
-                                            l*CONV_KM_TO_INV_EV) \
-            for l in l_val]
+    prob = [oscprob2nu_td.probabilities_2nu_td(
+        h_func, l_val[0]*CONV_KM_TO_INV_EV, l*CONV_KM_TO_INV_EV, 
+        integration_method='quad', epsrel=1.e-8, epsabs=1.e-8) for l in l_val]
     prob_ee = [x[0] for x in prob]
     prob_em = [x[1] for x in prob]
     prob_mm = [x[3] for x in prob]
@@ -231,7 +235,7 @@ def plot_probability_2nu_vs_baseline(
     return
 
 
-def plot_probability_2nu_vs_energy(
+def plot_probability_2nu_td_vs_energy(
                 case, sector, baseline=1.3e3,
                 log10_energy_min=-1.0, log10_energy_max=1.0,
                 log10_energy_npts=200,
@@ -324,16 +328,19 @@ def plot_probability_2nu_vs_energy(
         color_em = 'C5'
         color_mm = 'C8'
 
-    h_vacuum_energy_independent = \
-        hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(sth, Dm2)
+    h_vacuum_energy_independent_func = lambda l: \
+        hamiltonians2nu_td.hamiltonian_2nu_vacuum_energy_independent_td(l,
+            sth, Dm2)
 
     if (case.lower() == 'vacuum'):
 
-        prob = [oscprob2nu.probabilities_2nu( \
-                    np.multiply(1./energy/1.e9, h_vacuum_energy_independent),
-                    baseline)  \
-                for energy in energy_val]
-        label_case = r'Vacuum'
+        prob = [oscprob2nu_td.probabilities_2nu_td(lambda l: 
+            np.multiply(1./energy/1.e9, 
+                hamiltonians2nu_td.hamiltonian_2nu_vacuum_energy_independent_td(l, sth, Dm2)), 
+            0, baseline, 
+            integration_method='quad', epsrel=1.e-8, epsabs=1.e-8) \
+        for energy in energy_val]
+        label_case = r'Vacuum ($t$-dep. calc.)'
 
     elif (case.lower() == 'matter'):
 

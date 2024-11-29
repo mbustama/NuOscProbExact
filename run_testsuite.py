@@ -25,6 +25,7 @@ sys.path.append('./src')
 sys.path.append('./test')
 
 import oscprob2nu_plot
+import oscprob2nu_td_plot
 import oscprob3nu_plot
 import oscprob2nu_plotpaper
 import oscprob3nu_plotpaper
@@ -49,6 +50,17 @@ for case in ['vacuum', 'matter', 'nsi', 'liv']:
                 legend_loc='center left', legend_ncol=1)
     print('Done')
 
+    if (case == 'vacuum'):
+        print('    Pee, Pem (time-dependent Hamiltonian calculation)... ', end='')
+        oscprob2nu_td_plot.plot_probability_2nu_td_vs_baseline(
+                    case, '12', energy=1.e-2,
+                    log10_l_min=0.0, log10_l_max=3.0, log10_l_npts=3000,
+                    plot_prob_ee=True, plot_prob_em=True, plot_prob_mm=False,
+                    output_filename='prob_2nu_td_'+case+'_vs_baseline_ee_em',
+                    output_format='png', output_path='./fig/',
+                    legend_loc='center left', legend_ncol=1)
+        print('Done')
+
     print('    Pmm, Pmt... ', end='')
     oscprob2nu_plot.plot_probability_2nu_vs_baseline(
                 case, '23', energy=1.e-2,
@@ -59,13 +71,24 @@ for case in ['vacuum', 'matter', 'nsi', 'liv']:
                 legend_loc='center left', legend_ncol=1)
     print('Done')
 
+    if (case == 'vacuum'):
+        print('    Pmm, Pmt (time-dependent Hamiltonian calculation)... ', end='')
+        oscprob2nu_td_plot.plot_probability_2nu_td_vs_baseline(
+                    case, '23', energy=1.e-2,
+                    log10_l_min=0.0, log10_l_max=3.0, log10_l_npts=3000,
+                    plot_prob_ee=True, plot_prob_em=True, plot_prob_mm=False,
+                    output_filename='prob_2nu_td_'+case+'_vs_baseline_mm_mt',
+                    output_format='png', output_path='./fig/',
+                    legend_loc='center left', legend_ncol=1)
+        print('Done')
+
     print('  Done')
 
 print()
 
 print('Generating plots of 2nu probability vs. energy:')
 
-for case in ['vacuum', 'matter', 'nsi', 'liv']:
+for case in ['vacuum']:#, 'matter', 'nsi', 'liv']:
 
     print('  Case: '+case)
 
@@ -80,7 +103,19 @@ for case in ['vacuum', 'matter', 'nsi', 'liv']:
                 legend_loc='center right', legend_ncol=1)
     print('Done')
 
-    print('    Pee, Pem... ', end='')
+    if (case == 'vacuum'):
+        print('    Pee, Pem (time-dependent Hamiltonian calculation)... ', end='')
+        oscprob2nu_td_plot.plot_probability_2nu_td_vs_energy(
+                    case, '12', baseline=1.e3,
+                    log10_energy_min=-1.0, log10_energy_max=1.0,
+                    log10_energy_npts=600,
+                    plot_prob_ee=True, plot_prob_em=True, plot_prob_mm=False,
+                    output_filename='prob_2nu_td_'+case+'_vs_energy_ee_em',
+                    output_format='png', output_path='./fig/',
+                    legend_loc='center right', legend_ncol=1)
+        print('Done')
+
+    print('    Pmm, Pmt... ', end='')
     oscprob2nu_plot.plot_probability_2nu_vs_energy(
                 case, '23', baseline=1.e3,
                 log10_energy_min=-1.0, log10_energy_max=1.0,
@@ -91,6 +126,17 @@ for case in ['vacuum', 'matter', 'nsi', 'liv']:
                 legend_loc='center right', legend_ncol=1)
     print('Done')
 
+    if (case == 'vacuum'):
+        print('    Pmm, Pmt (time-dependent Hamiltonian calculation)... ', end='')
+        oscprob2nu_plot.plot_probability_2nu_vs_energy(
+                    case, '23', baseline=1.e3,
+                    log10_energy_min=-1.0, log10_energy_max=1.0,
+                    log10_energy_npts=600,
+                    plot_prob_ee=True, plot_prob_em=True, plot_prob_mm=False,
+                    output_filename='prob_2nu_'+case+'_vs_energy_mm_mt',
+                    output_format='png', output_path='./fig/',
+                    legend_loc='center right', legend_ncol=1)
+        print('Done')
 
     print('  Done')
 
