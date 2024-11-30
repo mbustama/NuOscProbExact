@@ -378,10 +378,11 @@ def plot_oscillogram_earth_2nu_td(
 
     # Generate the probability for all combinations of costhz and Enu
     for costhz_index, costhz in enumerate(costhz_val):
+        print(str(costhz_index)+'/'+str(costhz_npts))
         for Enu_index, Enu in enumerate(Enu_val):
             # print(costhz_index, Enu_index, costhz, 
             # l_val[costhz_index], Enu_val[Enu_index])
-            print(costhz_index, Enu_index)
+            # print(costhz_index, Enu_index)
             def VCC_func_prem_wrapper(l):
                 r = matter.earth_radial_distance_from_depth(costhz, 
                     l/CONV_KM_TO_INV_EV)
