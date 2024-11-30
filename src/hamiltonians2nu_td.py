@@ -3,18 +3,18 @@ r"""Compute two-neutrino time-dependent Hamiltonians for selected
 scenarios.
 
 This module contains the routines to compute the two-neutrino
-Hamiltonians for the following scenarios: oscillations in vacuum, in
-matter of constant density, in matter with non-standard interactions
-(NSI), and in a CPT-odd Lorentz invariance-violating background (LIV).
+Hamiltonians for oscillations in vacuum and in matter of constant 
+density, for a time-dependent (or position-dependent) Hamiltonian.
 
 Routine listings
 ----------------
 
-    * hamiltonian_2nu_vacuum_energy_independent - Returns H_vac (no 1/E)
-    * hamiltonian_2nu_matter - Returns H_matter
+    * hamiltonian_2nu_vacuum_energy_independent_td - Returns H_vac (no
+         1/E)
+    * hamiltonian_2nu_matter_td - Returns H_matter
 
 Created: 2024/11/28 21:00
-Last modified: 2024/11/30 15:40
+Last modified: 2024/11/30 21:36
 """
 
 
@@ -91,7 +91,7 @@ def hamiltonian_2nu_matter_td(h_vacuum_energy_independent, l, energy,
         Neutrino energy.
     VCC : float
         Potential due to charged-current interactions of nu_e with
-        electrons.
+        electrons. This is a function only of the position, l.
 
     Returns
     -------

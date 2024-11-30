@@ -116,7 +116,7 @@ def plot_probability_2nu_td_vs_baseline(
 
     # Baselines, L
     log10_l_val = np.linspace(log10_l_min, log10_l_max, log10_l_npts)
-    l_val =[10.**x for x in log10_l_val]
+    l_val = [10.**x for x in log10_l_val]
 
     if sector == '12':
         sth = S12_NO_BF
@@ -310,6 +310,141 @@ def plot_probability_2nu_td_vs_baseline(
         horizontalalignment='right', rotation=0, zorder=2 )
 
     pylab.savefig(output_path+output_filename+'.'+output_format,
+        bbox_inches='tight', dpi=100)
+
+    plt.close()
+
+    return
+
+
+def plot_oscillogram_earth_2nu_td(
+                sector, prob_sel='ee',
+                costhz_min=-1.0, costhz_max=0.0, costhz_npts=100,
+                log10_Enu_min=0.0, log10_Enu_max=2.0, Enu_npts=100,
+                output_filename='oscillogram_earth_2nu_td', 
+                output_format='png', output_path='../fig/'):
+
+    def VCC_func_prem(r):
+        density_matter_func = lambda r: \
+            matter.density_matter_func_prem(r) # [g cm^{-3}]
+        num_density_e_func = lambda r : \
+            matter.num_density_e_func(r, density_matter_func,
+            electron_fraction=0.5) # [eV^{-3}]
+        return matter.VCC_func(r, num_density_e_func) # [eV]
+
+    if sector == '12':
+        sth = S12_NO_BF
+        Dm2 = D21_NO_BF
+        if (prob_sel == 'ee'):
+            prob_index = 0
+            label = r'$P_{\nu_e \to \nu_e}$'
+        elif (prob_sel == 'em'):
+            prob_index = 1
+            label = r'$P_{\nu_e \to \nu_\mu}$'
+        elif (prob_sel == 'mm'):
+            prob_index = 2
+            label = r'$P_{\nu_\mu \to \nu_\mu}$'
+    elif sector == '23':
+        sth = S23_NO_BF
+        Dm2 = D31_NO_BF
+        if (prob_sel == 'mm'):
+            prob_index = 0
+            label = r'$P_{\nu_\mu \to \nu_\mu}$'
+        elif (prob_sel == 'mt'):
+            prob_index = 1
+            label = r'$P_{\nu_\mu \to \nu_\tau}$'
+        elif (prob_sel == 'tt'):
+            prob_index = 2
+            label = r'$P_{\nu_\tau \to \nu_\tau}$'
+
+    # Cosine of zenith angle
+    costhz_val = np.linspace(costhz_min, costhz_max, costhz_npts)
+
+    # Baselines, L
+    l_val = [matter.distance_traveled_inside_earth(costhz) \
+        for costhz in costhz_val] # [km]
+
+    # Neutrino energies, Enu
+    Enu_val = np.logspace(log10_Enu_min, log10_Enu_max, Enu_npts) # [GeV]
+    log10_Enu_val = np.log10(Enu_val)
+
+    # Create the 2D array to store the probability
+    prob_2d = np.zeros((costhz_npts, Enu_npts))
+
+    # Compute vacuum, energy-independent Hamiltonian just once
+    h_vacuum_energy_independent = \
+        hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(sth, 
+            Dm2)
+
+    # Generate the probability for all combinations of costhz and Enu
+    for costhz_index, costhz in enumerate(costhz_val):
+        for Enu_index, Enu in enumerate(Enu_val):
+            # print(costhz_index, Enu_index, costhz, 
+            # l_val[costhz_index], Enu_val[Enu_index])
+            print(costhz_index, Enu_index)
+            def VCC_func_prem_wrapper(l):
+                r = matter.earth_radial_distance_from_depth(costhz, 
+                    l/CONV_KM_TO_INV_EV)
+                return VCC_func_prem(r)
+            # Hamiltonian function including matter effects
+            h_func = lambda l: \
+                hamiltonians2nu_td.hamiltonian_2nu_matter_td( \
+                    h_vacuum_energy_independent, l, Enu*1.e9, 
+                    VCC_func_prem_wrapper) # [eV]
+            # Each element of prob, e.g., [Pee, Pem, Pmm]
+            prob = oscprob2nu_td.probabilities_2nu_td(
+                h_func, 0.0, l_val[costhz_index]*CONV_KM_TO_INV_EV, 
+                integration_method='quad', epsrel=1.e-8, epsabs=1.e-8)
+            prob_2d[Enu_index][costhz_index] = prob[prob_index]
+
+    # Plot the contour plot
+    mpl.rcParams['xtick.labelsize']=26
+    mpl.rcParams['ytick.labelsize']=26
+    mpl.rcParams['legend.fontsize']=26
+    mpl.rcParams['legend.borderpad']=0.4
+    mpl.rcParams['axes.labelpad']=10
+    mpl.rcParams['ps.fonttype']=42
+    mpl.rcParams['pdf.fonttype']=42
+
+    fig = plt.figure(figsize=[9,9])
+    ax = fig.add_subplot(1,1,1)
+
+    ax.tick_params('both', length=10, width=2, which='major')
+    ax.tick_params('both', length=5, width=1, which='minor')
+    ax.tick_params(axis='both', which='major', pad=10, direction='in')
+    ax.tick_params(axis='both', which='minor', pad=10, direction='in')
+    ax.tick_params(axis='x', which='minor', bottom=True)
+    ax.tick_params(axis='x', which='minor', top=True)
+    ax.tick_params(axis='y', which='minor', left=True)
+    ax.tick_params(axis='y', which='minor', right=True)
+    ax.tick_params(bottom=True, top=True, left=True, right=True)
+    
+    ax.set_xlim([costhz_min, costhz_max])
+    ax.set_ylim([log10_Enu_min, log10_Enu_max])
+
+    xaxis_major_locator = mpl.ticker.MultipleLocator(0.2)
+    ax.xaxis.set_major_locator(xaxis_major_locator)
+    xaxis_minor_locator = mpl.ticker.MultipleLocator(0.02)
+    ax.xaxis.set_minor_locator(xaxis_minor_locator)
+    yaxis_major_locator = mpl.ticker.MultipleLocator(0.1)
+    ax.yaxis.set_major_locator(yaxis_major_locator)
+    yaxis_minor_locator = mpl.ticker.MultipleLocator(0.02)
+    ax.yaxis.set_minor_locator(yaxis_minor_locator)
+
+    ax.set_xlabel(r'Zenith angle, $\cos(\theta_z)$', fontsize=25)
+    ax.set_ylabel(r'Neutrino energy, $\log_{10}(E_\nu/{\rm GeV})$', 
+        fontsize=25)
+
+    # print(prob_2d)
+
+    # Plot
+    cs = ax.contourf(costhz_val, log10_Enu_val, prob_2d,
+        levels=120, cmap=mpl.cm.plasma)
+    cbar = fig.colorbar(cs)
+    cbar.ax.tick_params(labelsize=25) 
+    cbar.set_label(label=r'Two-neutrino probability, '+label, fontsize=25)
+
+    plt.savefig(output_path+output_filename+'.'+output_format,
         bbox_inches='tight', dpi=100)
 
     plt.close()

@@ -7,7 +7,7 @@ The core modules oscprob2nu.py and oscprob3nu.py do not require these
 constants.
 
 Created: 2019/04/17 17:03
-Last modified: 2019/04/29 23:39
+Last modified: 2024/11/30 16:37
 """
 
 
@@ -116,6 +116,13 @@ r"""float: Module-level constant
 
 Charged-current matter potential in the Earth's crust.
 Units: [eV]
+"""
+
+EARTH_RADIUS = 6371.0
+r"""float: Module-level constant
+
+Average Earth radius.
+Units: [km]
 """
 
 S12_NO_BF = sqrt(0.310)

@@ -17,8 +17,9 @@ Routine listings
 References
 ----------
 
-.. [1] Mauricio Bustamante, "Exact neutrino oscillation probabilities
-   with arbitrary time-independent Hamiltonians", arXiv:1904.XXXXX.
+.. [1] Mauricio Bustamante, "NuOscProbExact: a general-purpose code to
+   compute exact two-flavor and three-flavor neutrino oscillation 
+   probabilities", arXiv:1904.12391.
 
 Created: 2019/04/20 19:07
 Last modified: 2019/04/22 20:33
@@ -204,7 +205,7 @@ def evolution_operator_2nu(hamiltonian_matrix, L):
 def probabilities_2nu(hamiltonian_matrix, L):
     r"""Returns the 2nu oscillation probability.
 
-    Returns the three-neutrino oscillation probabilities
+    Returns the two-neutrino oscillation probabilities
     Pee, Pem, Pme, Pmm.
 
     Parameters
