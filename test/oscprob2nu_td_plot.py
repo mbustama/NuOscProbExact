@@ -172,6 +172,11 @@ def plot_probability_2nu_td_vs_baseline(
                         density_matter_func, electron_fraction=0.5) # [eV^{-3}]
                 return matter.VCC_func(l, num_density_e_func) # [eV]
 
+            if (sector == '12'):
+                label_case = r'Matter, constant $\rho_0 = 10$ g cm$^{-3}$'
+            elif (sector == '23'):
+                label_case = r'Matter, constant $\rho_0 = 100$ g cm$^{-3}$'
+                
             h_vacuum_energy_independent = \
                 hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(sth,
                     Dm2)
