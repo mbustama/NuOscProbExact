@@ -36,6 +36,7 @@ import oscprob2nu
 import hamiltonians2nu
 import oscprob2nu_td
 import hamiltonians2nu_td
+import matter
 from globaldefs import *
 
 
@@ -164,12 +165,12 @@ def plot_probability_2nu_td_vs_baseline(
                     density_matter_const = 100 # [g cm^{-3}]
                     label_case = r'Matter, constant $\rho_0 = 100$ g cm$^{-3}$'
                 density_matter_func = lambda l: \
-                    hamiltonians2nu_td.density_matter_func_const(l, 
+                    matter.density_matter_func_const(l, 
                         density_matter_const) # [g cm^{-3}]
                 num_density_e_func = lambda l : \
-                    hamiltonians2nu_td.num_density_e_func(l,
+                    matter.num_density_e_func(l,
                         density_matter_func, electron_fraction=0.5) # [eV^{-3}]
-                return hamiltonians2nu_td.VCC_func(l, num_density_e_func) # [eV]
+                return matter.VCC_func(l, num_density_e_func) # [eV]
 
             h_vacuum_energy_independent = \
                 hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(sth,
@@ -193,12 +194,12 @@ def plot_probability_2nu_td_vs_baseline(
                     density_matter_central = 100 # [g cm^{-3}]
                     l_scale = 100*CONV_KM_TO_INV_EV # [km]
                 density_matter_func = lambda l: \
-                    hamiltonians2nu_td.density_matter_func_exp(l, 
+                    matter.density_matter_func_exp(l, 
                         density_matter_central, l_scale) # [g cm^{-3}]
                 num_density_e_func = lambda l : \
-                    hamiltonians2nu_td.num_density_e_func(l,
+                    matter.num_density_e_func(l,
                         density_matter_func, electron_fraction=0.5) # [eV^{-3}]
-                return hamiltonians2nu_td.VCC_func(l, num_density_e_func) # [eV]
+                return matter.VCC_func(l, num_density_e_func) # [eV]
 
             h_vacuum_energy_independent = \
                 hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(sth,
@@ -223,12 +224,12 @@ def plot_probability_2nu_td_vs_baseline(
                     density_matter_central = 100 # [g cm^{-3}]
                     l_scale = 100*CONV_KM_TO_INV_EV # [km]
                 density_matter_func = lambda l: \
-                    hamiltonians2nu_td.density_matter_func_exp(l, 
+                    matter.density_matter_func_exp(l, 
                         density_matter_central, l_scale) # [g cm^{-3}]
                 num_density_e_func = lambda l : \
-                    hamiltonians2nu_td.num_density_e_func(l,
+                    matter.num_density_e_func(l,
                         density_matter_func, electron_fraction=0.5) # [eV^{-3}]
-                return hamiltonians2nu_td.VCC_func(l, num_density_e_func) # [eV]
+                return matter.VCC_func(l, num_density_e_func) # [eV]
 
             h_vacuum_energy_independent = \
                 hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(sth,
