@@ -116,7 +116,7 @@ def density_matter_func_prem(r):
 
     RADIUS_EARTH = 6371.0 # [km]
 
-    if (l > RADIUS_EARTH):
+    if (r > RADIUS_EARTH):
         print('Error: density_matter_prem: value of ' + \
                 'l cannot be > RADIUS_EARTH = 6371 km')
         quit()
