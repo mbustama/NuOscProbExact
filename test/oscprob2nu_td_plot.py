@@ -314,7 +314,7 @@ def plot_probability_2nu_td_vs_baseline(
         xy = (0.98, 0.05), xycoords='axes fraction', color='k', fontsize=20,
         horizontalalignment='right', rotation=0, zorder=2 )
 
-    pylab.savefig(output_path+output_filename+'.'+output_format,
+    plt.savefig(output_path+output_filename+'.'+output_format,
         bbox_inches='tight', dpi=100)
 
     plt.close()
