@@ -87,7 +87,7 @@ def hamiltonian_2nu_vacuum_energy_independent(sth, Dm2,
     list
         Hamiltonian 2x2 matrix.
     """
-    cth = 1.0-sth*sth
+    cth = sqrt(1.0-sth*sth)
     c2th = cth*cth-sth*sth
     s2th = 2.0*cth*sth
 
