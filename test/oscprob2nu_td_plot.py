@@ -148,10 +148,8 @@ def plot_probability_2nu_td_vs_baseline(
             def VCC_func_const_density(l):
                 if (sector == '12'):
                     density_matter_const = 10 # [g cm^{-3}]
-                    label_case = r'Matter, constant $\rho_0 = 10$ g cm$^{-3}$'
                 elif (sector == '23'):
                     density_matter_const = 100 # [g cm^{-3}]
-                    label_case = r'Matter, constant $\rho_0 = 100$ g cm$^{-3}$'
                 density_matter_func = lambda l: \
                     matter.density_matter_func_const(l, 
                         density_matter_const) # [g cm^{-3}]
