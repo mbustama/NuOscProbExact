@@ -249,17 +249,46 @@ def plot_probability_2nu_td_vs_baseline(
             lc = 'C2'
 
         # Each element of prob: [Pee, Pem, Pmm]
-        prob = [oscprob2nu_td.probabilities_2nu_td(
+        prob = np.array([oscprob2nu_td.probabilities_2nu_td(
             h_func, l_val[0]*CONV_KM_TO_INV_EV, l*CONV_KM_TO_INV_EV, 
-            integration_method='quad', epsrel=1.e-8, epsabs=1.e-8) for l in l_val]
+            integration_method='quad', epsrel=1.e-30, epsabs=1.e-30) for l in l_val])
         prob_ee = [x[0] for x in prob]
         prob_em = [x[1] for x in prob]
         prob_mm = [x[3] for x in prob]
+
+        # # --- Validation tests (all passed) ---
+        # # --- Standard probability formula ---
+        # prob_std = np.array([hamiltonians2nu.probabilities_2nu_vacuum_std(sth, Dm2, energy*1.e9, 
+        #     (l-l_val[0])*CONV_KM_TO_INV_EV) \
+        #     for l in l_val])
+        #
+        # # --- NOPE method, time-independent calculation ---
+        # h_vacuum_energy_independent = \
+        #     hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(sth, Dm2)
+        # hamiltonian = np.multiply(1./energy/1.e9, h_vacuum_energy_independent)
+        # prob_nope_ti = np.array([oscprob2nu.probabilities_2nu(   hamiltonian,
+        #                                     l*CONV_KM_TO_INV_EV) \
+        #         for l in l_val])
+        #
+        # # --- Ratios ---
+        # ratio1 = prob[:,0]/prob_std[:,0]
+        # ratio2 = prob_nope_ti[:,0]/prob_std[:,0]
+        # err1 = (prob[:,0]-prob_std[:,0])/prob_std[:,0]
+        # err2 = (prob_nope_ti[:,0]-prob_std[:,0])/prob_std[:,0]
 
         # Plot
         if (plot_prob_ee):
             ax.plot(l_val, prob_ee, label=label_case,
                 color=lc, ls=ls, zorder=1)
+            # # --- Validation tests (all passed) ---
+            # ax.plot(l_val, prob_nope_ti[:,0], label='Time-independent calc.',
+            #     color='b', ls=ls, zorder=1)
+            # ax.plot(l_val, prob_std[:,0], label='Stdandard formula',
+            #     color='r', ls=ls, zorder=1)
+            # ax.plot(l_val, ratio1, label='Ratio1')
+            # ax.plot(l_val, ratio2, label='Ratio2')
+            # ax.plot(l_val, err1, label='Err1')
+            # ax.plot(l_val, err2, label='Err2')
         if (plot_prob_em):
             ax.plot(l_val, prob_em, label=label_case,
                 color=lc, ls=ls, zorder=1)
@@ -302,7 +331,8 @@ def plot_probability_2nu_td_vs_baseline(
 
     ax.set_xlim([10.**log10_l_min, 10.**log10_l_max])
     ax.set_xscale('log')
-    ax.set_ylim([0.0, 1.0])
+    # ax.set_ylim([0.0, 1.0])
+    ax.set_ylim([0, 1.])
 
     # Legend
     ax.legend(loc=legend_loc, frameon=True, ncol=legend_ncol,

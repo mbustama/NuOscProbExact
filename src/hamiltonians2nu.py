@@ -137,7 +137,8 @@ def probabilities_2nu_vacuum_std(sth, Dm2, energy, L):
     list
         List of probabilities [Pee, Pem, Pme, Pmm].
     """
-    arg = 1.27*Dm2*L/energy#/4.0
+    # arg = 1.27*Dm2*L/energy#/4.0
+    arg = Dm2*L/energy/4.0
     cth = sqrt(1.0-sth*sth)
     s2th = 2.0*sth*cth
 

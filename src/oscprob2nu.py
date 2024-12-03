@@ -36,6 +36,7 @@ import numpy as np
 import cmath
 import cmath as cmath
 
+
 sigma_1 = [[0.0, 1.0], [1.0, 0.0]]
 sigma_2 = [[0.0, -1.0j], [1.0j, 0]]
 sigma_3 = [[1.0, 0.0], [0.0, -1.0]]
@@ -107,6 +108,7 @@ def modulus(h_coeffs):
     """
     # h_abs = |h|
     h_abs = sqrt(sum([abs(h)**2.0 for h in h_coeffs]))
+    # h_abs = np.sqrt(np.sum(np.power(np.array(h_coeffs), 2)))
 
     return h_abs
 

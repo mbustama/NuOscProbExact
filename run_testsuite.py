@@ -7,7 +7,7 @@ vs. baseline and vs. energy.  Also generates the plot included in the
 paper.
 
 Created: 2019/04/22 16:23
-Last modified: 2024/11/30 21:38
+Last modified: 2024/12/03 18:39
 """
 
 
@@ -66,6 +66,18 @@ print()
 
 
 print('Generating plots of 2nu probability vs. baseline (time-dependent Hamiltonian):')
+
+# --- Uncomment this when validating vacuum calculations (see oscprob2nu_td_plot.y)
+# print('    Pee (time-dependent Hamiltonian calculation)... ', end='')
+# oscprob2nu_td_plot.plot_probability_2nu_td_vs_baseline(
+#             '12', energy=1.e-2,
+#             log10_l_min=log10(1.e6), log10_l_max=log10(1.e7), log10_l_npts=10000,
+#             plot_prob_ee=True, plot_prob_em=False, plot_prob_mm=False,
+#             output_filename='prob_2nu_td_vacuum_vs_baseline_ee_validation',
+#             output_format='png', output_path='./fig/',
+#             legend_loc='lower left', legend_ncol=1)
+# print('Done')
+
 
 print('    Pee (time-dependent Hamiltonian calculation)... ', end='')
 oscprob2nu_td_plot.plot_probability_2nu_td_vs_baseline(

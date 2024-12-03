@@ -34,6 +34,7 @@ import cmath
 import cmath as cmath
 import scipy as sp
 import oscprob2nu
+# from mpmath import mp
 
 
 def probabilities_2nu_td(hamiltonian_matrix_func, l_init, l_final,
@@ -100,6 +101,9 @@ def probabilities_2nu_td(hamiltonian_matrix_func, l_init, l_final,
         # h_abs = |h|
         h_abs = oscprob2nu.modulus(h_coeffs)
 
+        # mp.dps = 100
+        # Pem = (abs(h_coeffs[0])**2.0 + abs(h_coeffs[1])**2.0) / h_abs**2.0 \
+        #     * mp.power(mp.sin(h_abs), 2.0)
         Pem = (abs(h_coeffs[0])**2.0 + abs(h_coeffs[1])**2.0) / h_abs**2.0 \
             * pow(sin(h_abs), 2.0)
         Pme = Pem
