@@ -121,21 +121,9 @@ def plot_probability_2nu_td_vs_baseline(
     if sector == '12':
         sth = S12_NO_BF
         Dm2 = D21_NO_BF
-        label_ee = r'$P_{\nu_e \to \nu_e}$'
-        label_em = r'$P_{\nu_e \to \nu_\mu}$'
-        label_mm = r'$P_{\nu_\mu \to \nu_\mu}$'
-        color_ee = 'C0'
-        color_em = 'C1'
-        color_mm = 'C4'
     elif sector == '23':
         sth = S23_NO_BF
         Dm2 = D31_NO_BF
-        label_ee = r'$P_{\nu_\mu \to \nu_\mu}$'
-        label_em = r'$P_{\nu_\mu \to \nu_\tau}$'
-        label_mm = r'$P_{\nu_\tau \to \nu_\tau}$'
-        color_ee = 'C4'
-        color_em = 'C5'
-        color_mm = 'C8'
 
     for case in ['vacuum', 'matter_const', 'matter_exp_1', 'matter_exp_2']:
 
