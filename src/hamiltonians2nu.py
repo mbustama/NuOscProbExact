@@ -87,9 +87,9 @@ def hamiltonian_2nu_vacuum_energy_independent(sth, Dm2,
     list
         Hamiltonian 2x2 matrix.
     """
-    th = np.arcsin(sth)
-    c2th = cos(2.0*th)
-    s2th = sin(2.0*th)
+    cth = 1.0-sth*sth
+    c2th = cth*cth-sth*sth
+    s2th = 2.0*cth*sth
 
     f = 1./4.
 
