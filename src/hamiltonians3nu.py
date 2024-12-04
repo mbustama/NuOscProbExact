@@ -78,6 +78,10 @@ def pmns_mixing_matrix(s12, s23, s13, dCP):
     U21 = -c12*s23 - s12*c23*s13*complex(cdCP,sdCP)
     U22 = c23*c13
 
+    # print()
+    # print(np.array([[U00,U01,U02],[U10,U11,U12],[U20,U21,U22]]))
+    # quit()
+
     return [[U00,U01,U02],[U10,U11,U12],[U20,U21,U22]]
 
 
@@ -153,6 +157,10 @@ def hamiltonian_3nu_vacuum_energy_independent(s12, s23, s13, dCP, D21, D31,
         M2 = np.array([[0.0, 0.0, 0.0], [0.0, D21, 0.0], [0.0, 0.0, D31]])
         # Hamiltonian
         H = list(f*np.matmul(R, np.matmul(M2, np.conj(matrix.transpose(R)))))
+
+        # print()
+        # print(np.array(H))
+        # quit()
 
     return H
 
@@ -236,16 +244,18 @@ def probabilities_3nu_vacuum_std(U, D21, D31, energy, L):
         Ptt].
     """
     D32 = D31-D21
-    arg21 = 2.54*D21*L/energy#/2.0
-    arg31 = 2.54*D31*L/energy#/2.0
-    arg32 = 2.54*D32*L/energy#/2.0
+    # arg21 = 2.54*D21*L/energy
+    # arg31 = 2.54*D31*L/energy
+    # arg32 = 2.54*D32*L/energy
+    arg21 = D21*L/energy/2.0
+    arg31 = D31*L/energy/2.0
+    arg32 = D32*L/energy/2.0
     s21 = sin(arg21)
     s31 = sin(arg31)
     s32 = sin(arg32)
     ss21 = pow(sin(arg21/2.0), 2.0)
     ss31 = pow(sin(arg31/2.0), 2.0)
     ss32 = pow(sin(arg32/2.0), 2.0)
-
     # Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt
     prob = [delta(alpha, beta) \
             - 4.0 * ( J(U, alpha, beta, 1, 0).real*ss21

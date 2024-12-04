@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-r"""Routines to plot two-neutrino flavor-transition probabilities (t-dep. H).
+r"""Routines to plot three-neutrino flavor-transition probabilities (t-dep. H).
 
-This module contains contains routines to plot two-neutrino
+This module contains contains routines to plot three-neutrino
 oscillation probabilities vs. the neutrino baseline and energy for time-
 dependent Hamiltonians.  These routines are used by run_testsuite.py to 
 produce a suite of test plots.
@@ -9,11 +9,10 @@ produce a suite of test plots.
 Routine listings
 ----------------
 
-    * plot_probability_2nu_td_vs_baseline - Plot probabilities vs. baseline
-    * plot_probability_2nu_td_vs_energy - Plot probabilities vs. energy
+    * plot_probability_3nu_td_vs_baseline - Plot probabilities vs. baseline
 
-Created: 2024/11/28 21:00
-Last modified: 2024/11/29 17:26
+Created: 2024/12/03 21:58
+Last modified: 2024/12/03 21:58
 """
 
 
@@ -32,24 +31,26 @@ import sys
 sys.path.append('../src')
 sys.path.append('../test')
 
-import oscprob2nu
-import hamiltonians2nu
-import oscprob2nu_td
-import hamiltonians2nu_td
+import oscprob3nu
+import hamiltonians3nu
+import oscprob3nu_td
+import hamiltonians3nu_td
 import matter
 from globaldefs import *
 
 
-def plot_probability_2nu_td_vs_baseline(
-                sector, energy=1.e-1,
+def plot_probability_3nu_td_vs_baseline(
+                energy=1.e-1,
                 log10_l_min=0.0, log10_l_max=3.0, log10_l_npts=6000,
-                plot_prob_ee=True, plot_prob_em=True, plot_prob_mm=False,
+                plot_prob_ee=True, plot_prob_em=False, plot_prob_et=False,
+                plot_prob_me=False, plot_prob_mm=False, plot_prob_mt=False,
+                plot_prob_te=False, plot_prob_tm=False, plot_prob_tt=False,
                 output_filename='prob_td_vs_baseline', 
                 output_format='pdf', output_path='../fig/', 
                 legend_loc='center left', legend_ncol=1):
-    r"""Generates and saves a plot of 2nu probabilities vs. baseline.
+    r"""Generates and saves a plot of 3nu probabilities vs. baseline.
 
-    Generates a plot of two-neutrino oscillation probabilities vs.
+    Generates a plot of three-neutrino oscillation probabilities vs.
     baseline, for a fixed neutrino energy.  The probabilities to be
     plotted are turned on and off via the flags plot_prob_ee,
     plot_prob_em, etc.  (At least one of them must be True.)  The
@@ -98,7 +99,9 @@ def plot_probability_2nu_td_vs_baseline(
     None
         The plot is generated and saved.
     """
-    if (not plot_prob_ee) and (not plot_prob_em) and (not plot_prob_mm):
+    if (not plot_prob_ee) and (not plot_prob_em) and (not plot_prob_et) \
+        and (not plot_prob_me) and (not plot_prob_mm) and (not plot_prob_mt) \
+        and (not plot_prob_te) and (not plot_prob_tm) and (not plot_prob_tt):
         quit()
 
     # Formatting
@@ -118,14 +121,7 @@ def plot_probability_2nu_td_vs_baseline(
     log10_l_val = np.linspace(log10_l_min, log10_l_max, log10_l_npts)
     l_val = [10.**x for x in log10_l_val]
 
-    if sector == '12':
-        sth = S12_NO_BF
-        Dm2 = D21_NO_BF
-    elif sector == '23':
-        sth = S23_NO_BF
-        Dm2 = D31_NO_BF
-
-    for case in ['vacuum', 'matter_const', 'matter_exp_1', 'matter_exp_2']:
+    for case in ['vacuum']:#, 'matter_const', 'matter_exp_1', 'matter_exp_2']:
 
         if (case.lower() == 'vacuum'):
 
@@ -133,8 +129,9 @@ def plot_probability_2nu_td_vs_baseline(
             # In this case, oscilllations are in vacuum, so this is only for
             # testing.
             h_vacuum_func = lambda l: np.multiply(1./energy/1.e9, 
-                hamiltonians2nu_td.hamiltonian_2nu_vacuum_energy_independent_td(l,
-                sth, Dm2))
+                hamiltonians3nu_td.hamiltonian_3nu_vacuum_energy_independent_td( \
+                    S12_NO_BF, S23_NO_BF, S13_NO_BF, DCP_NO_BF, D21_NO_BF, 
+                    D31_NO_BF, compute_matrix_multiplication=True))
             h_func = h_vacuum_func
             label_case = r'Vacuum ($t$-dep. calculation)'
             ls = '-'
@@ -146,10 +143,7 @@ def plot_probability_2nu_td_vs_baseline(
             # In this case, the matter density is constant, so this is only
             # for testing.
             def VCC_func_const_density(l):
-                if (sector == '12'):
-                    density_matter_const = 10 # [g cm^{-3}]
-                elif (sector == '23'):
-                    density_matter_const = 100 # [g cm^{-3}]
+                density_matter_const = 100 # [g cm^{-3}]
                 density_matter_func = lambda l: \
                     matter.density_matter_func_const(l, 
                         density_matter_const) # [g cm^{-3}]
@@ -158,16 +152,14 @@ def plot_probability_2nu_td_vs_baseline(
                         density_matter_func, electron_fraction=0.5) # [eV^{-3}]
                 return matter.VCC_func(l, num_density_e_func) # [eV]
 
-            if (sector == '12'):
-                label_case = r'Matter, constant $\rho_0 = 10$ g cm$^{-3}$'
-            elif (sector == '23'):
-                label_case = r'Matter, constant $\rho_0 = 100$ g cm$^{-3}$'
+            label_case = r'Matter, constant $\rho_0 = 100$ g cm$^{-3}$'
                 
             h_vacuum_energy_independent = \
-                hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(sth,
-                    Dm2)
+                hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent( \
+                    S12_NO_BF, S23_NO_BF, S13_NO_BF, DCP_NO_BF, D21_NO_BF, 
+                    D31_NO_BF, compute_matrix_multiplication=False)
             h_matter_func = lambda l: \
-                hamiltonians2nu_td.hamiltonian_2nu_matter_td( \
+                hamiltonians3nu_td.hamiltonian_3nu_matter_td( \
                     h_vacuum_energy_independent, l, energy*1.e9, 
                     VCC_func_const_density)
             h_func = h_matter_func
@@ -178,12 +170,8 @@ def plot_probability_2nu_td_vs_baseline(
 
             # Define a potential that is only a function of position, l
             def VCC_func_exp(l):
-                if (sector == '12'):
-                    density_matter_central = 10 # [g cm^{-3}]
-                    l_scale = 500*CONV_KM_TO_INV_EV # [km]
-                elif (sector == '23'):
-                    density_matter_central = 100 # [g cm^{-3}]
-                    l_scale = 100*CONV_KM_TO_INV_EV # [km]
+                density_matter_central = 100 # [g cm^{-3}]
+                l_scale = 500*CONV_KM_TO_INV_EV # [km]
                 density_matter_func = lambda l: \
                     matter.density_matter_func_exp(l, 
                         density_matter_central, l_scale) # [g cm^{-3}]
@@ -193,10 +181,11 @@ def plot_probability_2nu_td_vs_baseline(
                 return matter.VCC_func(l, num_density_e_func) # [eV]
 
             h_vacuum_energy_independent = \
-                hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(sth,
-                    Dm2)
+                hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent( \
+                    S12_NO_BF, S23_NO_BF, S13_NO_BF, DCP_NO_BF, D21_NO_BF, 
+                    D31_NO_BF, compute_matrix_multiplication=False)
             h_matter_func = lambda l: \
-                hamiltonians2nu_td.hamiltonian_2nu_matter_td( \
+                hamiltonians3nu_td.hamiltonian_3nu_matter_td( \
                     h_vacuum_energy_independent, l, energy*1.e9, 
                     VCC_func_exp)
             h_func = h_matter_func
@@ -208,12 +197,8 @@ def plot_probability_2nu_td_vs_baseline(
 
             # Define a potential that is only a function of position, l
             def VCC_func_exp(l):
-                if (sector == '12'):
-                    density_matter_central = 10 # [g cm^{-3}]
-                    l_scale = 100*CONV_KM_TO_INV_EV # [km]
-                elif (sector == '23'):
-                    density_matter_central = 100 # [g cm^{-3}]
-                    l_scale = 100*CONV_KM_TO_INV_EV # [km]
+                density_matter_central = 100 # [g cm^{-3}]
+                l_scale = 100*CONV_KM_TO_INV_EV # [km]
                 density_matter_func = lambda l: \
                     matter.density_matter_func_exp(l, 
                         density_matter_central, l_scale) # [g cm^{-3}]
@@ -223,10 +208,11 @@ def plot_probability_2nu_td_vs_baseline(
                 return matter.VCC_func(l, num_density_e_func) # [eV]
 
             h_vacuum_energy_independent = \
-                hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(sth,
-                    Dm2)
+                hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent( \
+                    S12_NO_BF, S23_NO_BF, S13_NO_BF, DCP_NO_BF, D21_NO_BF, 
+                    D31_NO_BF, compute_matrix_multiplication=False)
             h_matter_func = lambda l: \
-                hamiltonians2nu_td.hamiltonian_2nu_matter_td( \
+                hamiltonians3nu_td.hamiltonian_3nu_matter_td( \
                     h_vacuum_energy_independent, l, energy*1.e9, 
                     VCC_func_exp)
             h_func = h_matter_func
@@ -234,76 +220,101 @@ def plot_probability_2nu_td_vs_baseline(
             ls = ':'
             lc = 'C2'
 
-        # Each element of prob: [Pee, Pem, Pmm]
-        prob = np.array([oscprob2nu_td.probabilities_2nu_td(
-            h_func, l_val[0]*CONV_KM_TO_INV_EV, l*CONV_KM_TO_INV_EV, 
+        # Each element of prob: [Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt]
+        prob = np.array([oscprob3nu_td.probabilities_3nu_td(
+            h_func, 0.0, l*CONV_KM_TO_INV_EV, 
+            # h_func, l_val[0]*CONV_KM_TO_INV_EV, l*CONV_KM_TO_INV_EV, 
             integration_method='quad', epsrel=1.e-30, epsabs=1.e-30) for l in l_val])
-        prob_ee = [x[0] for x in prob]
-        prob_em = [x[1] for x in prob]
-        prob_mm = [x[3] for x in prob]
-
-        # --------------------------------------------------------------------
-        # # --- Validation tests (all passed) ---
-        # # --- Standard probability formula ---
-        # prob_std = np.array([hamiltonians2nu.probabilities_2nu_vacuum_std(sth, Dm2, energy*1.e9, 
-        #     (l-l_val[0])*CONV_KM_TO_INV_EV) \
-        #     for l in l_val])
-        #
-        # # --- NOPE method, time-independent calculation ---
-        # h_vacuum_energy_independent = \
-        #     hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(sth, Dm2)
-        # hamiltonian = np.multiply(1./energy/1.e9, h_vacuum_energy_independent)
-        # prob_nope_ti = np.array([oscprob2nu.probabilities_2nu(   hamiltonian,
-        #                                     l*CONV_KM_TO_INV_EV) \
-        #         for l in l_val])
-        #
-        # # --- Ratios ---
-        # ratio1 = prob[:,0]/prob_std[:,0]
-        # ratio2 = prob_nope_ti[:,0]/prob_std[:,0]
-        # err1 = (prob[:,0]-prob_std[:,0])/prob_std[:,0]
-        # err2 = (prob_nope_ti[:,0]-prob_std[:,0])/prob_std[:,0]
-        # --------------------------------------------------------------------
 
         # Plot
-        if (plot_prob_ee):
-            ax.plot(l_val, prob_ee, label=label_case,
-                color=lc, ls=ls, zorder=1)
-            # ----------------------------------------------------------------
-            # # --- Validation tests (all passed) ---
-            # ax.plot(l_val, prob_nope_ti[:,0], label='Time-independent calc.',
-            #     color='b', ls=ls, zorder=1)
-            # ax.plot(l_val, prob_std[:,0], label='Standard formula',
-            #     color='r', ls=ls, zorder=1)
-            # ax.plot(l_val, ratio1, label='Ratio1')
-            # ax.plot(l_val, ratio2, label='Ratio2')
-            # ax.plot(l_val, err1, label='Err1')
-            # ax.plot(l_val, err2, label='Err2')
-            # ----------------------------------------------------------------
-        elif (plot_prob_em):
-            ax.plot(l_val, prob_em, label=label_case,
-                color=lc, ls=ls, zorder=1)
-        elif (plot_prob_mm):
-            ax.plot(l_val, prob_mm, label=label_case,
-                color=lc, ls=ls, zorder=1)
+        if plot_prob_ee and (not plot_prob_em) and (not plot_prob_et) \
+            and (not plot_prob_me) and (not plot_prob_mm) and (not plot_prob_mt) \
+            and (not plot_prob_te) and (not plot_prob_tm) and (not plot_prob_tt):
+            y_label = r'Three-neutrino probability, $P_{\nu_e \to \nu_e}$'
+            ax.plot(l_val, prob[:,0], label=label_case, color=lc, ls=ls, zorder=1)
+        elif (not plot_prob_ee) and plot_prob_em and (not plot_prob_et) \
+            and (not plot_prob_me) and (not plot_prob_mm) and (not plot_prob_mt) \
+            and (not plot_prob_te) and (not plot_prob_tm) and (not plot_prob_tt):
+            y_label = r'Three-neutrino probability, $P_{\nu_e \to \nu_\mu}$'
+            ax.plot(l_val, prob[:,1], label=label_case, color=lc, ls=ls, zorder=1)
+        elif (not plot_prob_ee) and (not plot_prob_em) and plot_prob_et \
+            and (not plot_prob_me) and (not plot_prob_mm) and (not plot_prob_mt) \
+            and (not plot_prob_te) and (not plot_prob_tm) and (not plot_prob_tt):
+            y_label = r'Three-neutrino probability, $P_{\nu_e \to \nu_\tau}$'
+            ax.plot(l_val, prob[:,2], label=label_case, color=lc, ls=ls, zorder=1)
+        elif (not plot_prob_ee) and (not plot_prob_em) and (not plot_prob_et) \
+            and plot_prob_me and (not plot_prob_mm) and (not plot_prob_mt) \
+            and (not plot_prob_te) and (not plot_prob_tm) and (not plot_prob_tt):
+            y_label = r'Three-neutrino probability, $P_{\nu_\mu \to \nu_e}$'
+            ax.plot(l_val, prob[:,3], label=label_case, color=lc, ls=ls, zorder=1)
+        elif (not plot_prob_ee) and (not plot_prob_em) and (not plot_prob_et) \
+            and (not plot_prob_me) and plot_prob_mm and (not plot_prob_mt) \
+            and (not plot_prob_te) and (not plot_prob_tm) and (not plot_prob_tt):
+            y_label = r'Three-neutrino probability, $P_{\nu_\mu \to \nu_\mu}$'
+            ax.plot(l_val, prob[:,4], label=label_case, color=lc, ls=ls, zorder=1)
+        elif (not plot_prob_ee) and (not plot_prob_em) and (not plot_prob_et) \
+            and (not plot_prob_me) and (not plot_prob_mm) and plot_prob_mt \
+            and (not plot_prob_te) and (not plot_prob_tm) and (not plot_prob_tt):
+            y_label = r'Three-neutrino probability, $P_{\nu_\mu \to \nu_\tau}$'
+            ax.plot(l_val, prob[:,5], label=label_case, color=lc, ls=ls, zorder=1)
+        elif (not plot_prob_ee) and (not plot_prob_em) and (not plot_prob_et) \
+            and (not plot_prob_me) and (not plot_prob_mm) and (not plot_prob_mt) \
+            and plot_prob_te and (not plot_prob_tm) and (not plot_prob_tt):
+            y_label = r'Three-neutrino probability, $P_{\nu_\tau \to \nu_e}$'
+            ax.plot(l_val, prob[:,6], label=label_case, color=lc, ls=ls, zorder=1)
+        elif (not plot_prob_ee) and (not plot_prob_em) and (not plot_prob_et) \
+            and (not plot_prob_me) and (not plot_prob_mm) and (not plot_prob_mt) \
+            and (not plot_prob_te) and plot_prob_tm and (not plot_prob_tt):
+            y_label = r'Three-neutrino probability, $P_{\nu_\tau \to \nu_\mu}$'
+            ax.plot(l_val, prob[:,7], label=label_case, color=lc, ls=ls, zorder=1)
+        elif (not plot_prob_ee) and (not plot_prob_em) and (not plot_prob_et) \
+            and (not plot_prob_me) and (not plot_prob_mm) and (not plot_prob_mt) \
+            and (not plot_prob_te) and (not plot_prob_tm) and plot_prob_tt:
+            y_label = r'Three-neutrino probability, $P_{\nu_\tau \to \nu_\tau}$'
+            ax.plot(l_val, prob[:,8], label=label_case, color=lc, ls=ls, zorder=1)
+        else:
+            y_label = r'Three-neutrino probability'
+
+        # --------------------------------------------------------------------
+        # --- Validation tests (all passed) ---
+        # --- Standard probability formula ---
+        U = hamiltonians3nu.pmns_mixing_matrix(S12_NO_BF, S23_NO_BF, 
+            S13_NO_BF, DCP_NO_BF)
+        prob_std = np.array([hamiltonians3nu.probabilities_3nu_vacuum_std( \
+            U, D21_NO_BF, D31_NO_BF, energy*1.e9, 
+            l*CONV_KM_TO_INV_EV) for l in l_val])
+        
+        # # --- NOPE method, time-independent calculation ---
+        # U = hamiltonians3nu.pmns_mixing_matrix(S12_NO_BF, S23_NO_BF, 
+        #     S13_NO_BF, DCP_NO_BF)
+        # h_vacuum_energy_independent = \
+        #     hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent( \
+        #         S12_NO_BF, S23_NO_BF, S13_NO_BF, DCP_NO_BF, 
+        #         D21_NO_BF, D31_NO_BF)
+        # hamiltonian = np.multiply(1./energy/1.e9, h_vacuum_energy_independent)
+        # prob_nope_ti = np.array([oscprob3nu.probabilities_3nu(   hamiltonian,
+        #                                     (l-l_val[0])*CONV_KM_TO_INV_EV) \
+        #         for l in l_val])
+        
+        # --- Ratios ---
+        # ratio1 = prob[:,0]/prob_std[:,0]
+        # ratio2 = prob_nope_ti[:,0]/prob_std[:,0]
+        err1 = (prob[:,1]-prob_std[:,1])/prob_std[:,1]
+        # err2 = (prob_nope_ti[:,0]-prob_std[:,0])/prob_std[:,0]
+        # print(err1)
+
+        # --- Validation tests (all passed) ---
+        # ax.plot(l_val, prob_nope_ti[:,0], label='Time-independent calc.',
+        #     color='b', ls=ls, zorder=1)
+        ax.plot(l_val, prob_std[:,1], label='Standard formula',
+            color='r', ls=ls, zorder=1)
+        # ax.plot(l_val, ratio1, label='Ratio1')
+        # ax.plot(l_val, ratio2, label='Ratio2')
+        ax.plot(l_val, err1, label='Err1', c='g')
+        # ax.plot(l_val, err2, label='Err2', c='g')
+        # --------------------------------------------------------------------
 
     ax.set_xlabel(r'Baseline, $L$ [km]', fontsize=25)
-
-    if (sector == '12'):
-        if plot_prob_ee and (not plot_prob_em) and (not plot_prob_mm):
-            y_label = r'Two-neutrino probability, $P_{\nu_e \to \nu_e}$'
-        elif (not plot_prob_ee) and plot_prob_em and (not plot_prob_mm):
-            y_label = r'Two-neutrino probability, $P_{\nu_e \to \nu_\mu}$'
-        elif (not plot_prob_ee) and (not plot_prob_em) and plot_prob_mm:
-            y_label = r'Two-neutrino probability, $P_{\nu_\mu \to \nu_\mu}$'
-    elif (sector == '23'):
-        if plot_prob_ee and (not plot_prob_em) and (not plot_prob_mm):
-            y_label = r'Two-neutrino probability, $P_{\nu_\mu \to \nu_\mu}$'
-        elif (not plot_prob_ee) and plot_prob_em and (not plot_prob_mm):
-            y_label = r'Two-neutrino probability, $P_{\nu_\mu \to \nu_\tau}$'
-        elif (not plot_prob_ee) and (not plot_prob_em) and plot_prob_mm:
-            y_label = r'Two-neutrino probability, $P_{\nu_\tau \to \nu_\tau}$'
-    else:
-        y_label = r'Two-neutrino probability'
     ax.set_ylabel(y_label, fontsize=25)
 
     yaxis_minor_locator = mpl.ticker.MultipleLocator(0.1)
@@ -322,7 +333,7 @@ def plot_probability_2nu_td_vs_baseline(
     ax.set_xlim([10.**log10_l_min, 10.**log10_l_max])
     ax.set_xscale('log')
     # ax.set_ylim([0.0, 1.0])
-    ax.set_ylim([0, 1.])
+    ax.set_ylim([-1, 1.5])
 
     # Legend
     ax.legend(loc=legend_loc, frameon=True, ncol=legend_ncol,
@@ -342,8 +353,8 @@ def plot_probability_2nu_td_vs_baseline(
     return
 
 
-def plot_oscillogram_earth_2nu_td(
-                sector, prob_sel='ee',
+def plot_oscillogram_earth_3nu_td(
+                prob_sel='ee',
                 costhz_min=-1.0, costhz_max=0.0, costhz_npts=100,
                 log10_Enu_min=0.0, log10_Enu_max=2.0, Enu_npts=100,
                 output_filename='oscillogram_earth_2nu_td', 
@@ -357,30 +368,25 @@ def plot_oscillogram_earth_2nu_td(
             electron_fraction=0.5) # [eV^{-3}]
         return matter.VCC_func(r, num_density_e_func) # [eV]
 
-    if sector == '12':
-        sth = S12_NO_BF
-        Dm2 = D21_NO_BF
-        if (prob_sel == 'ee'):
-            prob_index = 0
-            label = r'$P_{\nu_e \to \nu_e}$'
-        elif (prob_sel == 'em'):
-            prob_index = 1
-            label = r'$P_{\nu_e \to \nu_\mu}$'
-        elif (prob_sel == 'mm'):
-            prob_index = 2
-            label = r'$P_{\nu_\mu \to \nu_\mu}$'
-    elif sector == '23':
-        sth = S23_NO_BF
-        Dm2 = D31_NO_BF
-        if (prob_sel == 'mm'):
-            prob_index = 0
-            label = r'$P_{\nu_\mu \to \nu_\mu}$'
-        elif (prob_sel == 'mt'):
-            prob_index = 1
-            label = r'$P_{\nu_\mu \to \nu_\tau}$'
-        elif (prob_sel == 'tt'):
-            prob_index = 2
-            label = r'$P_{\nu_\tau \to \nu_\tau}$'
+    # Each element of prob: [Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt]
+    if (prob_sel == 'ee'):
+        prob_index = 0
+        label = r'$P_{\nu_e \to \nu_e}$'
+    elif (prob_sel == 'em'):
+        prob_index = 1
+        label = r'$P_{\nu_e \to \nu_\mu}$'
+    elif (prob_sel == 'et'):
+        prob_index = 2
+        label = r'$P_{\nu_e \to \nu_\tau}$'
+    elif (prob_sel == 'mm'):
+        prob_index = 4
+        label = r'$P_{\nu_\mu \to \nu_\mu}$'
+    elif (prob_sel == 'mt'):
+        prob_index = 5
+        label = r'$P_{\nu_\mu \to \nu_\tau}$'
+    elif (prob_sel == 'tt'):
+        prob_index = 7
+        label = r'$P_{\nu_\tau \to \nu_\tau}$'
 
     # Cosine of zenith angle
     costhz_val = np.linspace(costhz_min, costhz_max, costhz_npts)
@@ -398,8 +404,9 @@ def plot_oscillogram_earth_2nu_td(
 
     # Compute vacuum, energy-independent Hamiltonian just once
     h_vacuum_energy_independent = \
-        hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(sth, 
-            Dm2)
+        hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent( \
+            S12_NO_BF, S23_NO_BF, S13_NO_BF, DCP_NO_BF, D21_NO_BF, D31_NO_BF,
+            compute_matrix_multiplication=True)
 
     # Generate the probability for all combinations of costhz and Enu
     for costhz_index, costhz in enumerate(costhz_val):
@@ -414,11 +421,11 @@ def plot_oscillogram_earth_2nu_td(
                 return VCC_func_prem(r)
             # Hamiltonian function including matter effects
             h_func = lambda l: \
-                hamiltonians2nu_td.hamiltonian_2nu_matter_td( \
+                hamiltonians3nu_td.hamiltonian_3nu_matter_td( \
                     h_vacuum_energy_independent, l, Enu*1.e9, 
                     VCC_func_prem_wrapper) # [eV]
             # Each element of prob, e.g., [Pee, Pem, Pmm]
-            prob = oscprob2nu_td.probabilities_2nu_td(
+            prob = oscprob3nu_td.probabilities_3nu_td(
                 h_func, 0.0, l_val[costhz_index]*CONV_KM_TO_INV_EV, 
                 integration_method='quad', epsrel=1.e-8, epsabs=1.e-8)
             prob_2d[Enu_index][costhz_index] = prob[prob_index]
@@ -468,7 +475,7 @@ def plot_oscillogram_earth_2nu_td(
         levels=120, cmap=mpl.cm.plasma)
     cbar = fig.colorbar(cs)
     cbar.ax.tick_params(labelsize=25) 
-    cbar.set_label(label=r'Two-neutrino probability, '+label, fontsize=25)
+    cbar.set_label(label=r'Three-neutrino probability, '+label, fontsize=25)
 
     plt.savefig(output_path+output_filename+'.'+output_format,
         bbox_inches='tight', dpi=100)
