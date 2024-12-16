@@ -43,6 +43,8 @@ from globaldefs import *
 def plot_probability_2nu_td_vs_baseline(
                 sector, energy=1.e-1,
                 log10_l_min=0.0, log10_l_max=3.0, log10_l_npts=6000,
+                integration_method='quad_linear', 
+                epsrel=1.e-8, epsabs=1.e-8, num_pts_integration=100,
                 plot_prob_ee=True, plot_prob_em=True, plot_prob_mm=False,
                 output_filename='prob_td_vs_baseline', 
                 output_format='pdf', output_path='../fig/', 
@@ -155,7 +157,7 @@ def plot_probability_2nu_td_vs_baseline(
                         density_matter_const) # [g cm^{-3}]
                 num_density_e_func = lambda l : \
                     matter.num_density_e_func(l,
-                        density_matter_func, electron_fraction=0.5) # [eV^{-3}]
+                        density_matter_func, electron_fraction=0.5) # [eV^3]
                 return matter.VCC_func(l, num_density_e_func) # [eV]
 
             if (sector == '12'):
@@ -189,7 +191,7 @@ def plot_probability_2nu_td_vs_baseline(
                         density_matter_central, l_scale) # [g cm^{-3}]
                 num_density_e_func = lambda l : \
                     matter.num_density_e_func(l,
-                        density_matter_func, electron_fraction=0.5) # [eV^{-3}]
+                        density_matter_func, electron_fraction=0.5) # [eV^3]
                 return matter.VCC_func(l, num_density_e_func) # [eV]
 
             h_vacuum_energy_independent = \
@@ -219,7 +221,7 @@ def plot_probability_2nu_td_vs_baseline(
                         density_matter_central, l_scale) # [g cm^{-3}]
                 num_density_e_func = lambda l : \
                     matter.num_density_e_func(l,
-                        density_matter_func, electron_fraction=0.5) # [eV^{-3}]
+                        density_matter_func, electron_fraction=0.5) # [eV^3]
                 return matter.VCC_func(l, num_density_e_func) # [eV]
 
             h_vacuum_energy_independent = \
@@ -237,7 +239,10 @@ def plot_probability_2nu_td_vs_baseline(
         # Each element of prob: [Pee, Pem, Pmm]
         prob = np.array([oscprob2nu_td.probabilities_2nu_td(
             h_func, l_val[0]*CONV_KM_TO_INV_EV, l*CONV_KM_TO_INV_EV, 
-            integration_method='quad', epsrel=1.e-30, epsabs=1.e-30) for l in l_val])
+            integration_method=integration_method, 
+            epsrel=epsrel, epsabs=epsabs, 
+            num_pts_integration=num_pts_integration) \
+            for l in l_val])
         prob_ee = [x[0] for x in prob]
         prob_em = [x[1] for x in prob]
         prob_mm = [x[3] for x in prob]
@@ -333,6 +338,847 @@ def plot_probability_2nu_td_vs_baseline(
         str(int(log10(energy)*100.)/100.),
         xy = (0.98, 0.05), xycoords='axes fraction', color='k', fontsize=20,
         horizontalalignment='right', rotation=0, zorder=2 )
+
+    plt.savefig(output_path+output_filename+'.'+output_format,
+        bbox_inches='tight', dpi=100)
+
+    plt.close()
+
+    return
+
+
+def plot_probability_2nu_td_vs_density(
+                sector, l_min=0.0, l_max=1.e3,
+                num_density_e_min=0, num_density_e_max=300, 
+                num_density_e_npts=1000,
+                integration_method='quad_linear', 
+                epsrel=1.e-8, epsabs=1.e-8, num_pts_integration=100,
+                plot_prob_ee=True, plot_prob_em=True, plot_prob_mm=False,
+                output_filename='prob_td_vs_baseline', 
+                output_format='pdf', output_path='../fig/', 
+                legend_loc='center left', legend_ncol=1):
+    r"""Generates and saves a plot of 2nu probabilities vs. baseline.
+
+    Generates a plot of two-neutrino oscillation probabilities vs.
+    baseline, for a fixed neutrino energy.  The probabilities to be
+    plotted are turned on and off via the flags plot_prob_ee,
+    plot_prob_em, etc.  (At least one of them must be True.)  The
+    parameter 'case' selects between 'vacuum', 'matter', 'nsi', and
+    'liv' (see below).  The plot is saved with the provided name and
+    file format under the specified path.
+
+    Parameters
+    ----------
+    sector : str
+        Not optional.  Must be one of the following: '12' (for nu_e <-->
+        nu_mu oscillations) of '23' (for nu_mu <--> nu_tau
+        oscillations).
+    energy : float, optional
+        Neutrino energy [GeV].
+    log10_l_min : float, optional
+        Log10 of the minimum baseline [km].
+    log10_l_max : float, optional
+        Log10 of the maximum baseline [km].
+    log10_l_npts : int, optional
+        Number of baseline values at which to compute the probabilities.
+    plot_prob_ee : bool, optional
+        True to plot Pee (if sector == '12') or Pmm (if sector == '23),
+        False otherwise.
+    plot_prob_em : bool, optional
+        True to plot Pem (if sector == '12') or Pmt (if sector == '23),
+        False otherwise.
+    plot_prob_mm : bool, optional
+        True to plot Pmm (if sector == '12') or Ptt (if sector == '23),
+        False otherwise.
+    output_filename : str, optional
+        File name of plot to save (without the file extension).
+    output_format : str, optional
+        File extension of the plot to save (e.g., 'pdf', 'png', 'jpg').
+    output_path : str, optional
+        File path where to save the plot.
+    legend_loc : str, optional
+        Location of the legend in the plot.  Must be one of the allowed
+        values of the plot routine of matplotlib.
+    legend_ncol : int, optional
+        Number of columns to include in the legend box.  Must be at
+        least 1.
+
+    Returns
+    -------
+    None
+        The plot is generated and saved.
+    """
+    if (not plot_prob_ee) and (not plot_prob_em) and (not plot_prob_mm):
+        quit()
+
+    # Formatting
+    mpl.rcParams['xtick.labelsize']=26
+    mpl.rcParams['ytick.labelsize']=26
+    mpl.rcParams['legend.fontsize']=26
+    mpl.rcParams['legend.borderpad']=0.4
+    mpl.rcParams['axes.labelpad']=10
+    mpl.rcParams['ps.fonttype']=42
+    mpl.rcParams['pdf.fonttype']=42
+
+    # Open the plot
+    fig = plt.figure(figsize=[18,9])
+    ax = fig.add_subplot(1,1,1)
+
+    # Baselines, L
+    num_density_e = np.linspace(num_density_e_min, num_density_e_max,
+        num_density_e_npts)
+
+    if sector == '12':
+        sth = S12_NO_BF
+        Dm2 = D21_NO_BF
+    elif sector == '23':
+        sth = S23_NO_BF
+        Dm2 = D31_NO_BF
+
+    h_vacuum_energy_independent = \
+        hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(sth,
+            Dm2)
+
+    # Define a potential that is only a function of position, l.
+    # In this case, the matter density is constant, so this is only
+    # for testing.
+    def VCC_func_const_density(l, n_e):
+        num_density_e_func = lambda r: \
+            n_e*N_AV/pow(CONV_CM_TO_INV_EV, 3.0) # [eV^3]
+        return matter.VCC_func(l, num_density_e_func) # [eV]
+
+    for case in ['vacuum', 'matter_const_en_1', 'matter_const_en_2']:
+
+        if (case.lower() == 'vacuum'):
+            continue
+
+            # Define a potential that is only a function of position, l.
+            # In this case, oscilllations are in vacuum, so this is only for
+            # testing.
+            h_vacuum_func = lambda l: np.multiply(1./energy/1.e9, 
+                hamiltonians2nu_td.hamiltonian_2nu_vacuum_energy_independent_td(l,
+                sth, Dm2))
+            h_func = h_vacuum_func
+            label_case = r'Vacuum ($t$-dep. calculation)'
+            ls = '-'
+            lc = 'k'
+
+        elif (case.lower() == 'matter_const_en_1'):
+
+            energy = 1.e1 # [GeV]
+
+            # Each element of prob: [Pee, Pem, Pmm]
+            prob = np.array([oscprob2nu_td.probabilities_2nu_td(
+                lambda l: \
+                hamiltonians2nu_td.hamiltonian_2nu_matter_td( \
+                    h_vacuum_energy_independent, l, energy*1.e9, 
+                    lambda r: VCC_func_const_density(r, n_e)), 
+                l_min, l_max, 
+                integration_method=integration_method, 
+                epsrel=epsrel, epsabs=epsabs, 
+                num_pts_integration=num_pts_integration) \
+                for n_e in num_density_e])
+
+            label_case = r'Matter, constant $N_e$, $E = 1~{\rm MeV}$'
+            ls = '--'
+            lc = 'C0'
+
+        elif (case.lower() == 'matter_const_en_2'):
+
+            energy = 5.e-3 # [GeV]
+
+            # Each element of prob: [Pee, Pem, Pmm]
+            prob = np.array([oscprob2nu_td.probabilities_2nu_td(
+                lambda l: \
+                hamiltonians2nu_td.hamiltonian_2nu_matter_td( \
+                    h_vacuum_energy_independent, l, energy*1.e9, 
+                    lambda r: VCC_func_const_density(r, n_e)), 
+                l_min, l_max, 
+                integration_method=integration_method, 
+                epsrel=epsrel, epsabs=epsabs, 
+                num_pts_integration=num_pts_integration) \
+                for n_e in num_density_e])
+
+            label_case = r'Matter, constant $N_e$, $E = 5~{\rm MeV}$'
+            ls = '-.'
+            lc = 'C1'
+
+        # Each element of prob: [Pee, Pem, Pmm]
+        prob_ee = [x[0] for x in prob]
+        # print(prob_ee)
+        prob_em = [x[1] for x in prob]
+        prob_mm = [x[3] for x in prob]
+
+        # Plot
+        if (plot_prob_ee):
+            ax.plot(num_density_e, prob_ee, label=label_case,
+                color=lc, ls=ls, zorder=1)
+        elif (plot_prob_em):
+            ax.plot(num_density_e, prob_em, label=label_case,
+                color=lc, ls=ls, zorder=1)
+        elif (plot_prob_mm):
+            ax.plot(num_density_e, prob_mm, label=label_case,
+                color=lc, ls=ls, zorder=1)
+
+    ax.set_xlabel(r'Electron number density, $N_e/N_{\rm Av}$ [cm$^{-3}$]',
+        fontsize=25)
+
+    if (sector == '12'):
+        if plot_prob_ee and (not plot_prob_em) and (not plot_prob_mm):
+            y_label = r'Two-neutrino probability, $P_{\nu_e \to \nu_e}$'
+        elif (not plot_prob_ee) and plot_prob_em and (not plot_prob_mm):
+            y_label = r'Two-neutrino probability, $P_{\nu_e \to \nu_\mu}$'
+        elif (not plot_prob_ee) and (not plot_prob_em) and plot_prob_mm:
+            y_label = r'Two-neutrino probability, $P_{\nu_\mu \to \nu_\mu}$'
+    elif (sector == '23'):
+        if plot_prob_ee and (not plot_prob_em) and (not plot_prob_mm):
+            y_label = r'Two-neutrino probability, $P_{\nu_\mu \to \nu_\mu}$'
+        elif (not plot_prob_ee) and plot_prob_em and (not plot_prob_mm):
+            y_label = r'Two-neutrino probability, $P_{\nu_\mu \to \nu_\tau}$'
+        elif (not plot_prob_ee) and (not plot_prob_em) and plot_prob_mm:
+            y_label = r'Two-neutrino probability, $P_{\nu_\tau \to \nu_\tau}$'
+    else:
+        y_label = r'Two-neutrino probability'
+    ax.set_ylabel(y_label, fontsize=25)
+
+    yaxis_minor_locator = mpl.ticker.MultipleLocator(0.1)
+    ax.yaxis.set_minor_locator(yaxis_minor_locator)
+
+    ax.tick_params('both', length=10, width=2, which='major')
+    ax.tick_params('both', length=5, width=1, which='minor')
+    ax.tick_params(axis='both', which='major', pad=10, direction='in')
+    ax.tick_params(axis='both', which='minor', pad=10, direction='in')
+    ax.tick_params(axis='x', which='minor', bottom=True)
+    ax.tick_params(axis='x', which='minor', top=True)
+    ax.tick_params(axis='y', which='minor', left=True)
+    ax.tick_params(axis='y', which='minor', right=True)
+    ax.tick_params(bottom=True, top=True, left=True, right=True)
+
+    ax.set_xlim([num_density_e_min, num_density_e_max])
+    # ax.set_xscale('log')
+    # ax.set_ylim([0.0, 1.0])
+    ax.set_ylim([0, 1.])
+
+    # Legend
+    ax.legend(loc=legend_loc, frameon=True, ncol=legend_ncol,
+        fontsize=20)
+
+    # Annotations
+    # ax.annotate( r'$\log_{10}(E/{\rm GeV}) = $' + \
+    #     str(int(log10(energy)*100.)/100.),
+    #     xy = (0.98, 0.05), xycoords='axes fraction', color='k', fontsize=20,
+    #     horizontalalignment='right', rotation=0, zorder=2 )
+
+    plt.savefig(output_path+output_filename+'.'+output_format,
+        bbox_inches='tight', dpi=100)
+
+    plt.close()
+
+    return
+
+
+def plot_probability_2nu_td_vs_baseline_sun(
+                sector, energy=1.e-1,
+                log10_l_min=6.0, log10_l_max=7.0, log10_l_npts=6000,
+                integration_method='quad_linear', 
+                epsrel=1.e-8, epsabs=1.e-8, num_pts_integration=100,
+                plot_prob_ee=True, plot_prob_em=True, plot_prob_mm=False,
+                output_filename='prob_td_vs_baseline_sun', 
+                output_format='pdf', output_path='../fig/', 
+                legend_loc='center left', legend_ncol=1):
+    r"""Generates and saves a plot of 2nu probabilities vs. baseline.
+
+    Generates a plot of two-neutrino oscillation probabilities vs.
+    baseline, for a fixed neutrino energy.  The probabilities to be
+    plotted are turned on and off via the flags plot_prob_ee,
+    plot_prob_em, etc.  (At least one of them must be True.)  The
+    parameter 'case' selects between 'vacuum', 'matter', 'nsi', and
+    'liv' (see below).  The plot is saved with the provided name and
+    file format under the specified path.
+
+    Parameters
+    ----------
+    sector : str
+        Not optional.  Must be one of the following: '12' (for nu_e <-->
+        nu_mu oscillations) of '23' (for nu_mu <--> nu_tau
+        oscillations).
+    energy : float, optional
+        Neutrino energy [GeV].
+    log10_l_min : float, optional
+        Log10 of the minimum baseline [km].
+    log10_l_max : float, optional
+        Log10 of the maximum baseline [km].
+    log10_l_npts : int, optional
+        Number of baseline values at which to compute the probabilities.
+    plot_prob_ee : bool, optional
+        True to plot Pee (if sector == '12') or Pmm (if sector == '23),
+        False otherwise.
+    plot_prob_em : bool, optional
+        True to plot Pem (if sector == '12') or Pmt (if sector == '23),
+        False otherwise.
+    plot_prob_mm : bool, optional
+        True to plot Pmm (if sector == '12') or Ptt (if sector == '23),
+        False otherwise.
+    output_filename : str, optional
+        File name of plot to save (without the file extension).
+    output_format : str, optional
+        File extension of the plot to save (e.g., 'pdf', 'png', 'jpg').
+    output_path : str, optional
+        File path where to save the plot.
+    legend_loc : str, optional
+        Location of the legend in the plot.  Must be one of the allowed
+        values of the plot routine of matplotlib.
+    legend_ncol : int, optional
+        Number of columns to include in the legend box.  Must be at
+        least 1.
+
+    Returns
+    -------
+    None
+        The plot is generated and saved.
+    """
+    if (not plot_prob_ee) and (not plot_prob_em) and (not plot_prob_mm):
+        quit()
+
+    # Formatting
+    mpl.rcParams['xtick.labelsize']=26
+    mpl.rcParams['ytick.labelsize']=26
+    mpl.rcParams['legend.fontsize']=26
+    mpl.rcParams['legend.borderpad']=0.4
+    mpl.rcParams['axes.labelpad']=10
+    mpl.rcParams['ps.fonttype']=42
+    mpl.rcParams['pdf.fonttype']=42
+
+    # Open the plot
+    fig = plt.figure(figsize=[18,9])
+    ax = fig.add_subplot(1,1,1)
+
+    # Baselines, L
+    log10_l_val = np.linspace(log10_l_min, log10_l_max, log10_l_npts)
+    l_val = [10.**x for x in log10_l_val]
+
+    if sector == '12':
+        sth = S12_NO_BF
+        Dm2 = D21_NO_BF
+    elif sector == '23':
+        sth = S23_NO_BF
+        Dm2 = D31_NO_BF
+
+    # Shade the region where the matter profile is valid
+    ax.fill_between([l_val[0], 0.1], y1=[1.0, 1.0], y2=[0.0, 0.0],
+        color='0.8', zorder=0.8, alpha=0.5)
+    ax.fill_between([0.9, l_val[-1]], y1=[1.0, 1.0], y2=[0.0, 0.0],
+        color='0.8', zorder=0.8, alpha=0.5)
+
+    # Parameters for the electron number density in the Sun,
+    # Eq. (10.62) in Giunti & Kim
+    num_density_e_center_sun = 245*N_AV/pow(CONV_CM_TO_INV_EV,3.0) # [eV^3]
+    l_scale_sun = SUN_RADIUS/10.54 # [km]
+
+    for case in ['vacuum', 'matter_const', 'matter_exp']:
+
+        if (case.lower() == 'vacuum'):
+            continue
+
+            # Define a potential that is only a function of position, l.
+            # In this case, oscilllations are in vacuum, so this is only for
+            # testing.
+            h_vacuum_func = lambda l: np.multiply(1./energy/1.e9, 
+                hamiltonians2nu_td.hamiltonian_2nu_vacuum_energy_independent_td(l,
+                sth, Dm2))
+            h_func = h_vacuum_func
+            label_case = r'Vacuum ($t$-dep. calculation)'
+            ls = '-'
+            lc = '0.5'
+            zorder = 0.5
+
+        elif (case.lower() == 'matter_const'):
+            continue
+
+            # Define a potential that is only a function of position, l.
+            # In this case, the matter density is constant, so this is only
+            # for testing.
+            def VCC_func_const_density(l):
+                num_density_e_func = lambda l: num_density_e_center_sun # [eV^3]
+                return matter.VCC_func(l, num_density_e_func) # [eV]
+
+            label_case = r'Matter, constant $n_e = 245 N_{\rm Av}$ cm$^{-3}$'
+                
+            h_vacuum_energy_independent = \
+                hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(sth,
+                    Dm2)
+            h_matter_func = lambda l: \
+                hamiltonians2nu_td.hamiltonian_2nu_matter_td( \
+                    h_vacuum_energy_independent, 
+                    l, energy*1.e9, VCC_func_const_density)
+            h_func = h_matter_func
+            ls = '--'
+            lc = 'C0'
+            zorder = 0.7
+
+        elif (case.lower() == 'matter_exp'):
+
+            # Define a potential that is only a function of position, l
+            def VCC_func_exp(l):
+                num_density_e_func = lambda l : \
+                    num_density_e_center_sun*exp(-(l/CONV_KM_TO_INV_EV)/l_scale_sun) # [eV^3]
+                return matter.VCC_func(l, num_density_e_func) # [eV]
+
+            h_vacuum_energy_independent = \
+                hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(sth,
+                    Dm2)
+            h_matter_func = lambda l: \
+                hamiltonians2nu_td.hamiltonian_2nu_matter_td( \
+                    h_vacuum_energy_independent, 
+                    l, energy*1.e9, VCC_func_exp)
+            h_func = h_matter_func
+            label_case = r'Matter, solar $n_e$ profile'
+            ls = '-.'
+            lc = 'C1'
+            zorder = 0.6
+
+        # Each element of prob: [Pee, Pem, Pmm]
+        prob = np.array([oscprob2nu_td.probabilities_2nu_td(
+            h_func, 
+            l_val[0]*SUN_RADIUS*CONV_KM_TO_INV_EV, l*SUN_RADIUS*CONV_KM_TO_INV_EV, 
+            # 0, l*SUN_RADIUS*CONV_KM_TO_INV_EV, 
+            integration_method=integration_method, 
+            epsrel=epsrel, epsabs=epsabs, 
+            num_pts_integration=num_pts_integration) for l in l_val])
+        prob_ee = [x[0] for x in prob]
+        prob_em = [x[1] for x in prob]
+        prob_mm = [x[3] for x in prob]
+
+        # --------------------------------------------------------------------
+        # # --- Validation tests (all passed) ---
+        # # --- Standard probability formula ---
+        # prob_std = np.array([hamiltonians2nu.probabilities_2nu_vacuum_std(sth, Dm2, energy*1.e9, 
+        #     (l-l_val[0])*CONV_KM_TO_INV_EV) \
+        #     for l in l_val])
+        #
+        # # --- NOPE method, time-independent calculation ---
+        # h_vacuum_energy_independent = \
+        #     hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(sth, Dm2)
+        # hamiltonian = np.multiply(1./energy/1.e9, h_vacuum_energy_independent)
+        # prob_nope_ti = np.array([oscprob2nu.probabilities_2nu(   hamiltonian,
+        #                                     l*CONV_KM_TO_INV_EV) \
+        #         for l in l_val])
+        #
+        # # --- Ratios ---
+        # ratio1 = prob[:,0]/prob_std[:,0]
+        # ratio2 = prob_nope_ti[:,0]/prob_std[:,0]
+        # err1 = (prob[:,0]-prob_std[:,0])/prob_std[:,0]
+        # err2 = (prob_nope_ti[:,0]-prob_std[:,0])/prob_std[:,0]
+        # --------------------------------------------------------------------
+
+        # Plot
+        if (plot_prob_ee):
+            ax.plot(l_val, prob_ee, label=label_case,
+                color=lc, ls=ls, zorder=zorder)
+            # ----------------------------------------------------------------
+            # # --- Validation tests (all passed) ---
+            # ax.plot(l_val, prob_nope_ti[:,0], label='Time-independent calc.',
+            #     color='b', ls=ls, zorder=1)
+            # ax.plot(l_val, prob_std[:,0], label='Standard formula',
+            #     color='r', ls=ls, zorder=1)
+            # ax.plot(l_val, ratio1, label='Ratio1')
+            # ax.plot(l_val, ratio2, label='Ratio2')
+            # ax.plot(l_val, err1, label='Err1')
+            # ax.plot(l_val, err2, label='Err2')
+            # ----------------------------------------------------------------
+        elif (plot_prob_em):
+            ax.plot(l_val, prob_em, label=label_case,
+                color=lc, ls=ls, zorder=zorder)
+        elif (plot_prob_mm):
+            ax.plot(l_val, prob_mm, label=label_case,
+                color=lc, ls=ls, zorder=zorder)
+
+    ax.set_xlabel(r'Baseline, $L/R_\odot$', fontsize=25)
+
+    if (sector == '12'):
+        if plot_prob_ee and (not plot_prob_em) and (not plot_prob_mm):
+            y_label = r'Two-neutrino probability, $P_{\nu_e \to \nu_e}$'
+        elif (not plot_prob_ee) and plot_prob_em and (not plot_prob_mm):
+            y_label = r'Two-neutrino probability, $P_{\nu_e \to \nu_\mu}$'
+        elif (not plot_prob_ee) and (not plot_prob_em) and plot_prob_mm:
+            y_label = r'Two-neutrino probability, $P_{\nu_\mu \to \nu_\mu}$'
+    elif (sector == '23'):
+        if plot_prob_ee and (not plot_prob_em) and (not plot_prob_mm):
+            y_label = r'Two-neutrino probability, $P_{\nu_\mu \to \nu_\mu}$'
+        elif (not plot_prob_ee) and plot_prob_em and (not plot_prob_mm):
+            y_label = r'Two-neutrino probability, $P_{\nu_\mu \to \nu_\tau}$'
+        elif (not plot_prob_ee) and (not plot_prob_em) and plot_prob_mm:
+            y_label = r'Two-neutrino probability, $P_{\nu_\tau \to \nu_\tau}$'
+    else:
+        y_label = r'Two-neutrino probability'
+    ax.set_ylabel(y_label, fontsize=25)
+
+    yaxis_minor_locator = mpl.ticker.MultipleLocator(0.1)
+    ax.yaxis.set_minor_locator(yaxis_minor_locator)
+
+    ax.tick_params('both', length=10, width=2, which='major')
+    ax.tick_params('both', length=5, width=1, which='minor')
+    ax.tick_params(axis='both', which='major', pad=10, direction='in')
+    ax.tick_params(axis='both', which='minor', pad=10, direction='in')
+    ax.tick_params(axis='x', which='minor', bottom=True)
+    ax.tick_params(axis='x', which='minor', top=True)
+    ax.tick_params(axis='y', which='minor', left=True)
+    ax.tick_params(axis='y', which='minor', right=True)
+    ax.tick_params(bottom=True, top=True, left=True, right=True)
+
+    ax.set_xlim([10.**log10_l_min, 10.**log10_l_max])
+    ax.set_xscale('log')
+    # ax.set_ylim([0.0, 1.0])
+    ax.set_ylim([0, 1.])
+
+    # Legend
+    ax.legend(loc=legend_loc, frameon=True, ncol=legend_ncol,
+        fontsize=20)
+
+    # Annotations
+    ax.annotate( r'$\log_{10}(E/{\rm GeV}) = $' + \
+        str(int(log10(energy)*100.)/100.),
+        xy = (0.98, 0.05), xycoords='axes fraction', color='k', fontsize=20,
+        horizontalalignment='right', rotation=0, zorder=2 )
+
+    plt.savefig(output_path+output_filename+'.'+output_format,
+        bbox_inches='tight', dpi=100)
+
+    plt.close()
+
+    return
+
+
+def plot_probability_2nu_td_vs_energy_sun(
+                sector, 
+                r_ini=0.1*SUN_RADIUS, r_fin=0.9*SUN_RADIUS,
+                log10_energy_min=6.0, log10_energy_max=7.0, 
+                log10_energy_npts=6000,
+                integration_method='quad_linear', 
+                epsrel=1.e-8, epsabs=1.e-8, num_pts_integration=100,
+                plot_prob_ee=True, plot_prob_em=True, plot_prob_mm=False,
+                output_filename='prob_td_vs_energy_sun', 
+                output_format='pdf', output_path='../fig/', 
+                legend_loc='center left', legend_ncol=1):
+    r"""Generates and saves a plot of 2nu probabilities vs. energy.
+
+    Generates a plot of two-neutrino oscillation probabilities vs.
+    baseline, for a fixed neutrino energy.  The probabilities to be
+    plotted are turned on and off via the flags plot_prob_ee,
+    plot_prob_em, etc.  (At least one of them must be True.)  The
+    parameter 'case' selects between 'vacuum', 'matter', 'nsi', and
+    'liv' (see below).  The plot is saved with the provided name and
+    file format under the specified path.
+
+    Parameters
+    ----------
+    sector : str
+        Not optional.  Must be one of the following: '12' (for nu_e <-->
+        nu_mu oscillations) of '23' (for nu_mu <--> nu_tau
+        oscillations).
+    energy : float, optional
+        Neutrino energy [GeV].
+    log10_l_min : float, optional
+        Log10 of the minimum baseline [km].
+    log10_l_max : float, optional
+        Log10 of the maximum baseline [km].
+    log10_l_npts : int, optional
+        Number of baseline values at which to compute the probabilities.
+    plot_prob_ee : bool, optional
+        True to plot Pee (if sector == '12') or Pmm (if sector == '23),
+        False otherwise.
+    plot_prob_em : bool, optional
+        True to plot Pem (if sector == '12') or Pmt (if sector == '23),
+        False otherwise.
+    plot_prob_mm : bool, optional
+        True to plot Pmm (if sector == '12') or Ptt (if sector == '23),
+        False otherwise.
+    output_filename : str, optional
+        File name of plot to save (without the file extension).
+    output_format : str, optional
+        File extension of the plot to save (e.g., 'pdf', 'png', 'jpg').
+    output_path : str, optional
+        File path where to save the plot.
+    legend_loc : str, optional
+        Location of the legend in the plot.  Must be one of the allowed
+        values of the plot routine of matplotlib.
+    legend_ncol : int, optional
+        Number of columns to include in the legend box.  Must be at
+        least 1.
+
+    Returns
+    -------
+    None
+        The plot is generated and saved.
+    """
+    if (not plot_prob_ee) and (not plot_prob_em) and (not plot_prob_mm):
+        quit()
+
+    # Formatting
+    mpl.rcParams['xtick.labelsize']=26
+    mpl.rcParams['ytick.labelsize']=26
+    mpl.rcParams['legend.fontsize']=26
+    mpl.rcParams['legend.borderpad']=0.4
+    mpl.rcParams['axes.labelpad']=10
+    mpl.rcParams['ps.fonttype']=42
+    mpl.rcParams['pdf.fonttype']=42
+
+    # Open the plot
+    fig = plt.figure(figsize=[18,9])
+    ax = fig.add_subplot(1,1,1)
+
+    # baseline = baseline # [eV^{-1}]
+
+    # Neutrino energies
+    log10_energy_val = np.linspace( log10_energy_min, log10_energy_max,
+                                    log10_energy_npts)
+    energy_val = [10.**x for x in log10_energy_val]
+
+    if sector == '12':
+        sth = S12_NO_BF
+        Dm2 = D21_NO_BF
+    elif sector == '23':
+        sth = S23_NO_BF
+        Dm2 = D31_NO_BF
+
+    # Parameters for the electron number density in the Sun,
+    # Eq. (10.62) in Giunti & Kim
+    num_density_e_center_sun = 245*N_AV/pow(CONV_CM_TO_INV_EV,3.0) # [eV^3]
+    l_scale_sun = SUN_RADIUS/10.54 # [km]
+
+    h_vacuum_energy_independent_func = lambda l: \
+        hamiltonians2nu_td.hamiltonian_2nu_vacuum_energy_independent_td(l,
+            sth, Dm2)
+
+    for case in ['vacuum', 'matter_const_1', 'matter_const_1_std', 
+        'matter_const_2', 'matter_exp_1', 'matter_exp_2']:
+
+        if (case.lower() == 'vacuum'):
+
+            # Define a potential that is only a function of position, l.
+            # In this case, oscilllations are in vacuum, so this is only for
+            # testing.
+            prob = [oscprob2nu_td.probabilities_2nu_td(lambda l: 
+                np.multiply(1./energy/1.e6, h_vacuum_energy_independent_func(l)), 
+                    r_ini*CONV_KM_TO_INV_EV, r_fin*CONV_KM_TO_INV_EV, 
+                    integration_method=integration_method, 
+                    epsrel=epsrel, epsabs=epsabs,
+                    num_pts_integration=num_pts_integration) \
+            for energy in energy_val]
+            label_case = r'Vacuum ($t$-dep. calculation)'
+            ls = '-'
+            lc = '0.5'
+            zorder = 0.5
+
+        elif (case.lower() == 'matter_const_1'):
+            # continue
+
+            # Define a potential that is only a function of position, l.
+            # In this case, the matter density is constant, so this is only
+            # for testing.
+
+            def VCC_func_const_density(l):
+                num_density_e_func = lambda l: num_density_e_center_sun # [eV^3]
+                return matter.VCC_func(l, num_density_e_func) # [eV]
+
+            h_vacuum_energy_independent = \
+                hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(sth,
+                    Dm2)
+        
+            # Each element of prob: [Pee, Pem, Pmm]
+            prob = np.array([oscprob2nu_td.probabilities_2nu_td(
+                lambda l: \
+                    hamiltonians2nu_td.hamiltonian_2nu_matter_td( \
+                        h_vacuum_energy_independent, 
+                        l, energy*1.e6, VCC_func_const_density), 
+                r_ini*CONV_KM_TO_INV_EV, r_fin*CONV_KM_TO_INV_EV, 
+                integration_method=integration_method, 
+                epsrel=epsrel, epsabs=epsabs,
+                num_pts_integration=num_pts_integration) \
+            for energy in energy_val])
+
+            label_case = r'Matter, constant $n_e = 245 N_{\rm Av}$ cm$^{-3}$'
+            ls = '-'
+            lc = 'C0'
+            zorder = 0.7
+
+        elif (case.lower() == 'matter_const_1_std'):
+            # continue
+
+            L = (r_fin-r_ini)*CONV_KM_TO_INV_EV # [eV^{-1}]
+            VCC = matter.VCC_func(0.0, lambda l: num_density_e_center_sun) # [eV]
+            # Each element of prob: [Pee, Pem, Pmm]
+            prob = np.array([hamiltonians2nu.probabilities_2nu_matter_std(sth, 
+                Dm2, VCC, energy*1.e6, L) for energy in energy_val])
+            print(prob[:,0])
+
+            label_case = r'Matter, constant $n_e = 245 N_{\rm Av}$ cm$^{-3}$ (std.)'
+            ls = '-'
+            lc = 'C1'
+            zorder = 0.6
+
+        elif (case.lower() == 'matter_const_2'):
+            continue
+
+            # Define a potential that is only a function of position, l.
+            # In this case, the matter density is constant, so this is only
+            # for testing.
+
+            def VCC_func_const_density(l):
+                num_density_e_func = lambda l: (40./245.)*num_density_e_center_sun # [eV^3]
+                return matter.VCC_func(l, num_density_e_func) # [eV]
+
+            h_vacuum_energy_independent = \
+                hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(sth,
+                    Dm2)
+        
+            # Each element of prob: [Pee, Pem, Pmm]
+            prob = np.array([oscprob2nu_td.probabilities_2nu_td(
+                lambda l: \
+                    hamiltonians2nu_td.hamiltonian_2nu_matter_td( \
+                        h_vacuum_energy_independent, 
+                        l, energy*1.e6, VCC_func_const_density), 
+                r_ini*CONV_KM_TO_INV_EV, r_fin*CONV_KM_TO_INV_EV, 
+                integration_method=integration_method, 
+                epsrel=epsrel, epsabs=epsabs,
+                num_pts_integration=num_pts_integration) \
+            for energy in energy_val])
+
+            label_case = r'Matter, constant $n_e = 40 N_{\rm Av}$ cm$^{-3}$'
+            ls = '--'
+            lc = 'C1'
+            zorder = 0.7
+
+
+        elif (case.lower() == 'matter_exp_1'):
+            continue
+
+            # Define a potential that is only a function of position, l
+            num_density_e_func = lambda l : \
+                num_density_e_center_sun*exp(-(l/CONV_KM_TO_INV_EV)/l_scale_sun) # [eV^3]
+            def VCC_func_exp(l):
+                return matter.VCC_func(l, num_density_e_func) # [eV]
+            # def VCC_func_exp(l):
+            #     density_matter_func = lambda l: \
+            #         matter.density_matter_func_exp(l/CONV_KM_TO_INV_EV, 
+            #             160.0, l_scale_sun) # [g cm^{-3}]
+            #     num_density_e_func = lambda l : \
+            #         matter.num_density_e_func(l,
+            #             density_matter_func, electron_fraction=0.5) # [eV^3]
+            #     return matter.VCC_func(l, num_density_e_func) # [eV]
+            # print(num_density_e_func(0.172*SUN_RADIUS*CONV_KM_TO_INV_EV)*pow(CONV_CM_TO_INV_EV,3.0)/N_AV)
+            # quit()
+
+            # Each element of prob: [Pee, Pem, Pmm]
+            prob = np.array([oscprob2nu_td.probabilities_2nu_td(
+                lambda l: \
+                    hamiltonians2nu_td.hamiltonian_2nu_matter_td( \
+                        h_vacuum_energy_independent, 
+                        l, energy*1.e6, VCC_func_exp), 
+                r_ini*CONV_KM_TO_INV_EV, r_fin*CONV_KM_TO_INV_EV, 
+                integration_method=integration_method, 
+                epsrel=epsrel, epsabs=epsabs,
+                num_pts_integration=num_pts_integration) \
+            for energy in energy_val])
+
+            label_case = r'Matter, solar $n_e$ profile'
+            ls = '-.'
+            lc = 'C1'
+            zorder = 0.6
+
+        elif (case.lower() == 'matter_exp_2'):
+            continue
+
+            # Define a potential that is only a function of position, l
+            num_density_e_center_sun_2 = (40./245.)*num_density_e_center_sun
+            num_density_e_func = lambda l : \
+                num_density_e_center_sun_2*exp(-(l/CONV_KM_TO_INV_EV)/l_scale_sun) # [eV^3]
+            def VCC_func_exp(l):
+                return matter.VCC_func(l, num_density_e_func) # [eV]
+
+            h_vacuum_energy_independent = \
+                hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(sth,
+                    Dm2)
+        
+            # Each element of prob: [Pee, Pem, Pmm]
+            prob = np.array([oscprob2nu_td.probabilities_2nu_td(
+                lambda l: \
+                    hamiltonians2nu_td.hamiltonian_2nu_matter_td( \
+                        h_vacuum_energy_independent, 
+                        l, energy*1.e6, VCC_func_exp), 
+                r_ini*CONV_KM_TO_INV_EV, r_fin*CONV_KM_TO_INV_EV, 
+                integration_method=integration_method, 
+                epsrel=epsrel, epsabs=epsabs,
+                num_pts_integration=num_pts_integration) \
+            for energy in energy_val])
+
+            label_case = r'Matter, solar profile, scaled'
+            ls = ':'
+            lc = 'C2'
+            zorder = 0.6
+
+        # Each element of prob: [Pee, Pem, Pmm]
+        prob_ee = [x[0] for x in prob]
+        prob_em = [x[1] for x in prob]
+        prob_mm = [x[3] for x in prob]
+
+        # Plot
+        if (plot_prob_ee):
+            ax.plot(energy_val, prob_ee, label=label_case,
+                color=lc, ls=ls, zorder=zorder)
+        elif (plot_prob_em):
+            ax.plot(energy_val, prob_em, label=label_case,
+                color=lc, ls=ls, zorder=zorder)
+        elif (plot_prob_mm):
+            ax.plot(energy_val, prob_mm, label=label_case,
+                color=lc, ls=ls, zorder=zorder)
+
+    ax.set_xlabel(r'Neutrino energy, $E$ [MeV]', fontsize=25)
+
+    if (sector == '12'):
+        if plot_prob_ee and (not plot_prob_em) and (not plot_prob_mm):
+            y_label = r'Two-neutrino probability, $P_{\nu_e \to \nu_e}$'
+        elif (not plot_prob_ee) and plot_prob_em and (not plot_prob_mm):
+            y_label = r'Two-neutrino probability, $P_{\nu_e \to \nu_\mu}$'
+        elif (not plot_prob_ee) and (not plot_prob_em) and plot_prob_mm:
+            y_label = r'Two-neutrino probability, $P_{\nu_\mu \to \nu_\mu}$'
+    elif (sector == '23'):
+        if plot_prob_ee and (not plot_prob_em) and (not plot_prob_mm):
+            y_label = r'Two-neutrino probability, $P_{\nu_\mu \to \nu_\mu}$'
+        elif (not plot_prob_ee) and plot_prob_em and (not plot_prob_mm):
+            y_label = r'Two-neutrino probability, $P_{\nu_\mu \to \nu_\tau}$'
+        elif (not plot_prob_ee) and (not plot_prob_em) and plot_prob_mm:
+            y_label = r'Two-neutrino probability, $P_{\nu_\tau \to \nu_\tau}$'
+    else:
+        y_label = r'Two-neutrino probability'
+    ax.set_ylabel(y_label, fontsize=25)
+
+    yaxis_minor_locator = mpl.ticker.MultipleLocator(0.1)
+    ax.yaxis.set_minor_locator(yaxis_minor_locator)
+
+    ax.tick_params('both', length=10, width=2, which='major')
+    ax.tick_params('both', length=5, width=1, which='minor')
+    ax.tick_params(axis='both', which='major', pad=10, direction='in')
+    ax.tick_params(axis='both', which='minor', pad=10, direction='in')
+    ax.tick_params(axis='x', which='minor', bottom=True)
+    ax.tick_params(axis='x', which='minor', top=True)
+    ax.tick_params(axis='y', which='minor', left=True)
+    ax.tick_params(axis='y', which='minor', right=True)
+    ax.tick_params(bottom=True, top=True, left=True, right=True)
+
+    ax.set_xlim([10.**log10_energy_min, 10.**log10_energy_max])
+    ax.set_xscale('log')
+    ax.set_ylim([0, 1.])
+
+    # Legend
+    ax.legend(loc=legend_loc, frameon=True, ncol=legend_ncol,
+        fontsize=20)
+
+    # Annotations
+    # ax.annotate( r'$\log_{10}(E/{\rm GeV}) = $' + \
+    #     str(int(log10(energy)*100.)/100.),
+    #     xy = (0.98, 0.05), xycoords='axes fraction', color='k', fontsize=20,
+    #     horizontalalignment='right', rotation=0, zorder=2 )
 
     plt.savefig(output_path+output_filename+'.'+output_format,
         bbox_inches='tight', dpi=100)

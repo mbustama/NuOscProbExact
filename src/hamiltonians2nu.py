@@ -211,7 +211,8 @@ def probabilities_2nu_matter_std(sth, Dm2, VCC, energy, L):
     list
         List of probabilities [Pee, Pem, Pme, Pmm].
     """
-    x = 2.0*VCC*(energy*1.e9)/Dm2
+    # x = 2.0*VCC*(energy*1.e9)/Dm2
+    x = 2.0*VCC*(energy)/Dm2
     cth = sqrt(1.0-sth*sth)
     s2th = 2.0*sth*cth
     s2thsq = s2th*s2th
@@ -220,7 +221,8 @@ def probabilities_2nu_matter_std(sth, Dm2, VCC, energy, L):
     Dm2m = Dm2*sqrt(s2thsq+pow(c2th-x, 2.0))
     s2thmsq = s2thsq / (s2thsq+pow(c2th-x, 2.0))
 
-    arg = 1.27*Dm2m*L/energy#/4.0
+    # arg = 1.27*Dm2m*L/energy#/4.0
+    arg = Dm2m*L/energy/4.0
 
     Pem = s2thmsq * pow(sin(arg), 2.0)
     Pme = Pem

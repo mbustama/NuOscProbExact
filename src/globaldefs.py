@@ -7,7 +7,7 @@ The core modules oscprob2nu.py and oscprob3nu.py do not require these
 constants.
 
 Created: 2019/04/17 17:03
-Last modified: 2024/11/30 16:37
+Last modified: 2024/12/11 20:32
 """
 
 
@@ -97,6 +97,13 @@ Average matter density in the Earth's crust.
 Units: [g cm^{-3}]
 """
 
+N_AV = 6.02214076e23
+r"""float: Module-level constant
+
+Avogadro constant
+Units: [mol^{-1}]
+"""
+
 # NUM_DENSITY_E_EARTH_CRUST = DENSITY_MATTER_CRUST_G_PER_CM3 * CONV_G_TO_EV \
 #                             / ((MASS_PROTON+MASS_NEUTRON)/2.0) \
 #                             * ELECTRON_FRACTION_EARTH_CRUST \
@@ -122,6 +129,13 @@ EARTH_RADIUS = 6371.0
 r"""float: Module-level constant
 
 Average Earth radius.
+Units: [km]
+"""
+
+SUN_RADIUS = 6.947e5
+r"""float: Module-level constant
+
+Average solar radius.
 Units: [km]
 """
 

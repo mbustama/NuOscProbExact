@@ -30,6 +30,7 @@ import oscprob3nu_plot
 import oscprob3nu_td_plot
 import oscprob2nu_plotpaper
 import oscprob3nu_plotpaper
+from globaldefs import *
 
 
 print('NuOscProbExact: Running test suite (plots will be stored inside ./fig)')
@@ -119,6 +120,18 @@ print()
 #             legend_loc='lower left', legend_ncol=1)
 # print('Done')
 
+# print('    Pee solar (time-dependent Hamiltonian calculation)... ', end='')
+# oscprob2nu_td_plot.plot_probability_2nu_td_vs_baseline_sun(
+#             '12', energy=5e-3,#1.e-2,
+#             log10_l_min=-2, log10_l_max=log10(1e2), log10_l_npts=5000,
+#             integration_method='simpson_log', 
+#             epsrel=1.e-10, epsabs=1.e-10, num_pts_integration=1001,
+#             plot_prob_ee=True, plot_prob_em=False, plot_prob_mm=False,
+#             output_filename='prob_2nu_td_vacuum_matter_vs_baseline_ee_sun',
+#             output_format='png', output_path='./fig/',
+#             legend_loc='lower left', legend_ncol=1)
+# print('Done')
+
 # print('  Done')
 
 # print()
@@ -179,6 +192,48 @@ print()
 
 # print()
 
+# print('Generating plots of 2nu probability vs. density:')
+
+# print('    Pee (time-dependent Hamiltonian calculation)... ', end='')
+# oscprob2nu_td_plot.plot_probability_2nu_td_vs_density(
+#             '12', 
+#             l_min=0.0, l_max=SUN_RADIUS,
+#             num_density_e_min=0, num_density_e_max=300, 
+#             num_density_e_npts=1000,
+#             integration_method='quad_linear', 
+#             epsrel=1.e-10, epsabs=1.e-10, num_pts_integration=1001,
+#             plot_prob_ee=True, plot_prob_em=False, plot_prob_mm=False,
+#             output_filename='prob_2nu_td_vacuum_matter_vs_density_ee', 
+#             output_format='png', output_path='./fig/', 
+#             legend_loc='center left', legend_ncol=1)
+# print('Done')
+
+# print('  Done')
+
+# print()
+
+print('Generating plots of 2nu probability vs. energy (time-dependent Hamiltonian):')
+
+print('    Pee solar (time-dependent Hamiltonian calculation)... ', end='')
+oscprob2nu_td_plot.plot_probability_2nu_td_vs_energy_sun(
+            '12', 
+            # r_ini=1.e-3*SUN_RADIUS, r_fin=SUN_RADIUS,
+            r_ini=1.e-1*SUN_RADIUS, r_fin=2.e-1*SUN_RADIUS,
+            log10_energy_min=-1.0, log10_energy_max=2.0, 
+            log10_energy_npts=5000,
+            integration_method='quad_log', 
+            epsrel=1.e-10, epsabs=1.e-10, num_pts_integration=1001,
+            plot_prob_ee=True, plot_prob_em=False, plot_prob_mm=False,
+            output_filename='prob_2nu_td_vacuum_matter_vs_energy_ee_sun', 
+            output_format='png', output_path='./fig/', 
+            legend_loc='center left', legend_ncol=1)
+print('Done')
+
+print('  Done')
+
+print()
+
+
 # print('Generating plots of 3nu probability vs. baseline:')
 
 # for case in ['vacuum', 'matter', 'nsi', 'liv']:
@@ -227,20 +282,20 @@ print()
 
 # print()
 
-print('Generating plots of 3nu probability vs. baseline (time-dependent Hamiltonian):')
+# print('Generating plots of 3nu probability vs. baseline (time-dependent Hamiltonian):')
 
-# --- Uncomment this when validating vacuum calculations (see oscprob3nu_td_plot.y)
-print('    Pem (time-dependent Hamiltonian calculation)... ', end='')
-oscprob3nu_td_plot.plot_probability_3nu_td_vs_baseline(
-            energy=1.e-2,
-            log10_l_min=log10(5.e1), log10_l_max=4.0, log10_l_npts=200,
-            plot_prob_ee=False, plot_prob_em=True, plot_prob_et=False,
-            plot_prob_me=False, plot_prob_mm=False, plot_prob_mt=False,
-            plot_prob_te=False, plot_prob_tm=False, plot_prob_tt=False,
-            output_filename='prob_3nu_td_vacuum_vs_baseline_em_validation',
-            output_format='png', output_path='./fig/',
-            legend_loc='lower left', legend_ncol=1)
-print('Done')
+# # --- Uncomment this when validating vacuum calculations (see oscprob3nu_td_plot.y)
+# print('    Pem (time-dependent Hamiltonian calculation)... ', end='')
+# oscprob3nu_td_plot.plot_probability_3nu_td_vs_baseline(
+#             energy=1.e-2,
+#             log10_l_min=log10(5.e1), log10_l_max=4.0, log10_l_npts=200,
+#             plot_prob_ee=False, plot_prob_em=True, plot_prob_et=False,
+#             plot_prob_me=False, plot_prob_mm=False, plot_prob_mt=False,
+#             plot_prob_te=False, plot_prob_tm=False, plot_prob_tt=False,
+#             output_filename='prob_3nu_td_vacuum_vs_baseline_em_validation',
+#             output_format='png', output_path='./fig/',
+#             legend_loc='lower left', legend_ncol=1)
+# print('Done')
 
 
 # print('    Pee (time-dependent Hamiltonian calculation)... ', end='')

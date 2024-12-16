@@ -38,7 +38,8 @@ import oscprob2nu
 
 
 def probabilities_2nu_td(hamiltonian_matrix_func, l_init, l_final,
-    integration_method='quad', epsrel=1.e-8, epsabs=1.e-8):
+    integration_method='quad_linear', epsrel=1.e-8, epsabs=1.e-8,
+    num_pts_integration=100):
     r"""Returns the 2nu oscillation probability.
 
     Returns the two-neutrino oscillation probabilities
@@ -85,10 +86,24 @@ def probabilities_2nu_td(hamiltonian_matrix_func, l_init, l_final,
         # First integrate each of the components of the Hamiltonian
         h_integral = np.zeros((2,2))
         for i in range(4):
-            if (integration_method == 'quad'):
+            if (integration_method == 'quad_linear'):
                 res, err = sp.integrate.quad(lambda l: \
                     hamiltonian_matrix_func(l)[i//2][i%2], 
                     l_init, l_final, epsrel=epsrel, epsabs=epsabs)
+            elif (integration_method == 'quad_log'):
+                res, err = sp.integrate.quad(lambda log10_l: \
+                    log(10.) * 10.**log10_l * \
+                    hamiltonian_matrix_func(10.**log10_l)[i//2][i%2], 
+                    log10(l_init), log10(l_final), 
+                    epsrel=epsrel, epsabs=epsabs)
+            elif (integration_method == 'simpson_log'):
+                # First build the arrays to integrate
+                x = np.logspace(log10(l_init), log10(l_final), 
+                    num_pts_integration)
+                y = log(10.) * \
+                    np.array([l*hamiltonian_matrix_func(l)[i//2][i%2] \
+                        for l in x])
+                res = sp.integrate.simpson(y, x=x)
             else:
                 print('Error: probabilities_2nu_td: ' + \
                     'value of integration_method not allowed')
