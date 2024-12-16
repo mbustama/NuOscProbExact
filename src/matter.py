@@ -272,6 +272,6 @@ def VCC_func(l, num_density_e_func):
     float
         Coherent forward electron potntial, V_CC [eV]
     """
-    VCC = sqrt(2.0)*GF*num_density_e_func(l) # [eV]
+    VCC = -sqrt(2.0)*GF*num_density_e_func(l) # [eV]
 
     return VCC

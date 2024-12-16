@@ -218,9 +218,9 @@ print('    Pee solar (time-dependent Hamiltonian calculation)... ', end='')
 oscprob2nu_td_plot.plot_probability_2nu_td_vs_energy_sun(
             '12', 
             # r_ini=1.e-3*SUN_RADIUS, r_fin=SUN_RADIUS,
-            r_ini=1.e-1*SUN_RADIUS, r_fin=2.e-1*SUN_RADIUS,
+            r_ini=1.e-3*SUN_RADIUS, r_fin=SUN_RADIUS,
             log10_energy_min=-1.0, log10_energy_max=2.0, 
-            log10_energy_npts=5000,
+            log10_energy_npts=10000,
             integration_method='quad_log', 
             epsrel=1.e-10, epsabs=1.e-10, num_pts_integration=1001,
             plot_prob_ee=True, plot_prob_em=False, plot_prob_mm=False,

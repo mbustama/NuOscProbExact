@@ -36,6 +36,7 @@ import oscprob2nu
 import hamiltonians2nu
 import oscprob2nu_td
 import hamiltonians2nu_td
+import oscprob2nu_tslice
 import matter
 from globaldefs import *
 
@@ -951,7 +952,8 @@ def plot_probability_2nu_td_vs_energy_sun(
             sth, Dm2)
 
     for case in ['vacuum', 'matter_const_1', 'matter_const_1_std', 
-        'matter_const_2', 'matter_exp_1', 'matter_exp_2']:
+        'matter_exp_1_tslice', 'matter_const_2', 'matter_exp_1', 
+        'matter_exp_2']:
 
         if (case.lower() == 'vacuum'):
 
@@ -1003,14 +1005,13 @@ def plot_probability_2nu_td_vs_energy_sun(
             zorder = 0.7
 
         elif (case.lower() == 'matter_const_1_std'):
-            # continue
+            continue
 
             L = (r_fin-r_ini)*CONV_KM_TO_INV_EV # [eV^{-1}]
             VCC = matter.VCC_func(0.0, lambda l: num_density_e_center_sun) # [eV]
             # Each element of prob: [Pee, Pem, Pmm]
             prob = np.array([hamiltonians2nu.probabilities_2nu_matter_std(sth, 
                 Dm2, VCC, energy*1.e6, L) for energy in energy_val])
-            print(prob[:,0])
 
             label_case = r'Matter, constant $n_e = 245 N_{\rm Av}$ cm$^{-3}$ (std.)'
             ls = '-'
@@ -1049,6 +1050,31 @@ def plot_probability_2nu_td_vs_energy_sun(
             lc = 'C1'
             zorder = 0.7
 
+        elif (case.lower() == 'matter_exp_1_tslice'):
+            # continue
+
+            # Define a potential that is only a function of position, l
+            num_density_e_func = lambda l : \
+                num_density_e_center_sun*exp(-(l/CONV_KM_TO_INV_EV)/l_scale_sun) # [eV^3]
+                # num_density_e_center_sun # [eV^3]
+            def VCC_func_exp(l):
+                return matter.VCC_func(l, num_density_e_func) # [eV]
+
+            # Each element of prob: [Pee, Pem, Pmm]
+            prob = np.array([oscprob2nu_tslice.probabilities_2nu_tslice(
+                lambda l: \
+                    hamiltonians2nu_td.hamiltonian_2nu_matter_td( \
+                        h_vacuum_energy_independent, 
+                        l, energy*1.e6, VCC_func_exp), 
+                r_ini*CONV_KM_TO_INV_EV, r_fin*CONV_KM_TO_INV_EV, 1000,
+                use_td_calculation=False) \
+            for energy in energy_val])
+            # print(prob[:,0])
+
+            label_case = r'Matter, solar $n_e$ profile (time-sliced)'
+            ls = '-'
+            lc = 'C3'
+            zorder = 0.8
 
         elif (case.lower() == 'matter_exp_1'):
             continue
