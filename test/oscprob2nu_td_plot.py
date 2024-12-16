@@ -676,10 +676,11 @@ def plot_probability_2nu_td_vs_baseline_sun(
     num_density_e_center_sun = 245*N_AV/pow(CONV_CM_TO_INV_EV,3.0) # [eV^3]
     l_scale_sun = SUN_RADIUS/10.54 # [km]
 
-    for case in ['vacuum', 'matter_const', 'matter_exp']:
+    for case in ['vacuum', 'matter_const', 'matter_exp',
+        'matter_exp_tslice']:
 
         if (case.lower() == 'vacuum'):
-            continue
+            # continue
 
             # Define a potential that is only a function of position, l.
             # In this case, oscilllations are in vacuum, so this is only for
@@ -713,7 +714,7 @@ def plot_probability_2nu_td_vs_baseline_sun(
                     h_vacuum_energy_independent, 
                     l, energy*1.e9, VCC_func_const_density)
             h_func = h_matter_func
-            ls = '--'
+            ls = '-'
             lc = 'C0'
             zorder = 0.7
 
@@ -734,18 +735,52 @@ def plot_probability_2nu_td_vs_baseline_sun(
                     l, energy*1.e9, VCC_func_exp)
             h_func = h_matter_func
             label_case = r'Matter, solar $n_e$ profile'
-            ls = '-.'
+            ls = '-'
             lc = 'C1'
             zorder = 0.6
 
-        # Each element of prob: [Pee, Pem, Pmm]
-        prob = np.array([oscprob2nu_td.probabilities_2nu_td(
-            h_func, 
-            l_val[0]*SUN_RADIUS*CONV_KM_TO_INV_EV, l*SUN_RADIUS*CONV_KM_TO_INV_EV, 
-            # 0, l*SUN_RADIUS*CONV_KM_TO_INV_EV, 
-            integration_method=integration_method, 
-            epsrel=epsrel, epsabs=epsabs, 
-            num_pts_integration=num_pts_integration) for l in l_val])
+        elif (case.lower() == 'matter_exp_tslice'):
+
+            # Define a potential that is only a function of position, l
+            def VCC_func_exp(l):
+                num_density_e_func = lambda l : \
+                    num_density_e_center_sun*exp(-(l/CONV_KM_TO_INV_EV)/l_scale_sun) # [eV^3]
+                return matter.VCC_func(l, num_density_e_func) # [eV]
+
+            h_vacuum_energy_independent = \
+                hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(sth,
+                    Dm2)
+            h_matter_func = lambda l: \
+                hamiltonians2nu_td.hamiltonian_2nu_matter_td( \
+                    h_vacuum_energy_independent, 
+                    l, energy*1.e9, VCC_func_exp)
+            h_func = h_matter_func
+            label_case = r'Matter, solar $n_e$ profile (time-sliced)'
+            ls = '-'
+            lc = 'C3'
+            zorder = 0.7
+
+        if (case.lower() != 'matter_exp_tslice'):
+
+            # Each element of prob: [Pee, Pem, Pmm]
+            prob = np.array([oscprob2nu_td.probabilities_2nu_td(
+                h_func, 
+                l_val[0]*SUN_RADIUS*CONV_KM_TO_INV_EV, l*SUN_RADIUS*CONV_KM_TO_INV_EV, 
+                # 0, l*SUN_RADIUS*CONV_KM_TO_INV_EV, 
+                integration_method=integration_method, 
+                epsrel=epsrel, epsabs=epsabs, 
+                num_pts_integration=num_pts_integration) for l in l_val])
+
+        else:
+
+            # Each element of prob: [Pee, Pem, Pme, Pmm]
+            prob = np.array([oscprob2nu_tslice.probabilities_2nu_tslice(
+                h_func, 
+                l_val[0]*SUN_RADIUS*CONV_KM_TO_INV_EV, 
+                l*SUN_RADIUS*CONV_KM_TO_INV_EV, 1000,
+                use_td_calculation=False) \
+            for l in l_val])
+
         prob_ee = [x[0] for x in prob]
         prob_em = [x[1] for x in prob]
         prob_mm = [x[3] for x in prob]
@@ -1060,7 +1095,7 @@ def plot_probability_2nu_td_vs_energy_sun(
             def VCC_func_exp(l):
                 return matter.VCC_func(l, num_density_e_func) # [eV]
 
-            # Each element of prob: [Pee, Pem, Pmm]
+            # Each element of prob: [Pee, Pem, Pme, Pmm]
             prob = np.array([oscprob2nu_tslice.probabilities_2nu_tslice(
                 lambda l: \
                     hamiltonians2nu_td.hamiltonian_2nu_matter_td( \

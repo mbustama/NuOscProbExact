@@ -67,7 +67,7 @@ print()
 # print()
 
 
-# print('Generating plots of 2nu probability vs. baseline (time-dependent Hamiltonian):')
+print('Generating plots of 2nu probability vs. baseline (time-dependent Hamiltonian):')
 
 # # --- Uncomment this when validating vacuum calculations (see oscprob2nu_td_plot.y)
 # # print('    Pee (time-dependent Hamiltonian calculation)... ', end='')
@@ -120,19 +120,19 @@ print()
 #             legend_loc='lower left', legend_ncol=1)
 # print('Done')
 
-# print('    Pee solar (time-dependent Hamiltonian calculation)... ', end='')
-# oscprob2nu_td_plot.plot_probability_2nu_td_vs_baseline_sun(
-#             '12', energy=5e-3,#1.e-2,
-#             log10_l_min=-2, log10_l_max=log10(1e2), log10_l_npts=5000,
-#             integration_method='simpson_log', 
-#             epsrel=1.e-10, epsabs=1.e-10, num_pts_integration=1001,
-#             plot_prob_ee=True, plot_prob_em=False, plot_prob_mm=False,
-#             output_filename='prob_2nu_td_vacuum_matter_vs_baseline_ee_sun',
-#             output_format='png', output_path='./fig/',
-#             legend_loc='lower left', legend_ncol=1)
-# print('Done')
+print('    Pee solar (time-dependent Hamiltonian calculation)... ', end='')
+oscprob2nu_td_plot.plot_probability_2nu_td_vs_baseline_sun(
+            '12', energy=5e-3,
+            log10_l_min=-3, log10_l_max=0.0, log10_l_npts=5000,
+            integration_method='quad_log', 
+            epsrel=1.e-10, epsabs=1.e-10, num_pts_integration=1001,
+            plot_prob_ee=True, plot_prob_em=False, plot_prob_mm=False,
+            output_filename='prob_2nu_td_vacuum_matter_vs_baseline_ee_sun',
+            output_format='png', output_path='./fig/',
+            legend_loc='lower left', legend_ncol=1)
+print('Done')
 
-# print('  Done')
+print('  Done')
 
 # print()
 
@@ -212,26 +212,26 @@ print()
 
 # print()
 
-print('Generating plots of 2nu probability vs. energy (time-dependent Hamiltonian):')
+# print('Generating plots of 2nu probability vs. energy (time-dependent Hamiltonian):')
 
-print('    Pee solar (time-dependent Hamiltonian calculation)... ', end='')
-oscprob2nu_td_plot.plot_probability_2nu_td_vs_energy_sun(
-            '12', 
-            # r_ini=1.e-3*SUN_RADIUS, r_fin=SUN_RADIUS,
-            r_ini=1.e-3*SUN_RADIUS, r_fin=SUN_RADIUS,
-            log10_energy_min=-1.0, log10_energy_max=2.0, 
-            log10_energy_npts=10000,
-            integration_method='quad_log', 
-            epsrel=1.e-10, epsabs=1.e-10, num_pts_integration=1001,
-            plot_prob_ee=True, plot_prob_em=False, plot_prob_mm=False,
-            output_filename='prob_2nu_td_vacuum_matter_vs_energy_ee_sun', 
-            output_format='png', output_path='./fig/', 
-            legend_loc='center left', legend_ncol=1)
-print('Done')
+# print('    Pee solar (time-dependent Hamiltonian calculation)... ', end='')
+# oscprob2nu_td_plot.plot_probability_2nu_td_vs_energy_sun(
+#             '12', 
+#             # r_ini=1.e-3*SUN_RADIUS, r_fin=SUN_RADIUS,
+#             r_ini=1.e-3*SUN_RADIUS, r_fin=SUN_RADIUS,
+#             log10_energy_min=-1.0, log10_energy_max=2.0, 
+#             log10_energy_npts=10000,
+#             integration_method='quad_log', 
+#             epsrel=1.e-10, epsabs=1.e-10, num_pts_integration=1001,
+#             plot_prob_ee=True, plot_prob_em=False, plot_prob_mm=False,
+#             output_filename='prob_2nu_td_vacuum_matter_vs_energy_ee_sun', 
+#             output_format='png', output_path='./fig/', 
+#             legend_loc='center left', legend_ncol=1)
+# print('Done')
 
-print('  Done')
+# print('  Done')
 
-print()
+# print()
 
 
 # print('Generating plots of 3nu probability vs. baseline:')
