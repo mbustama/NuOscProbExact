@@ -22,7 +22,7 @@ dependencies = ["numpy"]
 [project.optional-dependencies]
 fast = ["numba"]
 plots = ["matplotlib"]
-test = ["pytest", "scipy", "coverage"]
+test = ["pytest", "scipy", "coverage", "pytest-cov"]
 docs = ["sphinx", "numpydoc", "myst-parser"]
 
 [project.urls]
@@ -42,3 +42,76 @@ py-modules = ["oscprob2nu", "oscprob3nu", "hamiltonians2nu",
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 filterwarnings = ["error::RuntimeWarning"]
+
+# Every setting coverage needs lives here rather than on the command line, so
+# that a local `pytest --cov` measures, reports, and gates exactly as CI does.
+# A threshold passed as a flag in a workflow is a threshold that only CI knows
+# about, and the two drift the first time one of them is edited.
+[tool.coverage.run]
+# There is no import package: pyproject declares six flat `py-modules` under
+# `package-dir = {"" = "src"}`, so an editable install puts `oscprob3nu` and
+# friends on the path under their bare names.  Coverage measures imported
+# source files, and those files live directly in `src/` --- `src/<package>`,
+# which is the usual incantation, would match nothing here.
+source = ["src"]
+
+# Branch coverage, not only line coverage.  It is what this codebase needs
+# measuring: `oscprob3nu` alone has 170 branches, almost all of them the
+# degeneracy and near-degeneracy handling in the SU(3) expansion, where the
+# interesting question is never "did this line run" but "was the degenerate
+# case taken as well as the generic one".  Line coverage answers the first and
+# says nothing about the second.
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+
+exclude_also = [
+    # The Numba kernels.  These are not untested --- tests/test_fastkernels.py
+    # runs every one of them against the NumPy path and requires agreement to
+    # round-off --- but @njit compiles a function to machine code, and
+    # coverage.py traces Python bytecode, so not one line of a compiled body
+    # can ever be recorded as executed.  Left in, they report a permanent 118
+    # missing lines that no test could ever close, which is worse than
+    # uninformative: it makes a real regression indistinguishable from the
+    # noise floor.
+    #
+    # Matching the decorator excludes the whole function it decorates, which
+    # is why this is written against `@njit` rather than as an `omit` of the
+    # file.  Omitting `src/fastkernels.py` outright was the obvious
+    # alternative and was rejected: it would also drop `available`,
+    # `worthwhile`, `_run` and both public `probabilities_*_kernel` wrappers,
+    # roughly forty lines of ordinary Python that decide when the compiled
+    # path is used at all.  Those are measured, and they are the part where a
+    # dispatch bug would actually hide.
+    '^\s*@njit',
+]
+
+# A floor, not a target, and one that only ever moves up.  Measured, rather
+# than guessed, in all three configurations the suite supports:
+#
+#     Numba installed and used            100%   (0 of 655 statements missed)
+#     Numba installed, USE_NUMBA = False  100%
+#     Numba not importable                 97%
+#
+# The third is lower for a reason that is not a coverage regression: with
+# Numba absent the `if HAVE_NUMBA:` block never executes, so `_run` and both
+# `probabilities_*_kernel` wrappers are unreachable, and the two
+# `fastkernels.worthwhile(...)` dispatch branches in `oscprob2nu` and
+# `oscprob3nu` can only be taken one way.  Two points of headroom under the
+# 100% that the first two configurations reach is what keeps this a floor
+# rather than a tripwire, without letting it sag to the third.
+#
+# The consequence, stated plainly because it will otherwise be discovered the
+# hard way: `pytest --cov` without the `fast` extra installed reports 97 and
+# exits non-zero.  That is why the coverage job in .github/workflows/tests.yml
+# installs `.[fast,test]`, and it is the reason to prefer
+# `pip install -e '.[fast,test]'` when working on this locally.
+#
+# Do not lower it to turn a red build green --- a floor that follows the
+# measurement down is not a floor, it merely certifies whatever happened.
+#
+# This applies to every coverage run, not only CI, so measuring a single test
+# file will report far below the threshold and exit non-zero.  Pass
+# `--cov-fail-under=0` when doing that deliberately.
+fail_under = 98

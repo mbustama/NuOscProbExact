@@ -164,7 +164,7 @@ def worthwhile(n_flavors: int, size: int) -> bool:
     return available() and size >= MIN_BATCH.get(n_flavors, 1)
 
 
-if HAVE_NUMBA:
+if HAVE_NUMBA:                                          # pragma: no branch
 
     SQRT3 = math.sqrt(3.0)
     SQRT3_INV = 1.0/SQRT3
