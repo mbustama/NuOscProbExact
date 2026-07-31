@@ -29,7 +29,6 @@ from numpy import *
 import numpy as np
 import cmath
 import cmath as cmath
-import copy as cp
 
 import oscprob3nu
 from globaldefs import *
@@ -179,8 +178,7 @@ def hamiltonian_2nu_matter(h_vacuum_energy_independent, energy, VCC):
     list
         Hamiltonian 2x2 matrix.
     """
-    h_matter = cp.deepcopy(h_vacuum_energy_independent)
-    h_matter = np.multiply(1.0/energy, h_matter)
+    h_matter = np.array(h_vacuum_energy_independent, dtype=complex)/energy
 
     # Add the matter potential to the ee term to find the matter
     # Hamiltonian
@@ -262,8 +260,7 @@ def hamiltonian_2nu_nsi(h_vacuum_energy_independent, energy, VCC, eps):
     list
         Hamiltonian 2x2 matrix.
     """
-    h_nsi = cp.deepcopy(h_vacuum_energy_independent)
-    h_nsi = np.multiply(1.0/energy, h_nsi)
+    h_nsi = np.array(h_vacuum_energy_independent, dtype=complex)/energy
 
     eps_ee, eps_em, eps_mm = eps
 
@@ -305,8 +302,7 @@ def hamiltonian_2nu_liv(h_vacuum_energy_independent, energy, sxi,
     list
         Hamiltonian 2x2 matrix.
     """
-    h_liv = cp.deepcopy(h_vacuum_energy_independent)
-    h_liv = np.multiply(1.0/energy, h_liv)
+    h_liv = np.array(h_vacuum_energy_independent, dtype=complex)/energy
 
     f = energy/Lambda
     cxi = sqrt(1.0-sxi*sxi)
