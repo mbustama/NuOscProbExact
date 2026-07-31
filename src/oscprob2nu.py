@@ -93,6 +93,8 @@ def hamiltonian_2nu_coefficients(
     given in the flavor basis.  The coefficient :math:`h_0` contributes
     only an overall phase to the evolution operator and is not returned.
 
+    .. versionadded:: 1.0.0
+
     Parameters
     ----------
     hamiltonian_matrix : array_like
@@ -138,6 +140,8 @@ def modulus(h_coeffs: Union[list, np.ndarray]) -> float:
     Returns the modulus of the vector of coefficients :math:`h_k` of the
     SU(2) expansion of the two-neutrino Hamiltonian,
     :math:`|h| = \sqrt{|h_1|^2 + |h_2|^2 + |h_3|^2}`.
+
+    .. versionadded:: 1.0.0
 
     Parameters
     ----------
@@ -366,6 +370,8 @@ def evolution_operator_2nu_u_coefficients(
     exponential expansion,
     :math:`U_2 = u_0 \mathbb{1} + i u_k \sigma^k`.
 
+    .. versionadded:: 1.0.0
+
     Parameters
     ----------
     hamiltonian_matrix : array_like
@@ -424,6 +430,8 @@ def evolution_operator_2nu(
     :math:`U_2(L) = u_0 \mathbb{1} + i u_k \sigma^k`.  This is a
     :math:`2\times2` unitary matrix.
 
+    .. versionadded:: 1.0.0
+
     Parameters
     ----------
     hamiltonian_matrix : array_like
@@ -479,6 +487,8 @@ def probabilities_2nu(
     Returns the two-neutrino flavor-transition probabilities
     :math:`P_{ee}, P_{e\mu}, P_{\mu e}, P_{\mu\mu}`, where
     :math:`P_{\alpha\beta} \equiv P(\nu_\alpha \to \nu_\beta)`.
+
+    .. versionadded:: 1.0.0
 
     Parameters
     ----------

@@ -115,6 +115,8 @@ def pmns_mixing_matrix(
     the CP-violation phase :math:`\delta_{\rm CP}`, in the standard
     PDG parametrization.
 
+    .. versionadded:: 1.0.0
+
     Parameters
     ----------
     s12 : float
@@ -181,6 +183,8 @@ def hamiltonian_3nu_vacuum_energy_independent(
     matrix and :math:`M^2 = \mathrm{diag}(0, \Delta m^2_{21},
     \Delta m^2_{31})` the mass matrix.  The multiplicative factor
     :math:`1/E` is *not* applied.
+
+    .. versionadded:: 1.0.0
 
     Parameters
     ----------
@@ -275,6 +279,8 @@ def hamiltonian_3nu_vacuum_energy_independent(
 def delta(a: int, b: int) -> int:
     r"""Returns the Kronecker delta :math:`\delta_{ab}`.
 
+    .. versionadded:: 1.0.0
+
     Parameters
     ----------
     a : int
@@ -312,6 +318,8 @@ def J(
     product appears in the standard expression for the three-neutrino
     oscillation probability in vacuum; its imaginary part is the
     Jarlskog invariant, up to a sign.
+
+    .. versionadded:: 1.0.0
 
     Parameters
     ----------
@@ -364,6 +372,8 @@ def probabilities_3nu_vacuum_std(
 
     This routine exists to validate the exact SU(3) computation in
     :mod:`oscprob3nu`; the two agree to round-off.
+
+    .. versionadded:: 1.0.0
 
     Parameters
     ----------
@@ -438,6 +448,8 @@ def hamiltonian_3nu_matter(
     by adding the charged-current matter potential to the :math:`ee`
     entry of the vacuum Hamiltonian.
 
+    .. versionadded:: 1.0.0
+
     Parameters
     ----------
     h_vacuum_energy_independent : array_like
@@ -492,6 +504,8 @@ def hamiltonian_3nu_nsi(
     Computes and returns the :math:`3\times3` three-neutrino
     Hamiltonian for oscillations with non-standard interactions (NSI)
     in matter of constant density.
+
+    .. versionadded:: 1.0.0
 
     Parameters
     ----------
@@ -569,6 +583,8 @@ def hamiltonian_3nu_liv(
     PMNS-like matrix built from the mixing angles :math:`\xi_{ij}` and
     the phase :math:`\delta_{\xi,\rm CP}` that relate the eigenvectors
     of :math:`B_3` to the flavor states.
+
+    .. versionadded:: 1.0.0
 
     Parameters
     ----------

@@ -124,6 +124,8 @@ def hamiltonian_3nu_coefficients(
     contributes only an overall phase to the evolution operator and is
     not returned.
 
+    .. versionadded:: 1.0.0
+
     Parameters
     ----------
     hamiltonian_matrix : array_like
@@ -175,6 +177,8 @@ def tensor_d(i: int, j: int, k: int) -> float:
     Returns the totally symmetric SU(3) tensor
     :math:`d_{ijk} = \frac{1}{4}\mathrm{Tr}
     (\{\lambda_i, \lambda_j\} \lambda_k)`, defined in [1]_.
+
+    .. versionadded:: 1.0.0
 
     Parameters
     ----------
@@ -310,6 +314,8 @@ def star(i: int, h_coeffs: Union[list, np.ndarray]) -> float:
     :math:`(h \star h)_i = d_{ijk} h^j h^k`, summed over repeated
     indices.
 
+    .. versionadded:: 1.0.0
+
     Parameters
     ----------
     i : int
@@ -345,6 +351,8 @@ def su3_invariants(h_coeffs: Union[list, np.ndarray]) -> Tuple[float, float]:
     respectively, :math:`\mathrm{Tr}(H_0^2)/2` and
     :math:`\mathrm{Tr}(H_0^3)/2`, with :math:`H_0` the traceless part of
     the Hamiltonian.
+
+    .. versionadded:: 1.0.0
 
     Parameters
     ----------
@@ -383,6 +391,8 @@ def psi_roots(h2: Union[int, float], h3: Union[int, float]) -> List[float]:
     equation :math:`\psi^3 - |h|^2 \psi - \frac{2}{3}\langle h \rangle
     = 0`, which are the eigenvalues of minus the traceless part of the
     Hamiltonian.  The roots are independent of the baseline.
+
+    .. versionadded:: 1.0.0
 
     Parameters
     ----------
@@ -894,6 +904,8 @@ def evolution_operator_3nu_u_coefficients(
     exponential expansion,
     :math:`U_3 = u_0 \mathbb{1} + i u_k \lambda^k`.
 
+    .. versionadded:: 1.0.0
+
     Parameters
     ----------
     hamiltonian_matrix : array_like
@@ -953,6 +965,8 @@ def evolution_operator_3nu(
     its SU(3) exponential expansion
     :math:`U_3(L) = u_0 \mathbb{1} + i u_k \lambda^k`.  This is a
     :math:`3\times3` unitary matrix.
+
+    .. versionadded:: 1.0.0
 
     Parameters
     ----------
@@ -1014,6 +1028,8 @@ def probabilities_3nu(
     P_{\mu\tau}, P_{\tau e}, P_{\tau\mu}, P_{\tau\tau}`, where
     :math:`P_{\alpha\beta} \equiv P(\nu_\alpha \to \nu_\beta)
     = |[U_3]_{\beta\alpha}|^2`.
+
+    .. versionadded:: 1.0.0
 
     Parameters
     ----------
