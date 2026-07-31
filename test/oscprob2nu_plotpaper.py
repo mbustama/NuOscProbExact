@@ -87,9 +87,9 @@ def plot_probability_2nu_vs_energy_compare(output_format='pdf',
         hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(  S23_NO_BF,
                                                                     D31_NO_BF)
 
-    prob_vacuum = [oscprob2nu.probabilities_2nu( \
-                    np.multiply(1./x/1.e9, h_vacuum_energy_indep), l) \
-                    for x in energy_nu]
+    prob_vacuum = oscprob2nu.probabilities_2nu(
+                    h_vacuum_energy_indep
+                    / (np.array(energy_nu)*1.e9)[:, None, None], l)
 
     # Uncomment to compare to the probability computed with the standard
     # ocillation formula in vacuum
@@ -97,10 +97,9 @@ def plot_probability_2nu_vs_energy_compare(output_format='pdf',
     #                     S23_NO_BF, D31_NO_BF, x*1.e9, l) \
     #                 for x in energy_nu]
 
-    prob_matter = [oscprob2nu.probabilities_2nu( \
-                    hamiltonians2nu.hamiltonian_2nu_matter( \
-                        h_vacuum_energy_indep, x*1.e9, VCC_EARTH_CRUST), l)
-                    for x in energy_nu]
+    prob_matter = oscprob2nu.probabilities_2nu(
+                    hamiltonians2nu.hamiltonian_2nu_matter(
+                        h_vacuum_energy_indep, np.array(energy_nu)*1.e9, VCC_EARTH_CRUST), l)
 
     # Uncomment to compare to the probability computed with the standard
     # ocillation formula in matter
@@ -109,51 +108,49 @@ def plot_probability_2nu_vs_energy_compare(output_format='pdf',
     #                     l) \
     #                 for x in energy_nu]
 
-    prob_nsi = [oscprob2nu.probabilities_2nu( \
-                    hamiltonians2nu.hamiltonian_2nu_nsi( \
-                        h_vacuum_energy_indep, x*1.e9, VCC_EARTH_CRUST, EPS_2),
+    prob_nsi = oscprob2nu.probabilities_2nu(
+                    hamiltonians2nu.hamiltonian_2nu_nsi(
+                        h_vacuum_energy_indep, np.array(energy_nu)*1.e9, VCC_EARTH_CRUST, EPS_2),
                         l)
-                for x in energy_nu]
 
-    prob_liv = [oscprob2nu.probabilities_2nu( \
-                    hamiltonians2nu.hamiltonian_2nu_liv( \
-                        h_vacuum_energy_indep, x*1.e9, SXI12, B1, B3, LAMBDA),
+    prob_liv = oscprob2nu.probabilities_2nu(
+                    hamiltonians2nu.hamiltonian_2nu_liv(
+                        h_vacuum_energy_indep, np.array(energy_nu)*1.e9, SXI12, B1, B3, LAMBDA),
                         l)
-                for x in energy_nu]
 
     # Pee, Pem, Pmm
     for i, ax in enumerate(np.array(axes).reshape((1,3))[0]):
 
         if (i == 0): # Pee
 
-            p_vacuum = [x[0] for x in prob_vacuum]
+            p_vacuum = prob_vacuum[:, 0]
             # p_vacuum_std = [x[0] for x in prob_vacuum_std]
-            p_matter = [x[0] for x in prob_matter]
+            p_matter = prob_matter[:, 0]
             # p_matter_std = [x[0] for x in prob_matter_std]
-            p_nsi = [x[0] for x in prob_nsi]
-            p_liv = [x[0] for x in prob_liv]
+            p_nsi = prob_nsi[:, 0]
+            p_liv = prob_liv[:, 0]
 
             ylabel = r'$P_{\nu_e \to \nu_e}$'
 
         elif (i == 1): # Pme
 
-            p_vacuum = [x[2] for x in prob_vacuum]
+            p_vacuum = prob_vacuum[:, 2]
             # p_vacuum_std = [x[2] for x in prob_vacuum_std]
-            p_matter = [x[2] for x in prob_matter]
+            p_matter = prob_matter[:, 2]
             # p_matter_std = [x[2] for x in prob_matter_std]
-            p_nsi = [x[2] for x in prob_nsi]
-            p_liv = [x[2] for x in prob_liv]
+            p_nsi = prob_nsi[:, 2]
+            p_liv = prob_liv[:, 2]
 
             ylabel = r'$P_{\nu_\mu \to \nu_e}$'
 
         elif (i == 2): # Pmm
 
-            p_vacuum = [x[3] for x in prob_vacuum]
+            p_vacuum = prob_vacuum[:, 3]
             # p_vacuum_std = [x[3] for x in prob_vacuum_std]
-            p_matter = [x[3] for x in prob_matter]
+            p_matter = prob_matter[:, 3]
             # p_matter_std = [x[3] for x in prob_matter_std]
-            p_nsi = [x[3] for x in prob_nsi]
-            p_liv = [x[3] for x in prob_liv]
+            p_nsi = prob_nsi[:, 3]
+            p_liv = prob_liv[:, 3]
 
             ylabel = r'$P_{\nu_\mu \to \nu_\mu}$'
             ax.set_xlabel(r'Neutrino energy [GeV]', fontsize=27)
