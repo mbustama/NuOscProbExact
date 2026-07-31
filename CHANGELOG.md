@@ -5,6 +5,74 @@ All notable changes to **NuOscProbExact** are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.2.0] - 2026-07-31
+
+Performance.  The exact SU(2) and SU(3) expansions now evaluate a whole stack
+of Hamiltonians and baselines in one pass, which is what a scan over energy or
+baseline, or an oscillogram, actually needs.
+
+Nothing about the method changes, and nothing about the existing interface
+changes: a single Hamiltonian with a scalar baseline returns exactly what it
+returned before, at the same speed.
+
+### Added
+
+- `evolution_operator_2nu`, `evolution_operator_3nu`, `probabilities_2nu` and
+  `probabilities_3nu` accept a stack of Hamiltonians of shape `(..., n, n)`, an
+  array of baselines, or both, broadcast against each other.  The result is an
+  array with the broadcast leading axes: `(..., 9)` for the three-flavor
+  probabilities, `(..., 3, 3)` for the evolution operator.  Measured against
+  the equivalent Python loop over 2000 points:
+
+  | Scan | Speedup |
+  |---|---|
+  | Versus baseline: one Hamiltonian, many baselines | 80-100x |
+  | Versus energy: many Hamiltonians, one baseline | 20-30x |
+  | Oscillogram, 100 energies x 100 baselines | ~80x |
+  | Two flavors, versus baseline | ~50x |
+
+  The two scans differ because the latent roots depend on the Hamiltonian
+  alone: scanning one Hamiltonian over many baselines solves the
+  characteristic equation once and then evaluates only the phases, whereas an
+  energy scan changes the Hamiltonian at every point.  The vectorised path
+  agrees with the scalar one to 1.2e-13, and with `scipy.linalg.expm` to
+  3.2e-14.
+
+  For context, the vectorised expansion is now about as fast as diagonalising
+  with LAPACK --- one `eigh` plus phases for a baseline scan, batched `eigh`
+  for an energy scan.  That is the honest comparison to draw: the SU(3) route's
+  advantage is that it is a closed form, not that it outruns `eigh`.  What the
+  vectorisation removes is the disadvantage it used to carry.
+
+- 24 tests covering the vectorised path (`tests/test_vectorized.py`): agreement
+  with the scalar path element by element, all three broadcasting patterns,
+  unitarity and normalization on the batched path, empty and length-one stacks,
+  and degenerate Hamiltonians mixed into an otherwise ordinary stack.
+
+- A section on scanning in `docs/source/quickstart.rst`, and a revised cost
+  section in `docs/source/methodology.rst` carrying the measurements above.
+
+### Changed
+
+- Degenerate spectra are still handled exactly on the vectorised path, but the
+  branch cannot be taken elementwise inside a vectorised expression.  The
+  general formula is evaluated everywhere with vanishing denominators replaced
+  by one, and the affected elements are then recomputed individually with the
+  scalar routine.  Degeneracy is measure-zero among floating-point
+  Hamiltonians, so that fallback loop is empty in essentially every real use;
+  the tests exercise it by constructing degenerate cases deliberately.
+
+- The scalar path is unchanged in speed.  Dispatching between the scalar and
+  vectorised paths is done by inspecting the argument types rather than by
+  calling `numpy.ndim`, which would convert a nested list to an array on every
+  call: the first implementation did exactly that and cost the scalar path 47%,
+  which is why the dispatch is written the way it is.  Measured best-of-five,
+  interleaved against the previous release, the overhead is now -1%.
+
+- The scalar three-flavor routine is refactored so that its core takes the
+  SU(3) coefficients and invariants rather than the Hamiltonian matrix, since
+  the vectorised path reuses it for degenerate elements.
+
 ## [1.1.0] - 2026-07-31
 
 An audit of the code released alongside
@@ -79,8 +147,13 @@ in matter, with NSI, or with LIV. Three-flavor results are unaffected.
   single `probabilities_3nu` call used to evaluate `tensor_d` 2048 times --- 512
   from the 8³ loop for ⟨h⟩, and 1536 because `star(k, h_coeffs)` sat inside the
   loop over m, rebuilding a baseline-independent vector three times for each of
-  eight k. None remain on the hot path, and an evaluation goes from 757 to 308
-  microseconds. The algebra is unchanged, to 1e-14.
+  eight k. None remain on the hot path, and an evaluation goes from roughly 700
+  to roughly 40 microseconds. The algebra is unchanged, to 1e-14.
+  *(Corrected in 1.2.0: the commit message for this change, and the description
+  of pull request #2, quote "757 to 308 microseconds". That measurement was
+  taken without a warm-up and is wrong; re-measured carefully, best of five
+  runs, the figures are ~700 µs before and ~40 µs after --- a factor of ~17
+  rather than ~2.5.)*
 - The library docstrings are rewritten in numpydoc format, so Sphinx can render
   them through `sphinx.ext.napoleon` and the `numpydoc` extension; a trial
   autodoc build completes with no warnings. Each module gains `__all__`, an
