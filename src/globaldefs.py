@@ -1,344 +1,361 @@
 # -*- coding: utf-8 -*-
-r"""Contains physical constants and unit-conversion constants.
+r"""Physical constants, unit-conversion factors, and default parameters.
 
-This module contains contains values of physical constants and
-unit-conversion factors used by the various modules of NuOscProbExact.
-The core modules oscprob2nu.py and oscprob3nu.py do not require these
-constants.
+This module contains the values of the physical constants, the
+unit-conversion factors, and the default oscillation parameters used by
+the sample-Hamiltonian and plotting modules of **NuOscProbExact**.
+
+The core modules :mod:`oscprob2nu` and :mod:`oscprob3nu` do *not* need
+these constants: they accept an arbitrary Hermitian Hamiltonian in
+whatever units the user prefers.
+
+Unless stated otherwise, quantities are expressed in natural units, in
+which energies are in eV, mass-squared differences in eV\ :sup:`2`, and
+baselines in eV\ :sup:`-1`.
+
+Notes
+-----
+The lepton mixing parameters are the best-fit values from NuFit 4.0 [1]_,
+including Super-Kamiokande atmospheric data, for both the normal
+ordering (suffix ``_NO_BF``) and the inverted ordering (suffix
+``_IO_BF``).  The non-standard-interaction strengths are taken from
+[2]_.  These constants support the method of [3]_.
+
+References
+----------
+
+.. [1] I. Esteban *et al.*, "Global analysis of three-flavour neutrino
+   oscillations", JHEP 01, 106 (2019), arXiv:1811.05487 (NuFit 4.0).
+
+.. [2] P. Coloma *et al.*, "Curtailing the dark side in non-standard
+   neutrino interactions", arXiv:1805.04530.
+
+.. [3] Mauricio Bustamante, "Exact neutrino oscillation probabilities
+   with arbitrary time-independent Hamiltonians", arXiv:1904.12391.
 
 Created: 2019/04/17 17:03
-Last modified: 2019/04/29 23:39
+Last modified: 2026/07/31
 """
 
+from __future__ import print_function
 
-__version__ = "1.0"
+__version__ = "1.1"
 __author__ = "Mauricio Bustamante"
 __email__ = "mbustamante@gmail.com"
 
-
-from numpy import *
 import numpy as np
 
 
-CONV_KM_TO_INV_EV = 5.06773e9
-r"""float: Module-level constant
+###############################################################################
+# Unit-conversion factors
+###############################################################################
 
-Multiplicative conversion factor from km to eV^{-1}.
-Units: [km^{-1} eV^{-1}].
+CONV_KM_TO_INV_EV = 5.06773e9
+r"""float: Multiplicative conversion factor from km to eV\ :sup:`-1`.
+
+Units: [eV\ :sup:`-1` km\ :sup:`-1`].
 """
 
 CONV_CM_TO_INV_EV = CONV_KM_TO_INV_EV*1.e-5
-r"""float: Module-level constant
+r"""float: Multiplicative conversion factor from cm to eV\ :sup:`-1`.
 
-Multiplicative conversion factor from cm to eV^{-1}.
-Units: [cm^{-1} eV^{-1}]
+Units: [eV\ :sup:`-1` cm\ :sup:`-1`].
 """
 
 CONV_INV_EV_TO_CM = 1./CONV_CM_TO_INV_EV
-r"""float: Module-level constant
+r"""float: Multiplicative conversion factor from eV\ :sup:`-1` to cm.
 
-Multiplicative conversion factor from eV^{-1} to cm.
-Units: [eV cm]
+Units: [eV cm].
 """
 
 CONV_EV_TO_G = 1.783e-33
-r"""float: Module-level constant
+r"""float: Multiplicative conversion factor from eV to grams.
 
-Multiplicative conversion factor from eV^{-1} to grams.
-Units: [g eV^{-1}]
+Converts a mass expressed in eV (i.e., eV/c\ :sup:`2`) into grams.
+Units: [g eV\ :sup:`-1`].
 """
 
 CONV_G_TO_EV = 1./CONV_EV_TO_G
-r"""float: Module-level constant
+r"""float: Multiplicative conversion factor from grams to eV.
 
-Multiplicative conversion factor from grams to eV^{-1}.
-Units: [eV g^{-1}]
+Units: [eV g\ :sup:`-1`].
 """
 
-GF = 1.1663787e-23
-r"""float: Module-level constant
 
-Fermi constant.
-Units: [eV^{-1}]
+###############################################################################
+# Physical constants
+###############################################################################
+
+GF = 1.1663787e-23
+r"""float: Fermi constant.
+
+Units: [eV\ :sup:`-2`].
 """
 
 MASS_ELECTRON = 0.5109989461e6
-r"""float: Module-level constant
+r"""float: Electron mass.
 
-Electron mass.
-Units: [eV]
+Units: [eV].
 """
 
 MASS_PROTON = 938.272046e6
-r"""float: Module-level constant
+r"""float: Proton mass.
 
-Proton mass.
-Units: [eV]
+Units: [eV].
 """
 
 MASS_NEUTRON = 939.565379e6
-r"""float: Module-level constant
+r"""float: Neutron mass.
 
-Neutron mass.
-Units: [eV]
+Units: [eV].
 """
 
-ELECTRON_FRACTION_EARTH_CRUST = 0.5
-r"""float: Module-level constant
 
-Electron fraction in the Earth's crust.
-Units: [Adimensional]
+###############################################################################
+# Matter density in the Earth's crust
+###############################################################################
+
+ELECTRON_FRACTION_EARTH_CRUST = 0.5
+r"""float: Electron fraction in the Earth's crust.
+
+Units: [adimensional].
 """
 
 DENSITY_MATTER_CRUST_G_PER_CM3 = 3.0
-r"""float: Module-level constant
+r"""float: Average matter density in the Earth's crust.
 
-Average matter density in the Earth's crust.
-Units: [g cm^{-3}]
+Units: [g cm\ :sup:`-3`].
 """
 
-# NUM_DENSITY_E_EARTH_CRUST = DENSITY_MATTER_CRUST_G_PER_CM3 * CONV_G_TO_EV \
-#                             / ((MASS_PROTON+MASS_NEUTRON)/2.0) \
-#                             * ELECTRON_FRACTION_EARTH_CRUST \
-#                             / pow(CONV_CM_TO_INV_EV, 3.0)
 NUM_DENSITY_E_EARTH_CRUST = DENSITY_MATTER_CRUST_G_PER_CM3 * CONV_G_TO_EV \
                             / ((MASS_PROTON+MASS_NEUTRON)/2.0) \
                             * ELECTRON_FRACTION_EARTH_CRUST \
                             / pow(CONV_CM_TO_INV_EV, 3.0)
-r"""float: Module-level constant
+r"""float: Electron number density in the Earth's crust.
 
-Electron number density in the Earth's crust
-Units: [eV^3]
+Units: [eV\ :sup:`3`].
 """
 
-VCC_EARTH_CRUST = sqrt(2.0)*GF*NUM_DENSITY_E_EARTH_CRUST
-r"""float: Module-level constant
+VCC_EARTH_CRUST = np.sqrt(2.0)*GF*NUM_DENSITY_E_EARTH_CRUST
+r"""float: Charged-current matter potential in the Earth's crust.
 
-Charged-current matter potential in the Earth's crust.
-Units: [eV]
+Equal to :math:`\sqrt{2} G_F n_e`.  It is positive for neutrinos; use
+its negative for antineutrinos.  Units: [eV].
 """
 
-S12_NO_BF = sqrt(0.310)
-r"""float: Module-level constant
 
-Lepton mixing angle sin(theta_12), best fit from NuFit 4.0, assuming
-normal ordering with SK atmospheric data.
-Units: [Adimensional]
+###############################################################################
+# Lepton mixing parameters, normal ordering
+#
+# Best-fit values from NuFit 4.0, with Super-Kamiokande atmospheric data
+###############################################################################
+
+S12_NO_BF = np.sqrt(0.310)
+r"""float: Lepton mixing angle :math:`\sin\theta_{12}`, normal ordering.
+
+Units: [adimensional].
 """
 
-S23_NO_BF = sqrt(0.582)
-r"""float: Module-level constant
+S23_NO_BF = np.sqrt(0.582)
+r"""float: Lepton mixing angle :math:`\sin\theta_{23}`, normal ordering.
 
-Lepton mixing angle sin(theta_23), best fit from NuFit 4.0, assuming
-normal ordering with SK atmospheric data.
-Units: [Adimensional]
+Units: [adimensional].
 """
 
-S13_NO_BF = sqrt(2.240e-2)
-r"""float: Module-level constant
+S13_NO_BF = np.sqrt(2.240e-2)
+r"""float: Lepton mixing angle :math:`\sin\theta_{13}`, normal ordering.
 
-Lepton mixing angle sin(theta_13), best fit from NuFit 4.0, assuming
-normal ordering with SK atmospheric data.
-Units: [Adimensional]
+Units: [adimensional].
 """
 
 DCP_NO_BF = 217./180.*np.pi
-r"""float: Module-level constant
+r"""float: CP-violation phase :math:`\delta_{\rm CP}`, normal ordering.
 
-Lepton CP-violation phase delta_CP, best fit from NuFit 4.0, assuming
-normal ordering with SK atmospheric data.
-Units: [radian]
+Units: [radian].
 """
 
 D21_NO_BF = 7.39e-5
-r"""float: Module-level constant
+r"""float: Mass-squared difference :math:`\Delta m^2_{21}`, normal
+ordering.
 
-Mass-squared difference Delta m^2_21, best fit from NuFit 4.0, assuming
-normal ordering with SK atmospheric data.
-Units: [eV^2]
+Units: [eV\ :sup:`2`].
 """
 
 D31_NO_BF = 2.525e-3
-r"""float: Module-level constant
+r"""float: Mass-squared difference :math:`\Delta m^2_{31}`, normal
+ordering.
 
-Mass-squared difference Delta m^2_31, best fit from NuFit 4.0, assuming
-normal ordering with SK atmospheric data.
-Units: [eV^2]
+Units: [eV\ :sup:`2`].
 """
 
-S12_IO_BF = sqrt(0.310)
-r"""float: Module-level constant
 
-Lepton mixing angle sin(theta_12), best fit from NuFit 4.0, assuming
-inverted ordering with SK atmospheric data.
-Units: [Adimensional]
+###############################################################################
+# Lepton mixing parameters, inverted ordering
+#
+# Best-fit values from NuFit 4.0, with Super-Kamiokande atmospheric data
+###############################################################################
+
+S12_IO_BF = np.sqrt(0.310)
+r"""float: Lepton mixing angle :math:`\sin\theta_{12}`, inverted
+ordering.
+
+Units: [adimensional].
 """
 
-S23_IO_BF = sqrt(0.582)
-r"""float: Module-level constant
+S23_IO_BF = np.sqrt(0.582)
+r"""float: Lepton mixing angle :math:`\sin\theta_{23}`, inverted
+ordering.
 
-Lepton mixing angle sin(theta_23), best fit from NuFit 4.0, assuming
-inverted ordering with SK atmospheric data.
-Units: [Adimensional]
+Units: [adimensional].
 """
 
-S13_IO_BF = sqrt(2.263e-2)
-r"""float: Module-level constant
+S13_IO_BF = np.sqrt(2.263e-2)
+r"""float: Lepton mixing angle :math:`\sin\theta_{13}`, inverted
+ordering.
 
-Lepton mixing angle sin(theta_13), best fit from NuFit 4.0, assuming
-inverted ordering with SK atmospheric data.
-Units: [Adimensional]
+Units: [adimensional].
 """
 
 DCP_IO_BF = 280./180.*np.pi
-r"""float: Module-level constant
+r"""float: CP-violation phase :math:`\delta_{\rm CP}`, inverted
+ordering.
 
-Lepton CP-violation phase delta_CP, best fit from NuFit 4.0, assuming
-inverted ordering with SK atmospheric data.
-Units: [radian]
+Units: [radian].
 """
 
 D21_IO_BF = 7.39e-5
-r"""float: Module-level constant
+r"""float: Mass-squared difference :math:`\Delta m^2_{21}`, inverted
+ordering.
 
-Mass-squared difference Delta m^2_21, best fit from NuFit 4.0, assuming
-normal ordering with SK atmospheric data.
-Units: [eV^2]
+Units: [eV\ :sup:`2`].
 """
 
 D32_IO_BF = -2.512e-3
-r"""float: Module-level constant
+r"""float: Mass-squared difference :math:`\Delta m^2_{32}`, inverted
+ordering.
 
-Mass-squared difference Delta m^2_32, best fit from NuFit 4.0, assuming
-normal ordering with SK atmospheric data.
-Units: [eV^2]
+Units: [eV\ :sup:`2`].
 """
 
 D31_IO_BF = D32_IO_BF+D21_IO_BF
-r"""float: Module-level constant
+r"""float: Mass-squared difference :math:`\Delta m^2_{31}`, inverted
+ordering.
 
-Mass-squared difference Delta m^2_31, best fit from NuFit 4.0, assuming
-inverted ordering with SK atmospheric data.
-Units: [eV^2]
+Computed as :math:`\Delta m^2_{32} + \Delta m^2_{21}`.
+Units: [eV\ :sup:`2`].
 """
 
-EPS_EE = 0.06
-r"""float: Module-level constant
 
-Total NSI strength parameter eps_ee computed using values of the u and d
-quark parameters compatible at 2sigma with LMA+coherent from 1805.04530.
-Units: [Adimensional]
+###############################################################################
+# Non-standard interaction (NSI) parameters
+#
+# Total NSI strengths computed using values of the u and d quark
+# parameters compatible at 2 sigma with LMA+coherent, from [2]_
+###############################################################################
+
+EPS_EE = 0.06
+r"""float: NSI strength parameter :math:`\epsilon_{ee}`.
+
+Units: [adimensional].
 """
 
 EPS_EM = -0.06
-r"""float: Module-level constant
+r"""float: NSI strength parameter :math:`\epsilon_{e\mu}`.
 
-Total NSI strength parameter eps_em computed using values of the u and d
-quark parameters compatible at 2sigma with LMA+coherent from 1805.04530.
-Units: [Adimensional]
+May in general be complex.  Units: [adimensional].
 """
 
 EPS_ET = 0.0
-r"""float: Module-level constant
+r"""float: NSI strength parameter :math:`\epsilon_{e\tau}`.
 
-Total NSI strength parameter eps_et computed using values of the u and d
-quark parameters compatible at 2sigma with LMA+coherent from 1805.04530.
-Units: [Adimensional]
+May in general be complex.  Units: [adimensional].
 """
 
 EPS_MM = 1.2
-r"""float: Module-level constant
+r"""float: NSI strength parameter :math:`\epsilon_{\mu\mu}`.
 
-Total NSI strength parameter eps_mm computed using values of the u and d
-quark parameters compatible at 2sigma with LMA+coherent from 1805.04530.
-Units: [Adimensional]
+Units: [adimensional].
 """
 
 EPS_MT = 0.0
-r"""float: Module-level constant
+r"""float: NSI strength parameter :math:`\epsilon_{\mu\tau}`.
 
-Total NSI strength parameter eps_mt computed using values of the u and d
-quark parameters compatible at 2sigma with LMA+coherent from 1805.04530.
-Units: [Adimensional]
+May in general be complex.  Units: [adimensional].
 """
 
 EPS_TT = 0.0
-r"""float: Module-level constant
+r"""float: NSI strength parameter :math:`\epsilon_{\tau\tau}`.
 
-Total NSI strength parameter eps_tt computed using values of the u and d
-quark parameters compatible at 2sigma with LMA+coherent from 1805.04530.
-Units: [Adimensional]
+Units: [adimensional].
 """
 
 EPS_2 = [EPS_EE, EPS_EM, EPS_MM]
-r"""float: Module-level constant
+r"""list of float: NSI strengths for two-neutrino oscillations.
 
-Vector of total NSI strength parameters for two-neutrino oscillations.
-Used in oscprob2nu_plot.py.
-Units: [Adimensional]
+Ordered as ``[eps_ee, eps_em, eps_mm]``, ready to be passed to
+:func:`hamiltonians2nu.hamiltonian_2nu_nsi`.
+Units: [adimensional].
 """
 
 EPS_3 = [EPS_EE, EPS_EM, EPS_ET, EPS_MM, EPS_MT, EPS_TT]
-r"""float: Module-level constant
+r"""list of float: NSI strengths for three-neutrino oscillations.
 
-Vector of total NSI strength parameters for three-neutrino oscillations.
-Used in oscprob3nu_plot.py.
-Units: [Adimensional]
+Ordered as ``[eps_ee, eps_em, eps_et, eps_mm, eps_mt, eps_tt]``, ready
+to be passed to :func:`hamiltonians3nu.hamiltonian_3nu_nsi`.
+Units: [adimensional].
 """
 
-# LIV parameters
-# Compatible with 90% C.L. upper limits on c^(4) from 1709.03434
-SXI12 = 0.0
-r"""float: Module-level constant
 
-LIV lepton mixing angle sin(xi_12).
-Units: [Adimensional]
+###############################################################################
+# Lorentz invariance-violating (LIV) parameters
+#
+# Compatible with the 90% C.L. upper limits on c^(4) from 1709.03434
+###############################################################################
+
+SXI12 = 0.0
+r"""float: LIV mixing angle :math:`\sin\xi_{12}`.
+
+Units: [adimensional].
 """
 
 SXI23 = 0.0
-r"""float: Module-level constant
+r"""float: LIV mixing angle :math:`\sin\xi_{23}`.
 
-LIV lepton mixing angle sin(xi_23).
-Units: [Adimensional]
+Units: [adimensional].
 """
 
 SXI13 = 0.0
-r"""float: Module-level constant
+r"""float: LIV mixing angle :math:`\sin\xi_{13}`.
 
-LIV lepton mixing angle sin(xi_13).
-Units: [Adimensional]
+Units: [adimensional].
 """
 
 DXICP = 0.0
-r"""float: Module-level constant
+r"""float: LIV CP-violation phase :math:`\delta_{\xi,\rm CP}`.
 
-LIV CP-violation phase.
-Units: [radian]
+Units: [radian].
 """
 
 B1 = 1.e-9
-r"""float: Module-level constant
+r"""float: Eigenvalue :math:`b_1` of the LIV operator.
 
-LIV eigenvalue b_1.
-Units: [eV]
+Units: [eV].
 """
 
 B2 = 1.e-9
-r"""float: Module-level constant
+r"""float: Eigenvalue :math:`b_2` of the LIV operator.
 
-LIV eigenvalue b_2.
-Units: [eV]
+Units: [eV].
 """
+
 B3 = 2.e-9
-r"""float: Module-level constant
+r"""float: Eigenvalue :math:`b_3` of the LIV operator.
 
-LIV eigenvalue b_3.
-Units: [eV]
+Units: [eV].
 """
 
-LAMBDA = 1.e12 # [eV]
-r"""float: Module-level constant
+LAMBDA = 1.e12
+r"""float: Energy scale :math:`\Lambda` of the LIV operator.
 
-LIV energy scale Lambda.
-Units: [eV]
+Units: [eV].
 """

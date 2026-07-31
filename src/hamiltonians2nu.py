@@ -1,99 +1,171 @@
 # -*- coding: utf-8 -*-
 r"""Compute two-neutrino Hamiltonians for selected scenarios.
 
-This module contains the routines to compute the two-neutrino
-Hamiltonians for the following scenarios: oscillations in vacuum, in
+This module contains routines that build the two-neutrino Hamiltonian
+for a number of standard scenarios --- oscillations in vacuum, in
 matter of constant density, in matter with non-standard interactions
-(NSI), and in a CPT-odd Lorentz invariance-violating background (LIV).
+(NSI), and in a CPT-odd Lorentz invariance-violating (LIV) background
+--- together with the textbook oscillation formulas for vacuum and
+matter, which serve to validate the exact SU(2) computation performed by
+:mod:`oscprob2nu` and described in [1]_.
+
+The Hamiltonians built here are meant to be passed to
+:func:`oscprob2nu.probabilities_2nu`.  They are examples: the exact
+computation accepts *any* Hermitian :math:`2\times2` Hamiltonian.
+
+Units
+-----
+
+Throughout this module,
+
+===========================  ==================================
+Quantity                     Units
+===========================  ==================================
+Mass-squared difference      eV\ :sup:`2`
+Neutrino energy              eV
+Baseline                     eV\ :sup:`-1`
+Matter potential             eV
+LIV eigenvalues and scale    eV
+===========================  ==================================
+
+The routine
+:func:`hamiltonian_2nu_vacuum_energy_independent` returns the
+energy-*independent* part of the vacuum Hamiltonian, i.e. it has units
+of eV\ :sup:`2` and must still be divided by the neutrino energy.  The
+module :mod:`globaldefs` provides ``CONV_KM_TO_INV_EV`` to convert a
+baseline in km into eV\ :sup:`-1`.
+
+Sign convention
+---------------
+
+The vacuum Hamiltonian is
+
+.. math::
+   H_{\rm vac} = \frac{\Delta m^2}{4E}
+   \begin{pmatrix} -\cos 2\theta & \sin 2\theta \\
+                    \sin 2\theta & \cos 2\theta \end{pmatrix} ,
+
+i.e. the mass eigenstate with the larger mass-squared value is the
+second one.  This sign matters: it fixes the sign of the matter
+potential *relative* to the vacuum term, and hence whether the routines
+describe neutrinos (as they do) or antineutrinos.  An overall sign flip
+of the vacuum Hamiltonian alone is invisible in vacuum but moves the
+Mikheyev-Smirnov-Wolfenstein resonance from neutrinos to antineutrinos.
 
 Routine listings
 ----------------
 
-    * mixing_matrix_2nu - Returns 2x2 rotation matrix
-    * hamiltonian_2nu_vacuum_energy_independent - Returns H_vac (no 1/E)
-    * hamiltonian_2nu_matter - Returns H_matter
-    * hamiltonian_2nu_nsi - Returns H_NSI
-    * hamiltonian_2nu_liv - Returns H_LIV
+    * mixing_matrix_2nu - Returns the :math:`2\times2` rotation matrix
+    * hamiltonian_2nu_vacuum_energy_independent - Returns :math:`H_{\rm vac}` without the :math:`1/E`
+    * probabilities_2nu_vacuum_std - Vacuum probabilities, standard formula
+    * hamiltonian_2nu_matter - Returns :math:`H_{\rm matter}`
+    * probabilities_2nu_matter_std - Matter probabilities, standard formula
+    * hamiltonian_2nu_nsi - Returns :math:`H_{\rm NSI}`
+    * hamiltonian_2nu_liv - Returns :math:`H_{\rm LIV}`
+
+References
+----------
+
+.. [1] Mauricio Bustamante, "Exact neutrino oscillation probabilities
+   with arbitrary time-independent Hamiltonians", arXiv:1904.12391.
 
 Created: 2019/04/21 15:00
-Last modified: 2019/04/23 21:04
+Last modified: 2026/07/31
 """
 
+from __future__ import print_function
 
-__version__ = "1.0"
+__version__ = "1.1"
 __author__ = "Mauricio Bustamante"
 __email__ = "mbustamante@gmail.com"
 
+__all__ = ['mixing_matrix_2nu', 'hamiltonian_2nu_vacuum_energy_independent',
+           'probabilities_2nu_vacuum_std', 'hamiltonian_2nu_matter',
+           'probabilities_2nu_matter_std', 'hamiltonian_2nu_nsi',
+           'hamiltonian_2nu_liv']
 
-from numpy import *
 import numpy as np
-import cmath
-import cmath as cmath
-
-import oscprob3nu
-from globaldefs import *
 
 
 def mixing_matrix_2nu(sth):
-    r"""Returns the 2x2 rotation matrix.
+    r"""Returns the :math:`2\times2` rotation matrix.
 
-    Computes and returns a 2x2 real rotation matrix parametrized by a
-    single rotation angle theta.
+    Computes and returns the real :math:`2\times2` rotation matrix
+    parametrized by a single rotation angle :math:`\theta`.
 
     Parameters
     ----------
     sth : float
-        Sin(theta).
+        :math:`\sin\theta`, with :math:`\theta` in the first quadrant,
+        so that :math:`\cos\theta = \sqrt{1-\sin^2\theta} \geq 0`.
 
     Returns
     -------
-    list
-        Rotation matrix [[cth, sth], [-sth, cth]], with cth = cos(theta)
-        and sth = sin(theta).
+    list of list of float
+        The rotation matrix ``[[cth, sth], [-sth, cth]]``, with
+        ``cth`` = :math:`\cos\theta`.
+
+    Examples
+    --------
+    >>> R = mixing_matrix_2nu(0.6)
+    >>> print('%.6f  %.6f' % (R[0][0], R[0][1]))
+    0.800000  0.600000
     """
-    cth = sqrt(1.0-sth*sth)
+    cth = np.sqrt(1.0-sth*sth)
 
-    U00 = cth
-    U01 = sth
-    U10 = -sth
-    U11 = cth
-
-    return [[U00,U01],[U10,U11]]
+    return [[cth, sth], [-sth, cth]]
 
 
 def hamiltonian_2nu_vacuum_energy_independent(sth, Dm2,
-    compute_matrix_multiplication=False):
+                                              compute_matrix_multiplication=False):
     r"""Returns the two-neutrino Hamiltonian for vacuum oscillations.
 
-    Computes and returns the 2x2 real two-neutrino Hamiltonian for
-    oscillations in vacuum, parametrized by a single mixing angle theta
-    and a single mass-squared difference Dm2.  The Hamiltonian is
-    H = (1/4)*R.M2.R^T, with R the 2x2 rotation matrix and
-    M2 = diag(-Dm2, Dm2) the traceless mass matrix.  The multiplicative
-    factor 1/E is not applied.
-
-    The sign convention matters: the mass eigenstate with the larger
-    mass-squared value is the second one, so that adding a positive
-    matter potential to the ee entry describes neutrinos.
+    Computes and returns the energy-independent part of the real
+    :math:`2\times2` two-neutrino Hamiltonian for oscillations in
+    vacuum, parametrized by a single mixing angle :math:`\theta` and a
+    single mass-squared difference :math:`\Delta m^2`.  The Hamiltonian
+    is :math:`H = \frac{1}{4} R M^2 R^T`, with :math:`R` the rotation
+    matrix and :math:`M^2 = \mathrm{diag}(-\Delta m^2, \Delta m^2)` the
+    traceless mass matrix.  The multiplicative factor :math:`1/E` is
+    *not* applied.
 
     Parameters
     ----------
     sth : float
-        Sin(theta).
+        :math:`\sin\theta`.
     Dm2 : float
-        Mass-squared difference Delta m^2.
+        Mass-squared difference :math:`\Delta m^2` [eV\ :sup:`2`].
     compute_matrix_multiplication : bool, optional
-        If False (default), use the pre-computed expressions; otherwise,
-        multiply R.M2.R^dagger live.
+        If ``False`` (default), use the pre-computed closed-form
+        expressions; if ``True``, carry out the matrix multiplication
+        :math:`R M^2 R^T` explicitly.  Both give the same result; the
+        option exists as a cross-check.
 
     Returns
     -------
-    list
-        Hamiltonian 2x2 matrix.
+    numpy.ndarray
+        The :math:`2\times2` Hamiltonian [eV\ :sup:`2`], to be divided
+        by the neutrino energy before use.
+
+    Notes
+    -----
+    See the module-level *Sign convention* section: the mass eigenstate
+    with the larger mass-squared value is the second one, so that adding
+    a positive matter potential to the :math:`ee` entry describes
+    neutrinos.
+
+    Examples
+    --------
+    >>> H = hamiltonian_2nu_vacuum_energy_independent(0.5, 1.0)
+    >>> print('%.6f  %.6f' % (H[0][0].real, H[0][1].real))
+    -0.125000  0.216506
     """
-    th = np.arcsin(sth)
-    c2th = cos(2.0*th)
-    s2th = sin(2.0*th)
+    # Trigonometric identities, rather than arcsin followed by cos and
+    # sin, keep this consistent with mixing_matrix_2nu and avoid a
+    # needless round trip through the angle itself.
+    cth = np.sqrt(1.0-sth*sth)
+    c2th = 1.0-2.0*sth*sth
+    s2th = 2.0*sth*cth
 
     f = 1./4.
 
@@ -104,13 +176,13 @@ def hamiltonian_2nu_vacuum_energy_independent(sth, Dm2,
         H10 = H01
         H11 = -H00
 
-        H = [[H00*f,H01*f], [H10*f,H11*f]]
+        H = np.array([[H00*f, H01*f], [H10*f, H11*f]], dtype=complex)
 
     else:
 
-        # PMNS matrix
+        # Rotation matrix
         R = np.array(mixing_matrix_2nu(sth))
-        # Mass matrix
+        # Traceless mass matrix
         M2 = np.array([[-Dm2, 0.0], [0.0, Dm2]])
         # Hamiltonian
         H = (f*(R @ M2 @ R.T)).astype(complex)
@@ -119,68 +191,92 @@ def hamiltonian_2nu_vacuum_energy_independent(sth, Dm2,
 
 
 def probabilities_2nu_vacuum_std(sth, Dm2, energy, L):
-    r"""Returns 2nu oscillation vacuum probabilities, std. computation.
+    r"""Returns the 2nu vacuum probabilities, standard computation.
 
     Returns the probabilities for two-neutrino oscillations in vacuum,
-    computed using the standard analytical expression of the
-    probabilities.
+    computed with the standard analytical expression
+
+    .. math::
+       P_{e\mu} = \sin^2 2\theta \sin^2\left(\frac{\Delta m^2 L}{4E}\right).
+
+    This routine exists to validate the exact SU(2) computation in
+    :mod:`oscprob2nu`; the two agree to round-off.
 
     Parameters
     ----------
     sth : float
-        Sin(theta).
+        :math:`\sin\theta`.
     Dm2 : float
-        Mass-squared difference Delta m^2.
+        Mass-squared difference :math:`\Delta m^2` [eV\ :sup:`2`].
     energy : float
         Neutrino energy [eV].
     L : float
-        Baseline [eV^{-1}].
+        Baseline [eV\ :sup:`-1`].
 
     Returns
     -------
-    list
-        List of probabilities [Pee, Pem, Pme, Pmm].
+    list of float
+        The probabilities ``[Pee, Pem, Pme, Pmm]``.
+
+    See Also
+    --------
+    oscprob2nu.probabilities_2nu : The exact SU(2) computation.
+
+    Examples
+    --------
+    >>> prob = probabilities_2nu_vacuum_std(0.5, 2.5e-3, 1.0e9, 5.0e12)
+    >>> print('%.6f  %.6f' % (prob[0], prob[1]))
+    0.999794  0.000206
     """
     arg = Dm2*L/4.0/energy
-    cth = sqrt(1.0-sth*sth)
+    cth = np.sqrt(1.0-sth*sth)
     s2th = 2.0*sth*cth
 
-    Pem = s2th*s2th * pow(sin(arg), 2.0)
+    Pem = s2th*s2th * pow(np.sin(arg), 2.0)
     Pme = Pem
     Pee = 1.0-Pem
     Pmm = 1.0-Pme
 
-    prob = [Pee, Pem, Pme, Pmm]
-
-    return prob
+    return [Pee, Pem, Pme, Pmm]
 
 
 def hamiltonian_2nu_matter(h_vacuum_energy_independent, energy, VCC):
     r"""Returns the two-neutrino Hamiltonian for matter oscillations.
 
-    Computes and returns the 2x2 real two-neutrino Hamiltonian for
-    oscillations in matter with constant density.
+    Computes and returns the :math:`2\times2` two-neutrino Hamiltonian
+    for oscillations in matter of constant density, obtained by adding
+    the charged-current matter potential to the :math:`ee` entry of the
+    vacuum Hamiltonian.
 
     Parameters
     ----------
-    h_vacuum_energy_independent : list
-        Energy-independent part of the two-neutrino Hamiltonian for
-        oscillations in vacuum.  This is computed by the routine
-        hamiltonian_2nu_vacuum_energy_independent.
+    h_vacuum_energy_independent : array_like
+        Energy-independent part of the two-neutrino vacuum Hamiltonian
+        [eV\ :sup:`2`], as returned by
+        `hamiltonian_2nu_vacuum_energy_independent`.  It is not
+        modified.
     energy : float
-        Neutrino energy.
+        Neutrino energy [eV].
     VCC : float
-        Potential due to charged-current interactions of nu_e with
-        electrons.
+        Potential due to charged-current interactions of
+        :math:`\nu_e` with electrons [eV].  Positive for neutrinos,
+        negative for antineutrinos.
 
     Returns
     -------
-    list
-        Hamiltonian 2x2 matrix.
+    numpy.ndarray
+        The :math:`2\times2` Hamiltonian [eV].
+
+    Examples
+    --------
+    >>> H_vac = hamiltonian_2nu_vacuum_energy_independent(0.5, 2.5e-3)
+    >>> H = hamiltonian_2nu_matter(H_vac, 1.0e9, 1.0e-13)
+    >>> print('%.6e' % H[0][0].real)
+    -2.125000e-13
     """
     h_matter = np.array(h_vacuum_energy_independent, dtype=complex)/energy
 
-    # Add the matter potential to the ee term to find the matter
+    # Add the matter potential to the ee entry to find the matter
     # Hamiltonian
     h_matter[0][0] += VCC
 
@@ -188,82 +284,124 @@ def hamiltonian_2nu_matter(h_vacuum_energy_independent, energy, VCC):
 
 
 def probabilities_2nu_matter_std(sth, Dm2, VCC, energy, L):
-    r"""Returns 2nu oscillation matter probabilities, std. computation.
+    r"""Returns the 2nu matter probabilities, standard computation.
 
-    Returns the probabilities for two-neutrino oscillations in matter,
-    computed using the standard analytical expression of the
-    probabilities.
+    Returns the probabilities for two-neutrino oscillations in matter of
+    constant density, computed with the standard analytical expression
+    in terms of the effective mixing angle :math:`\theta_m` and
+    effective mass-squared difference :math:`\Delta m^2_m`,
+
+    .. math::
+       \sin^2 2\theta_m = \frac{\sin^2 2\theta}
+                               {\sin^2 2\theta + (\cos 2\theta - x)^2} ,
+       \quad
+       x \equiv \frac{2 V_{\rm CC} E}{\Delta m^2} .
+
+    This routine exists to validate the exact SU(2) computation in
+    :mod:`oscprob2nu`; the two agree to round-off.
 
     Parameters
     ----------
     sth : float
-        Sin(theta).
+        :math:`\sin\theta`.
     Dm2 : float
-        Mass-squared difference Delta m^2.
+        Mass-squared difference :math:`\Delta m^2` [eV\ :sup:`2`].
     VCC : float
-        Potential due to charged-current interactions of nu_e with
-        electrons.
+        Potential due to charged-current interactions of
+        :math:`\nu_e` with electrons [eV].
     energy : float
         Neutrino energy [eV].
     L : float
-        Baseline [eV^{-1}].
+        Baseline [eV\ :sup:`-1`].
 
     Returns
     -------
-    list
-        List of probabilities [Pee, Pem, Pme, Pmm].
+    list of float
+        The probabilities ``[Pee, Pem, Pme, Pmm]``.
+
+    Notes
+    -----
+    The resonance sits at :math:`x = \cos 2\theta`, which for
+    :math:`\theta < \pi/4` lies at positive energy, i.e. in the
+    neutrino channel.  Note that :math:`\cos 2\theta` is *signed*:
+    computing it as :math:`\sqrt{1 - \sin^2 2\theta}` would lose the
+    sign and misplace the resonance for :math:`\theta > \pi/4`.
+
+    See Also
+    --------
+    oscprob2nu.probabilities_2nu : The exact SU(2) computation.
+
+    Examples
+    --------
+    >>> prob = probabilities_2nu_matter_std(0.5, 2.5e-3, 1.0e-13, 1.0e9,
+    ...                                     5.0e12)
+    >>> print('%.6f  %.6f' % (prob[0], prob[1]))
+    0.985595  0.014405
     """
     x = 2.0*VCC*energy/Dm2
-    cth = sqrt(1.0-sth*sth)
+    cth = np.sqrt(1.0-sth*sth)
     s2th = 2.0*sth*cth
     s2thsq = s2th*s2th
-    # cos(2*theta) is signed; sqrt(1 - sin^2(2*theta)) would not be, and
-    # would misplace the resonance for theta > pi/4
+    # cos(2*theta) is signed; sqrt(1 - sin^2(2*theta)) would not be
     c2th = 1.0-2.0*sth*sth
 
     denominator = s2thsq+pow(c2th-x, 2.0)
 
-    Dm2m = Dm2*sqrt(denominator)
+    Dm2m = Dm2*np.sqrt(denominator)
     s2thmsq = s2thsq / denominator
 
     arg = Dm2m*L/4.0/energy
 
-    Pem = s2thmsq * pow(sin(arg), 2.0)
+    Pem = s2thmsq * pow(np.sin(arg), 2.0)
     Pme = Pem
     Pee = 1.0-Pem
     Pmm = 1.0-Pme
 
-    prob = [Pee, Pem, Pme, Pmm]
-
-    return prob
+    return [Pee, Pem, Pme, Pmm]
 
 
 def hamiltonian_2nu_nsi(h_vacuum_energy_independent, energy, VCC, eps):
     r"""Returns the two-neutrino Hamiltonian for oscillations with NSI.
 
-    Computes and returns the 2x2 real two-neutrino Hamiltonian for
-    oscillations with non-standard interactions (NSI) in matter with
+    Computes and returns the :math:`2\times2` two-neutrino Hamiltonian
+    for oscillations with non-standard interactions (NSI) in matter of
     constant density.
 
     Parameters
     ----------
-    h_vacuum_energy_independent : list
-        Energy-independent part of the two-neutrino Hamiltonian for
-        oscillations in vacuum.  This is computed by the routine
-        hamiltonian_2nu_vacuum_energy_independent.
+    h_vacuum_energy_independent : array_like
+        Energy-independent part of the two-neutrino vacuum Hamiltonian
+        [eV\ :sup:`2`], as returned by
+        `hamiltonian_2nu_vacuum_energy_independent`.  It is not
+        modified.
     energy : float
-        Neutrino energy.
+        Neutrino energy [eV].
     VCC : float
-        Potential due to charged-current interactions of nu_e with
-        electrons.
-    eps : list
-        Vector of NSI strength parameters: eps = eps_ee, eps_em, eps_mm.
+        Potential due to charged-current interactions of
+        :math:`\nu_e` with electrons [eV].
+    eps : array_like
+        The three NSI strength parameters
+        ``[eps_ee, eps_em, eps_mm]``, adimensional.  The diagonal
+        parameters ``eps_ee`` and ``eps_mm`` are real; the off-diagonal
+        ``eps_em`` may be complex, and its complex conjugate is placed
+        in the lower off-diagonal entry so that the Hamiltonian stays
+        Hermitian.
 
     Returns
     -------
-    list
-        Hamiltonian 2x2 matrix.
+    numpy.ndarray
+        The :math:`2\times2` complex Hamiltonian [eV].
+
+    Examples
+    --------
+    >>> H_vac = hamiltonian_2nu_vacuum_energy_independent(0.5, 2.5e-3)
+    >>> H = hamiltonian_2nu_nsi(H_vac, 1.0e9, 1.0e-13, [0.06, -0.06+0.03j,
+    ...                                                 1.2])
+    >>> print('%+.6e%+.6ej' % (H[0][1].real, H[0][1].imag))
+    +5.352659e-13+3.000000e-15j
     """
+    # The array is complex so that a complex eps_em keeps its imaginary
+    # part; a real array would silently discard it.
     h_nsi = np.array(h_vacuum_energy_independent, dtype=complex)/energy
 
     eps_ee, eps_em, eps_mm = eps
@@ -276,40 +414,53 @@ def hamiltonian_2nu_nsi(h_vacuum_energy_independent, energy, VCC, eps):
     return h_nsi
 
 
-def hamiltonian_2nu_liv(h_vacuum_energy_independent, energy, sxi,
-    b1, b2, Lambda):
+def hamiltonian_2nu_liv(h_vacuum_energy_independent, energy, sxi, b1, b2,
+                        Lambda):
     r"""Returns the two-neutrino Hamiltonian for oscillations with LIV.
 
-    Computes and returns the 2x2 real two-neutrino Hamiltonian for
-    oscillations in a CPT-odd Lorentz invariance-violating background.
+    Computes and returns the :math:`2\times2` two-neutrino Hamiltonian
+    for oscillations in a CPT-odd Lorentz invariance-violating (LIV)
+    background.  The LIV term is :math:`(E/\Lambda) R B_2 R^T`, with
+    :math:`B_2 = \mathrm{diag}(b_1, b_2)` and :math:`R` the rotation by
+    the angle :math:`\xi` between the eigenvectors of :math:`B_2` and
+    the flavor states.
 
     Parameters
     ----------
-    h_vacuum_energy_independent : list
-        Energy-independent part of the two-neutrino Hamiltonian for
-        oscillations in vacuum.  This is computed by the routine
-        hamiltonian_2nu_vacuum_energy_independent.
+    h_vacuum_energy_independent : array_like
+        Energy-independent part of the two-neutrino vacuum Hamiltonian
+        [eV\ :sup:`2`], as returned by
+        `hamiltonian_2nu_vacuum_energy_independent`.  It is not
+        modified.
     energy : float
-        Neutrino energy.
+        Neutrino energy [eV].
     sxi : float
-        Sin(xi), with xi the rotation angle between the space of the
-        eigenvectors of B2 and the flavor states.
+        :math:`\sin\xi`, with :math:`\xi` the rotation angle between the
+        space of the eigenvectors of :math:`B_2` and the flavor states.
     b1 : float
-        Eigenvalue b1 of the LIV operator B2.
+        Eigenvalue :math:`b_1` of the LIV operator :math:`B_2` [eV].
     b2 : float
-        Eigenvalue b2 of the LIV operator B2.
+        Eigenvalue :math:`b_2` of the LIV operator :math:`B_2` [eV].
     Lambda : float
-        Energy scale of the LIV operator B2.
+        Energy scale :math:`\Lambda` of the LIV operator :math:`B_2`
+        [eV].
 
     Returns
     -------
-    list
-        Hamiltonian 2x2 matrix.
+    numpy.ndarray
+        The :math:`2\times2` complex Hamiltonian [eV].
+
+    Examples
+    --------
+    >>> H_vac = hamiltonian_2nu_vacuum_energy_independent(0.5, 2.5e-3)
+    >>> H = hamiltonian_2nu_liv(H_vac, 1.0e9, 0.6, 1.0e-9, 2.0e-9, 1.0e12)
+    >>> print('%.6e' % H[0][0].real)
+    1.047500e-12
     """
     h_liv = np.array(h_vacuum_energy_independent, dtype=complex)/energy
 
     f = energy/Lambda
-    cxi = sqrt(1.0-sxi*sxi)
+    cxi = np.sqrt(1.0-sxi*sxi)
 
     h_liv[0][0] += f*(b1*cxi*cxi + b2*sxi*sxi)
     h_liv[0][1] += f*((-b1+b2)*cxi*sxi)
