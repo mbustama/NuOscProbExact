@@ -117,6 +117,10 @@ def pmns_mixing_matrix(
 
     .. versionadded:: 1.0.0
 
+    .. versionchanged:: 1.1.0
+       Returns a complex :class:`numpy.ndarray` rather than a nested
+       list.
+
     Parameters
     ----------
     s12 : float
@@ -185,6 +189,10 @@ def hamiltonian_3nu_vacuum_energy_independent(
     :math:`1/E` is *not* applied.
 
     .. versionadded:: 1.0.0
+
+    .. versionchanged:: 1.1.0
+       Returns a complex :class:`numpy.ndarray` rather than a nested
+       list.
 
     Parameters
     ----------
@@ -375,6 +383,13 @@ def probabilities_3nu_vacuum_std(
 
     .. versionadded:: 1.0.0
 
+    .. versionchanged:: 1.1.0
+       The signature changed: the energy is now given in eV and the
+       baseline in :math:`\mathrm{eV}^{-1}`, like the rest of the
+       library, rather than in GeV and km.  The rounded constants 1.27
+       and 2.54 that folded in the old conversion overstated every phase
+       by 0.242%.
+
     Parameters
     ----------
     U : array_like
@@ -450,6 +465,16 @@ def hamiltonian_3nu_matter(
 
     .. versionadded:: 1.0.0
 
+    .. versionchanged:: 1.1.0
+       Returns a complex :class:`numpy.ndarray` rather than a nested
+       list.
+
+    .. versionchanged:: 1.3.0
+       Accepts an array of energies, returning one Hamiltonian per
+       energy stacked along a leading axis; the matter potential may be
+       an array too.  A scalar energy still returns a single matrix, and
+       the results are bit-for-bit what the equivalent loop produced.
+
     Parameters
     ----------
     h_vacuum_energy_independent : array_like
@@ -506,6 +531,16 @@ def hamiltonian_3nu_nsi(
     in matter of constant density.
 
     .. versionadded:: 1.0.0
+
+    .. versionchanged:: 1.1.0
+       Returns a complex :class:`numpy.ndarray` rather than a nested
+       list.
+
+    .. versionchanged:: 1.3.0
+       Accepts an array of energies, returning one Hamiltonian per
+       energy stacked along a leading axis; the matter potential may be
+       an array too.  A scalar energy still returns a single matrix, and
+       the results are bit-for-bit what the equivalent loop produced.
 
     Parameters
     ----------
@@ -585,6 +620,16 @@ def hamiltonian_3nu_liv(
     of :math:`B_3` to the flavor states.
 
     .. versionadded:: 1.0.0
+
+    .. versionchanged:: 1.1.0
+       Returns a complex :class:`numpy.ndarray` rather than a nested
+       list.
+
+    .. versionchanged:: 1.3.0
+       Accepts an array of energies, returning one Hamiltonian per
+       energy stacked along a leading axis; the matter potential may be
+       an array too.  A scalar energy still returns a single matrix, and
+       the results are bit-for-bit what the equivalent loop produced.
 
     Parameters
     ----------

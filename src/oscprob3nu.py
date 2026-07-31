@@ -126,6 +126,11 @@ def hamiltonian_3nu_coefficients(
 
     .. versionadded:: 1.0.0
 
+    .. versionchanged:: 1.1.0
+       Returns real floats.  The coefficients of a Hermitian Hamiltonian
+       are real by construction, but the routine previously returned a
+       mixture of floats and complex numbers.
+
     Parameters
     ----------
     hamiltonian_matrix : array_like
@@ -179,6 +184,12 @@ def tensor_d(i: int, j: int, k: int) -> float:
     (\{\lambda_i, \lambda_j\} \lambda_k)`, defined in [1]_.
 
     .. versionadded:: 1.0.0
+
+    .. versionchanged:: 1.1.0
+       Validates its indices and raises :exc:`ValueError` on one outside
+       0-7. The dispatch previously fell off the end of an ``elif``
+       chain and returned ``None``, so the failure surfaced far from its
+       cause.
 
     Parameters
     ----------
@@ -393,6 +404,12 @@ def psi_roots(h2: Union[int, float], h3: Union[int, float]) -> List[float]:
     Hamiltonian.  The roots are independent of the baseline.
 
     .. versionadded:: 1.0.0
+
+    .. versionchanged:: 1.1.0
+       No longer returns NaN when the traceless part of the Hamiltonian
+       vanishes, and the arc-cosine argument is clipped to :math:`[-1,
+       1]` so that round-off cannot make the roots complex and the
+       evolution operator non-unitary.
 
     Parameters
     ----------
@@ -906,6 +923,12 @@ def evolution_operator_3nu_u_coefficients(
 
     .. versionadded:: 1.0.0
 
+    .. versionchanged:: 1.1.0
+       Degenerate Hamiltonians are handled exactly instead of returning
+       NaN.  Lagrange interpolation over the latent roots divides by
+       :math:`3\psi_m^2 - |h|^2`, which vanishes at a repeated root; the
+       two degenerate cases are now taken in their confluent limit.
+
     Parameters
     ----------
     hamiltonian_matrix : array_like
@@ -967,6 +990,19 @@ def evolution_operator_3nu(
     :math:`3\times3` unitary matrix.
 
     .. versionadded:: 1.0.0
+
+    .. versionchanged:: 1.1.0
+       Degenerate Hamiltonians are handled exactly instead of returning
+       NaN.  Lagrange interpolation over the latent roots divides by
+       :math:`3\psi_m^2 - |h|^2`, which vanishes at a repeated root; the
+       two degenerate cases are now taken in their confluent limit.
+
+    .. versionchanged:: 1.2.0
+       Accepts a stack of Hamiltonians of shape ``(..., n, n)``, an
+       array of baselines, or both broadcast against each other,
+       returning an array with the broadcast leading axes.  A single
+       Hamiltonian with a scalar baseline returns exactly what it
+       returned before.
 
     Parameters
     ----------
@@ -1030,6 +1066,19 @@ def probabilities_3nu(
     = |[U_3]_{\beta\alpha}|^2`.
 
     .. versionadded:: 1.0.0
+
+    .. versionchanged:: 1.1.0
+       Degenerate Hamiltonians are handled exactly instead of returning
+       NaN.  Lagrange interpolation over the latent roots divides by
+       :math:`3\psi_m^2 - |h|^2`, which vanishes at a repeated root; the
+       two degenerate cases are now taken in their confluent limit.
+
+    .. versionchanged:: 1.2.0
+       Accepts a stack of Hamiltonians of shape ``(..., n, n)``, an
+       array of baselines, or both broadcast against each other,
+       returning an array with the broadcast leading axes.  A single
+       Hamiltonian with a scalar baseline returns exactly what it
+       returned before.
 
     Parameters
     ----------

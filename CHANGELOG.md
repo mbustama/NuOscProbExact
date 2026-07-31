@@ -72,6 +72,19 @@ The one thing users will notice is the supported Python range.
   That the public surface has been stable for seven years is worth being able
   to see at a glance.
 
+- 33 `.. versionchanged::` directives across 23 of those functions, recording
+  what changed and when.  Only changes a caller can observe are listed — a
+  changed signature, a newly accepted input type, a changed return type, or a
+  changed returned value.  Most are 1.1.0, where the audit corrected results;
+  the rest are the batched interface in 1.2.0 and the batched Hamiltonian
+  builders in 1.3.0.
+
+  1.4.0, 1.5.0 and 1.6.0 are deliberately absent.  They rewrote most of these
+  functions, but their entries above record that the results are byte-for-byte
+  identical, and a directive announcing a change a caller cannot detect would
+  make the ones that matter harder to find.  The performance history is in
+  this changelog, which is where it belongs.
+
 ### Changed
 
 - **`requires-python` is now `>=3.9`, raised from `>=3.7`.**  The old floor was
