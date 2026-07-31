@@ -111,6 +111,8 @@ def mixing_matrix_2nu(sth: Union[int, float]) -> List[List[float]]:
     Computes and returns the real :math:`2\times2` rotation matrix
     parametrized by a single rotation angle :math:`\theta`.
 
+    .. versionadded:: 1.0.0
+
     Parameters
     ----------
     sth : float
@@ -149,6 +151,8 @@ def hamiltonian_2nu_vacuum_energy_independent(
     matrix and :math:`M^2 = \mathrm{diag}(-\Delta m^2, \Delta m^2)` the
     traceless mass matrix.  The multiplicative factor :math:`1/E` is
     *not* applied.
+
+    .. versionadded:: 1.0.0
 
     Parameters
     ----------
@@ -228,6 +232,8 @@ def probabilities_2nu_vacuum_std(
     This routine exists to validate the exact SU(2) computation in
     :mod:`oscprob2nu`; the two agree to round-off.
 
+    .. versionadded:: 1.0.0
+
     Parameters
     ----------
     sth : float
@@ -277,6 +283,8 @@ def hamiltonian_2nu_matter(
     for oscillations in matter of constant density, obtained by adding
     the charged-current matter potential to the :math:`ee` entry of the
     vacuum Hamiltonian.
+
+    .. versionadded:: 1.0.0
 
     Parameters
     ----------
@@ -340,6 +348,8 @@ def probabilities_2nu_matter_std(
 
     This routine exists to validate the exact SU(2) computation in
     :mod:`oscprob2nu`; the two agree to round-off.
+
+    .. versionadded:: 1.0.0
 
     Parameters
     ----------
@@ -413,6 +423,8 @@ def hamiltonian_2nu_nsi(
     for oscillations with non-standard interactions (NSI) in matter of
     constant density.
 
+    .. versionadded:: 1.0.0
+
     Parameters
     ----------
     h_vacuum_energy_independent : array_like
@@ -480,6 +492,8 @@ def hamiltonian_2nu_liv(
     :math:`B_2 = \mathrm{diag}(b_1, b_2)` and :math:`R` the rotation by
     the angle :math:`\xi` between the eigenvectors of :math:`B_2` and
     the flavor states.
+
+    .. versionadded:: 1.0.0
 
     Parameters
     ----------

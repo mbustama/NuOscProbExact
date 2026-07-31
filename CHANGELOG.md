@@ -65,6 +65,13 @@ The one thing users will notice is the supported Python range.
   codecov, Documentation, PyPI, Downloads, and Code style: ruff.  The PyPI and
   Downloads badges will not resolve until the first release is published.
 
+- A `.. versionadded::` directive on all 32 public functions, so the API
+  reference says when each one entered the library.  The answer is mostly
+  1.0.0: 28 of them have been there since the first release in 2019, and the
+  only later additions are the four that came with the Numba backend in 1.6.0.
+  That the public surface has been stable for seven years is worth being able
+  to see at a glance.
+
 ### Changed
 
 - **`requires-python` is now `>=3.9`, raised from `>=3.7`.**  The old floor was

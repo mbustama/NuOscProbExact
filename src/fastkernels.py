@@ -132,6 +132,8 @@ def available() -> bool:
     been turned off.  Whether they are *worth* using for a given stack
     is a separate question; see `worthwhile`.
 
+    .. versionadded:: 1.6.0
+
     Returns
     -------
     bool
@@ -148,6 +150,8 @@ def worthwhile(n_flavors: int, size: int) -> bool:
     Below the per-flavor threshold in `MIN_BATCH` the NumPy path is
     quicker, and using the kernel anyway would make installing the
     optional extra a pessimisation for those calls.
+
+    .. versionadded:: 1.6.0
 
     Parameters
     ----------
@@ -391,6 +395,8 @@ if HAVE_NUMBA:                                          # pragma: no branch
     ) -> np.ndarray:
         r"""Returns the nine probabilities for a stack of Hamiltonians.
 
+        .. versionadded:: 1.6.0
+
         Parameters
         ----------
         h_stack : numpy.ndarray
@@ -413,6 +419,8 @@ if HAVE_NUMBA:                                          # pragma: no branch
         l_stack: np.ndarray
     ) -> np.ndarray:
         r"""Returns the four probabilities for a stack of Hamiltonians.
+
+        .. versionadded:: 1.6.0
 
         Parameters
         ----------
