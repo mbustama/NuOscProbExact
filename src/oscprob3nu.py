@@ -79,9 +79,9 @@ def hamiltonian_3nu_coefficients(hamiltonian_matrix):
 
     Returns
     -------
-    list
+    list of float
         List of coefficients [h1, h2, h3, h4, h5, h6, h7, h8].  These
-        are complex numbers, in general.
+        are real, because the Hamiltonian is Hermitian.
 
     Example
     -------
@@ -105,16 +105,17 @@ def hamiltonian_3nu_coefficients(hamiltonian_matrix):
     H33 = hamiltonian_matrix[2][2]
 
     # h0 = (H11+H22+H33)/3.0  # Not used
-    h1 = H12.real
-    h2 = -H12.imag
-    h3 = (H11-H22)/2.0
-    h4 = H13.real
-    h5 = -H13.imag
-    h6 = H23.real
-    h7 = -H23.imag
-    h8 = (H11+H22-2.0*H33)*SQRT3/6.0
+    h1 = np.real(H12)
+    h2 = -np.imag(H12)
+    h3 = np.real(H11-H22)/2.0
+    h4 = np.real(H13)
+    h5 = -np.imag(H13)
+    h6 = np.real(H23)
+    h7 = -np.imag(H23)
+    h8 = np.real(H11+H22-2.0*H33)*SQRT3/6.0
 
-    return [h1, h2, h3, h4, h5, h6, h7, h8]
+    return [float(h1), float(h2), float(h3), float(h4), float(h5),
+            float(h6), float(h7), float(h8)]
 
 
 def tensor_d(i, j, k):
