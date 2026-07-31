@@ -55,5 +55,39 @@ jobs:
           pip install twine
           twine check dist/*
 
+      # - name: Publish package to TestPyPI
+      #   uses: pypa/gh-action-pypi-publish@release/v1
+      #   with:
+      #     repository-url: https://test.pypi.org/legacy/
+      #
+      # A rehearsal of the step below, against https://test.pypi.org, which is a
+      # throwaway index that exists for exactly this.  Left commented out rather than
+      # guarded by a condition because there is no secret or variable to key it on:
+      # trusted publishing carries no token, so dormancy here has to be textual.
+      #
+      # Worth rehearsing at all because the real upload is unrepeatable.  PyPI refuses a
+      # second upload of a version permanently, even after the file is deleted, so a
+      # release that fails partway through cannot be retried -- it can only be renumbered.
+      # `twine check` above catches a README the renderer will reject, which is the most
+      # likely such failure, but it does not exercise the OIDC exchange, the trusted
+      # publisher configuration, or the upload itself.
+      #
+      # To use it:
+      #
+      #   1. Create a pending publisher at https://test.pypi.org/manage/account/publishing/
+      #      -- a separate account and a separate registration from PyPI proper, with the
+      #      same four values: nuoscprobexact, mbustama, NuOscProbExact, publish.yml, and
+      #      an empty environment name.
+      #   2. Uncomment the four lines above, and comment out the PyPI step below, so that
+      #      the rehearsal does not become the performance.
+      #   3. Publish a GitHub Release and watch it land at
+      #      https://test.pypi.org/project/nuoscprobexact/.
+      #   4. Restore this file before releasing for real.
+      #
+      # TestPyPI burns version numbers the same way PyPI does, so rehearse with a version
+      # you do not intend to ship -- 1.7.0.dev1 rather than 1.7.0.  It also does not mirror
+      # PyPI's dependencies, which does not matter here: numpy is the only requirement and
+      # the wheel is universal.
+
       - name: Publish package to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
