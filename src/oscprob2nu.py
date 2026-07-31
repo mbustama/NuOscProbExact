@@ -237,7 +237,8 @@ def probabilities_2nu(hamiltonian_matrix, L):
     # h_abs = |h|
     h_abs = modulus(h_coeffs)
 
-    Pem = abs(h_coeffs[0])**2.0 / h_abs**2.0 * pow(sin(h_abs*L), 2.0)
+    Pem = (abs(h_coeffs[0])**2.0 + abs(h_coeffs[1])**2.0) / h_abs**2.0 \
+            * pow(sin(h_abs*L), 2.0)
     Pme = Pem
     Pee = 1.0-Pem
     Pmm = 1.0-Pme
