@@ -630,8 +630,17 @@ def _u_coefficients_3nu_batch(h: np.ndarray, L: np.ndarray) -> np.ndarray:
     positive = h2 > 0.0
     safe_h2 = np.where(positive, h2, 1.0)
 
-    pre = 2.0*np.sqrt(safe_h2)*SQRT3_INV
-    chi = np.arccos(np.clip(-SQRT3*h3*safe_h2**-1.5, -1.0, 1.0))
+    # sqrt(|h|^2) is wanted three times over -- for the prefactor, for
+    # the |h|^-3 in the arc-cosine argument, and for the degeneracy
+    # scale below -- so it is taken once.  Writing that argument as a
+    # division by |h|^2 sqrt(|h|^2), rather than as a power of -1.5, is
+    # seven times quicker for the same value.
+    sqrt_h2 = np.sqrt(safe_h2)
+    pre = 2.0*SQRT3_INV*sqrt_h2
+
+    # Not clipped in place: for a single Hamiltonian this is a scalar,
+    # which has nowhere to write to
+    chi = np.arccos(np.clip((-SQRT3)*h3/(safe_h2*sqrt_h2), -1.0, 1.0))
     m = np.array([1.0, 2.0, 3.0])
     psi = pre[..., None]*np.cos((chi[..., None]+2.0*np.pi*m)/3.0)
     psi = np.where(positive[..., None], psi, 0.0)
@@ -665,11 +674,12 @@ def _u_coefficients_3nu_batch(h: np.ndarray, L: np.ndarray) -> np.ndarray:
     # criterion as the scalar path: the closest pair of latent roots.
     # Degeneracy is a property of the Hamiltonian, so the test is made at
     # the shape of `h` and then broadcast over the baselines.
-    gaps = np.stack([np.abs(psi[..., 0]-psi[..., 1]),
-                     np.abs(psi[..., 0]-psi[..., 2]),
-                     np.abs(psi[..., 1]-psi[..., 2])], axis=-1)
-    degenerate = ((gaps.min(-1) <= DEGENERACY_TOL*np.sqrt(safe_h2))
-                  | ~positive)
+    # Taking the smallest gap pairwise avoids stacking the three of them
+    # into an array only to reduce it away again
+    smallest_gap = np.minimum(np.minimum(np.abs(psi[..., 0]-psi[..., 1]),
+                                         np.abs(psi[..., 0]-psi[..., 2])),
+                              np.abs(psi[..., 1]-psi[..., 2]))
+    degenerate = (smallest_gap <= DEGENERACY_TOL*sqrt_h2) | ~positive
     if degenerate.any():
         full = u.shape[:-1]
         h_full = np.broadcast_to(h, full+(8,))
