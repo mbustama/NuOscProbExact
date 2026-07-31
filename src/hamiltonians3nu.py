@@ -224,9 +224,9 @@ def probabilities_3nu_vacuum_std(U, D21, D31, energy, L):
     D31 : float
         Mass-squared difference Delta m^2_31.
     energy : float
-        Neutrino energy.
+        Neutrino energy [eV].
     L : float
-        Baseline.
+        Baseline [eV^{-1}].
 
     Returns
     -------
@@ -235,9 +235,10 @@ def probabilities_3nu_vacuum_std(U, D21, D31, energy, L):
         Ptt].
     """
     D32 = D31-D21
-    arg21 = 2.54*D21*L/energy#/2.0
-    arg31 = 2.54*D31*L/energy#/2.0
-    arg32 = 2.54*D32*L/energy#/2.0
+    # Oscillation phases, 2 * Dm2 * L / (4 * E)
+    arg21 = D21*L/2.0/energy
+    arg31 = D31*L/2.0/energy
+    arg32 = D32*L/2.0/energy
     s21 = sin(arg21)
     s31 = sin(arg31)
     s32 = sin(arg32)

@@ -132,16 +132,16 @@ def probabilities_2nu_vacuum_std(sth, Dm2, energy, L):
     Dm2 : float
         Mass-squared difference Delta m^2.
     energy : float
-        Neutrino energy.
+        Neutrino energy [eV].
     L : float
-        Baseline.
+        Baseline [eV^{-1}].
 
     Returns
     -------
     list
         List of probabilities [Pee, Pem, Pme, Pmm].
     """
-    arg = 1.27*Dm2*L/energy#/4.0
+    arg = Dm2*L/4.0/energy
     cth = sqrt(1.0-sth*sth)
     s2th = 2.0*sth*cth
 
@@ -204,25 +204,29 @@ def probabilities_2nu_matter_std(sth, Dm2, VCC, energy, L):
         Potential due to charged-current interactions of nu_e with
         electrons.
     energy : float
-        Neutrino energy.
+        Neutrino energy [eV].
     L : float
-        Baseline.
+        Baseline [eV^{-1}].
 
     Returns
     -------
     list
         List of probabilities [Pee, Pem, Pme, Pmm].
     """
-    x = 2.0*VCC*(energy*1.e9)/Dm2
+    x = 2.0*VCC*energy/Dm2
     cth = sqrt(1.0-sth*sth)
     s2th = 2.0*sth*cth
     s2thsq = s2th*s2th
-    c2th = sqrt(1.0-s2thsq)
+    # cos(2*theta) is signed; sqrt(1 - sin^2(2*theta)) would not be, and
+    # would misplace the resonance for theta > pi/4
+    c2th = 1.0-2.0*sth*sth
 
-    Dm2m = Dm2*sqrt(s2thsq+pow(c2th-x, 2.0))
-    s2thmsq = s2thsq / (s2thsq+pow(c2th-x, 2.0))
+    denominator = s2thsq+pow(c2th-x, 2.0)
 
-    arg = 1.27*Dm2m*L/energy#/4.0
+    Dm2m = Dm2*sqrt(denominator)
+    s2thmsq = s2thsq / denominator
+
+    arg = Dm2m*L/4.0/energy
 
     Pem = s2thmsq * pow(sin(arg), 2.0)
     Pme = Pem
