@@ -27,9 +27,8 @@ __email__ = "mbustamante@nbi.ku.dk"
 
 from numpy import *
 import numpy as np
-from pylab import *
-from matplotlib import *
 import matplotlib as mpl
+import matplotlib.pyplot as plt
 
 import sys
 sys.path.append('../src')
@@ -216,7 +215,7 @@ def plot_probability_3nu_vs_energy_compare(output_format='pdf',
             ax.set_yticks(ax_yticks_minor, minor=True)
             ax.set_ylim([0.0, 1.0])
 
-        pylab.savefig(output_path+'prob_3nu_vs_energy_compare.'+output_format,
+        plt.savefig(output_path+'prob_3nu_vs_energy_compare.'+output_format,
             bbox_inches='tight', dpi=300)
 
     return

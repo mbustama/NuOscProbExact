@@ -23,9 +23,8 @@ __email__ = "mbustamante@gmail.com"
 
 from numpy import *
 import numpy as np
-from pylab import *
-from matplotlib import *
 import matplotlib as mpl
+import matplotlib.pyplot as plt
 
 import sys
 sys.path.append('../src')
@@ -241,7 +240,7 @@ def plot_probability_3nu_vs_baseline(
         xy = (0.05, 0.80), xycoords='axes fraction', color='k', fontsize=25,
         horizontalalignment='left', rotation=0, zorder=2 )
 
-    pylab.savefig(output_path+output_filename+'.'+output_format,
+    plt.savefig(output_path+output_filename+'.'+output_format,
         bbox_inches='tight', dpi=100)
 
     plt.close()
@@ -466,7 +465,7 @@ def plot_probability_3nu_vs_energy(
         xy = (0.05, 0.80), xycoords='axes fraction', color='k', fontsize=25,
         horizontalalignment='left', rotation=0, zorder=2 )
 
-    pylab.savefig(output_path+output_filename+'.'+output_format,
+    plt.savefig(output_path+output_filename+'.'+output_format,
         bbox_inches='tight', dpi=100)
 
     plt.close()
@@ -547,7 +546,7 @@ def plot_probability_3nu_vacuum_vs_l_std(output_format='pdf'):
     # Legend
     ax.legend(loc='center left', frameon=False, ncol=1)
 
-    pylab.savefig('prob_3nu_vacuum_std_vs_l.'+output_format, bbox_inches='tight',
+    plt.savefig('prob_3nu_vacuum_std_vs_l.'+output_format, bbox_inches='tight',
         dpi=300)
 
     return
