@@ -233,6 +233,14 @@ def tensor_d(i, j, k):
         return 0.0
 
 
+# The d tensor is constant, so it is tabulated once, at import time, as a
+# dense 8x8x8 array.  Evaluating the star product and the SU(3)
+# invariants from this table, rather than by calling tensor_d inside
+# nested loops, is what makes repeated probability evaluations fast.
+_TENSOR_D = np.array([[[tensor_d(i, j, k) for k in range(8)]
+                       for j in range(8)] for i in range(8)])
+
+
 def star(i, h_coeffs):
     r"""Returns the SU(3) star oroduct (h*h)_i.
 
@@ -251,10 +259,9 @@ def star(i, h_coeffs):
     float
         Star product (h*h)_i.
     """
-    res = sum([tensor_d(i,j,k)*h_coeffs[j]*h_coeffs[k]
-            for j in range(0,8) for k in range(0,8)])
+    h = np.asarray(h_coeffs, dtype=float)
 
-    return res
+    return float(h @ _TENSOR_D[i] @ h)
 
 
 def su3_invariants(h_coeffs):
@@ -275,12 +282,13 @@ def su3_invariants(h_coeffs):
     h3 : float
         SU(3) invariant <h>.
     """
-    # h2 = |h|^2
-    h2 = sum([h*h for h in h_coeffs])
+    h = np.asarray(h_coeffs, dtype=float)
 
-    # h3 = <h>
-    h3 = sum([tensor_d(i,j,k)*h_coeffs[i]*h_coeffs[j]*h_coeffs[k]
-            for i in range(0,8) for j in range(0,8) for k in range(0,8)])
+    # h2 = |h|^2
+    h2 = float(h @ h)
+
+    # h3 = <h> = h_i (h*h)_i, using the star product computed once
+    h3 = float(h @ (_TENSOR_D @ h @ h))
 
     return h2, h3
 
@@ -389,11 +397,15 @@ def evolution_operator_3nu_u_coefficients(hamiltonian_matrix, L):
 
         return [u0]+uk
 
+    # (h*h)_k, computed once: it depends on neither m nor the baseline
+    star_coeffs = _TENSOR_D @ np.asarray(h_coeffs, dtype=float) \
+        @ np.asarray(h_coeffs, dtype=float)
+
     # [e^{i*L*psi1}, e^{i*L*psi2}, e^{i*L*psi3}]
     exp_psi = [cmath.exp(1.j*L*x) for x in psi]
 
-    u0 = sum([x for x in exp_psi])/3.
-    uk = [ 1.j*sum([exp_psi[m]*(psi[m]*h_coeffs[k]-star(k,h_coeffs)) \
+    u0 = sum(exp_psi)/3.
+    uk = [ 1.j*sum([exp_psi[m]*(psi[m]*h_coeffs[k]-star_coeffs[k]) \
             /(3.*psi[m]*psi[m]-h2) for m in [0,1,2]]) for k in range(0,8)]
 
     # [u0, u1, u2, u3, u4, u5, u6, u7, u8]
