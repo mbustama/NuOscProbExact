@@ -113,6 +113,10 @@ def mixing_matrix_2nu(sth: Union[int, float]) -> List[List[float]]:
 
     .. versionadded:: 1.0.0
 
+    .. versionchanged:: 1.1.0
+       Returns a complex :class:`numpy.ndarray` rather than a nested
+       list.
+
     Parameters
     ----------
     sth : float
@@ -153,6 +157,15 @@ def hamiltonian_2nu_vacuum_energy_independent(
     *not* applied.
 
     .. versionadded:: 1.0.0
+
+    .. versionchanged:: 1.1.0
+       The sign convention was corrected.  The Hamiltonian was built
+       from :math:`M^2 = \mathrm{diag}(\Delta m^2, -\Delta m^2)`, which
+       yields the negative of the textbook Hamiltonian.  In vacuum this
+       is invisible, but it reverses the sign of the matter potential
+       relative to the vacuum term, so results in matter, with NSI, or
+       with LIV were the antineutrino ones.  It also returns a complex
+       :class:`numpy.ndarray` rather than a nested list.
 
     Parameters
     ----------
@@ -234,6 +247,13 @@ def probabilities_2nu_vacuum_std(
 
     .. versionadded:: 1.0.0
 
+    .. versionchanged:: 1.1.0
+       The signature changed: the energy is now given in eV and the
+       baseline in :math:`\mathrm{eV}^{-1}`, like the rest of the
+       library, rather than in GeV and km.  The rounded constants 1.27
+       and 2.54 that folded in the old conversion overstated every phase
+       by 0.242%.
+
     Parameters
     ----------
     sth : float
@@ -285,6 +305,19 @@ def hamiltonian_2nu_matter(
     vacuum Hamiltonian.
 
     .. versionadded:: 1.0.0
+
+    .. versionchanged:: 1.1.0
+       Results changed, following the sign-convention correction in
+       `hamiltonian_2nu_vacuum_energy_independent`: this routine
+       previously returned the antineutrino Hamiltonian when asked for
+       the neutrino one, placing the MSW resonance on the wrong side.
+       Returns a complex :class:`numpy.ndarray`.
+
+    .. versionchanged:: 1.3.0
+       Accepts an array of energies, returning one Hamiltonian per
+       energy stacked along a leading axis; the matter potential may be
+       an array too.  A scalar energy still returns a single matrix, and
+       the results are bit-for-bit what the equivalent loop produced.
 
     Parameters
     ----------
@@ -350,6 +383,16 @@ def probabilities_2nu_matter_std(
     :mod:`oscprob2nu`; the two agree to round-off.
 
     .. versionadded:: 1.0.0
+
+    .. versionchanged:: 1.1.0
+       The signature changed: the energy is now given in eV and the
+       baseline in :math:`\mathrm{eV}^{-1}`, like the rest of the
+       library, rather than in GeV and km.  The rounded constants 1.27
+       and 2.54 that folded in the old conversion overstated every phase
+       by 0.242%.  The sign of :math:`\cos 2\theta` is also kept, where
+       it was previously discarded by computing it as :math:`\sqrt{1 -
+       \sin^2 2\theta}`; for :math:`\theta > \pi/4` that put the matter
+       resonance on the wrong side.
 
     Parameters
     ----------
@@ -425,6 +468,19 @@ def hamiltonian_2nu_nsi(
 
     .. versionadded:: 1.0.0
 
+    .. versionchanged:: 1.1.0
+       The imaginary part of a complex :math:`\epsilon_{e\mu}` is no
+       longer discarded: the vacuum Hamiltonian was real, so the array
+       was ``float64`` and the in-place addition truncated the value.
+       Results also changed with the sign-convention correction
+       described under `hamiltonian_2nu_matter`.
+
+    .. versionchanged:: 1.3.0
+       Accepts an array of energies, returning one Hamiltonian per
+       energy stacked along a leading axis; the matter potential may be
+       an array too.  A scalar energy still returns a single matrix, and
+       the results are bit-for-bit what the equivalent loop produced.
+
     Parameters
     ----------
     h_vacuum_energy_independent : array_like
@@ -494,6 +550,20 @@ def hamiltonian_2nu_liv(
     the flavor states.
 
     .. versionadded:: 1.0.0
+
+    .. versionchanged:: 1.1.0
+       :math:`\cos\xi` was computed as ``sqrt(1 - sxi - sxi)`` rather
+       than ``sqrt(1 - sxi*sxi)``.  For :math:`0 < \sin\xi < 1/2` the
+       LIV term was not a rotation at all, and for :math:`\sin\xi \geq
+       1/2` the whole Hamiltonian became NaN.  Results also changed with
+       the sign-convention correction described under
+       `hamiltonian_2nu_matter`.
+
+    .. versionchanged:: 1.3.0
+       Accepts an array of energies, returning one Hamiltonian per
+       energy stacked along a leading axis; the matter potential may be
+       an array too.  A scalar energy still returns a single matrix, and
+       the results are bit-for-bit what the equivalent loop produced.
 
     Parameters
     ----------

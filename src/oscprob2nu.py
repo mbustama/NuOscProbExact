@@ -95,6 +95,11 @@ def hamiltonian_2nu_coefficients(
 
     .. versionadded:: 1.0.0
 
+    .. versionchanged:: 1.1.0
+       Returns real floats.  The coefficients of a Hermitian Hamiltonian
+       are real by construction, but the routine previously returned a
+       mixture of floats and complex numbers.
+
     Parameters
     ----------
     hamiltonian_matrix : array_like
@@ -372,6 +377,10 @@ def evolution_operator_2nu_u_coefficients(
 
     .. versionadded:: 1.0.0
 
+    .. versionchanged:: 1.1.0
+       Degenerate Hamiltonians are handled exactly instead of returning
+       NaN, by taking the limit :math:`\sin(|h|L)/|h| \to L`.
+
     Parameters
     ----------
     hamiltonian_matrix : array_like
@@ -432,6 +441,17 @@ def evolution_operator_2nu(
 
     .. versionadded:: 1.0.0
 
+    .. versionchanged:: 1.1.0
+       Degenerate Hamiltonians are handled exactly instead of returning
+       NaN, by taking the limit :math:`\sin(|h|L)/|h| \to L`.
+
+    .. versionchanged:: 1.2.0
+       Accepts a stack of Hamiltonians of shape ``(..., n, n)``, an
+       array of baselines, or both broadcast against each other,
+       returning an array with the broadcast leading axes.  A single
+       Hamiltonian with a scalar baseline returns exactly what it
+       returned before.
+
     Parameters
     ----------
     hamiltonian_matrix : array_like
@@ -489,6 +509,21 @@ def probabilities_2nu(
     :math:`P_{\alpha\beta} \equiv P(\nu_\alpha \to \nu_\beta)`.
 
     .. versionadded:: 1.0.0
+
+    .. versionchanged:: 1.1.0
+       The :math:`h_2` contribution was restored.  The transition
+       probability is :math:`|U_{\mu e}|^2 = u_1^2 + u_2^2`, but the
+       routine computed only :math:`|h_1|^2/|h|^2 \sin^2(|h|L)`.  Since
+       :math:`h_2 = -\mathrm{Im}(H_{12})`, this affected every
+       Hamiltonian with a complex off-diagonal entry; oscillations in
+       vacuum and in matter of constant density were unaffected.
+
+    .. versionchanged:: 1.2.0
+       Accepts a stack of Hamiltonians of shape ``(..., n, n)``, an
+       array of baselines, or both broadcast against each other,
+       returning an array with the broadcast leading axes.  A single
+       Hamiltonian with a scalar baseline returns exactly what it
+       returned before.
 
     Parameters
     ----------
