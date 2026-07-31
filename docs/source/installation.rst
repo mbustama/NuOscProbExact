@@ -121,7 +121,8 @@ File tree
    │   └── workflows/
    │       ├── tests.yml                # The suite: five Pythons, all three backends
    │       ├── lint.yml                 # ruff, and the docs build under -W
-   │       └── pages.yml                # Builds and deploys the docs to GitHub Pages
+   │       ├── pages.yml                # Builds and deploys the docs to GitHub Pages
+   │       └── publish.yml              # Publishes to PyPI on a GitHub Release
    ├── .gitignore                       # Build, cache, and generated-output artefacts
    ├── CHANGELOG.md                     # Notable changes, rendered as a docs page
    ├── LICENSE                          # MIT license
