@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 r"""Routines to plot two-neutrino flavor-transition probabilities.
 
-This module contains contains routines to plot two-neutrino
+This module contains routines to plot two-neutrino
 oscillation probabilities vs. the neutrino baseline and energy.  These
 routines are used by run_testsuite.py to produce a suite of test plots.
 
@@ -10,6 +10,13 @@ Routine listings
 
     * plot_probability_2nu_vs_baseline - Plot probabilities vs. baseline
     * plot_probability_2nu_vs_energy - Plot probabilities vs. energy
+
+References
+----------
+
+.. [1] Mauricio Bustamante, "NuOscProbExact: a general-purpose code
+   to compute exact two-flavor and three-flavor neutrino oscillation
+   probabilities", arXiv:1904.12391.
 
 Created: 2019/04/22 18:35
 Last modified: 2019/04/22 19:31
@@ -23,9 +30,8 @@ __email__ = "mbustamante@gmail.com"
 
 from numpy import *
 import numpy as np
-from pylab import *
-from matplotlib import *
 import matplotlib as mpl
+import matplotlib.pyplot as plt
 
 import sys
 sys.path.append('../src')
@@ -223,7 +229,7 @@ def plot_probability_2nu_vs_baseline(
         xy = (0.05, 0.80), xycoords='axes fraction', color='k', fontsize=25,
         horizontalalignment='left', rotation=0, zorder=2 )
 
-    pylab.savefig(output_path+output_filename+'.'+output_format,
+    plt.savefig(output_path+output_filename+'.'+output_format,
         bbox_inches='tight', dpi=100)
 
     plt.close()
@@ -430,7 +436,7 @@ def plot_probability_2nu_vs_energy(
         xy = (0.05, 0.80), xycoords='axes fraction', color='k', fontsize=25,
         horizontalalignment='left', rotation=0, zorder=2 )
 
-    pylab.savefig(output_path+output_filename+'.'+output_format,
+    plt.savefig(output_path+output_filename+'.'+output_format,
         bbox_inches='tight', dpi=100)
 
     plt.close()

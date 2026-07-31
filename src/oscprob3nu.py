@@ -1,436 +1,577 @@
 # -*- coding: utf-8 -*-
-r"""Compute the three-neutrino flavor-transition probability.
+r"""Compute the three-neutrino flavor-transition probabilities.
 
-This module contains all the necessary routines to compute the
-three-neutrino flavor-transition probabilities using the SU(3)
-exponential expansion.
+This module contains the routines needed to compute three-neutrino
+flavor-transition probabilities for an arbitrary time-independent
+:math:`3\times3` Hermitian Hamiltonian, using the SU(3) exponential
+expansion described in [2]_.
+
+The Hamiltonian is expanded in the basis of Gell-Mann matrices, whose
+structure constants and :math:`d` tensor follow the conventions of [1]_,
+
+.. math:: H = h_0 \mathbb{1} + h_k \lambda^k ,
+
+and the time-evolution operator in the same basis,
+
+.. math:: U_3(L) = u_0 \mathbb{1} + i u_k \lambda^k .
+
+The term :math:`h_0` contributes only an overall phase and is dropped;
+all routines therefore work with the traceless part of the Hamiltonian,
+which leaves the oscillation probabilities unchanged.
+
+Units
+-----
+
+The routines are unit-agnostic: they require only that the Hamiltonian
+and the baseline be given in reciprocal units, so that the product
+:math:`H L` is dimensionless.  Elsewhere in **NuOscProbExact** the
+Hamiltonian is in eV and the baseline in eV\ :sup:`-1`; the module
+:mod:`globaldefs` provides ``CONV_KM_TO_INV_EV`` to convert a baseline
+in km into eV\ :sup:`-1`.
 
 Routine listings
 ----------------
 
-    * hamiltonian_3nu_coefficients - Returns coefficients of Hamiltonian
-    * tensor_d - Returns the value of the tensor :math:`d_{i,jk}`
-    * star - Returns the SU(3) product :math:`(h * h)_k`
-    * su3_invariants - Returns the SU(3) invariants :math:`|h|^2, <L>`
+    * hamiltonian_3nu_coefficients - Returns the :math:`h_k`
+    * tensor_d - Returns the SU(3) tensor :math:`d_{ijk}`
+    * star - Returns the SU(3) star product :math:`(h \star h)_i`
+    * su3_invariants - Returns the SU(3) invariants :math:`|h|^2, \langle h \rangle`
     * psi_roots - Returns the roots of the characteristic equation
     * evolution_operator_3nu_u_coefficients - Returns the :math:`u_k`
-    * evolution_operator_3nu - Returns evolution operator :math:`U_3`
+    * evolution_operator_3nu - Returns the evolution operator :math:`U_3`
     * probabilities_3nu - Returns the oscillation probabilities
 
 References
 ----------
 
 .. [1] A.J. MacFarlane, A. Sudbery, and P.H. Weisz, "On Gell-Mann's
-   :math:`\lambda`-matrices, :math:`d`- and math`f`-tensors, octets, and
-   parametrizations of SU(3)", Commun. Math. Phys. 11, 77 (1968).
+   :math:`\lambda`-matrices, :math:`d`- and :math:`f`-tensors, octets,
+   and parametrizations of SU(3)", Commun. Math. Phys. 11, 77 (1968).
 
 .. [2] Mauricio Bustamante, "Exact neutrino oscillation probabilities
-   with arbitrary time-independent Hamiltonians", arXiv:1904.XXXXX.
+   with arbitrary time-independent Hamiltonians", arXiv:1904.12391.
 
 Created: 2019/04/11 15:36
-Last modified: 2019/04/20 18:47
+Last modified: 2026/07/31
 """
 
+from __future__ import print_function
 
-__version__ = "1.0"
+__version__ = "1.1"
 __author__ = "Mauricio Bustamante"
 __email__ = "mbustamante@gmail.com"
 
+__all__ = ['hamiltonian_3nu_coefficients', 'tensor_d', 'star',
+           'su3_invariants', 'psi_roots',
+           'evolution_operator_3nu_u_coefficients', 'evolution_operator_3nu',
+           'probabilities_3nu']
 
-from numpy import *
-import numpy as np
 import cmath
-import cmath as cmath
+
+import numpy as np
 
 
-SQRT3 = sqrt(3.0)
-r"""float: Module-level constant
+SQRT3 = np.sqrt(3.0)
+r"""float: Module-level constant equal to :math:`\sqrt{3}`."""
 
-Constant equal to sqrt(3.0).
-"""
-
-SQRT3_INV = 1./sqrt(3.0)
-r"""float: Module-level constant
-
-Constant equal to 1.0/sqrt(3.0).
-"""
+SQRT3_INV = 1./np.sqrt(3.0)
+r"""float: Module-level constant equal to :math:`1/\sqrt{3}`."""
 
 NEG_HALF_SQRT3_INV = -SQRT3_INV/2.0
-r"""float: Module-level constant
+r"""float: Module-level constant equal to :math:`-1/(2\sqrt{3})`."""
 
-Constant equal to -1.0/sqrt(3.0)/2.0.
+DEGENERACY_TOL = 1.e-12
+r"""float: Module-level constant.
+
+Relative tolerance below which two latent roots :math:`\psi` are treated
+as degenerate.  The general expression for the :math:`u_k` divides by
+:math:`3\psi_m^2 - |h|^2`, which vanishes at a repeated root, so a
+degenerate spectrum is handled by a separate, exact expression.
 """
 
 
 def hamiltonian_3nu_coefficients(hamiltonian_matrix):
-    r"""Returns the h_k of the SU(3)-expansion of the 3nu Hamiltonian.
+    r"""Returns the :math:`h_k` of the SU(3) expansion of the Hamiltonian.
 
-    Computes the coefficients :math:`h_1, ..., h_8` in the SU(3)
-    expansion of the provided three-flavor Hamiltonian
-    `hamiltonian_matrix`, which is assumed to be given in the flavor
-    basis.  The Hamiltonian is a :math:`3\times3` Hermitian matrix.
+    Computes the coefficients :math:`h_1, \ldots, h_8` of the SU(3)
+    expansion :math:`H = h_0 \mathbb{1} + h_k \lambda^k` of the
+    three-flavor Hamiltonian `hamiltonian_matrix`, which is assumed to
+    be given in the flavor basis.  The coefficient :math:`h_0`
+    contributes only an overall phase to the evolution operator and is
+    not returned.
 
     Parameters
     ----------
     hamiltonian_matrix : array_like
-        Three-flavor Hamiltonian matrix, given as the list
-        [[H11, H12, H13], [H12*, H22, H23], [H13*, H23*, H33]], where
-        the componentes Hij are complex numbers.
+        Three-flavor Hamiltonian, given as the nested list
+        ``[[H11, H12, H13], [H21, H22, H23], [H31, H32, H33]]``.  It
+        must be Hermitian.
 
     Returns
     -------
-    list
-        List of coefficients [h1, h2, h3, h4, h5, h6, h7, h8].  These
-        are complex numbers, in general.
+    list of float
+        The eight coefficients ``[h1, h2, h3, h4, h5, h6, h7, h8]``.
+        They are real, because the Hamiltonian is Hermitian.
 
-    Example
-    -------
-    >>> hamiltonian_matrix = [
-    ...                   [1.0+0.0j, 0.0+2.0j, 0.0-1.0j],
-    ...                   [0.0-2.0j, 3.0+0.0j, 3.0+0.0j],
-    ...                   [0.0+1.0j, 3.0-0.0j, -5.0+0.0j]
-    ... ]
+    Examples
+    --------
+    >>> hamiltonian_matrix = [[1.0+0.0j, 0.0+2.0j, 0.0-1.0j],
+    ...                       [0.0-2.0j, 3.0+0.0j, 3.0+0.0j],
+    ...                       [0.0+1.0j, 3.0-0.0j, -5.0+0.0j]]
     >>> h_coeffs = hamiltonian_3nu_coefficients(hamiltonian_matrix)
-    >>> print(h_coeffs)
-    [0.0, -2.0, (-1+0j), 0.0, 1.0, 3.0, -0.0, (-1.7320508075688774+0j)]
+    >>> print('  '.join(['%.6f' % (h+0.0) for h in h_coeffs]))
+    0.000000  -2.000000  -1.000000  0.000000  1.000000  3.000000  0.000000  4.041452
     """
     H11 = hamiltonian_matrix[0][0]
     H12 = hamiltonian_matrix[0][1]
     H13 = hamiltonian_matrix[0][2]
-    H21 = hamiltonian_matrix[1][0]
     H22 = hamiltonian_matrix[1][1]
     H23 = hamiltonian_matrix[1][2]
-    H31 = hamiltonian_matrix[2][0]
-    H32 = hamiltonian_matrix[2][1]
     H33 = hamiltonian_matrix[2][2]
 
-    # h0 = (H11+H22+H33)/3.0  # Not used
-    h1 = H12.real
-    h2 = -H12.imag
-    h3 = (H11-H22)/2.0
-    h4 = H13.real
-    h5 = -H13.imag
-    h6 = H23.real
-    h7 = -H23.imag
-    h8 = (H11+H22-2.0*H33)*SQRT3/6.0
+    # h0 = (H11+H22+H33)/3.0 is not returned: it multiplies the identity
+    # and so contributes only an overall phase to U3, which cancels in
+    # the oscillation probabilities.
+    h1 = np.real(H12)
+    h2 = -np.imag(H12)
+    h3 = np.real(H11-H22)/2.0
+    h4 = np.real(H13)
+    h5 = -np.imag(H13)
+    h6 = np.real(H23)
+    h7 = -np.imag(H23)
+    h8 = np.real(H11+H22-2.0*H33)*SQRT3/6.0
 
-    return [h1, h2, h3, h4, h5, h6, h7, h8]
+    return [float(h1), float(h2), float(h3), float(h4), float(h5),
+            float(h6), float(h7), float(h8)]
 
 
 def tensor_d(i, j, k):
-    r"""Returns the tensor d_ijk of the SU(3) algebra.
+    r"""Returns the tensor :math:`d_{ijk}` of the SU(3) algebra.
 
-    Returns the SU(3) tensor d_ijk.
+    Returns the totally symmetric SU(3) tensor
+    :math:`d_{ijk} = \frac{1}{4}\mathrm{Tr}
+    (\{\lambda_i, \lambda_j\} \lambda_k)`, defined in [1]_.
 
     Parameters
     ----------
     i : int
-        First index.
+        First index, in the range 0--7 (i.e., :math:`d_{ijk}` is indexed
+        from zero, so that ``i = 0`` corresponds to :math:`d_{1jk}`).
     j : int
-        Second index.
+        Second index, in the range 0--7.
     k : int
-        Third index.
+        Third index, in the range 0--7.
 
     Returns
     -------
     float
-        Value of the tensor d_ijk.
+        The value of :math:`d_{ijk}`.
+
+    Raises
+    ------
+    IndexError
+        If any index lies outside the range 0--7.
+
+    References
+    ----------
+
+    .. [1] A.J. MacFarlane, A. Sudbery, and P.H. Weisz, "On Gell-Mann's
+       :math:`\lambda`-matrices, :math:`d`- and :math:`f`-tensors,
+       octets, and parametrizations of SU(3)", Commun. Math. Phys. 11,
+       77 (1968).
+
+    Examples
+    --------
+    >>> print('%.6f' % tensor_d(0, 0, 7))
+    0.577350
+    >>> print('%.6f' % tensor_d(0, 1, 2))
+    0.000000
     """
+    for index in (i, j, k):
+        if not 0 <= index <= 7:
+            raise IndexError(
+                'tensor_d: index %r is outside the range 0-7' % index)
+
     ip1 = i+1
-    jp1 = j+1
-    kp1 = k+1
-    jkp1 = (jp1, kp1)
+    jkp1 = (j+1, k+1)
 
     if (ip1 == 1):
-        if jkp1 == (1,8): return SQRT3_INV
-        if jkp1 == (4,6): return 0.5
-        if jkp1 == (5,7): return 0.5
-        if jkp1 == (6,4): return 0.5
-        if jkp1 == (7,5): return 0.5
-        if jkp1 == (8,1): return SQRT3_INV
+        if jkp1 == (1, 8): return SQRT3_INV
+        if jkp1 == (4, 6): return 0.5
+        if jkp1 == (5, 7): return 0.5
+        if jkp1 == (6, 4): return 0.5
+        if jkp1 == (7, 5): return 0.5
+        if jkp1 == (8, 1): return SQRT3_INV
         return 0.0
     elif (ip1 == 2):
-        if jkp1 == (2,8): return SQRT3_INV
-        if jkp1 == (4,7): return -0.5
-        if jkp1 == (5,6): return 0.5
-        if jkp1 == (6,5): return 0.5
-        if jkp1 == (7,4): return -0.5
-        if jkp1 == (8,2): return SQRT3_INV
+        if jkp1 == (2, 8): return SQRT3_INV
+        if jkp1 == (4, 7): return -0.5
+        if jkp1 == (5, 6): return 0.5
+        if jkp1 == (6, 5): return 0.5
+        if jkp1 == (7, 4): return -0.5
+        if jkp1 == (8, 2): return SQRT3_INV
         return 0.0
     elif (ip1 == 3):
-        if jkp1 == (3,8): return SQRT3_INV
-        if jkp1 == (4,4): return 0.5
-        if jkp1 == (5,5): return 0.5
-        if jkp1 == (6,6): return -0.5
-        if jkp1 == (7,7): return -0.5
-        if jkp1 == (8,3): return SQRT3_INV
+        if jkp1 == (3, 8): return SQRT3_INV
+        if jkp1 == (4, 4): return 0.5
+        if jkp1 == (5, 5): return 0.5
+        if jkp1 == (6, 6): return -0.5
+        if jkp1 == (7, 7): return -0.5
+        if jkp1 == (8, 3): return SQRT3_INV
         return 0.0
     elif (ip1 == 4):
-        if jkp1 == (1,6): return 0.5
-        if jkp1 == (2,7): return -0.5
-        if jkp1 == (3,4): return 0.5
-        if jkp1 == (4,3): return 0.5
-        if jkp1 == (4,8): return NEG_HALF_SQRT3_INV
-        if jkp1 == (6,1): return 0.5
-        if jkp1 == (7,2): return -0.5
-        if jkp1 == (8,4): return NEG_HALF_SQRT3_INV
+        if jkp1 == (1, 6): return 0.5
+        if jkp1 == (2, 7): return -0.5
+        if jkp1 == (3, 4): return 0.5
+        if jkp1 == (4, 3): return 0.5
+        if jkp1 == (4, 8): return NEG_HALF_SQRT3_INV
+        if jkp1 == (6, 1): return 0.5
+        if jkp1 == (7, 2): return -0.5
+        if jkp1 == (8, 4): return NEG_HALF_SQRT3_INV
         return 0.0
     elif (ip1 == 5):
-        if jkp1 == (1,7): return 0.5
-        if jkp1 == (2,6): return 0.5
-        if jkp1 == (3,5): return 0.5
-        if jkp1 == (5,3): return 0.5
-        if jkp1 == (5,8): return NEG_HALF_SQRT3_INV
-        if jkp1 == (6,2): return 0.5
-        if jkp1 == (7,1): return 0.5
-        if jkp1 == (8,5): return NEG_HALF_SQRT3_INV
+        if jkp1 == (1, 7): return 0.5
+        if jkp1 == (2, 6): return 0.5
+        if jkp1 == (3, 5): return 0.5
+        if jkp1 == (5, 3): return 0.5
+        if jkp1 == (5, 8): return NEG_HALF_SQRT3_INV
+        if jkp1 == (6, 2): return 0.5
+        if jkp1 == (7, 1): return 0.5
+        if jkp1 == (8, 5): return NEG_HALF_SQRT3_INV
         return 0.0
     elif (ip1 == 6):
-        if jkp1 == (1,4): return 0.5
-        if jkp1 == (2,5): return 0.5
-        if jkp1 == (3,6): return -0.5
-        if jkp1 == (4,1): return 0.5
-        if jkp1 == (5,2): return 0.5
-        if jkp1 == (6,3): return -0.5
-        if jkp1 == (6,8): return NEG_HALF_SQRT3_INV
-        if jkp1 == (8,6): return NEG_HALF_SQRT3_INV
+        if jkp1 == (1, 4): return 0.5
+        if jkp1 == (2, 5): return 0.5
+        if jkp1 == (3, 6): return -0.5
+        if jkp1 == (4, 1): return 0.5
+        if jkp1 == (5, 2): return 0.5
+        if jkp1 == (6, 3): return -0.5
+        if jkp1 == (6, 8): return NEG_HALF_SQRT3_INV
+        if jkp1 == (8, 6): return NEG_HALF_SQRT3_INV
         return 0.0
     elif (ip1 == 7):
-        if jkp1 == (1,5): return 0.5
-        if jkp1 == (2,4): return -0.5
-        if jkp1 == (3,7): return -0.5
-        if jkp1 == (4,2): return -0.5
-        if jkp1 == (5,1): return 0.5
-        if jkp1 == (7,3): return -0.5
-        if jkp1 == (7,8): return NEG_HALF_SQRT3_INV
-        if jkp1 == (8,7): return NEG_HALF_SQRT3_INV
+        if jkp1 == (1, 5): return 0.5
+        if jkp1 == (2, 4): return -0.5
+        if jkp1 == (3, 7): return -0.5
+        if jkp1 == (4, 2): return -0.5
+        if jkp1 == (5, 1): return 0.5
+        if jkp1 == (7, 3): return -0.5
+        if jkp1 == (7, 8): return NEG_HALF_SQRT3_INV
+        if jkp1 == (8, 7): return NEG_HALF_SQRT3_INV
         return 0.0
-    elif (ip1 == 8):
-        if jkp1 == (1,1): return SQRT3_INV
-        if jkp1 == (2,2): return SQRT3_INV
-        if jkp1 == (3,3): return SQRT3_INV
-        if jkp1 == (4,4): return NEG_HALF_SQRT3_INV
-        if jkp1 == (5,5): return NEG_HALF_SQRT3_INV
-        if jkp1 == (6,6): return NEG_HALF_SQRT3_INV
-        if jkp1 == (7,7): return NEG_HALF_SQRT3_INV
-        if jkp1 == (8,8): return -SQRT3_INV
+    else:  # ip1 == 8
+        if jkp1 == (1, 1): return SQRT3_INV
+        if jkp1 == (2, 2): return SQRT3_INV
+        if jkp1 == (3, 3): return SQRT3_INV
+        if jkp1 == (4, 4): return NEG_HALF_SQRT3_INV
+        if jkp1 == (5, 5): return NEG_HALF_SQRT3_INV
+        if jkp1 == (6, 6): return NEG_HALF_SQRT3_INV
+        if jkp1 == (7, 7): return NEG_HALF_SQRT3_INV
+        if jkp1 == (8, 8): return -SQRT3_INV
         return 0.0
+
+
+# The d tensor is constant, so it is tabulated once, at import time, as a
+# dense 8x8x8 array.  Evaluating the star product and the SU(3)
+# invariants from this table, rather than by calling tensor_d inside
+# nested loops, is what makes repeated probability evaluations fast.
+_TENSOR_D = np.array([[[tensor_d(i, j, k) for k in range(8)]
+                       for j in range(8)] for i in range(8)])
 
 
 def star(i, h_coeffs):
-    r"""Returns the SU(3) star oroduct (h*h)_i.
+    r"""Returns the SU(3) star product :math:`(h \star h)_i`.
 
-    Returns the SU(3) star product (h*h)_i = d_ijk*h^j*h^k (summed over
-    repeated indices).
+    Returns the SU(3) star product
+    :math:`(h \star h)_i = d_{ijk} h^j h^k`, summed over repeated
+    indices.
 
     Parameters
     ----------
     i : int
-        Index of the star product.
+        Index of the star product, in the range 0--7.
     h_coeffs : array_like
-        Eight-component vector.
+        Eight-component vector of coefficients :math:`h_k`, as returned
+        by `hamiltonian_3nu_coefficients`.
 
     Returns
     -------
     float
-        Star product (h*h)_i.
-    """
-    res = sum([tensor_d(i,j,k)*h_coeffs[j]*h_coeffs[k]
-            for j in range(0,8) for k in range(0,8)])
+        The star product :math:`(h \star h)_i`.
 
-    return res
+    Examples
+    --------
+    >>> print('%.6f' % star(0, [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]))
+    0.000000
+    >>> print('%.6f' % star(7, [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]))
+    0.577350
+    """
+    h = np.asarray(h_coeffs, dtype=float)
+
+    return float(h @ _TENSOR_D[i] @ h)
 
 
 def su3_invariants(h_coeffs):
-    r"""Returns the two SU(3) invariants, |h|^2 and <h>.
+    r"""Returns the two SU(3) invariants, :math:`|h|^2` and
+    :math:`\langle h \rangle`.
 
-    Returns the two SU(3) invariants computed from the coefficients
-    h_coeffs.
+    Returns the two invariants of the SU(3) expansion,
+    :math:`|h|^2 = h_i h_i` and
+    :math:`\langle h \rangle = d_{ijk} h_i h_j h_k`.  They equal,
+    respectively, :math:`\mathrm{Tr}(H_0^2)/2` and
+    :math:`\mathrm{Tr}(H_0^3)/2`, with :math:`H_0` the traceless part of
+    the Hamiltonian.
 
     Parameters
     ----------
     h_coeffs : array_like
-        Eight-component vector.
+        Eight-component vector of coefficients :math:`h_k`, as returned
+        by `hamiltonian_3nu_coefficients`.
 
     Returns
     -------
     h2 : float
-        SU(3) invariant |h|^2.
+        The SU(3) invariant :math:`|h|^2`.
     h3 : float
-        SU(3) invariant <h>.
-    """
-    # h2 = |h|^2
-    h2 = sum([h*h for h in h_coeffs])
+        The SU(3) invariant :math:`\langle h \rangle`.
 
-    # h3 = <h>
-    h3 = sum([tensor_d(i,j,k)*h_coeffs[i]*h_coeffs[j]*h_coeffs[k]
-            for i in range(0,8) for j in range(0,8) for k in range(0,8)])
+    Examples
+    --------
+    >>> h2, h3 = su3_invariants([1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+    >>> print('%.6f  %.6f' % (h2, h3))
+    1.000000  0.000000
+    """
+    h = np.asarray(h_coeffs, dtype=float)
+
+    # h2 = |h|^2
+    h2 = float(h @ h)
+
+    # h3 = <h> = h_i (h*h)_i, using the star product computed once
+    h3 = float(h @ (_TENSOR_D @ h @ h))
 
     return h2, h3
 
 
 def psi_roots(h2, h3):
-    r"""Returns the roots psi.
+    r"""Returns the three latent roots :math:`\psi`.
 
-    Returns the three latent roots psi of the characteristic equation of
-    -h_h*lambda^k.  These roots are L-independent.
+    Returns the three latent roots :math:`\psi` of the characteristic
+    equation :math:`\psi^3 - |h|^2 \psi - \frac{2}{3}\langle h \rangle
+    = 0`, which are the eigenvalues of minus the traceless part of the
+    Hamiltonian.  The roots are independent of the baseline.
 
     Parameters
     ----------
     h2 : float
-        SU(3) invariant |h|^2.
+        The SU(3) invariant :math:`|h|^2`.
     h3 : float
-        SU(3) invariant <h>.
+        The SU(3) invariant :math:`\langle h \rangle`.
 
     Returns
     -------
-    roots : list
-        The three roots [psi1, psi2, psi3].
+    list of float
+        The three roots ``[psi1, psi2, psi3]``.  They are real, because
+        the Hamiltonian is Hermitian.
+
+    Notes
+    -----
+    For a Hermitian Hamiltonian the argument of the arc cosine lies in
+    :math:`[-1, 1]`; it is clipped to that interval so that round-off
+    cannot produce spurious complex roots, which would spoil the
+    unitarity of the evolution operator.  When :math:`|h|^2 = 0` the
+    Hamiltonian is proportional to the identity and all three roots
+    vanish.
+
+    Examples
+    --------
+    >>> psi = psi_roots(1.0, 0.0)
+    >>> print('  '.join(['%.6f' % (round(p, 9)+0.0) for p in sorted(psi)]))
+    -1.000000  0.000000  1.000000
     """
-    pre = 2.0*sqrt(h2)*SQRT3_INV
-    chi = cmath.acos(-SQRT3*h3*pow(h2,-1.5))
+    if h2 <= 0.0:
+        return [0.0, 0.0, 0.0]
 
-    roots = [pre*cmath.cos((chi+2.*np.pi*m)/3.0) for m in [1,2,3]]
+    pre = 2.0*np.sqrt(h2)*SQRT3_INV
+    chi = np.arccos(np.clip(-SQRT3*h3*pow(h2, -1.5), -1.0, 1.0))
 
-    return roots
+    return [float(pre*np.cos((chi+2.*np.pi*m)/3.0)) for m in [1, 2, 3]]
 
 
 def evolution_operator_3nu_u_coefficients(hamiltonian_matrix, L):
-    r"""Returns coefficients u0, ..., u8 of the 3nu evolution operator.
+    r"""Returns the coefficients :math:`u_0, \ldots, u_8`.
 
-    Returns the nine coefficients u0, ..., u8 of the three-neutrino
-    time-evolution operator U3(L) in its SU(3) exponential expansion,
-    i.e., U3 = u0*I + i*u_k*lambda^k.
+    Returns the nine coefficients :math:`u_0, \ldots, u_8` of the
+    three-neutrino time-evolution operator :math:`U_3(L)` in its SU(3)
+    exponential expansion,
+    :math:`U_3 = u_0 \mathbb{1} + i u_k \lambda^k`.
 
     Parameters
     ----------
-    hamiltonian_matrix : list
-        3x3 Hamiltonian, [[H11,H12,H13],[H21,H22,H23],[H31,H32,H33]].
+    hamiltonian_matrix : array_like
+        Three-flavor Hermitian Hamiltonian, given as the nested list
+        ``[[H11, H12, H13], [H21, H22, H23], [H31, H32, H33]]``.
     L : float
-        Baseline.
+        Baseline, in units reciprocal to those of the Hamiltonian.
 
     Returns
     -------
-    list
-        The nine coefficients [u0, u1, u2, u3, u4, u5, u6, u7, u8].
+    list of complex
+        The nine coefficients ``[u0, u1, ..., u8]``.
 
-    Example
-    -------
-    >>> hamiltonian_matrix = [
-    ...                   [1.0+0.0j, 0.0+2.0j, 0.0-1.0j],
-    ...                   [0.0-2.0j, 3.0+0.0j, 3.0+0.0j],
-    ...                   [0.0+1.0j, 3.0-0.0j, -5.0+0.0j]
-    ... ]
-    >>> L = 1.0
-    >>> u_coeffs = \
-    ...     evolution_operator_3nu_u_coefficients(hamiltonian_matrix, L)
-    >>> print(u_coeffs)
-    [(0.02931819348583329-0.05379039810587031j), 0j,
-     (-0.37401185730706943+0.5232654591567741j),
-     (-0.22397496123471491-0.18194182213957913j), 0j,
-     (0.17020182293481648-0.4632575258138263j),
-     (0.6584815991291701+0.3845256294303862j), 0j,
-     (-0.37629378652956447-0.17544272350921003j)]
+    Notes
+    -----
+    The general expression divides by :math:`3\psi_m^2 - |h|^2`, which
+    vanishes when two latent roots coincide.  Two degenerate cases are
+    therefore handled separately, and exactly:
+
+    * :math:`|h|^2 = 0`, when the Hamiltonian is proportional to the
+      identity and :math:`U_3 = \mathbb{1}`;
+    * a doubly degenerate root :math:`\psi_a = \psi_b \neq \psi_c`, when
+      the spectral decomposition reduces to a single projector and
+      :math:`U_3 = e^{i\psi_a L}\mathbb{1} +
+      (e^{i\psi_c L} - e^{i\psi_a L}) P_c`, with
+      :math:`P_c = (h_k\lambda^k + \psi_a \mathbb{1})/(\psi_a - \psi_c)`.
+
+    Examples
+    --------
+    >>> hamiltonian_matrix = [[1.0+0.0j, 0.0+2.0j, 0.0-1.0j],
+    ...                       [0.0-2.0j, 3.0+0.0j, 3.0+0.0j],
+    ...                       [0.0+1.0j, 3.0-0.0j, -5.0+0.0j]]
+    >>> u_coeffs = evolution_operator_3nu_u_coefficients(hamiltonian_matrix,
+    ...                                                  1.0)
+    >>> print('%+.6f%+.6fj' % (u_coeffs[0].real, u_coeffs[0].imag))
+    +0.621522-0.047327j
     """
     # [h1, h2, h3, h4, h5, h6, h7, h8]
     h_coeffs = hamiltonian_3nu_coefficients(hamiltonian_matrix)
+    h = np.asarray(h_coeffs, dtype=float)
 
     # h2 = |h|^2, h3 = <h>
     h2, h3 = su3_invariants(h_coeffs)
 
+    if h2 <= 0.0:
+        # The Hamiltonian is proportional to the identity: U3 = 1
+        return [1.0+0.j] + [0.j]*8
+
     # [psi1, psi2, psi3]
     psi = psi_roots(h2, h3)
+
+    # (h*h)_k, computed once: it does not depend on the baseline
+    star_coeffs = _TENSOR_D @ h @ h
+
+    # Find the closest pair of latent roots, to detect degeneracy
+    scale = np.sqrt(h2)
+    pairs = [(0, 1, 2), (0, 2, 1), (1, 2, 0)]
+    a, b, c = min(pairs, key=lambda p: abs(psi[p[0]]-psi[p[1]]))
+
+    if abs(psi[a]-psi[b]) <= DEGENERACY_TOL*scale:
+        # Doubly degenerate root: the general expression would divide by
+        # zero, so use the two-projector form instead.
+        psi_deg = (psi[a]+psi[b])/2.0
+        exp_deg = cmath.exp(1.j*L*psi_deg)
+        exp_odd = cmath.exp(1.j*L*psi[c])
+        weight = (exp_odd-exp_deg)/(psi_deg-psi[c])
+        u0 = exp_deg + weight*psi_deg
+        uk = [-1.j*weight*h[k] for k in range(0, 8)]
+
+        return [u0]+uk
 
     # [e^{i*L*psi1}, e^{i*L*psi2}, e^{i*L*psi3}]
     exp_psi = [cmath.exp(1.j*L*x) for x in psi]
 
-    u0 = sum([x for x in exp_psi])/3.
-    uk = [ 1.j*sum([exp_psi[m]*(psi[m]*h_coeffs[k]-star(k,h_coeffs)) \
-            /(3.*psi[m]*psi[m]-h2) for m in [0,1,2]]) for k in range(0,8)]
+    u0 = sum(exp_psi)/3.
+    uk = [1.j*sum([exp_psi[m]*(psi[m]*h[k]-star_coeffs[k])
+                   / (3.*psi[m]*psi[m]-h2) for m in [0, 1, 2]])
+          for k in range(0, 8)]
 
     # [u0, u1, u2, u3, u4, u5, u6, u7, u8]
-    u_coeffs = [u0]+uk
-
-    return u_coeffs
+    return [u0]+uk
 
 
 def evolution_operator_3nu(hamiltonian_matrix, L):
-    r"""Returns the 3nu time-evolution operator in its SU(3) expanstion.
+    r"""Returns the three-neutrino time-evolution operator.
 
-    Returns the three-neutrino time-evolution operator U3(L) in its
-    exponential SU(3) expansion U3(L) = u0*I + i*u_k*lambda^k.  This is
-    a 3x3 unitary matrix.
+    Returns the three-neutrino time-evolution operator :math:`U_3(L)` in
+    its SU(3) exponential expansion
+    :math:`U_3(L) = u_0 \mathbb{1} + i u_k \lambda^k`.  This is a
+    :math:`3\times3` unitary matrix.
 
     Parameters
     ----------
-    hamiltonian_matrix : list
-        3x3 Hamiltonian, [[H11,H12,H13],[H21,H22,H23],[H31,H32,H33]].
+    hamiltonian_matrix : array_like
+        Three-flavor Hermitian Hamiltonian, given as the nested list
+        ``[[H11, H12, H13], [H21, H22, H23], [H31, H32, H33]]``.
     L : float
-        Baseline.
+        Baseline, in units reciprocal to those of the Hamiltonian.
 
     Returns
     -------
-    list
-        The U3(L) time-evolution operator, a 3x3 unitary complex matrix.
+    list of list of complex
+        The time-evolution operator :math:`U_3(L)`, a :math:`3\times3`
+        unitary complex matrix, as a nested list.
 
-    Example
-    -------
-    >>> hamiltonian_matrix = [
-    ...                   [1.0+0.0j, 0.0+2.0j, 0.0-1.0j],
-    ...                   [0.0-2.0j, 3.0+0.0j, 3.0+0.0j],
-    ...                   [0.0+1.0j, 3.0-0.0j, -5.0+0.0j]
-    ... ]
-    >>> L = 1.0
-    >>> U3 = evolution_operator_3nu(hamiltonian_matrix, L)
-    >>> print(U3)
-    [[ 0.312551-0.495018j -0.374011+0.523265j  0.170201-0.463257j]
-     [ 0.374011-0.523265j -0.051331-0.047068j -0.384525+0.65848j ]
-     [-0.170201+0.463257j -0.384525+0.65848j  -0.173265+0.380716j]]
+    See Also
+    --------
+    probabilities_3nu : Returns the probabilities built from this matrix.
+
+    Examples
+    --------
+    >>> hamiltonian_matrix = [[1.0+0.0j, 0.0+2.0j, 0.0-1.0j],
+    ...                       [0.0-2.0j, 3.0+0.0j, 3.0+0.0j],
+    ...                       [0.0+1.0j, 3.0-0.0j, -5.0+0.0j]]
+    >>> U3 = evolution_operator_3nu(hamiltonian_matrix, 1.0)
+    >>> for row in U3:
+    ...     print('  '.join(['%+.6f%+.6fj' % (z.real+0.0, z.imag+0.0)
+    ...                      for z in row]))
+    +0.546090-0.496423j  -0.600964-0.114920j  -0.278885+0.056655j
+    +0.600964+0.114920j  +0.430462+0.614384j  -0.171381+0.183031j
+    +0.278885-0.056655j  -0.171381+0.183031j  +0.888015-0.259943j
     """
     u0, u1, u2, u3, u4, u5, u6, u7, u8 = \
         evolution_operator_3nu_u_coefficients(hamiltonian_matrix, L)
 
-    evolution_operator = [
-                            [u0+1.j*(u3+u8/SQRT3), 1.j*u1+u2, 1.j*u4+u5],
-                            [1.j*u1-u2, u0-1.j*(u3-u8/SQRT3), 1.j*u6+u7],
-                            [1.j*u4-u5, 1.j*u6-u7, u0-1.j*2.*u8/SQRT3]
+    return [
+        [u0+1.j*(u3+u8/SQRT3), 1.j*u1+u2, 1.j*u4+u5],
+        [1.j*u1-u2, u0-1.j*(u3-u8/SQRT3), 1.j*u6+u7],
+        [1.j*u4-u5, 1.j*u6-u7, u0-1.j*2.*u8/SQRT3]
     ]
-
-    return evolution_operator
 
 
 def probabilities_3nu(hamiltonian_matrix, L):
-    r"""Returns the 3nu oscillation probability.
+    r"""Returns the three-neutrino oscillation probabilities.
 
-    Returns the three-neutrino oscillation probabilities
-    Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt.
+    Returns the three-neutrino flavor-transition probabilities
+    :math:`P_{ee}, P_{e\mu}, P_{e\tau}, P_{\mu e}, P_{\mu\mu},
+    P_{\mu\tau}, P_{\tau e}, P_{\tau\mu}, P_{\tau\tau}`, where
+    :math:`P_{\alpha\beta} \equiv P(\nu_\alpha \to \nu_\beta)
+    = |[U_3]_{\beta\alpha}|^2`.
 
     Parameters
     ----------
-    hamiltonian_matrix : list
-        3x3 Hamiltonian, [[H11,H12,H13],[H21,H22,H23],[H31,H32,H33]].
+    hamiltonian_matrix : array_like
+        Three-flavor Hermitian Hamiltonian, given as the nested list
+        ``[[H11, H12, H13], [H21, H22, H23], [H31, H32, H33]]``.
     L : float
-        Baseline.
+        Baseline, in units reciprocal to those of the Hamiltonian.
 
     Returns
     -------
-    list
-        Three-neutrino probabilities
-        Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt.
+    tuple of float
+        The nine probabilities ``(Pee, Pem, Pet, Pme, Pmm, Pmt, Pte,
+        Ptm, Ptt)``, ordered with the initial flavor varying slowest.
 
-    Example
-    -------
-    >>> hamiltonian_matrix = [
-    ...                   [1.0+0.0j, 0.0+2.0j, 0.0-1.0j],
-    ...                   [0.0-2.0j, 3.0+0.0j, 3.0+0.0j],
-    ...                   [0.0+1.0j, 3.0-0.0j, -5.0+0.0j]
-    ... ]
-    >>> L = 1.0
-    >>> Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = \
-    ...     probabilities_3nu(hamiltonian_matrix, 1.0)
-    >>> print(Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt)
-    0.342732 0.413691 0.243576 0.413691 0.0048504 0.58145 0.243576
-    0.58145 0.174965
+    Examples
+    --------
+    >>> hamiltonian_matrix = [[1.0+0.0j, 0.0+2.0j, 0.0-1.0j],
+    ...                       [0.0-2.0j, 3.0+0.0j, 3.0+0.0j],
+    ...                       [0.0+1.0j, 3.0-0.0j, -5.0+0.0j]]
+    >>> prob = probabilities_3nu(hamiltonian_matrix, 1.0)
+    >>> print('  '.join(['%.6f' % p for p in prob[0:3]]))
+    0.544650  0.374364  0.080986
+    >>> print('  '.join(['%.6f' % p for p in prob[3:6]]))
+    0.374364  0.562764  0.062872
+    >>> print('  '.join(['%.6f' % p for p in prob[6:9]]))
+    0.080986  0.062872  0.856142
     """
     U = evolution_operator_3nu(hamiltonian_matrix, L)
 

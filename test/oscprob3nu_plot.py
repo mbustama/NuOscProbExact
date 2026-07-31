@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 r"""Routines to plot three-neutrino flavor-transition probabilities.
 
-This module contains contains routines to plot three-neutrino
+This module contains routines to plot three-neutrino
 oscillation probabilities vs. the neutrino baseline and energy.  These
 routines are used by run_testsuite.py to produce a suite of test plots.
 
@@ -10,6 +10,14 @@ Routine listings
 
     * plot_probability_3nu_vs_baseline - Plot probabilities vs. baseline
     * plot_probability_3nu_vs_energy - Plot probabilities vs. energy
+    * plot_probability_3nu_vacuum_vs_l_std - Plot the standard formula
+
+References
+----------
+
+.. [1] Mauricio Bustamante, "NuOscProbExact: a general-purpose code
+   to compute exact two-flavor and three-flavor neutrino oscillation
+   probabilities", arXiv:1904.12391.
 
 Created: 2019/04/17 17:14
 Last modified: 2019/04/22 18:01
@@ -23,9 +31,8 @@ __email__ = "mbustamante@gmail.com"
 
 from numpy import *
 import numpy as np
-from pylab import *
-from matplotlib import *
 import matplotlib as mpl
+import matplotlib.pyplot as plt
 
 import sys
 sys.path.append('../src')
@@ -241,7 +248,7 @@ def plot_probability_3nu_vs_baseline(
         xy = (0.05, 0.80), xycoords='axes fraction', color='k', fontsize=25,
         horizontalalignment='left', rotation=0, zorder=2 )
 
-    pylab.savefig(output_path+output_filename+'.'+output_format,
+    plt.savefig(output_path+output_filename+'.'+output_format,
         bbox_inches='tight', dpi=100)
 
     plt.close()
@@ -466,7 +473,7 @@ def plot_probability_3nu_vs_energy(
         xy = (0.05, 0.80), xycoords='axes fraction', color='k', fontsize=25,
         horizontalalignment='left', rotation=0, zorder=2 )
 
-    pylab.savefig(output_path+output_filename+'.'+output_format,
+    plt.savefig(output_path+output_filename+'.'+output_format,
         bbox_inches='tight', dpi=100)
 
     plt.close()
@@ -475,7 +482,35 @@ def plot_probability_3nu_vs_energy(
 
 
 def plot_probability_3nu_vacuum_vs_l_std(output_format='pdf'):
+    r"""Plots the 3nu vacuum probabilities from the standard formula.
 
+    Generates and saves a plot of the three-neutrino oscillation
+    probabilities :math:`P_{ee}`, :math:`P_{e\mu}`, :math:`P_{e\tau}`
+    vs. baseline, computed with the standard analytical expression
+    rather than with the exact SU(3) expansion.  The two agree to
+    round-off; this routine exists so that the standard result can be
+    inspected on its own.
+
+    The mixing parameters are the best-fit values for the normal
+    ordering from arXiv:1708.01186, which differ slightly from the
+    NuFit 4.0 values kept in :mod:`globaldefs`.
+
+    Parameters
+    ----------
+    output_format : str, optional
+        Extension of the output file, e.g. ``'pdf'`` (default) or
+        ``'png'``.  The plot is saved as
+        ``prob_3nu_vacuum_std_vs_l.<output_format>`` in the current
+        working directory.
+
+    Returns
+    -------
+    None
+
+    See Also
+    --------
+    hamiltonians3nu.probabilities_3nu_vacuum_std : The formula plotted.
+    """
     # Best-fit values of mixing parameters, normal ordering, from 1708.01186
     s12 = sqrt(3.21e-1)
     s23 = sqrt(4.30e-1)
@@ -494,11 +529,13 @@ def plot_probability_3nu_vacuum_vs_l_std(output_format='pdf'):
     log10_l_val = np.linspace(log10_l_min, log10_l_max, log10_l_npts)
     l_val =[10.**x for x in log10_l_val]
 
-    U = pmns_mixing_matrix(s12, s23, s13, dCP)
+    U = hamiltonians3nu.pmns_mixing_matrix(s12, s23, s13, dCP)
 
     # Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt
-    lst_prob = [probabilities_3nu_std(  U, D21, D31, energy_nu,
-                                        l/CONV_KM_TO_INV_EV) \
+    # probabilities_3nu_vacuum_std takes the energy in eV and the
+    # baseline in eV^{-1}; l_val holds baselines in km
+    lst_prob = [hamiltonians3nu.probabilities_3nu_vacuum_std(
+                    U, D21, D31, energy_nu, l*CONV_KM_TO_INV_EV)
                 for l in l_val]
     lst_prob_ee = [x[0] for x in lst_prob]
     lst_prob_em = [x[1] for x in lst_prob]
@@ -547,7 +584,7 @@ def plot_probability_3nu_vacuum_vs_l_std(output_format='pdf'):
     # Legend
     ax.legend(loc='center left', frameon=False, ncol=1)
 
-    pylab.savefig('prob_3nu_vacuum_std_vs_l.'+output_format, bbox_inches='tight',
+    plt.savefig('prob_3nu_vacuum_std_vs_l.'+output_format, bbox_inches='tight',
         dpi=300)
 
     return

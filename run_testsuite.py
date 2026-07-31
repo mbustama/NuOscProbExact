@@ -1,26 +1,37 @@
 # -*- coding: utf-8 -*-
-r"""Produce a suite of test plots of probabilities.
+r"""Produce a suite of test plots of the oscillation probabilities.
 
 Running this module ('python run_testsuite.py') creates a number of
 test plots of the two- and three-neutrino oscillation probabilities
-vs. baseline and vs. energy.  Also generates the plot included in the
-paper.
+vs. baseline and vs. energy, for oscillations in vacuum, in matter, in
+matter with non-standard interactions, and in a Lorentz
+invariance-violating background.  It also generates the two plots
+included in the paper.  All plots are written to the ``fig/``
+directory.
+
+This is a *visual* test suite: it checks that the code runs end to end
+and produces sensible-looking curves.  The numerical regression tests
+live in ``tests/`` and are run with ``pytest``.
+
+References
+----------
+
+.. [1] Mauricio Bustamante, "NuOscProbExact: a general-purpose code
+   to compute exact two-flavor and three-flavor neutrino oscillation
+   probabilities", arXiv:1904.12391.
 
 Created: 2019/04/22 16:23
-Last modified: 2019/04/27 17:19
+Last modified: 2026/07/31
 """
-
 
 from __future__ import print_function
 
-__version__ = "1.0"
+__version__ = "1.1"
 __author__ = "Mauricio Bustamante"
 __email__ = "mbustamante@gmail.com"
 
-
-from numpy import *
-
 import sys
+
 sys.path.append('./src')
 sys.path.append('./test')
 

@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nuoscprobexact"
+version = "1.1.0"
+description = "Exact two-flavor and three-flavor neutrino oscillation probabilities for arbitrary time-independent Hamiltonians"
+readme = "README.md"
+requires-python = ">=3.7"
+license = {file = "LICENSE"}
+authors = [{name = "Mauricio Bustamante", email = "mbustamante@gmail.com"}]
+keywords = ["neutrino", "oscillations", "physics", "SU(2)", "SU(3)"]
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = ["numpy"]
+
+[project.optional-dependencies]
+plots = ["matplotlib"]
+test = ["pytest", "scipy"]
+docs = ["sphinx", "numpydoc", "myst-parser"]
+
+[project.urls]
+Homepage = "https://github.com/mbustama/NuOscProbExact"
+Paper = "https://arxiv.org/abs/1904.12391"
+
+# The library is a flat set of top-level modules living in src/, which is
+# how the examples and the published paper refer to them (e.g.
+# `import oscprob3nu`).  Keeping that layout means an editable install
+# puts exactly those names on the path, and existing user code that does
+# sys.path.append('../src') keeps working unchanged.
+[tool.setuptools]
+package-dir = {"" = "src"}
+py-modules = ["oscprob2nu", "oscprob3nu", "hamiltonians2nu",
+              "hamiltonians3nu", "globaldefs"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["error::RuntimeWarning"]

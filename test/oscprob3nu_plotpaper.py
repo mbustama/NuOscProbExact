@@ -12,8 +12,9 @@ Routine listings
 References
 ----------
 
-.. [1] Mauricio Bustamante, "Exact neutrino oscillation probabilities
-   with arbitrary time-independent Hamiltonians", arXiv:1904.XXXXX.
+.. [1] Mauricio Bustamante, "NuOscProbExact: a general-purpose code
+   to compute exact two-flavor and three-flavor neutrino oscillation
+   probabilities", arXiv:1904.12391.
 
 Created: 2019/04/17 18:08
 Last modified: 2019/04/22 20:36
@@ -27,9 +28,8 @@ __email__ = "mbustamante@nbi.ku.dk"
 
 from numpy import *
 import numpy as np
-from pylab import *
-from matplotlib import *
 import matplotlib as mpl
+import matplotlib.pyplot as plt
 
 import sys
 sys.path.append('../src')
@@ -102,7 +102,7 @@ def plot_probability_3nu_vs_energy_compare(output_format='pdf',
     #                                         S13_NO_BF,
     #                                         DCP_NO_BF)
     # prob_vacuum_std = [hamiltonians3nu.probabilities_3nu_vacuum_std( \
-    #                     U, D21_BF, D31_BF, x, l/CONV_KM_TO_INV_EV) \
+    #                     U, D21_NO_BF, D31_NO_BF, x*1.e9, l) \
     #                 for x in energy_nu]
 
     prob_matter = [oscprob3nu.probabilities_3nu( \
@@ -216,7 +216,7 @@ def plot_probability_3nu_vs_energy_compare(output_format='pdf',
             ax.set_yticks(ax_yticks_minor, minor=True)
             ax.set_ylim([0.0, 1.0])
 
-        pylab.savefig(output_path+'prob_3nu_vs_energy_compare.'+output_format,
+        plt.savefig(output_path+'prob_3nu_vs_energy_compare.'+output_format,
             bbox_inches='tight', dpi=300)
 
     return
