@@ -61,6 +61,13 @@ r"""float: Module-level constant
 Constant equal to -1.0/sqrt(3.0)/2.0.
 """
 
+DEGENERACY_TOL = 1.e-12
+r"""float: Module-level constant
+
+Relative tolerance below which two latent roots psi are treated as
+degenerate.
+"""
+
 
 def hamiltonian_3nu_coefficients(hamiltonian_matrix):
     r"""Returns the h_k of the SU(3)-expansion of the 3nu Hamiltonian.
@@ -288,10 +295,18 @@ def psi_roots(h2, h3):
     roots : list
         The three roots [psi1, psi2, psi3].
     """
-    pre = 2.0*sqrt(h2)*SQRT3_INV
-    chi = cmath.acos(-SQRT3*h3*pow(h2,-1.5))
+    if h2 <= 0.0:
+        # The Hamiltonian is proportional to the identity: all the
+        # latent roots vanish, and pow(h2, -1.5) would be infinite
+        return [0.0, 0.0, 0.0]
 
-    roots = [pre*cmath.cos((chi+2.*np.pi*m)/3.0) for m in [1,2,3]]
+    pre = 2.0*sqrt(h2)*SQRT3_INV
+    # For a Hermitian Hamiltonian the argument lies in [-1, 1]; clipping
+    # keeps round-off from producing spurious complex roots, which would
+    # spoil the unitarity of the evolution operator
+    chi = np.arccos(np.clip(-SQRT3*h3*pow(h2,-1.5), -1.0, 1.0))
+
+    roots = [float(pre*np.cos((chi+2.*np.pi*m)/3.0)) for m in [1,2,3]]
 
     return roots
 
