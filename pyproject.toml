@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nuoscprobexact"
-version = "1.5.0"
+version = "1.6.0"
 description = "Exact two-flavor and three-flavor neutrino oscillation probabilities for arbitrary time-independent Hamiltonians"
 readme = "README.md"
 requires-python = ">=3.7"
@@ -20,8 +20,9 @@ classifiers = [
 dependencies = ["numpy"]
 
 [project.optional-dependencies]
+fast = ["numba"]
 plots = ["matplotlib"]
-test = ["pytest", "scipy"]
+test = ["pytest", "scipy", "coverage"]
 docs = ["sphinx", "numpydoc", "myst-parser"]
 
 [project.urls]
@@ -36,7 +37,7 @@ Paper = "https://arxiv.org/abs/1904.12391"
 [tool.setuptools]
 package-dir = {"" = "src"}
 py-modules = ["oscprob2nu", "oscprob3nu", "hamiltonians2nu",
-              "hamiltonians3nu", "globaldefs"]
+              "hamiltonians3nu", "globaldefs", "fastkernels"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
