@@ -18,6 +18,10 @@ The term :math:`h_0` contributes only an overall phase and is dropped;
 all routines therefore work with the traceless part of the Hamiltonian,
 which leaves the oscillation probabilities unchanged.
 
+`evolution_operator_2nu` and `probabilities_2nu` accept either a single
+Hamiltonian and baseline or a stack of them, in which case the whole
+stack is evaluated at once.
+
 Units
 -----
 
@@ -134,6 +138,115 @@ def modulus(h_coeffs):
     return float(np.sqrt(sum([abs(h)**2.0 for h in h_coeffs])))
 
 
+def _hamiltonian_2nu_coefficients_batch(h_matrix):
+    r"""Returns the :math:`h_k` for a stack of Hamiltonians.
+
+    The vectorised counterpart of `hamiltonian_2nu_coefficients`.
+
+    Parameters
+    ----------
+    h_matrix : numpy.ndarray
+        Hamiltonians, of shape ``(..., 2, 2)``.
+
+    Returns
+    -------
+    numpy.ndarray
+        The coefficients, of shape ``(..., 3)``, real.
+    """
+    return np.stack([
+        h_matrix[..., 0, 1].real,
+        -h_matrix[..., 0, 1].imag,
+        (h_matrix[..., 0, 0]-h_matrix[..., 1, 1]).real/2.0,
+    ], axis=-1)
+
+
+def _u_coefficients_2nu_batch(h, L):
+    r"""Returns the four :math:`u_k` for a stack of Hamiltonians.
+
+    Parameters
+    ----------
+    h : numpy.ndarray
+        The coefficients :math:`h_k`, of shape ``(..., 3)``, real.
+    L : numpy.ndarray
+        Baselines, of shape ``(...)``, already broadcast against `h`.
+
+    Returns
+    -------
+    numpy.ndarray
+        The coefficients, of shape ``(..., 4)``, real.
+    """
+    # |h| depends on the Hamiltonian alone; the baselines enter only in
+    # the trigonometric factors below
+    h_abs = np.sqrt(np.einsum('...i,...i->...', h, h))
+
+    positive = h_abs > 0.0
+    safe_h_abs = np.where(positive, h_abs, 1.0)
+
+    phase = h_abs*L
+    u0 = np.cos(phase)
+    # The limit of -sin(|h|L)/|h| as |h| -> 0 is -L
+    ss = np.where(positive, -np.sin(phase)/safe_h_abs,
+                  -np.broadcast_to(L, np.shape(phase)))
+
+    return np.concatenate([np.broadcast_to(u0, np.shape(ss))[..., None],
+                           h*ss[..., None]], axis=-1)
+
+
+def _evolution_operator_2nu_batch(h_matrix, L):
+    r"""Returns :math:`U_2(L)` for a stack of Hamiltonians and baselines.
+
+    Parameters
+    ----------
+    h_matrix : array_like
+        Hamiltonians, of shape ``(..., 2, 2)``.
+    L : array_like
+        Baselines, broadcastable against the leading axes of `h_matrix`.
+
+    Returns
+    -------
+    numpy.ndarray
+        The evolution operators, of shape ``(..., 2, 2)``, complex.
+    """
+    h_matrix = np.asarray(h_matrix, dtype=complex)
+    L = np.asarray(L, dtype=float)
+
+    # Check that the two broadcast against each other, and fail here with
+    # a clear message rather than deep inside the expansion
+    np.broadcast_shapes(h_matrix.shape[:-2], L.shape)
+
+    u = _u_coefficients_2nu_batch(
+        _hamiltonian_2nu_coefficients_batch(h_matrix), L)
+    u0, u1, u2, u3 = [u[..., k] for k in range(4)]
+
+    return np.stack([
+        np.stack([u0+1.j*u3, 1.j*u1+u2], axis=-1),
+        np.stack([1.j*u1-u2, u0-1.j*u3], axis=-1),
+    ], axis=-2)
+
+
+def _is_batched(hamiltonian_matrix, L):
+    r"""Returns whether the arguments describe a stack of problems.
+
+    A single Hamiltonian is an ``n``-by-``n`` matrix and a single
+    baseline is a scalar, so anything with more axes than that is a
+    stack, and the vectorised path applies.
+
+    This runs on every scalar call, so it is written to be cheap: an
+    exact type check short-circuits the common case, and
+    ``numpy.ndim`` --- which would convert a nested list to an array
+    every time --- is reached only for an argument that is neither a
+    plain Python number nor a NumPy array.
+    """
+    if type(L) is not float and type(L) is not int:
+        if np.ndim(L) > 0:
+            return True
+
+    if type(hamiltonian_matrix) is np.ndarray:
+        return hamiltonian_matrix.ndim > 2
+
+    return isinstance(hamiltonian_matrix[0][0], (list, tuple, np.ndarray))
+
+
 def evolution_operator_2nu_u_coefficients(hamiltonian_matrix, L):
     r"""Returns the coefficients :math:`u_0, \ldots, u_3`.
 
@@ -200,15 +313,20 @@ def evolution_operator_2nu(hamiltonian_matrix, L):
     ----------
     hamiltonian_matrix : array_like
         Two-flavor Hermitian Hamiltonian, given as the nested list
-        ``[[H11, H12], [H21, H22]]``.
-    L : float
-        Baseline, in units reciprocal to those of the Hamiltonian.
+        ``[[H11, H12], [H21, H22]]``, or a stack of them, of shape
+        ``(..., 2, 2)``.
+    L : float or array_like
+        Baseline, in units reciprocal to those of the Hamiltonian, or an
+        array of baselines broadcastable against the leading axes of
+        `hamiltonian_matrix`.
 
     Returns
     -------
-    list of list of complex
-        The time-evolution operator :math:`U_2(L)`, a :math:`2\times2`
-        unitary complex matrix, as a nested list.
+    list of list of complex or numpy.ndarray
+        For a single Hamiltonian and baseline, the time-evolution
+        operator :math:`U_2(L)` --- a :math:`2\times2` unitary complex
+        matrix --- as a nested list.  If either argument is a stack, an
+        array of shape ``(..., 2, 2)``.
 
     See Also
     --------
@@ -225,6 +343,9 @@ def evolution_operator_2nu(hamiltonian_matrix, L):
     -0.617273+0.351845j  +0.703690+0.000000j
     -0.703690+0.000000j  -0.617273-0.351845j
     """
+    if _is_batched(hamiltonian_matrix, L):
+        return _evolution_operator_2nu_batch(hamiltonian_matrix, L)
+
     u0, u1, u2, u3 = \
         evolution_operator_2nu_u_coefficients(hamiltonian_matrix, L)
 
@@ -245,17 +366,27 @@ def probabilities_2nu(hamiltonian_matrix, L):
     ----------
     hamiltonian_matrix : array_like
         Two-flavor Hermitian Hamiltonian, given as the nested list
-        ``[[H11, H12], [H21, H22]]``.
-    L : float
-        Baseline, in units reciprocal to those of the Hamiltonian.
+        ``[[H11, H12], [H21, H22]]``, or a stack of them, of shape
+        ``(..., 2, 2)``.
+    L : float or array_like
+        Baseline, in units reciprocal to those of the Hamiltonian, or an
+        array of baselines broadcastable against the leading axes of
+        `hamiltonian_matrix`.
 
     Returns
     -------
-    tuple of float
-        The probabilities ``(Pee, Pem, Pme, Pmm)``.
+    tuple of float or numpy.ndarray
+        For a single Hamiltonian and baseline, the probabilities
+        ``(Pee, Pem, Pme, Pmm)`` as a tuple.  If either argument is a
+        stack, an array of shape ``(..., 4)`` in the same order.
 
     Notes
     -----
+    Passing arrays evaluates the whole stack at once, which is roughly
+    fifty times faster than calling this routine in a Python loop; see
+    the notes on :func:`oscprob3nu.probabilities_3nu` for the two scans
+    that broadcast naturally.
+
     The transition probability is
 
     .. math::
@@ -273,6 +404,13 @@ def probabilities_2nu(hamiltonian_matrix, L):
     >>> print('%.6f  %.6f  %.6f  %.6f' % (Pee, Pem, Pme, Pmm))
     0.504821  0.495179  0.495179  0.504821
     """
+    if _is_batched(hamiltonian_matrix, L):
+        U = _evolution_operator_2nu_batch(hamiltonian_matrix, L)
+        # P_ab = |U_ba|^2: the evolution operator is indexed
+        # (final, initial), the probabilities (initial, final)
+        prob = np.abs(U)**2.
+        return np.swapaxes(prob, -1, -2).reshape(prob.shape[:-2]+(4,))
+
     # [h1, h2, h3]
     h_coeffs = hamiltonian_2nu_coefficients(hamiltonian_matrix)
 

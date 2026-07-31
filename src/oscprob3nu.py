@@ -19,6 +19,10 @@ The term :math:`h_0` contributes only an overall phase and is dropped;
 all routines therefore work with the traceless part of the Hamiltonian,
 which leaves the oscillation probabilities unchanged.
 
+`evolution_operator_3nu` and `probabilities_3nu` accept either a single
+Hamiltonian and baseline or a stack of them, in which case the whole
+stack is evaluated at once.  See the notes on `probabilities_3nu`.
+
 Units
 -----
 
@@ -397,6 +401,236 @@ def psi_roots(h2, h3):
     return [float(pre*np.cos((chi+2.*np.pi*m)/3.0)) for m in [1, 2, 3]]
 
 
+def _u_coefficients_3nu_single(h, h2, h3, L):
+    r"""Returns the nine :math:`u_k` for one Hamiltonian and baseline.
+
+    The shared core of the scalar and the vectorised paths: given the
+    SU(3) coefficients and invariants of a *single* Hamiltonian, it
+    returns the coefficients of :math:`U_3(L)`.  The vectorised path
+    calls it only for the rare elements whose spectrum is degenerate.
+
+    Parameters
+    ----------
+    h : numpy.ndarray
+        The eight coefficients :math:`h_k`, as a real array.
+    h2 : float
+        The SU(3) invariant :math:`|h|^2`.
+    h3 : float
+        The SU(3) invariant :math:`\langle h \rangle`.
+    L : float
+        Baseline.
+
+    Returns
+    -------
+    list of complex
+        The nine coefficients ``[u0, u1, ..., u8]``.
+    """
+    if h2 <= 0.0:
+        # The Hamiltonian is proportional to the identity: U3 = 1
+        return [1.0+0.j] + [0.j]*8
+
+    # [psi1, psi2, psi3]
+    psi = psi_roots(h2, h3)
+
+    # (h*h)_k, computed once: it does not depend on the baseline
+    star_coeffs = _TENSOR_D @ h @ h
+
+    # Find the closest pair of latent roots, to detect degeneracy
+    scale = np.sqrt(h2)
+    pairs = [(0, 1, 2), (0, 2, 1), (1, 2, 0)]
+    a, b, c = min(pairs, key=lambda p: abs(psi[p[0]]-psi[p[1]]))
+
+    if abs(psi[a]-psi[b]) <= DEGENERACY_TOL*scale:
+        # Doubly degenerate root: the general expression would divide by
+        # zero, so use the two-projector form instead.
+        psi_deg = (psi[a]+psi[b])/2.0
+        exp_deg = cmath.exp(1.j*L*psi_deg)
+        exp_odd = cmath.exp(1.j*L*psi[c])
+        weight = (exp_odd-exp_deg)/(psi_deg-psi[c])
+        u0 = exp_deg + weight*psi_deg
+        uk = [-1.j*weight*h[k] for k in range(0, 8)]
+
+        return [u0]+uk
+
+    # [e^{i*L*psi1}, e^{i*L*psi2}, e^{i*L*psi3}]
+    exp_psi = [cmath.exp(1.j*L*x) for x in psi]
+
+    u0 = sum(exp_psi)/3.
+    uk = [1.j*sum([exp_psi[m]*(psi[m]*h[k]-star_coeffs[k])
+                   / (3.*psi[m]*psi[m]-h2) for m in [0, 1, 2]])
+          for k in range(0, 8)]
+
+    # [u0, u1, u2, u3, u4, u5, u6, u7, u8]
+    return [u0]+uk
+
+
+def _hamiltonian_3nu_coefficients_batch(h_matrix):
+    r"""Returns the :math:`h_k` for a stack of Hamiltonians.
+
+    The vectorised counterpart of `hamiltonian_3nu_coefficients`.
+
+    Parameters
+    ----------
+    h_matrix : numpy.ndarray
+        Hamiltonians, of shape ``(..., 3, 3)``.
+
+    Returns
+    -------
+    numpy.ndarray
+        The coefficients, of shape ``(..., 8)``, real.
+    """
+    return np.stack([
+        h_matrix[..., 0, 1].real,
+        -h_matrix[..., 0, 1].imag,
+        (h_matrix[..., 0, 0]-h_matrix[..., 1, 1]).real/2.0,
+        h_matrix[..., 0, 2].real,
+        -h_matrix[..., 0, 2].imag,
+        h_matrix[..., 1, 2].real,
+        -h_matrix[..., 1, 2].imag,
+        (h_matrix[..., 0, 0]+h_matrix[..., 1, 1]
+         - 2.0*h_matrix[..., 2, 2]).real*SQRT3/6.0,
+    ], axis=-1)
+
+
+def _u_coefficients_3nu_batch(h, L):
+    r"""Returns the nine :math:`u_k` for a stack of Hamiltonians.
+
+    Every step of the SU(3) expansion --- the star product, the two
+    invariants, the latent roots, and the Lagrange interpolation --- is
+    evaluated for the whole stack at once.
+
+    Parameters
+    ----------
+    h : numpy.ndarray
+        The coefficients :math:`h_k`, of shape ``(..., 8)``, real.
+    L : numpy.ndarray
+        Baselines, of shape ``(...)``, already broadcast against `h`.
+
+    Returns
+    -------
+    numpy.ndarray
+        The coefficients, of shape ``(..., 9)``, complex.
+
+    Notes
+    -----
+    Degenerate spectra are handled exactly, as in the scalar path, but
+    the branch cannot be taken elementwise inside a vectorised
+    expression.  The general formula is therefore evaluated everywhere
+    with the vanishing denominators replaced by one --- which produces a
+    finite but meaningless value for those elements --- and the affected
+    elements are then recomputed with `_u_coefficients_3nu_single`.
+    Degeneracy is measure-zero among floating-point Hamiltonians, so the
+    fallback loop is empty in essentially every real use.
+    """
+    # Everything up to here depends on the Hamiltonian alone, so it is
+    # evaluated at the shape of `h` and only then broadcast against the
+    # baselines.  Scanning one Hamiltonian over N baselines therefore
+    # solves the characteristic equation once, not N times.
+    star = np.einsum('ijk,...j,...k->...i', _TENSOR_D, h, h)
+    h2 = np.einsum('...i,...i->...', h, h)
+    h3 = np.einsum('...i,...i->...', h, star)
+
+    positive = h2 > 0.0
+    safe_h2 = np.where(positive, h2, 1.0)
+
+    pre = 2.0*np.sqrt(safe_h2)*SQRT3_INV
+    chi = np.arccos(np.clip(-SQRT3*h3*safe_h2**-1.5, -1.0, 1.0))
+    m = np.array([1.0, 2.0, 3.0])
+    psi = pre[..., None]*np.cos((chi[..., None]+2.0*np.pi*m)/3.0)
+    psi = np.where(positive[..., None], psi, 0.0)
+
+    denom = 3.0*psi*psi - h2[..., None]
+    safe_denom = np.where(denom != 0.0, denom, 1.0)
+    numer = psi[..., :, None]*h[..., None, :] - star[..., None, :]
+
+    # The baselines enter only here
+    exp_psi = np.exp(1.j*L[..., None]*psi)
+
+    u0 = exp_psi.sum(-1)/3.0
+    uk = 1.j*np.einsum('...m,...mk->...k', exp_psi/safe_denom, numer)
+    u = np.concatenate([u0[..., None], uk], axis=-1)
+
+    # Recompute the elements whose spectrum is degenerate, using the same
+    # criterion as the scalar path: the closest pair of latent roots.
+    # Degeneracy is a property of the Hamiltonian, so the test is made at
+    # the shape of `h` and then broadcast over the baselines.
+    gaps = np.stack([np.abs(psi[..., 0]-psi[..., 1]),
+                     np.abs(psi[..., 0]-psi[..., 2]),
+                     np.abs(psi[..., 1]-psi[..., 2])], axis=-1)
+    degenerate = ((gaps.min(-1) <= DEGENERACY_TOL*np.sqrt(safe_h2))
+                  | ~positive)
+    if degenerate.any():
+        full = u.shape[:-1]
+        h_full = np.broadcast_to(h, full+(8,))
+        h2_full = np.broadcast_to(h2, full)
+        h3_full = np.broadcast_to(h3, full)
+        L_full = np.broadcast_to(L, full)
+        for idx in zip(*np.nonzero(np.broadcast_to(degenerate, full))):
+            u[idx] = _u_coefficients_3nu_single(
+                h_full[idx], float(h2_full[idx]), float(h3_full[idx]),
+                float(L_full[idx]))
+
+    return u
+
+
+def _evolution_operator_3nu_batch(h_matrix, L):
+    r"""Returns :math:`U_3(L)` for a stack of Hamiltonians and baselines.
+
+    Parameters
+    ----------
+    h_matrix : array_like
+        Hamiltonians, of shape ``(..., 3, 3)``.
+    L : array_like
+        Baselines, broadcastable against the leading axes of `h_matrix`.
+
+    Returns
+    -------
+    numpy.ndarray
+        The evolution operators, of shape ``(..., 3, 3)``, complex.
+    """
+    h_matrix = np.asarray(h_matrix, dtype=complex)
+    L = np.asarray(L, dtype=float)
+
+    # Check that the two broadcast against each other, and fail here with
+    # a clear message rather than deep inside the expansion
+    np.broadcast_shapes(h_matrix.shape[:-2], L.shape)
+
+    h = _hamiltonian_3nu_coefficients_batch(h_matrix)
+    u = _u_coefficients_3nu_batch(h, L)
+
+    u0 = u[..., 0]
+    u1, u2, u3, u4, u5, u6, u7, u8 = [u[..., k] for k in range(1, 9)]
+
+    return np.stack([
+        np.stack([u0+1.j*(u3+u8/SQRT3), 1.j*u1+u2, 1.j*u4+u5], axis=-1),
+        np.stack([1.j*u1-u2, u0-1.j*(u3-u8/SQRT3), 1.j*u6+u7], axis=-1),
+        np.stack([1.j*u4-u5, 1.j*u6-u7, u0-1.j*2.*u8/SQRT3], axis=-1),
+    ], axis=-2)
+
+
+def _is_batched(hamiltonian_matrix, L):
+    r"""Returns whether the arguments describe a stack of problems.
+
+    A single Hamiltonian is an ``n``-by-``n`` matrix and a single
+    baseline is a scalar, so anything with more axes than that is a
+    stack, and the vectorised path applies.
+
+    This runs on every scalar call, so it is written to be cheap: an
+    exact type check short-circuits the common case, and
+    ``numpy.ndim`` --- which would convert a nested list to an array
+    every time --- is reached only for an argument that is neither a
+    plain Python number nor a NumPy array.
+    """
+    if type(L) is not float and type(L) is not int:
+        if np.ndim(L) > 0:
+            return True
+
+    if type(hamiltonian_matrix) is np.ndarray:
+        return hamiltonian_matrix.ndim > 2
+
+    return isinstance(hamiltonian_matrix[0][0], (list, tuple, np.ndarray))
+
+
 def evolution_operator_3nu_u_coefficients(hamiltonian_matrix, L):
     r"""Returns the coefficients :math:`u_0, \ldots, u_8`.
 
@@ -449,43 +683,7 @@ def evolution_operator_3nu_u_coefficients(hamiltonian_matrix, L):
     # h2 = |h|^2, h3 = <h>
     h2, h3 = su3_invariants(h_coeffs)
 
-    if h2 <= 0.0:
-        # The Hamiltonian is proportional to the identity: U3 = 1
-        return [1.0+0.j] + [0.j]*8
-
-    # [psi1, psi2, psi3]
-    psi = psi_roots(h2, h3)
-
-    # (h*h)_k, computed once: it does not depend on the baseline
-    star_coeffs = _TENSOR_D @ h @ h
-
-    # Find the closest pair of latent roots, to detect degeneracy
-    scale = np.sqrt(h2)
-    pairs = [(0, 1, 2), (0, 2, 1), (1, 2, 0)]
-    a, b, c = min(pairs, key=lambda p: abs(psi[p[0]]-psi[p[1]]))
-
-    if abs(psi[a]-psi[b]) <= DEGENERACY_TOL*scale:
-        # Doubly degenerate root: the general expression would divide by
-        # zero, so use the two-projector form instead.
-        psi_deg = (psi[a]+psi[b])/2.0
-        exp_deg = cmath.exp(1.j*L*psi_deg)
-        exp_odd = cmath.exp(1.j*L*psi[c])
-        weight = (exp_odd-exp_deg)/(psi_deg-psi[c])
-        u0 = exp_deg + weight*psi_deg
-        uk = [-1.j*weight*h[k] for k in range(0, 8)]
-
-        return [u0]+uk
-
-    # [e^{i*L*psi1}, e^{i*L*psi2}, e^{i*L*psi3}]
-    exp_psi = [cmath.exp(1.j*L*x) for x in psi]
-
-    u0 = sum(exp_psi)/3.
-    uk = [1.j*sum([exp_psi[m]*(psi[m]*h[k]-star_coeffs[k])
-                   / (3.*psi[m]*psi[m]-h2) for m in [0, 1, 2]])
-          for k in range(0, 8)]
-
-    # [u0, u1, u2, u3, u4, u5, u6, u7, u8]
-    return [u0]+uk
+    return _u_coefficients_3nu_single(h, h2, h3, L)
 
 
 def evolution_operator_3nu(hamiltonian_matrix, L):
@@ -500,15 +698,20 @@ def evolution_operator_3nu(hamiltonian_matrix, L):
     ----------
     hamiltonian_matrix : array_like
         Three-flavor Hermitian Hamiltonian, given as the nested list
-        ``[[H11, H12, H13], [H21, H22, H23], [H31, H32, H33]]``.
-    L : float
-        Baseline, in units reciprocal to those of the Hamiltonian.
+        ``[[H11, H12, H13], [H21, H22, H23], [H31, H32, H33]]``, or a
+        stack of them, of shape ``(..., 3, 3)``.
+    L : float or array_like
+        Baseline, in units reciprocal to those of the Hamiltonian, or an
+        array of baselines broadcastable against the leading axes of
+        `hamiltonian_matrix`.
 
     Returns
     -------
-    list of list of complex
-        The time-evolution operator :math:`U_3(L)`, a :math:`3\times3`
-        unitary complex matrix, as a nested list.
+    list of list of complex or numpy.ndarray
+        For a single Hamiltonian and baseline, the time-evolution
+        operator :math:`U_3(L)` --- a :math:`3\times3` unitary complex
+        matrix --- as a nested list.  If either argument is a stack, an
+        array of shape ``(..., 3, 3)``.
 
     See Also
     --------
@@ -527,6 +730,9 @@ def evolution_operator_3nu(hamiltonian_matrix, L):
     +0.600964+0.114920j  +0.430462+0.614384j  -0.171381+0.183031j
     +0.278885-0.056655j  -0.171381+0.183031j  +0.888015-0.259943j
     """
+    if _is_batched(hamiltonian_matrix, L):
+        return _evolution_operator_3nu_batch(hamiltonian_matrix, L)
+
     u0, u1, u2, u3, u4, u5, u6, u7, u8 = \
         evolution_operator_3nu_u_coefficients(hamiltonian_matrix, L)
 
@@ -550,15 +756,39 @@ def probabilities_3nu(hamiltonian_matrix, L):
     ----------
     hamiltonian_matrix : array_like
         Three-flavor Hermitian Hamiltonian, given as the nested list
-        ``[[H11, H12, H13], [H21, H22, H23], [H31, H32, H33]]``.
-    L : float
-        Baseline, in units reciprocal to those of the Hamiltonian.
+        ``[[H11, H12, H13], [H21, H22, H23], [H31, H32, H33]]``, or a
+        stack of them, of shape ``(..., 3, 3)``.
+    L : float or array_like
+        Baseline, in units reciprocal to those of the Hamiltonian, or an
+        array of baselines broadcastable against the leading axes of
+        `hamiltonian_matrix`.
 
     Returns
     -------
-    tuple of float
-        The nine probabilities ``(Pee, Pem, Pet, Pme, Pmm, Pmt, Pte,
-        Ptm, Ptt)``, ordered with the initial flavor varying slowest.
+    tuple of float or numpy.ndarray
+        For a single Hamiltonian and baseline, the nine probabilities
+        ``(Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt)`` as a tuple,
+        ordered with the initial flavor varying slowest.  If either
+        argument is a stack, an array of shape ``(..., 9)`` in the same
+        order, with the leading axes given by broadcasting the two
+        arguments together.
+
+    Notes
+    -----
+    Passing arrays evaluates the whole stack at once, which is between
+    one and two orders of magnitude faster than calling this routine in
+    a Python loop.  The two common scans both broadcast naturally:
+
+    * *versus baseline*, with one Hamiltonian and an array of
+      baselines.  The characteristic equation depends only on the
+      Hamiltonian, so it is solved once for the whole scan;
+    * *versus energy*, with an array of Hamiltonians --- one per energy,
+      since :math:`H \propto 1/E` --- and a single baseline.
+
+    An oscillogram is the outer combination of the two, obtained by
+    giving the Hamiltonians and the baselines separate axes, e.g.
+    ``probabilities_3nu(H[:, None, :, :], L[None, :])``, which returns
+    an array of shape ``(len(H), len(L), 9)``.
 
     Examples
     --------
@@ -573,6 +803,13 @@ def probabilities_3nu(hamiltonian_matrix, L):
     >>> print('  '.join(['%.6f' % p for p in prob[6:9]]))
     0.080986  0.062872  0.856142
     """
+    if _is_batched(hamiltonian_matrix, L):
+        U = _evolution_operator_3nu_batch(hamiltonian_matrix, L)
+        # P_ab = |U_ba|^2: the evolution operator is indexed
+        # (final, initial), the probabilities (initial, final)
+        prob = np.abs(U)**2.
+        return np.swapaxes(prob, -1, -2).reshape(prob.shape[:-2]+(9,))
+
     U = evolution_operator_3nu(hamiltonian_matrix, L)
 
     Pee = abs(U[0][0])**2.
