@@ -79,11 +79,22 @@ Run the regression suite:
 
    pytest
 
-All 132 tests should pass.  They check the SU(2) and SU(3) machinery against
-independent computations --- unitarity of the evolution operator, agreement
-with ``scipy.linalg.expm``, agreement with the standard oscillation formulas,
-and the sign conventions of the sample Hamiltonians --- and run every example
-embedded in the docstrings.
+Every test should either pass or be skipped, and skips are expected rather
+than a sign of trouble: the only tests that skip are those for the optional
+Numba backend, which stand down when ``numba`` is not installed --- the
+default.  Install the ``fast`` extra and the whole suite runs.  It is a few
+hundred tests and takes a few seconds.
+
+The suite checks the SU(2) and SU(3) machinery against independent
+computations: unitarity of the evolution operator, agreement with
+``scipy.linalg.expm``, agreement with the standard oscillation formulas, the
+``d`` tensor and star product of the SU(3) algebra, and the sign conventions
+of the sample Hamiltonians.  Beyond that it exercises the batched evaluation
+paths against the scalar ones, the two backends against each other, degenerate
+and near-degenerate Hamiltonians, the energies and baselines the library is
+actually used at, and the agreement between the type annotations and the
+docstrings --- and it runs every example embedded in the docstrings as a
+doctest.
 
 Then run one of the worked examples:
 
