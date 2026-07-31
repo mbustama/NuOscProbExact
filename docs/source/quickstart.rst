@@ -159,6 +159,48 @@ Because :math:`H` is time-independent, the evolution operator obeys the group
 property :math:`U(L_1+L_2) = U(L_2) U(L_1)`, which is what makes composing
 across segments of constant density legitimate.
 
+Scanning: pass arrays
+---------------------
+
+Every routine above accepts a *stack* of Hamiltonians, a *stack* of
+baselines, or both, and evaluates the whole stack at once.  This is
+between one and two orders of magnitude faster than the same calls in a
+Python loop, and it is the recommended way to produce a curve or a grid.
+
+Versus baseline --- one Hamiltonian, many baselines:
+
+.. code-block:: python
+
+   baselines = np.linspace(1.0, 1.3e4, 2000)*CONV_KM_TO_INV_EV
+   prob = oscprob3nu.probabilities_3nu(h_vacuum, baselines)
+   prob.shape        # (2000, 9)
+   Pem = prob[:, 1]  # same ordering as the scalar return
+
+The characteristic equation depends only on the Hamiltonian, so it is
+solved once for the whole scan rather than once per baseline.
+
+Versus energy --- many Hamiltonians, one baseline.  Since
+:math:`H \propto 1/E`, build the stack by dividing the
+energy-independent term by an array of energies:
+
+.. code-block:: python
+
+   energies = np.logspace(-1, 1, 2000)*1.e9                  # [eV]
+   h_stack = h_vacuum_energy_indep/energies[:, None, None]
+   prob = oscprob3nu.probabilities_3nu(h_stack, baseline*CONV_KM_TO_INV_EV)
+
+An oscillogram is the outer combination of the two: give the
+Hamiltonians and the baselines separate axes and let them broadcast.
+
+.. code-block:: python
+
+   prob = oscprob3nu.probabilities_3nu(h_stack[:, None, :, :],
+                                       baselines[None, :])
+   prob.shape        # (len(energies), len(baselines), 9)
+
+A single Hamiltonian and a scalar baseline still return a plain tuple,
+exactly as before, so existing code is unaffected.
+
 More examples
 -------------
 
