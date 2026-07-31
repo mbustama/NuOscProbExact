@@ -1,0 +1,219 @@
+name: tests
+
+# Every commit is tested exactly once, whether or not it belongs to a pull request.
+#
+# GitHub attaches check runs to the commit rather than to the event, so a push-triggered
+# run already shows up on any pull request containing that commit.  Leaving both events
+# unfiltered therefore buys nothing and costs a second, identical build of the same tree.
+#
+# `push` matches every branch so that work in progress is covered even before a pull
+# request exists.  Tags are excluded: a release tag points at a commit its branch has
+# already tested.
+on:
+  push:
+    # '**' matches every branch, including names containing a slash, and has to be spelled
+    # out.  A push filter naming only tags -- even `tags-ignore: ['**']` -- makes GitHub
+    # treat the workflow as tag-only and run it for no branch push at all.  Naming only
+    # branches has the mirror effect, which is what is wanted here.
+    branches: ['**']
+  pull_request:
+
+# Pushing twice to a branch in quick succession cancels the older build, which is not worth
+# paying for.  Not on main, where each commit is a merge that deserves its own verification.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  pytest:
+    # Pull-request events are kept only for forks.  A branch in this repository fires a push
+    # event, which is what runs the job; a fork's branch does not, so without this its pull
+    # requests would get no CI at all -- a hole that opens silently the first time an
+    # outside contribution arrives.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The floor is the one declared in pyproject.toml's requires-python, deliberately:
+        # a declared minimum that nothing tests is a claim, not a guarantee.  3.9 is also
+        # the oldest version this can honestly promise, since the batched paths call
+        # np.broadcast_shapes and the optional backend needs a Numba wheel; on 3.9 pip
+        # resolves to numba 0.60, the last release supporting it, and that combination is
+        # what this job checks still works.
+        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        # The `fast` extra is included so the matrix exercises the configuration most users
+        # who care about speed will actually have.  The bare-NumPy configuration is not
+        # skipped, it is a job of its own below.
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e '.[fast,test]'
+
+      - name: Run test suite
+        run: pytest -v
+
+  numpy-path:
+    # The second of the three configurations the library supports: Numba installed, but the
+    # compiled path switched off at the module level.  This is the one that answers "do the
+    # two backends agree", for the whole suite rather than only for the tests that compare
+    # them directly -- every assertion in tests/ is re-run against the NumPy arithmetic.
+    #
+    # It is cheap (one job, one interpreter) and it covers a failure the matrix above cannot
+    # see: a result that is correct only because the kernel produced it.
+    name: NumPy path, Numba present but disabled
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e '.[fast,test]'
+
+      - name: Run the suite with the compiled path switched off
+        # `fastkernels.USE_NUMBA = False` has to be set before the tests import anything, so
+        # it goes in a pytest plugin loaded with -p rather than in a fixture.  The file is
+        # written here rather than committed because it exists only for this job; `python -m
+        # pytest` puts the working directory on sys.path, which is what makes -p find it.
+        #
+        # The two assertions live inside the plugin on purpose.  They run while pytest is
+        # loading it, so a failure aborts the run before a single test executes, and between
+        # them they establish that the plugin was loaded at all, that Numba really is
+        # installed here, and that the switch took effect.  Without them this job would be
+        # indistinguishable from a duplicate of the matrix the day the switch stopped
+        # working: still green, testing the compiled path twice and the NumPy path never.
+        run: |
+          cat > _force_numpy.py <<'PLUGIN'
+          import fastkernels
+
+          assert fastkernels.HAVE_NUMBA, 'Numba should be installed in this job'
+          fastkernels.USE_NUMBA = False
+          assert not fastkernels.available(), 'the compiled path should be switched off'
+          PLUGIN
+          python -m pytest -q -p _force_numpy
+
+  without-numba:
+    # The third configuration: Numba genuinely absent, which is what every user gets from a
+    # plain `pip install nuoscprobexact`.  It is the default installation, so it is the one
+    # a break would affect most people, and it is invisible to every other job here.
+    name: Without Numba
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        # No `fast` extra.  That is the entire difference from the matrix job.
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e '.[test]'
+
+      - name: Confirm Numba really is absent
+        # A transitive dependency could pull Numba in one day, at which point this job would
+        # quietly stop testing the fallback while still reporting success.
+        run: |
+          python -c "
+          import fastkernels
+          assert not fastkernels.HAVE_NUMBA, 'Numba was installed; this job tests its absence'
+          "
+
+      - name: Run test suite
+        # The suite skips the tests that require the compiled backend rather than failing
+        # them, so the expected result here is passes plus skips, not passes alone.
+        run: pytest -v
+
+  coverage:
+    # Deliberately its own job rather than another axis of the matrix.  What a line or a
+    # branch is exercised by does not depend on the interpreter, so running this on all five
+    # would pay for instrumentation five times over to learn one number.  As a separate job
+    # it runs in parallel with the matrix and does not delay the pass/fail signal.
+    name: Coverage
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # Read at job level rather than on the upload step, because a step's own `env:` block
+      # is not visible to that step's `if:` condition -- which is what lets the Codecov step
+      # below switch itself off cleanly when the secret does not exist.
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        # The `fast` extra is not optional here.  Coverage is 100% with Numba installed and
+        # 97% without it, because the whole `if HAVE_NUMBA:` block in fastkernels.py is
+        # unreachable when the import fails; the 98% floor is set against the former.  See
+        # the comment on fail_under in pyproject.toml.
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e '.[fast,test]'
+
+      - name: Run test suite with coverage
+        # Branch coverage, which sources are measured, what the @njit exclusion covers and
+        # the 98% floor all live in [tool.coverage] in pyproject.toml, so a local
+        # `pytest --cov` gates identically.  Nothing is passed here that could drift.
+        run: pytest -q --cov --cov-report=term-missing --cov-report=xml
+
+      - name: Publish coverage summary
+        # Puts the table on the run's summary page, so the number is readable without
+        # opening the log or downloading the artifact.
+        run: |
+          {
+            echo '### Coverage (statements and branches)'
+            echo
+            python -m coverage report --format=markdown
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage to Codecov
+        # Dormant until a CODECOV_TOKEN repository secret exists: without one the condition
+        # is false and the step is skipped, so this costs nothing and cannot fail before the
+        # secret is deliberately added.  Creating it is the whole act of switching coverage
+        # reporting on, at which point Codecov also starts commenting per-pull-request diff
+        # coverage -- the part that actually changes anything, since it shows the coverage of
+        # the lines in front of you.
+        #
+        # fail_ci_if_error is on because an upload that quietly failed would leave the README
+        # badge frozen at a stale number under a green checkmark, which is worse than a
+        # visible failure.  It cannot affect the tests' own signal, which comes from the jobs
+        # above.
+        if: env.CODECOV_TOKEN != ''
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: true
+
+      - name: Upload coverage report
+        # Cobertura XML is what every coverage service consumes.  Publishing it as an
+        # artifact keeps the report available whether or not the Codecov step above is
+        # active, which is what makes the figure inspectable today.
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml
+          if-no-files-found: error

@@ -117,6 +117,9 @@ File tree
 .. code-block:: text
 
    NuOscProbExact/
+   ├── .github/                         # Continuous integration (GitHub Actions)
+   │   └── workflows/
+   │       └── tests.yml                # The suite: five Pythons, all three backends
    ├── .gitignore                       # Build, cache, and generated-output artefacts
    ├── CHANGELOG.md                     # Notable changes, rendered as a docs page
    ├── LICENSE                          # MIT license

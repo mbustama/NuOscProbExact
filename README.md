@@ -80,6 +80,9 @@ Instructions:
    Doing this will create the directory `/home/MyProjects/NuOscProbExact`, with the following file structure:
    ```text
    NuOscProbExact/
+   ├── .github/                         # Continuous integration (GitHub Actions)
+   │   └── workflows/
+   │       └── tests.yml                # The suite: five Pythons, all three backends
    ├── .gitignore                       # Build, cache, and generated-output artefacts
    ├── CHANGELOG.md                     # Notable changes, rendered as a docs page
    ├── LICENSE                          # MIT license
