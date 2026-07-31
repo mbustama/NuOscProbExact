@@ -797,7 +797,7 @@ def _probabilities_3nu_batch(
     batch = np.broadcast_shapes(h_matrix.shape[:-2], L.shape)
     size = int(np.prod(batch, dtype=np.int64))
 
-    if fastkernels.available() and size > 0:
+    if size > 0 and fastkernels.worthwhile(3, size):
         return fastkernels.probabilities_3nu_kernel(
             np.broadcast_to(h_matrix, batch+(3, 3)),
             np.broadcast_to(L, batch))

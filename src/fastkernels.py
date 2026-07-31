@@ -69,7 +69,8 @@ __version__ = "1.6"
 __author__ = "Mauricio Bustamante"
 __email__ = "mbustamante@gmail.com"
 
-__all__ = ['HAVE_NUMBA', 'USE_NUMBA', 'PARALLEL_THRESHOLD', 'available',
+__all__ = ['HAVE_NUMBA', 'USE_NUMBA', 'MIN_BATCH', 'PARALLEL_THRESHOLD',
+           'available', 'worthwhile',
            'probabilities_2nu_kernel', 'probabilities_3nu_kernel']
 
 import cmath
@@ -90,6 +91,29 @@ Set to ``False`` to force the NumPy path even when Numba is installed.
 `available` reports the two together.
 """
 
+MIN_BATCH = {2: 50000, 3: 1}
+r"""dict: Module-level constant.
+
+The smallest stack for which the compiled kernel is worth using, by
+number of flavors.  A backend that is sometimes slower than the path it
+replaces is worse than no backend, so these are measured rather than
+assumed.
+
+For three flavors the kernel wins at every size, by between two and
+sixteen times, so the threshold is one.  For two flavors it does not:
+that expansion reduces to a square root and a sine per element, which
+NumPy already does about as well as compiled code can, and the kernel
+additionally has to materialise the Hamiltonian stack --- which for a
+scan over baselines is the same matrix repeated, costing 2.5 ms to copy
+at two hundred thousand points.  Measured by alternating the two
+paths and taking the best of nine rounds each, the crossover sits
+between twenty and fifty thousand elements: at twenty thousand NumPy is
+still ahead by a few per cent, at fifty thousand the kernel leads by
+1.3x and it grows slowly from there.  The threshold is set at the first
+size where the kernel is unambiguously ahead, since the region around
+the crossover is broad and varies between machines.
+"""
+
 PARALLEL_THRESHOLD = 256
 r"""int: Module-level constant.
 
@@ -100,10 +124,11 @@ size the cost of waking the thread pool exceeds what it saves.
 
 
 def available() -> bool:
-    r"""Returns whether the compiled kernels should be used.
+    r"""Returns whether the compiled kernels can be used at all.
 
     True when Numba was imported successfully *and* `USE_NUMBA` has not
-    been turned off.
+    been turned off.  Whether they are *worth* using for a given stack
+    is a separate question; see `worthwhile`.
 
     Returns
     -------
@@ -112,6 +137,29 @@ def available() -> bool:
         `probabilities_3nu_kernel` may be called.
     """
     return HAVE_NUMBA and USE_NUMBA
+
+
+def worthwhile(n_flavors: int, size: int) -> bool:
+    r"""Returns whether the compiled kernel should be used for a stack.
+
+    The kernels are only used where they have been measured to win.
+    Below the per-flavor threshold in `MIN_BATCH` the NumPy path is
+    quicker, and using the kernel anyway would make installing the
+    optional extra a pessimisation for those calls.
+
+    Parameters
+    ----------
+    n_flavors : int
+        Number of neutrino flavors, 2 or 3.
+    size : int
+        Number of elements in the stack.
+
+    Returns
+    -------
+    bool
+        Whether to call the corresponding kernel.
+    """
+    return available() and size >= MIN_BATCH.get(n_flavors, 1)
 
 
 if HAVE_NUMBA:
