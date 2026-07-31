@@ -149,7 +149,8 @@ def evolution_operator_2nu_u_coefficients(hamiltonian_matrix, L):
     h_abs = modulus(h_coeffs)
 
     u0 = cos(h_abs*L)
-    ss = -sin(h_abs*L)/h_abs
+    # The limit of -sin(|h|L)/|h| as |h| -> 0 is -L
+    ss = -L if h_abs == 0.0 else -sin(h_abs*L)/h_abs
     uk = [h_coeffs[k]*ss for k in range(0,3)]
 
     # [u0, u1, u2, u3]
@@ -237,8 +238,13 @@ def probabilities_2nu(hamiltonian_matrix, L):
     # h_abs = |h|
     h_abs = modulus(h_coeffs)
 
-    Pem = (abs(h_coeffs[0])**2.0 + abs(h_coeffs[1])**2.0) / h_abs**2.0 \
-            * pow(sin(h_abs*L), 2.0)
+    if h_abs == 0.0:
+        # The Hamiltonian is proportional to the identity: no flavor
+        # transitions occur, whatever the baseline
+        Pem = 0.0
+    else:
+        Pem = (abs(h_coeffs[0])**2.0 + abs(h_coeffs[1])**2.0) / h_abs**2.0 \
+                * pow(sin(h_abs*L), 2.0)
     Pme = Pem
     Pee = 1.0-Pem
     Pmm = 1.0-Pme
