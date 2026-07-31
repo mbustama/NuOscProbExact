@@ -3,6 +3,30 @@
 NuOscProbExact: Exact Neutrino Oscillation Probabilities
 =========================================================
 
+.. image:: https://github.com/mbustama/NuOscProbExact/actions/workflows/tests.yml/badge.svg
+   :target: https://github.com/mbustama/NuOscProbExact/actions/workflows/tests.yml
+   :alt: tests
+
+.. image:: https://github.com/mbustama/NuOscProbExact/actions/workflows/lint.yml/badge.svg
+   :target: https://github.com/mbustama/NuOscProbExact/actions/workflows/lint.yml
+   :alt: Code Quality
+
+.. image:: https://codecov.io/gh/mbustama/NuOscProbExact/branch/main/graph/badge.svg
+   :target: https://codecov.io/gh/mbustama/NuOscProbExact
+   :alt: codecov
+
+.. image:: https://img.shields.io/badge/docs-GitHub%20Pages-blue.svg
+   :target: https://mbustama.github.io/NuOscProbExact/
+   :alt: Documentation
+
+.. image:: https://img.shields.io/pypi/v/nuoscprobexact.svg
+   :target: https://pypi.org/project/nuoscprobexact/
+   :alt: PyPI
+
+.. image:: https://pepy.tech/badge/nuoscprobexact
+   :target: https://pepy.tech/project/nuoscprobexact
+   :alt: Downloads
+
 .. image:: https://img.shields.io/badge/arXiv-1904.12391-orange.svg
    :target: https://arxiv.org/abs/1904.12391
    :alt: arXiv:1904.12391
@@ -15,9 +39,13 @@ NuOscProbExact: Exact Neutrino Oscillation Probabilities
    :target: https://opensource.org/licenses/MIT
    :alt: License: MIT
 
-.. image:: https://img.shields.io/badge/python-3.7+-blue.svg
+.. image:: https://img.shields.io/badge/python-3.9+-blue.svg
    :target: https://www.python.org/downloads/
-   :alt: Python 3.7+
+   :alt: Python 3.9+
+
+.. image:: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json
+   :target: https://github.com/astral-sh/ruff
+   :alt: Code style: ruff
 
 .. important::
    **Important links:**

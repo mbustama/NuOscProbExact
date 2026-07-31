@@ -4,10 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nuoscprobexact"
-version = "1.6.0"
+version = "1.7.0"
 description = "Exact two-flavor and three-flavor neutrino oscillation probabilities for arbitrary time-independent Hamiltonians"
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.9"
 license = {file = "LICENSE"}
 authors = [{name = "Mauricio Bustamante", email = "mbustamante@gmail.com"}]
 keywords = ["neutrino", "oscillations", "physics", "SU(2)", "SU(3)"]
@@ -15,6 +15,11 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Physics",
 ]
 dependencies = ["numpy"]
@@ -22,7 +27,7 @@ dependencies = ["numpy"]
 [project.optional-dependencies]
 fast = ["numba"]
 plots = ["matplotlib"]
-test = ["pytest", "scipy", "coverage"]
+test = ["pytest", "scipy", "coverage", "pytest-cov"]
 docs = ["sphinx", "numpydoc", "myst-parser"]
 
 [project.urls]
@@ -42,3 +47,121 @@ py-modules = ["oscprob2nu", "oscprob3nu", "hamiltonians2nu",
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 filterwarnings = ["error::RuntimeWarning"]
+
+[tool.ruff]
+line-length = 79
+# Matches requires-python.  Stated rather than inferred so that raising the
+# floor and changing what ruff assumes about the language stay one decision.
+target-version = "py39"
+
+[tool.ruff.lint]
+# Pinned explicitly rather than left to ruff's default.  The default selection
+# is not stable across ruff releases -- 0.16 widened it, which turned a green
+# CI red overnight on a codebase that had not changed -- and a blocking lint
+# whose rule set moves with whatever version the runner happens to install is
+# not a check, it is a tripwire.  This is the set the codebase was cleaned
+# against: the pycodestyle errors worth having, and all of Pyflakes.
+#
+# Note E501 is deliberately not reachable from this selection.  Line length is
+# left to `line-length` above and to `ruff format --check`, which is
+# informational: the docstrings are numpydoc with LaTeX in them, and breaking a
+# formula to satisfy a column limit makes it harder to read against the
+# equations in docs/source/methodology.rst.
+select = ["E4", "E7", "E9", "F"]
+
+# Both of these flag deliberate, codebase-wide conventions rather than defects.
+ignore = [
+    # `l` is the baseline along the neutrino trajectory, the standard symbol in
+    # the physics this implements and the one used throughout the paper.
+    # Renaming it everywhere would make the code harder to check against the
+    # expressions it evaluates, which is the property that matters most here.
+    "E741",
+    # One-line guards.  All 58 occurrences are in the d_ijk lookup table in
+    # oscprob3nu.tensor_d and its two-flavor counterpart, written as a dense
+    # column of `if jkp1 == (4, 3): return 0.5`.  That table is a transcription
+    # of a matrix of structure constants; expanding each entry to two lines
+    # would double its height and destroy the alignment that makes it legible
+    # as the table it is.
+    "E701",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# The worked examples in test/ open with `from globaldefs import *`, which is
+# what makes them read the way they do in the paper: the constants appear in
+# the expressions under the names the equations give them, with no module
+# prefix.  These files are documentation that happens to execute, they are
+# published alongside arXiv:1904.12391, and changing their imports to satisfy a
+# linter would put the repository and the paper out of step.  Everything else
+# in them is still checked.
+"test/*" = ["F403", "F405"]
+# that a local `pytest --cov` measures, reports, and gates exactly as CI does.
+# A threshold passed as a flag in a workflow is a threshold that only CI knows
+# about, and the two drift the first time one of them is edited.
+[tool.coverage.run]
+# There is no import package: pyproject declares six flat `py-modules` under
+# `package-dir = {"" = "src"}`, so an editable install puts `oscprob3nu` and
+# friends on the path under their bare names.  Coverage measures imported
+# source files, and those files live directly in `src/` --- `src/<package>`,
+# which is the usual incantation, would match nothing here.
+source = ["src"]
+
+# Branch coverage, not only line coverage.  It is what this codebase needs
+# measuring: `oscprob3nu` alone has 170 branches, almost all of them the
+# degeneracy and near-degeneracy handling in the SU(3) expansion, where the
+# interesting question is never "did this line run" but "was the degenerate
+# case taken as well as the generic one".  Line coverage answers the first and
+# says nothing about the second.
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+
+exclude_also = [
+    # The Numba kernels.  These are not untested --- tests/test_fastkernels.py
+    # runs every one of them against the NumPy path and requires agreement to
+    # round-off --- but @njit compiles a function to machine code, and
+    # coverage.py traces Python bytecode, so not one line of a compiled body
+    # can ever be recorded as executed.  Left in, they report a permanent 118
+    # missing lines that no test could ever close, which is worse than
+    # uninformative: it makes a real regression indistinguishable from the
+    # noise floor.
+    #
+    # Matching the decorator excludes the whole function it decorates, which
+    # is why this is written against `@njit` rather than as an `omit` of the
+    # file.  Omitting `src/fastkernels.py` outright was the obvious
+    # alternative and was rejected: it would also drop `available`,
+    # `worthwhile`, `_run` and both public `probabilities_*_kernel` wrappers,
+    # roughly forty lines of ordinary Python that decide when the compiled
+    # path is used at all.  Those are measured, and they are the part where a
+    # dispatch bug would actually hide.
+    '^\s*@njit',
+]
+
+# A floor, not a target, and one that only ever moves up.  Measured, rather
+# than guessed, in all three configurations the suite supports:
+#
+#     Numba installed and used            100%   (0 of 655 statements missed)
+#     Numba installed, USE_NUMBA = False  100%
+#     Numba not importable                 97%
+#
+# The third is lower for a reason that is not a coverage regression: with
+# Numba absent the `if HAVE_NUMBA:` block never executes, so `_run` and both
+# `probabilities_*_kernel` wrappers are unreachable, and the two
+# `fastkernels.worthwhile(...)` dispatch branches in `oscprob2nu` and
+# `oscprob3nu` can only be taken one way.  Two points of headroom under the
+# 100% that the first two configurations reach is what keeps this a floor
+# rather than a tripwire, without letting it sag to the third.
+#
+# The consequence, stated plainly because it will otherwise be discovered the
+# hard way: `pytest --cov` without the `fast` extra installed reports 97 and
+# exits non-zero.  That is why the coverage job in .github/workflows/tests.yml
+# installs `.[fast,test]`, and it is the reason to prefer
+# `pip install -e '.[fast,test]'` when working on this locally.
+#
+# Do not lower it to turn a red build green --- a floor that follows the
+# measurement down is not a floor, it merely certifies whatever happened.
+#
+# This applies to every coverage run, not only CI, so measuring a single test
+# file will report far below the threshold and exit non-zero.  Pass
+# `--cov-fail-under=0` when doing that deliberately.
+fail_under = 98

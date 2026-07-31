@@ -33,8 +33,11 @@ want to do:
 against an independent matrix exponential.  The library itself never imports
 it.
 
-**NuOscProbExact** requires Python 3.7 or newer.  It uses the ``@``
-matrix-multiplication operator, so it will not run under Python 2.
+**NuOscProbExact** requires Python 3.9 or newer, and every release is tested
+on 3.9, 3.10, 3.11, 3.12, and 3.13.  The floor comes from
+:func:`numpy.broadcast_shapes`, which the batched paths use and which arrived
+in NumPy 1.20; 3.9 is also the oldest version for which the optional ``numba``
+backend still has a wheel.
 
 Installing
 ----------
@@ -114,6 +117,12 @@ File tree
 .. code-block:: text
 
    NuOscProbExact/
+   ├── .github/                         # Continuous integration (GitHub Actions)
+   │   └── workflows/
+   │       ├── tests.yml                # The suite: five Pythons, all three backends
+   │       ├── lint.yml                 # ruff, and the docs build under -W
+   │       ├── pages.yml                # Builds and deploys the docs to GitHub Pages
+   │       └── publish.yml              # Publishes to PyPI on a GitHub Release
    ├── .gitignore                       # Build, cache, and generated-output artefacts
    ├── CHANGELOG.md                     # Notable changes, rendered as a docs page
    ├── LICENSE                          # MIT license

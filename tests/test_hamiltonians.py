@@ -12,13 +12,10 @@ import pytest
 
 import hamiltonians2nu
 import hamiltonians3nu
-import oscprob2nu
-import oscprob3nu
-from globaldefs import (CONV_KM_TO_INV_EV, D21_NO_BF, D31_NO_BF, DCP_NO_BF,
-                        EPS_2, EPS_3, LAMBDA, S12_NO_BF, S13_NO_BF, S23_NO_BF,
-                        VCC_EARTH_CRUST)
+from globaldefs import (D21_NO_BF, D31_NO_BF, DCP_NO_BF, EPS_2, EPS_3, LAMBDA,
+                        S12_NO_BF, S13_NO_BF, S23_NO_BF, VCC_EARTH_CRUST)
 
-from conftest import ATOL, as_nested_list
+from conftest import ATOL
 
 
 def textbook_hamiltonian_2nu_vacuum(sth, dm2):

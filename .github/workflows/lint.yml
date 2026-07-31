@@ -1,0 +1,88 @@
+name: Code Quality
+
+# Triggers match tests.yml exactly; the reasoning is written out there.  In short: a commit
+# is checked once, the push-triggered run is what appears on a pull request, and
+# pull_request events are kept only so that a fork's branches -- which never fire a push
+# event here -- are still covered.
+on:
+  push:
+    # '**' matches every branch, including names containing a slash, and has to be spelled
+    # out.  A push filter naming only tags -- even `tags-ignore: ['**']` -- makes GitHub
+    # treat the workflow as tag-only and run it for no branch push at all.
+    branches: ['**']
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  lint:
+    name: Run Ruff Linter
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Ruff
+        run: pip install ruff
+
+      - name: Run Ruff Linter
+        # Undefined names, unused imports, comparison and except-clause mistakes.  The rule
+        # selection, the two codebase-wide exemptions (E741 for `l`, E701 for the d_ijk
+        # lookup table) and the star-import exemption for the paper's worked examples all
+        # live in [tool.ruff.lint] in pyproject.toml, so this command and a local `ruff
+        # check` cannot disagree.
+        #
+        # Blocking on purpose: a new finding should fail the build rather than be reported
+        # into a green checkmark.  The codebase is clean against this selection as of the
+        # commit that introduced it, so anything this reports is new.
+        run: ruff check src/ tests/ test/ docs/ run_testsuite.py
+
+      - name: Run Ruff Formatter (Check Only)
+        # Informational, and expected to stay that way.  The codebase predates ruff format
+        # and does not follow it -- 35 of 39 files would be reformatted -- and running it
+        # would rewrite the alignment of the SU(3) coefficient blocks and the d_ijk table,
+        # which are laid out to be read against the equations rather than to please a
+        # formatter.  Left here so the gap stays visible without blocking anything.
+        run: ruff format --check .
+        continue-on-error: true
+
+  docs:
+    name: Documentation builds
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          # Matches pages.yml, so what is checked here is what gets deployed.
+          python-version: "3.12"
+
+      - name: Install documentation dependencies
+        # The package is not installed: docs/source/conf.py puts ../../src on sys.path
+        # itself, which is how autodoc imports the six modules under their bare names.
+        run: pip install -r docs/requirements.txt
+
+      - name: Build HTML documentation
+        # Stricter than pages.yml on purpose.  -W turns Sphinx warnings into errors, which
+        # is what catches a broken cross-reference, a page missing from the toctree, a
+        # numpydoc section that does not parse, or an autodoc target that has been renamed
+        # out from under the docs.  --keep-going reports all of them in one run instead of
+        # stopping at the first.
+        #
+        # The documentation builds clean under -W today and this is what keeps it that way.
+        # Until now it was only ever built by the deployment workflow, which runs on pushes
+        # to main -- so a page that failed to build was discovered after it had merged.
+        run: |
+          cd docs
+          make html SPHINXOPTS="-W --keep-going"
