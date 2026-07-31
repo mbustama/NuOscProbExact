@@ -159,6 +159,8 @@ Because :math:`H` is time-independent, the evolution operator obeys the group
 property :math:`U(L_1+L_2) = U(L_2) U(L_1)`, which is what makes composing
 across segments of constant density legitimate.
 
+.. _scanning:
+
 Scanning: pass arrays
 ---------------------
 
@@ -213,6 +215,41 @@ Hamiltonians and the baselines separate axes and let them broadcast.
 
 A single Hamiltonian and a scalar baseline still return a plain tuple,
 exactly as before, so existing code is unaffected.
+
+Going faster still
+------------------
+
+If `Numba <https://numba.pydata.org>`_ is installed, the batched paths are
+evaluated by compiled kernels instead of NumPy, which is worth between
+2x and 15x on large stacks:
+
+.. code-block:: shell
+
+   pip install "nuoscprobexact[fast]"
+
+Nothing in your code changes; :mod:`fastkernels` is picked up
+automatically, and the answers are the same to round-off.  If it is not
+installed, the NumPy path is used and everything works as before.
+
+It is used only where it is faster.  For three flavors that is every stack
+size, by between two and sixteen times; for two flavors the NumPy path is
+already lean enough to win below about fifty thousand elements, so it is
+kept there.  :func:`fastkernels.worthwhile` makes that choice from measured
+thresholds, so installing the extra can only help.
+
+The first call compiles, which takes a few seconds.  The kernels are
+cached on disk, so later runs start in milliseconds.  To force the NumPy
+path --- to compare the two, say --- set
+
+.. code-block:: python
+
+   import fastkernels
+   fastkernels.USE_NUMBA = False
+
+The scalar path is deliberately left uncompiled: a single probability
+takes about fifteen microseconds, which is not worth a compilation
+pause.  Short *stacks* are also evaluated one element at a time, since
+below about ten elements the array machinery costs more than it saves.
 
 More examples
 -------------

@@ -77,6 +77,8 @@ import math
 
 import numpy as np
 
+import fastkernels
+
 
 SQRT3 = np.sqrt(3.0)
 r"""float: Module-level constant equal to :math:`\sqrt{3}`."""
@@ -86,6 +88,19 @@ r"""float: Module-level constant equal to :math:`1/\sqrt{3}`."""
 
 NEG_HALF_SQRT3_INV = -SQRT3_INV/2.0
 r"""float: Module-level constant equal to :math:`-1/(2\sqrt{3})`."""
+
+SMALL_BATCH = 10
+r"""int: Module-level constant.
+
+Stacks with at most this many elements are evaluated one at a time
+through the scalar path.  A batched call carries a fixed cost of a
+couple of hundred microseconds --- allocating and reducing a dozen small
+arrays --- which for a short stack exceeds what the scalar path spends
+on the whole job.  Measured crossover: eleven elements, so a single
+Hamiltonian and baseline costs about a third of what the array path
+would.  The two-flavor expansion does less work per element, so its
+threshold is lower; see :data:`oscprob2nu.SMALL_BATCH`.
+"""
 
 DEGENERACY_TOL = 1.e-12
 r"""float: Module-level constant.
@@ -779,7 +794,26 @@ def _probabilities_3nu_batch(
     """
     h_matrix = np.asarray(h_matrix, dtype=complex)
     L = np.asarray(L, dtype=float)
-    np.broadcast_shapes(h_matrix.shape[:-2], L.shape)
+    batch = np.broadcast_shapes(h_matrix.shape[:-2], L.shape)
+    size = int(np.prod(batch, dtype=np.int64))
+
+    if size > 0 and fastkernels.worthwhile(3, size):
+        return fastkernels.probabilities_3nu_kernel(
+            np.broadcast_to(h_matrix, batch+(3, 3)),
+            np.broadcast_to(L, batch))
+
+    if size <= SMALL_BATCH:
+        # Below this size the fixed cost of the array machinery exceeds
+        # what the scalar path spends on the whole stack
+        flat_h = np.broadcast_to(h_matrix, batch+(3, 3)).reshape(-1, 3, 3)
+        flat_l = np.broadcast_to(L, batch).reshape(-1)
+        out = np.empty((flat_l.shape[0], 9))
+        for n in range(flat_l.shape[0]):
+            # .tolist() gives Python complex numbers, on which the scalar
+            # path is quicker than on NumPy scalars, by more than the
+            # conversion costs
+            out[n] = probabilities_3nu(flat_h[n].tolist(), float(flat_l[n]))
+        return out.reshape(batch+(9,))
 
     entries = _u_to_entries_batch(*_u_coefficients_3nu_batch(
         _hamiltonian_3nu_coefficients_batch(h_matrix), L))
