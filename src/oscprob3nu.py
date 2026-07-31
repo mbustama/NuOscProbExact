@@ -354,8 +354,32 @@ def evolution_operator_3nu_u_coefficients(hamiltonian_matrix, L):
     # h2 = |h|^2, h3 = <h>
     h2, h3 = su3_invariants(h_coeffs)
 
+    if h2 <= 0.0:
+        # The Hamiltonian is proportional to the identity: U3 = 1
+        return [1.0+0.j] + [0.j]*8
+
     # [psi1, psi2, psi3]
     psi = psi_roots(h2, h3)
+
+    # The expression below divides by 3*psi^2 - |h|^2, which is the
+    # derivative of the characteristic polynomial and so vanishes at a
+    # repeated root.  A doubly degenerate spectrum is handled by the
+    # confluent form of the same expansion, in which the spectral
+    # decomposition collapses to a single projector:
+    #   U3 = e^{i psi_a L} + (e^{i psi_c L} - e^{i psi_a L}) * P_c,
+    #   P_c = (h_k lambda^k + psi_a) / (psi_a - psi_c)
+    scale = sqrt(h2)
+    a, b, c = min([(0,1,2), (0,2,1), (1,2,0)],
+                  key=lambda p: abs(psi[p[0]]-psi[p[1]]))
+    if abs(psi[a]-psi[b]) <= DEGENERACY_TOL*scale:
+        psi_deg = (psi[a]+psi[b])/2.0
+        exp_deg = cmath.exp(1.j*L*psi_deg)
+        exp_odd = cmath.exp(1.j*L*psi[c])
+        weight = (exp_odd-exp_deg)/(psi_deg-psi[c])
+        u0 = exp_deg + weight*psi_deg
+        uk = [-1.j*weight*h_coeffs[k] for k in range(0,8)]
+
+        return [u0]+uk
 
     # [e^{i*L*psi1}, e^{i*L*psi2}, e^{i*L*psi3}]
     exp_psi = [cmath.exp(1.j*L*x) for x in psi]
