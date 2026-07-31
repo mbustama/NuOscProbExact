@@ -157,13 +157,20 @@ def _hamiltonian_2nu_coefficients_batch(h_matrix: np.ndarray) -> np.ndarray:
     Returns
     -------
     numpy.ndarray
-        The coefficients, of shape ``(..., 3)``, real.
+        The coefficients, of shape ``(3, ...)``.
+
+    Notes
+    -----
+    The component index is the *first* axis, so that each :math:`h_k` is
+    a contiguous array and the batch axes are the trailing ones, which
+    is what lets NumPy right-align them against the baselines.  This
+    mirrors :func:`oscprob3nu._hamiltonian_3nu_coefficients_batch`.
     """
     return np.stack([
         h_matrix[..., 0, 1].real,
         -h_matrix[..., 0, 1].imag,
         (h_matrix[..., 0, 0]-h_matrix[..., 1, 1]).real/2.0,
-    ], axis=-1)
+    ], axis=0)
 
 
 def _u_coefficients_2nu_batch(h: np.ndarray, L: np.ndarray) -> np.ndarray:
@@ -172,30 +179,37 @@ def _u_coefficients_2nu_batch(h: np.ndarray, L: np.ndarray) -> np.ndarray:
     Parameters
     ----------
     h : numpy.ndarray
-        The coefficients :math:`h_k`, of shape ``(..., 3)``, real.
+        The coefficients :math:`h_k`, of shape ``(3, ...)``, real.
     L : numpy.ndarray
-        Baselines, of shape ``(...)``, already broadcast against `h`.
+        Baselines, of shape ``(...)``, broadcastable against `h`.
 
     Returns
     -------
     numpy.ndarray
-        The coefficients, of shape ``(..., 4)``, real.
+        The coefficients, of shape ``(4, ...)``, real.
     """
+    # Pad the Hamiltonian's batch axes so that they right-align against
+    # the baselines; reshape returns a view, so this costs nothing
+    full = np.broadcast_shapes(h.shape[1:], np.shape(L))
+    extra = len(full) - (h.ndim - 1)
+    if extra > 0:
+        h = h.reshape(h.shape[:1] + (1,)*extra + h.shape[1:])
+
     # |h| depends on the Hamiltonian alone; the baselines enter only in
     # the trigonometric factors below
-    h_abs = np.sqrt(np.einsum('...i,...i->...', h, h))
+    h_abs = np.sqrt((h*h).sum(0))
 
     positive = h_abs > 0.0
     safe_h_abs = np.where(positive, h_abs, 1.0)
 
     phase = h_abs*L
-    u0 = np.cos(phase)
+    u0 = np.broadcast_to(np.cos(phase), full)
     # The limit of -sin(|h|L)/|h| as |h| -> 0 is -L
     ss = np.where(positive, -np.sin(phase)/safe_h_abs,
-                  -np.broadcast_to(L, np.shape(phase)))
+                  -np.broadcast_to(L, full))
 
-    return np.concatenate([np.broadcast_to(u0, np.shape(ss))[..., None],
-                           h*ss[..., None]], axis=-1)
+    return np.concatenate([u0[None], np.broadcast_to(h*ss, (3,)+full)],
+                          axis=0)
 
 
 def _evolution_operator_2nu_batch(
@@ -223,9 +237,8 @@ def _evolution_operator_2nu_batch(
     # a clear message rather than deep inside the expansion
     np.broadcast_shapes(h_matrix.shape[:-2], L.shape)
 
-    u = _u_coefficients_2nu_batch(
+    u0, u1, u2, u3 = _u_coefficients_2nu_batch(
         _hamiltonian_2nu_coefficients_batch(h_matrix), L)
-    u0, u1, u2, u3 = [u[..., k] for k in range(4)]
 
     return np.stack([
         np.stack([u0+1.j*u3, 1.j*u1+u2], axis=-1),
@@ -249,8 +262,8 @@ def _probabilities_2nu_batch(
     which leaves only two distinct numbers, and unitarity makes the
     second the complement of the first.  So neither the evolution
     operator nor the coefficients need to be built: the transition
-    probability follows from the Hamiltonian directly, exactly as it
-    does on the scalar path.
+    probability follows from the Hamiltonian directly, exactly as on
+    the scalar path.
 
     Parameters
     ----------
@@ -270,7 +283,7 @@ def _probabilities_2nu_batch(
     np.broadcast_shapes(h_matrix.shape[:-2], L.shape)
 
     h = _hamiltonian_2nu_coefficients_batch(h_matrix)
-    h1, h2, h3 = h[..., 0], h[..., 1], h[..., 2]
+    h1, h2, h3 = h
 
     h_sq = h1*h1 + h2*h2 + h3*h3
     positive = h_sq > 0.0

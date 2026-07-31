@@ -570,7 +570,16 @@ def _hamiltonian_3nu_coefficients_batch(h_matrix: np.ndarray) -> np.ndarray:
     Returns
     -------
     numpy.ndarray
-        The coefficients, of shape ``(..., 8)``, real.
+        The coefficients, of shape ``(8, ...)``.
+
+    Notes
+    -----
+    The component index is the *first* axis, not the last, so that each
+    :math:`h_k` is a contiguous array.  Everything downstream works one
+    component at a time --- the star product, the nine entries of
+    :math:`U_3` --- and reading those out of a strided view of a
+    ``(..., 8)`` array costs about a third more.  It also lets
+    `_star_all`, which unpacks its argument, serve both paths unchanged.
     """
     return np.stack([
         h_matrix[..., 0, 1].real,
@@ -582,7 +591,7 @@ def _hamiltonian_3nu_coefficients_batch(h_matrix: np.ndarray) -> np.ndarray:
         -h_matrix[..., 1, 2].imag,
         (h_matrix[..., 0, 0]+h_matrix[..., 1, 1]
          - 2.0*h_matrix[..., 2, 2]).real*SQRT3/6.0,
-    ], axis=-1)
+    ], axis=0)
 
 
 def _u_coefficients_3nu_batch(h: np.ndarray, L: np.ndarray) -> np.ndarray:
@@ -595,14 +604,18 @@ def _u_coefficients_3nu_batch(h: np.ndarray, L: np.ndarray) -> np.ndarray:
     Parameters
     ----------
     h : numpy.ndarray
-        The coefficients :math:`h_k`, of shape ``(..., 8)``, real.
+        The coefficients :math:`h_k`, of shape ``(8, ...)``, real.
     L : numpy.ndarray
-        Baselines, of shape ``(...)``, already broadcast against `h`.
+        Baselines, of shape ``(...)``, broadcastable against `h`.
 
     Returns
     -------
-    numpy.ndarray
-        The coefficients, of shape ``(..., 9)``, complex.
+    u0 : numpy.ndarray
+        The coefficient :math:`u_0`, of shape ``(...)``.
+    uk : numpy.ndarray
+        The coefficients :math:`u_1, \ldots, u_8`, of shape
+        ``(8, ...)``.  They come back separately rather than
+        concatenated, because every caller takes them apart again.
 
     Notes
     -----
@@ -615,17 +628,26 @@ def _u_coefficients_3nu_batch(h: np.ndarray, L: np.ndarray) -> np.ndarray:
     Degeneracy is measure-zero among floating-point Hamiltonians, so the
     fallback loop is empty in essentially every real use.
     """
-    # Everything up to here depends on the Hamiltonian alone, so it is
-    # evaluated at the shape of `h` and only then broadcast against the
-    # baselines.  Scanning one Hamiltonian over N baselines therefore
-    # solves the characteristic equation once, not N times.
-    # The same sparse expansion the scalar path uses.  Contracting the
+    # The component index leads, so the batch axes of `h` are the
+    # trailing ones and NumPy right-aligns them against `L`.  Padding
+    # `h` with as many length-one axes as `L` has extra keeps that
+    # alignment, and costs nothing: reshape returns a view.
+    full = np.broadcast_shapes(h.shape[1:], np.shape(L))
+    extra = len(full) - (h.ndim - 1)
+    if extra > 0:
+        h = h.reshape(h.shape[:1] + (1,)*extra + h.shape[1:])
+
+    # Everything up to the exponential depends on the Hamiltonian alone,
+    # so it is evaluated at the shape of `h` and only then broadcast
+    # against the baselines.  Scanning one Hamiltonian over N baselines
+    # therefore solves the characteristic equation once, not N times.
+    # The star product uses the same sparse expansion as the scalar path.  Contracting the
     # dense table with einsum instead costs an order of magnitude more:
     # without a path plan it walks the 8x8x8 tensor for every element,
     # where this is a few dozen array multiplications.
-    star = np.stack(_star_all(np.moveaxis(h, -1, 0)), axis=-1)
-    h2 = (h*h).sum(-1)
-    h3 = (h*star).sum(-1)
+    star = np.stack(_star_all(h))
+    h2 = (h*h).sum(0)
+    h3 = (h*star).sum(0)
 
     positive = h2 > 0.0
     safe_h2 = np.where(positive, h2, 1.0)
@@ -641,15 +663,15 @@ def _u_coefficients_3nu_batch(h: np.ndarray, L: np.ndarray) -> np.ndarray:
     # Not clipped in place: for a single Hamiltonian this is a scalar,
     # which has nowhere to write to
     chi = np.arccos(np.clip((-SQRT3)*h3/(safe_h2*sqrt_h2), -1.0, 1.0))
-    m = np.array([1.0, 2.0, 3.0])
-    psi = pre[..., None]*np.cos((chi[..., None]+2.0*np.pi*m)/3.0)
-    psi = np.where(positive[..., None], psi, 0.0)
 
-    denom = 3.0*psi*psi - h2[..., None]
+    m = np.array([1.0, 2.0, 3.0]).reshape((3,)+(1,)*np.ndim(chi))
+    psi = np.where(positive, pre*np.cos((chi+2.0*np.pi*m)/3.0), 0.0)
+
+    denom = 3.0*psi*psi - h2
     safe_denom = np.where(denom != 0.0, denom, 1.0)
 
     # The baselines enter only here
-    exp_psi = np.exp(1.j*L[..., None]*psi)
+    exp_psi = np.exp(1.j*L*psi)
 
     # Only two combinations of the three terms survive the sum over m,
     #   u_k = i [ (sum_m w_m psi_m) h_k - (sum_m w_m) (h*h)_k ],
@@ -658,50 +680,63 @@ def _u_coefficients_3nu_batch(h: np.ndarray, L: np.ndarray) -> np.ndarray:
     # intermediate eight times the size of the result.
     w = exp_psi/safe_denom
 
-    u0 = exp_psi.sum(-1)/3.0
-    if h.ndim == 1:
-        # A single Hamiltonian scanned over baselines: the bracket is a
-        # fixed 3-by-8 matrix, so the sum over m is one small matrix
-        # product, which BLAS does better than three broadcasts
-        uk = 1.j*(w @ (psi[:, None]*h - star))
+    u0 = exp_psi.sum(0)/3.0
+
+    if h[0].size == 1 and w.ndim > 1:
+        # A single Hamiltonian scanned over baselines.  The bracket is
+        # then a fixed 8-by-3 matrix and the sum over m is one matrix
+        # product, which BLAS does better than three broadcasts.
+        bracket = psi.reshape(1, 3)*h.reshape(8, 1) - star.reshape(8, 1)
+        uk = 1.j*(bracket @ w.reshape(3, -1)).reshape((8,)+full)
     else:
-        weighted = (w*psi).sum(-1)
-        total = w.sum(-1)
-        uk = 1.j*(weighted[..., None]*h - total[..., None]*star)
-    u = np.concatenate([u0[..., None], uk], axis=-1)
+        # The factor of i rides on the two (...)-shaped sums rather than
+        # on the (8, ...) result, which is eight times larger
+        weighted = 1.j*(w*psi).sum(0)
+        total = 1.j*w.sum(0)
+        uk = weighted*h - total*star
 
     # Recompute the elements whose spectrum is degenerate, using the same
     # criterion as the scalar path: the closest pair of latent roots.
     # Degeneracy is a property of the Hamiltonian, so the test is made at
-    # the shape of `h` and then broadcast over the baselines.
-    # Taking the smallest gap pairwise avoids stacking the three of them
-    # into an array only to reduce it away again
-    smallest_gap = np.minimum(np.minimum(np.abs(psi[..., 0]-psi[..., 1]),
-                                         np.abs(psi[..., 0]-psi[..., 2])),
-                              np.abs(psi[..., 1]-psi[..., 2]))
+    # the shape of `h` and then broadcast over the baselines.  Taking the
+    # smallest gap pairwise avoids stacking the three of them into an
+    # array only to reduce it away again.
+    smallest_gap = np.minimum(np.minimum(np.abs(psi[0]-psi[1]),
+                                         np.abs(psi[0]-psi[2])),
+                              np.abs(psi[1]-psi[2]))
     degenerate = (smallest_gap <= DEGENERACY_TOL*sqrt_h2) | ~positive
     if degenerate.any():
-        full = u.shape[:-1]
-        h_full = np.broadcast_to(h, full+(8,))
-        star_full = np.broadcast_to(star, full+(8,))
+        u0 = np.broadcast_to(u0, full).copy()
+        uk = np.broadcast_to(uk, (8,)+full).copy()
+        h_full = np.broadcast_to(h, (8,)+full)
+        star_full = np.broadcast_to(star, (8,)+full)
         h2_full = np.broadcast_to(h2, full)
         h3_full = np.broadcast_to(h3, full)
         L_full = np.broadcast_to(L, full)
         for idx in zip(*np.nonzero(np.broadcast_to(degenerate, full))):
-            u[idx] = _u_coefficients_3nu_single(
-                h_full[idx], float(h2_full[idx]), float(h3_full[idx]),
-                float(L_full[idx]), star_full[idx])
+            column = (slice(None),)+idx
+            values = _u_coefficients_3nu_single(
+                h_full[column], float(h2_full[idx]), float(h3_full[idx]),
+                float(L_full[idx]), star_full[column])
+            u0[idx] = values[0]
+            uk[column] = values[1:]
 
-    return u
+    return u0, uk
 
 
-def _u_to_entries_batch(u: np.ndarray) -> Tuple[np.ndarray, ...]:
+def _u_to_entries_batch(
+    u0: np.ndarray,
+    uk: np.ndarray
+) -> Tuple[np.ndarray, ...]:
     r"""Returns the nine entries of :math:`U_3` from the coefficients.
 
     Parameters
     ----------
-    u : numpy.ndarray
-        The nine coefficients, of shape ``(..., 9)``.
+    u0 : numpy.ndarray
+        The coefficient :math:`u_0`, of shape ``(...)``.
+    uk : numpy.ndarray
+        The coefficients :math:`u_1, \ldots, u_8`, of shape
+        ``(8, ...)``.
 
     Returns
     -------
@@ -709,8 +744,7 @@ def _u_to_entries_batch(u: np.ndarray) -> Tuple[np.ndarray, ...]:
         The entries ``(U00, U01, U02, U10, U11, U12, U20, U21, U22)``,
         each of shape ``(...)``.
     """
-    u0 = u[..., 0]
-    u1, u2, u3, u4, u5, u6, u7, u8 = [u[..., k] for k in range(1, 9)]
+    u1, u2, u3, u4, u5, u6, u7, u8 = uk
     u8_over_sqrt3 = u8/SQRT3
 
     return (u0+1.j*(u3+u8_over_sqrt3), 1.j*u1+u2, 1.j*u4+u5,
@@ -724,10 +758,10 @@ def _probabilities_3nu_batch(
 ) -> np.ndarray:
     r"""Returns the nine probabilities for a stack, without forming U.
 
-    :math:`U_3` is wanted only through the modulus squared of its
+    :math:`U_3` is needed only through the modulus squared of its
     entries, so the entries are squared as they are produced.  Stacking
     them into a ``(..., 3, 3)`` array first, and then transposing and
-    reshaping that into the order the probabilities are returned in,
+    reshaping it into the order the probabilities are returned in,
     allocates two further arrays and copies both.
 
     Parameters
@@ -747,7 +781,7 @@ def _probabilities_3nu_batch(
     L = np.asarray(L, dtype=float)
     np.broadcast_shapes(h_matrix.shape[:-2], L.shape)
 
-    entries = _u_to_entries_batch(_u_coefficients_3nu_batch(
+    entries = _u_to_entries_batch(*_u_coefficients_3nu_batch(
         _hamiltonian_3nu_coefficients_batch(h_matrix), L))
 
     # P_ab = |U_ba|^2: the entries come out row by row, so taking them
@@ -782,7 +816,7 @@ def _evolution_operator_3nu_batch(
     np.broadcast_shapes(h_matrix.shape[:-2], L.shape)
 
     h = _hamiltonian_3nu_coefficients_batch(h_matrix)
-    entries = _u_to_entries_batch(_u_coefficients_3nu_batch(h, L))
+    entries = _u_to_entries_batch(*_u_coefficients_3nu_batch(h, L))
 
     return np.stack([np.stack(entries[0:3], axis=-1),
                      np.stack(entries[3:6], axis=-1),
