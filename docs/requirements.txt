@@ -1,0 +1,12 @@
+# Documentation-only dependencies.  The library itself needs only numpy.
+#
+#     pip install -r docs/requirements.txt
+#     cd docs && make html
+#
+sphinx
+sphinx-rtd-theme
+sphinx-copybutton
+sphinxcontrib-bibtex
+numpydoc
+myst-parser
+numpy
