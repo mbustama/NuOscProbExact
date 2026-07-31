@@ -554,7 +554,7 @@ oscprob3nu_tests.plot_probability_3nu_vs_baseline(
 ```
 The function `plot_probability_3nu_vs_baseline` assumes that `energy` is in GeV and the (log10) of the baselines `log10_l_min` and `log_l_max` are in km.  The function call above produces the following plot:
 
-<img align="middle" class="center" src="https://github.com/mbustama/NuOscProbExact/blob/master/img/prob_3nu_vacuum_vs_baseline_ee_em_et.png" width="400"/>
+<img align="middle" class="center" src="https://github.com/mbustama/NuOscProbExact/blob/main/img/prob_3nu_vacuum_vs_baseline_ee_em_et.png" width="400"/>
 
 The parameter `case` can take any of the following values:
 * `vacuum`: for oscillations in vacuum, assuming the default values of mixing parameters from the `globaldefs` module
@@ -640,7 +640,7 @@ oscprob3nu_tests.plot_probability_3nu_vs_energy(
 ```
 The function `plot_probability_3nu_vs_energy` assumes that `baseline` is in km and the (log10) of the energies `log10_energy_min` and `log10_energy_max` are in GeV.  The function call above produces the following plot:
 
-<img align="middle" class="center" src="https://github.com/mbustama/NuOscProbExact/blob/master/img/prob_3nu_vacuum_vs_energy_ee_em_et.png" width="400"/>
+<img align="middle" class="center" src="https://github.com/mbustama/NuOscProbExact/blob/main/img/prob_3nu_vacuum_vs_energy_ee_em_et.png" width="400"/>
 
 The parameter `case` can take any of the same values as listed [above](#oscillations-in-vacuum-fixed-energy-varying-baseline).
 

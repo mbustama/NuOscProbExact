@@ -206,5 +206,5 @@ More examples
 
 The ``test/`` directory holds a runnable script for each of the cases above.
 They are the same examples given in the `README
-<https://github.com/mbustama/NuOscProbExact/blob/master/README.md>`_, with the
+<https://github.com/mbustama/NuOscProbExact/blob/main/README.md>`_, with the
 output you should expect.
