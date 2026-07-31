@@ -143,11 +143,19 @@ def tensor_d(i, j, k):
     -------
     float
         Value of the tensor d_ijk.
+
+    Raises
+    ------
+    IndexError
+        If any index lies outside the range 0-7.
     """
+    for index in (i, j, k):
+        if not 0 <= index <= 7:
+            raise IndexError(
+                'tensor_d: index %r is outside the range 0-7' % index)
+
     ip1 = i+1
-    jp1 = j+1
-    kp1 = k+1
-    jkp1 = (jp1, kp1)
+    jkp1 = (j+1, k+1)
 
     if (ip1 == 1):
         if jkp1 == (1,8): return SQRT3_INV
@@ -213,7 +221,7 @@ def tensor_d(i, j, k):
         if jkp1 == (7,8): return NEG_HALF_SQRT3_INV
         if jkp1 == (8,7): return NEG_HALF_SQRT3_INV
         return 0.0
-    elif (ip1 == 8):
+    else:  # ip1 == 8
         if jkp1 == (1,1): return SQRT3_INV
         if jkp1 == (2,2): return SQRT3_INV
         if jkp1 == (3,3): return SQRT3_INV
