@@ -131,6 +131,7 @@ Instructions:
        ├── test_docstrings.py           # Runs the examples embedded in the docstrings
        ├── test_vectorized.py           # The batched path, against the scalar one
        ├── test_vectorized_hamiltonians.py  # Hamiltonians built for an array of energies
+       ├── test_annotations.py          # Annotations, and their agreement with the docs
        └── test_file_tree.py            # Keeps this tree in step with the repository
    ```
    Now you are ready to start using **NuOscProbExact**.
