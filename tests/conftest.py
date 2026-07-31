@@ -59,3 +59,38 @@ def hermitian_3nu(rng):
     r"""Returns 100 random 3x3 Hermitian matrices with baselines."""
     return [(random_hermitian(rng, 3), rng.uniform(0.1, 5.0))
             for _ in range(100)]
+
+
+@pytest.fixture
+def kernel_spy(monkeypatch):
+    r"""Counts calls to the compiled kernels, by name.
+
+    A test that means to exercise the Numba backend can assert that it
+    actually did.  Without that, raising a dispatch threshold silently
+    turns such a test into a comparison of the NumPy path with itself,
+    which is how it passes for the wrong reason.
+    """
+    import fastkernels
+
+    # The dict handed back is the one the counters write to, not a copy
+    counts = _CountingDict()
+
+    for name in ('probabilities_2nu_kernel', 'probabilities_3nu_kernel'):
+        original = getattr(fastkernels, name, None)
+        if original is None:
+            continue
+
+        def counted(*args, __name=name, __original=original, **kwargs):
+            counts[__name] = counts[__name] + 1
+            return __original(*args, **kwargs)
+
+        monkeypatch.setattr(fastkernels, name, counted)
+
+    return counts
+
+
+class _CountingDict(dict):
+    r"""A dict that reports zero for names never called."""
+
+    def __missing__(self, key):
+        return 0

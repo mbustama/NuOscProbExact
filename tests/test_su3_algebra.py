@@ -150,3 +150,35 @@ def test_star_all_handles_arrays_and_lists(rng):
     h = rng.normal(size=8)
     assert np.allclose(oscprob3nu._star_all(list(h)),
                        oscprob3nu._star_all(h), atol=ATOL)
+
+
+def test_psi_roots_of_a_vanishing_invariant():
+    r"""psi_roots returns three zeros when |h|^2 vanishes.
+
+    The Hamiltonian is then proportional to the identity, its traceless
+    part is zero, and so are its latent roots.  The expansion's own
+    callers short-circuit before reaching this, so without a direct test
+    the branch that keeps ``pow(h2, -1.5)`` from blowing up would be
+    unexercised.
+    """
+    assert oscprob3nu.psi_roots(0.0, 0.0) == [0.0, 0.0, 0.0]
+    assert oscprob3nu.psi_roots(-1.0e-30, 0.0) == [0.0, 0.0, 0.0]
+
+
+def test_u_coefficients_recompute_the_star_product_when_not_given(rng):
+    r"""The expansion core computes the star product itself if the
+    caller does not pass one.
+
+    Every caller inside the library now passes it, having formed the
+    invariant from it, so this default is only reachable from outside.
+    """
+    for _ in range(20):
+        h_matrix = random_hermitian(rng, 3)
+        h = oscprob3nu.hamiltonian_3nu_coefficients(as_nested_list(h_matrix))
+        h2, h3 = oscprob3nu.su3_invariants(h)
+        l = float(rng.uniform(0.1, 5.0))
+
+        without = oscprob3nu._u_coefficients_3nu_single(h, h2, h3, l)
+        with_star = oscprob3nu._u_coefficients_3nu_single(
+            h, h2, h3, l, oscprob3nu._star_all(h))
+        assert np.allclose(without, with_star, atol=ATOL)
