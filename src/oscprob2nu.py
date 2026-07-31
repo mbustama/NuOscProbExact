@@ -233,6 +233,58 @@ def _evolution_operator_2nu_batch(
     ], axis=-2)
 
 
+def _probabilities_2nu_batch(
+    h_matrix: Union[list, np.ndarray],
+    L: Union[int, float, list, np.ndarray]
+) -> np.ndarray:
+    r"""Returns the four probabilities for a stack, without forming U.
+
+    For a Hermitian :math:`2\times2` Hamiltonian the coefficients
+    :math:`u_k` are real, so
+
+    .. math::
+       |U_{ee}|^2 = u_0^2 + u_3^2 , \qquad
+       |U_{\mu e}|^2 = |U_{e\mu}|^2 = u_1^2 + u_2^2 ,
+
+    which leaves only two distinct numbers, and unitarity makes the
+    second the complement of the first.  So neither the evolution
+    operator nor the coefficients need to be built: the transition
+    probability follows from the Hamiltonian directly, exactly as it
+    does on the scalar path.
+
+    Parameters
+    ----------
+    h_matrix : array_like
+        Hamiltonians, of shape ``(..., 2, 2)``.
+    L : array_like
+        Baselines, broadcastable against the leading axes of `h_matrix`.
+
+    Returns
+    -------
+    numpy.ndarray
+        The probabilities, of shape ``(..., 4)``, ordered
+        ``(Pee, Pem, Pme, Pmm)``.
+    """
+    h_matrix = np.asarray(h_matrix, dtype=complex)
+    L = np.asarray(L, dtype=float)
+    np.broadcast_shapes(h_matrix.shape[:-2], L.shape)
+
+    h = _hamiltonian_2nu_coefficients_batch(h_matrix)
+    h1, h2, h3 = h[..., 0], h[..., 1], h[..., 2]
+
+    h_sq = h1*h1 + h2*h2 + h3*h3
+    positive = h_sq > 0.0
+    safe_h_sq = np.where(positive, h_sq, 1.0)
+
+    sin_phase = np.sin(np.sqrt(safe_h_sq)*L)
+    # A Hamiltonian proportional to the identity drives no transitions
+    p_em = np.where(positive, (h1*h1 + h2*h2)/safe_h_sq*sin_phase*sin_phase,
+                    0.0)
+    p_ee = 1.0 - p_em
+
+    return np.stack([p_ee, p_em, p_em, p_ee], axis=-1)
+
+
 def _is_batched(
     hamiltonian_matrix: Union[list, np.ndarray],
     L: Union[int, float, list, np.ndarray]
@@ -427,11 +479,7 @@ def probabilities_2nu(
     0.504821  0.495179  0.495179  0.504821
     """
     if _is_batched(hamiltonian_matrix, L):
-        U = _evolution_operator_2nu_batch(hamiltonian_matrix, L)
-        # P_ab = |U_ba|^2: the evolution operator is indexed
-        # (final, initial), the probabilities (initial, final)
-        prob = np.abs(U)**2.
-        return np.swapaxes(prob, -1, -2).reshape(prob.shape[:-2]+(4,))
+        return _probabilities_2nu_batch(hamiltonian_matrix, L)
 
     # [h1, h2, h3]
     h_coeffs = hamiltonian_2nu_coefficients(hamiltonian_matrix)

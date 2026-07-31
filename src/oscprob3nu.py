@@ -685,6 +685,67 @@ def _u_coefficients_3nu_batch(h: np.ndarray, L: np.ndarray) -> np.ndarray:
     return u
 
 
+def _u_to_entries_batch(u: np.ndarray) -> Tuple[np.ndarray, ...]:
+    r"""Returns the nine entries of :math:`U_3` from the coefficients.
+
+    Parameters
+    ----------
+    u : numpy.ndarray
+        The nine coefficients, of shape ``(..., 9)``.
+
+    Returns
+    -------
+    tuple of numpy.ndarray
+        The entries ``(U00, U01, U02, U10, U11, U12, U20, U21, U22)``,
+        each of shape ``(...)``.
+    """
+    u0 = u[..., 0]
+    u1, u2, u3, u4, u5, u6, u7, u8 = [u[..., k] for k in range(1, 9)]
+    u8_over_sqrt3 = u8/SQRT3
+
+    return (u0+1.j*(u3+u8_over_sqrt3), 1.j*u1+u2, 1.j*u4+u5,
+            1.j*u1-u2, u0-1.j*(u3-u8_over_sqrt3), 1.j*u6+u7,
+            1.j*u4-u5, 1.j*u6-u7, u0-2.j*u8_over_sqrt3)
+
+
+def _probabilities_3nu_batch(
+    h_matrix: Union[list, np.ndarray],
+    L: Union[int, float, list, np.ndarray]
+) -> np.ndarray:
+    r"""Returns the nine probabilities for a stack, without forming U.
+
+    :math:`U_3` is wanted only through the modulus squared of its
+    entries, so the entries are squared as they are produced.  Stacking
+    them into a ``(..., 3, 3)`` array first, and then transposing and
+    reshaping that into the order the probabilities are returned in,
+    allocates two further arrays and copies both.
+
+    Parameters
+    ----------
+    h_matrix : array_like
+        Hamiltonians, of shape ``(..., 3, 3)``.
+    L : array_like
+        Baselines, broadcastable against the leading axes of `h_matrix`.
+
+    Returns
+    -------
+    numpy.ndarray
+        The probabilities, of shape ``(..., 9)``, ordered with the
+        initial flavor varying slowest.
+    """
+    h_matrix = np.asarray(h_matrix, dtype=complex)
+    L = np.asarray(L, dtype=float)
+    np.broadcast_shapes(h_matrix.shape[:-2], L.shape)
+
+    entries = _u_to_entries_batch(_u_coefficients_3nu_batch(
+        _hamiltonian_3nu_coefficients_batch(h_matrix), L))
+
+    # P_ab = |U_ba|^2: the entries come out row by row, so taking them
+    # in column order is what puts the initial flavor slowest
+    return np.stack([np.abs(entries[k])**2.
+                     for k in (0, 3, 6, 1, 4, 7, 2, 5, 8)], axis=-1)
+
+
 def _evolution_operator_3nu_batch(
     h_matrix: Union[list, np.ndarray],
     L: Union[int, float, list, np.ndarray]
@@ -711,16 +772,11 @@ def _evolution_operator_3nu_batch(
     np.broadcast_shapes(h_matrix.shape[:-2], L.shape)
 
     h = _hamiltonian_3nu_coefficients_batch(h_matrix)
-    u = _u_coefficients_3nu_batch(h, L)
+    entries = _u_to_entries_batch(_u_coefficients_3nu_batch(h, L))
 
-    u0 = u[..., 0]
-    u1, u2, u3, u4, u5, u6, u7, u8 = [u[..., k] for k in range(1, 9)]
-
-    return np.stack([
-        np.stack([u0+1.j*(u3+u8/SQRT3), 1.j*u1+u2, 1.j*u4+u5], axis=-1),
-        np.stack([1.j*u1-u2, u0-1.j*(u3-u8/SQRT3), 1.j*u6+u7], axis=-1),
-        np.stack([1.j*u4-u5, 1.j*u6-u7, u0-1.j*2.*u8/SQRT3], axis=-1),
-    ], axis=-2)
+    return np.stack([np.stack(entries[0:3], axis=-1),
+                     np.stack(entries[3:6], axis=-1),
+                     np.stack(entries[6:9], axis=-1)], axis=-2)
 
 
 def _is_batched(
@@ -933,11 +989,7 @@ def probabilities_3nu(
     0.080986  0.062872  0.856142
     """
     if _is_batched(hamiltonian_matrix, L):
-        U = _evolution_operator_3nu_batch(hamiltonian_matrix, L)
-        # P_ab = |U_ba|^2: the evolution operator is indexed
-        # (final, initial), the probabilities (initial, final)
-        prob = np.abs(U)**2.
-        return np.swapaxes(prob, -1, -2).reshape(prob.shape[:-2]+(9,))
+        return _probabilities_3nu_batch(hamiltonian_matrix, L)
 
     U = evolution_operator_3nu(hamiltonian_matrix, L)
 
