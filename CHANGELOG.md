@@ -33,6 +33,11 @@ The one thing users will notice is the supported Python range.
   preconditions, so neither can quietly become a duplicate of another and keep
   reporting success.
 
+  `publish.yml` also carries a commented-out TestPyPI step, with instructions,
+  for rehearsing a release against a throwaway index before the real upload —
+  which cannot be retried, since PyPI refuses a second upload of a version
+  permanently.
+
 - An automatic coverage gate, configured in `[tool.coverage]` in
   `pyproject.toml` so that a local `pytest --cov` measures and gates exactly as
   CI does.  Branch coverage is on, and the floor is 98%.
