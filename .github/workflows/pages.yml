@@ -1,0 +1,67 @@
+name: Documentation Deployment
+
+# Only main is published.  Every other branch has its documentation built and checked by the
+# `docs` job in lint.yml, which is the stricter of the two; this one exists to deploy.
+on:
+  push:
+    branches: [ "main" ]
+
+# Permissions the GITHUB_TOKEN needs to deploy to GitHub Pages.  `id-token: write` is what
+# lets actions/deploy-pages authenticate without a stored secret.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time, skipping any run queued behind the latest.  Unlike the test
+# workflow this does cancel in progress on main: two merges in quick succession should
+# publish the newer tree, not race to see which finishes last.
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          # Matches the docs job in lint.yml, so what was checked is what gets deployed.
+          python-version: "3.12"
+
+      - name: Install documentation dependencies
+        # The package itself is not installed.  docs/source/conf.py puts ../../src on
+        # sys.path directly, which is how autodoc imports the six modules under their bare
+        # names -- the same way user code does -- so there is nothing here for pip to build.
+        run: pip install -r docs/requirements.txt
+
+      - name: Build HTML documentation
+        # Deliberately without -W, unlike the docs job in lint.yml.  That job is the gate and
+        # runs on every branch; making the deploy strict as well would mean a warning
+        # introduced by a new Sphinx release could block publication of documentation that
+        # is otherwise correct, at the least convenient moment.
+        run: |
+          cd docs
+          make html
+
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload HTML artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Where docs/Makefile puts the build: BUILDDIR = build, and `make html` goes
+          # through sphinx-build -M, which appends the builder name.
+          path: 'docs/build/html'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

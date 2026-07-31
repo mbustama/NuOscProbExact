@@ -83,7 +83,8 @@ Instructions:
    ├── .github/                         # Continuous integration (GitHub Actions)
    │   └── workflows/
    │       ├── tests.yml                # The suite: five Pythons, all three backends
-   │       └── lint.yml                 # ruff, and the docs build under -W
+   │       ├── lint.yml                 # ruff, and the docs build under -W
+   │       └── pages.yml                # Builds and deploys the docs to GitHub Pages
    ├── .gitignore                       # Build, cache, and generated-output artefacts
    ├── CHANGELOG.md                     # Notable changes, rendered as a docs page
    ├── LICENSE                          # MIT license
