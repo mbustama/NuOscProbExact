@@ -61,6 +61,8 @@ __all__ = ['hamiltonian_2nu_coefficients', 'modulus',
            'evolution_operator_2nu_u_coefficients', 'evolution_operator_2nu',
            'probabilities_2nu']
 
+import math
+
 import numpy as np
 
 
@@ -105,9 +107,9 @@ def hamiltonian_2nu_coefficients(hamiltonian_matrix):
     # h0 = (H11+H22)/2.0 is not returned: it multiplies the identity and
     # so contributes only an overall phase to U2, which cancels in the
     # oscillation probabilities.
-    h1 = np.real(H12)
-    h2 = -np.imag(H12)
-    h3 = np.real(H11-H22)/2.0
+    h1 = H12.real
+    h2 = -H12.imag
+    h3 = (H11-H22).real/2.0
 
     return [float(h1), float(h2), float(h3)]
 
@@ -135,7 +137,7 @@ def modulus(h_coeffs):
     >>> print('%.6f' % modulus([0.0, -2.0, -1.0]))
     2.236068
     """
-    return float(np.sqrt(sum([abs(h)**2.0 for h in h_coeffs])))
+    return math.sqrt(sum([abs(h)**2.0 for h in h_coeffs]))
 
 
 def _hamiltonian_2nu_coefficients_batch(h_matrix):
@@ -292,9 +294,10 @@ def evolution_operator_2nu_u_coefficients(hamiltonian_matrix, L):
     # h_abs = |h|
     h_abs = modulus(h_coeffs)
 
-    u0 = np.cos(h_abs*L)
+    phase = h_abs*L
+    u0 = math.cos(phase)
     # The limit of -sin(|h|L)/|h| as |h| -> 0 is -L
-    ss = -L if h_abs == 0.0 else -np.sin(h_abs*L)/h_abs
+    ss = -L if h_abs == 0.0 else -math.sin(phase)/h_abs
     uk = [h_coeffs[k]*ss for k in range(0, 3)]
 
     # [u0, u1, u2, u3]
@@ -422,8 +425,9 @@ def probabilities_2nu(hamiltonian_matrix, L):
         # transitions occur, whatever the baseline.
         Pem = 0.0
     else:
-        Pem = (abs(h_coeffs[0])**2.0 + abs(h_coeffs[1])**2.0) / h_abs**2.0 \
-            * pow(np.sin(h_abs*L), 2.0)
+        h1, h2 = h_coeffs[0], h_coeffs[1]
+        sin_phase = math.sin(h_abs*L)
+        Pem = (h1*h1 + h2*h2)/(h_abs*h_abs) * sin_phase*sin_phase
 
     Pme = Pem
     Pee = 1.0-Pem

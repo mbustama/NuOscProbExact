@@ -71,6 +71,7 @@ __all__ = ['hamiltonian_3nu_coefficients', 'tensor_d', 'star',
            'probabilities_3nu']
 
 import cmath
+import math
 
 import numpy as np
 
@@ -136,14 +137,14 @@ def hamiltonian_3nu_coefficients(hamiltonian_matrix):
     # h0 = (H11+H22+H33)/3.0 is not returned: it multiplies the identity
     # and so contributes only an overall phase to U3, which cancels in
     # the oscillation probabilities.
-    h1 = np.real(H12)
-    h2 = -np.imag(H12)
-    h3 = np.real(H11-H22)/2.0
-    h4 = np.real(H13)
-    h5 = -np.imag(H13)
-    h6 = np.real(H23)
-    h7 = -np.imag(H23)
-    h8 = np.real(H11+H22-2.0*H33)*SQRT3/6.0
+    h1 = H12.real
+    h2 = -H12.imag
+    h3 = (H11-H22).real/2.0
+    h4 = H13.real
+    h5 = -H13.imag
+    h6 = H23.real
+    h7 = -H23.imag
+    h8 = (H11+H22-2.0*H33).real*SQRT3/6.0
 
     return [float(h1), float(h2), float(h3), float(h4), float(h5),
             float(h6), float(h7), float(h8)]
@@ -345,15 +346,15 @@ def su3_invariants(h_coeffs):
     >>> print('%.6f  %.6f' % (h2, h3))
     1.000000  0.000000
     """
-    h = np.asarray(h_coeffs, dtype=float)
+    star = _star_all(h_coeffs)
 
     # h2 = |h|^2
-    h2 = float(h @ h)
+    h2 = sum([x*x for x in h_coeffs])
 
     # h3 = <h> = h_i (h*h)_i, using the star product computed once
-    h3 = float(h @ (_TENSOR_D @ h @ h))
+    h3 = sum([x*y for x, y in zip(h_coeffs, star)])
 
-    return h2, h3
+    return float(h2), float(h3)
 
 
 def psi_roots(h2, h3):
@@ -395,13 +396,79 @@ def psi_roots(h2, h3):
     if h2 <= 0.0:
         return [0.0, 0.0, 0.0]
 
-    pre = 2.0*np.sqrt(h2)*SQRT3_INV
-    chi = np.arccos(np.clip(-SQRT3*h3*pow(h2, -1.5), -1.0, 1.0))
+    pre = 2.0*math.sqrt(h2)*SQRT3_INV
 
-    return [float(pre*np.cos((chi+2.*np.pi*m)/3.0)) for m in [1, 2, 3]]
+    # For a Hermitian Hamiltonian the argument lies in [-1, 1]; clipping
+    # keeps round-off from producing spurious complex roots.  The bounds
+    # are written out rather than passed through numpy, which would
+    # dispatch a whole array machinery for one number.
+    arg = -SQRT3*h3*pow(h2, -1.5)
+    if arg <= -1.0:
+        chi = math.pi
+    elif arg >= 1.0:
+        chi = 0.0
+    else:
+        chi = math.acos(arg)
+
+    return [pre*math.cos((chi+2.0*math.pi*m)/3.0) for m in (1, 2, 3)]
 
 
-def _u_coefficients_3nu_single(h, h2, h3, L):
+TWO_SQRT3_INV = 2.0*SQRT3_INV
+r"""float: Module-level constant equal to :math:`2/\sqrt{3}`."""
+
+
+def _star_all(h):
+    r"""Returns all eight components of the star product at once.
+
+    The sparse expansion of :math:`(h \star h)_i = d_{ijk} h_j h_k`,
+    written out.  The :math:`d` tensor has at most eight non-zero
+    entries per component, so contracting the dense
+    :math:`8\times8\times8` table costs several microseconds of NumPy
+    dispatch to do a few dozen multiplications --- about six times
+    longer than the arithmetic itself.  On the batched path the array
+    machinery pays for itself and the table is used instead.
+
+    These expressions are generated from, and checked against,
+    `tensor_d` by ``tests/test_su3_algebra.py``; edit them only in step
+    with that table.
+
+    Parameters
+    ----------
+    h : array_like
+        The eight coefficients :math:`h_k`.
+
+    Returns
+    -------
+    tuple of float
+        The eight components :math:`(h \star h)_i`.
+    """
+    h0, h1, h2, h3, h4, h5, h6, h7 = h
+
+    return (
+        TWO_SQRT3_INV*h0*h7 + h3*h5 + h4*h6,
+        TWO_SQRT3_INV*h1*h7 - h3*h6 + h4*h5,
+        TWO_SQRT3_INV*h2*h7 + 0.5*(h3*h3 + h4*h4 - h5*h5 - h6*h6),
+        h0*h5 - h1*h6 + h2*h3 - SQRT3_INV*h3*h7,
+        h0*h6 + h1*h5 + h2*h4 - SQRT3_INV*h4*h7,
+        h0*h3 + h1*h4 - h2*h5 - SQRT3_INV*h5*h7,
+        h0*h4 - h1*h3 - h2*h6 - SQRT3_INV*h6*h7,
+        SQRT3_INV*(h0*h0 + h1*h1 + h2*h2 - h7*h7)
+        - SQRT3_INV/2.0*(h3*h3 + h4*h4 + h5*h5 + h6*h6),
+    )
+
+
+def _abs2(z):
+    r"""Returns :math:`|z|^2` for a complex number.
+
+    ``abs(z)**2`` takes a square root and then squares it again, which
+    costs a call to ``hypot`` and loses a little precision for nothing.
+    This routine is used for the nine (or four) probabilities, which is
+    often enough to be worth spelling out.
+    """
+    return z.real*z.real + z.imag*z.imag
+
+
+def _u_coefficients_3nu_single(h, h2, h3, L, star_coeffs=None):
     r"""Returns the nine :math:`u_k` for one Hamiltonian and baseline.
 
     The shared core of the scalar and the vectorised paths: given the
@@ -419,6 +486,10 @@ def _u_coefficients_3nu_single(h, h2, h3, L):
         The SU(3) invariant :math:`\langle h \rangle`.
     L : float
         Baseline.
+    star_coeffs : numpy.ndarray, optional
+        The star product :math:`(h \star h)_k`, if the caller has
+        already computed it --- which it has whenever it obtained
+        :math:`\langle h \rangle` from it.  Recomputed here if omitted.
 
     Returns
     -------
@@ -432,15 +503,16 @@ def _u_coefficients_3nu_single(h, h2, h3, L):
     # [psi1, psi2, psi3]
     psi = psi_roots(h2, h3)
 
-    # (h*h)_k, computed once: it does not depend on the baseline
-    star_coeffs = _TENSOR_D @ h @ h
+    if star_coeffs is None:
+        star_coeffs = _star_all(h)
 
     # Find the closest pair of latent roots, to detect degeneracy
-    scale = np.sqrt(h2)
-    pairs = [(0, 1, 2), (0, 2, 1), (1, 2, 0)]
-    a, b, c = min(pairs, key=lambda p: abs(psi[p[0]]-psi[p[1]]))
+    psi0, psi1, psi2 = psi
+    gaps = (abs(psi0-psi1), abs(psi0-psi2), abs(psi1-psi2))
+    smallest = min(gaps)
+    a, b, c = ((0, 1, 2), (0, 2, 1), (1, 2, 0))[gaps.index(smallest)]
 
-    if abs(psi[a]-psi[b]) <= DEGENERACY_TOL*scale:
+    if smallest <= DEGENERACY_TOL*math.sqrt(h2):
         # Doubly degenerate root: the general expression would divide by
         # zero, so use the two-projector form instead.
         psi_deg = (psi[a]+psi[b])/2.0
@@ -452,13 +524,23 @@ def _u_coefficients_3nu_single(h, h2, h3, L):
 
         return [u0]+uk
 
-    # [e^{i*L*psi1}, e^{i*L*psi2}, e^{i*L*psi3}]
-    exp_psi = [cmath.exp(1.j*L*x) for x in psi]
+    # e^{i*L*psi_m}, and the same divided by the denominators of the
+    # Lagrange interpolation, which do not depend on k
+    exp0 = cmath.exp(1.j*L*psi0)
+    exp1 = cmath.exp(1.j*L*psi1)
+    exp2 = cmath.exp(1.j*L*psi2)
+    w0 = exp0/(3.*psi0*psi0-h2)
+    w1 = exp1/(3.*psi1*psi1-h2)
+    w2 = exp2/(3.*psi2*psi2-h2)
 
-    u0 = sum(exp_psi)/3.
-    uk = [1.j*sum([exp_psi[m]*(psi[m]*h[k]-star_coeffs[k])
-                   / (3.*psi[m]*psi[m]-h2) for m in [0, 1, 2]])
-          for k in range(0, 8)]
+    # Only two combinations of the three terms survive the sum over m,
+    #   u_k = i [ (sum_m w_m psi_m) h_k - (sum_m w_m) (h*h)_k ],
+    # so they are formed once instead of inside the loop over k
+    weighted = w0*psi0 + w1*psi1 + w2*psi2
+    total = w0 + w1 + w2
+
+    u0 = (exp0+exp1+exp2)/3.
+    uk = [1.j*(weighted*h[k] - total*star_coeffs[k]) for k in range(0, 8)]
 
     # [u0, u1, u2, u3, u4, u5, u6, u7, u8]
     return [u0]+uk
@@ -541,13 +623,27 @@ def _u_coefficients_3nu_batch(h, L):
 
     denom = 3.0*psi*psi - h2[..., None]
     safe_denom = np.where(denom != 0.0, denom, 1.0)
-    numer = psi[..., :, None]*h[..., None, :] - star[..., None, :]
 
     # The baselines enter only here
     exp_psi = np.exp(1.j*L[..., None]*psi)
 
+    # Only two combinations of the three terms survive the sum over m,
+    #   u_k = i [ (sum_m w_m psi_m) h_k - (sum_m w_m) (h*h)_k ],
+    # so they are formed directly.  Contracting the (..., 3, 8) array of
+    # numerators instead would build, and then immediately discard, an
+    # intermediate eight times the size of the result.
+    w = exp_psi/safe_denom
+
     u0 = exp_psi.sum(-1)/3.0
-    uk = 1.j*np.einsum('...m,...mk->...k', exp_psi/safe_denom, numer)
+    if h.ndim == 1:
+        # A single Hamiltonian scanned over baselines: the bracket is a
+        # fixed 3-by-8 matrix, so the sum over m is one small matrix
+        # product, which BLAS does better than three broadcasts
+        uk = 1.j*(w @ (psi[:, None]*h - star))
+    else:
+        weighted = (w*psi).sum(-1)
+        total = w.sum(-1)
+        uk = 1.j*(weighted[..., None]*h - total[..., None]*star)
     u = np.concatenate([u0[..., None], uk], axis=-1)
 
     # Recompute the elements whose spectrum is degenerate, using the same
@@ -562,13 +658,14 @@ def _u_coefficients_3nu_batch(h, L):
     if degenerate.any():
         full = u.shape[:-1]
         h_full = np.broadcast_to(h, full+(8,))
+        star_full = np.broadcast_to(star, full+(8,))
         h2_full = np.broadcast_to(h2, full)
         h3_full = np.broadcast_to(h3, full)
         L_full = np.broadcast_to(L, full)
         for idx in zip(*np.nonzero(np.broadcast_to(degenerate, full))):
             u[idx] = _u_coefficients_3nu_single(
                 h_full[idx], float(h2_full[idx]), float(h3_full[idx]),
-                float(L_full[idx]))
+                float(L_full[idx]), star_full[idx])
 
     return u
 
@@ -677,13 +774,15 @@ def evolution_operator_3nu_u_coefficients(hamiltonian_matrix, L):
     +0.621522-0.047327j
     """
     # [h1, h2, h3, h4, h5, h6, h7, h8]
-    h_coeffs = hamiltonian_3nu_coefficients(hamiltonian_matrix)
-    h = np.asarray(h_coeffs, dtype=float)
+    h = hamiltonian_3nu_coefficients(hamiltonian_matrix)
 
-    # h2 = |h|^2, h3 = <h>
-    h2, h3 = su3_invariants(h_coeffs)
+    # The star product gives <h> = h_i (h*h)_i, so computing it here and
+    # passing it on spares the expansion a second identical contraction
+    star_coeffs = _star_all(h)
+    h2 = sum([x*x for x in h])
+    h3 = sum([x*y for x, y in zip(h, star_coeffs)])
 
-    return _u_coefficients_3nu_single(h, h2, h3, L)
+    return _u_coefficients_3nu_single(h, h2, h3, L, star_coeffs)
 
 
 def evolution_operator_3nu(hamiltonian_matrix, L):
@@ -812,14 +911,9 @@ def probabilities_3nu(hamiltonian_matrix, L):
 
     U = evolution_operator_3nu(hamiltonian_matrix, L)
 
-    Pee = abs(U[0][0])**2.
-    Pem = abs(U[1][0])**2.
-    Pet = abs(U[2][0])**2.
-    Pme = abs(U[0][1])**2.
-    Pmm = abs(U[1][1])**2.
-    Pmt = abs(U[2][1])**2.
-    Pte = abs(U[0][2])**2.
-    Ptm = abs(U[1][2])**2.
-    Ptt = abs(U[2][2])**2.
+    row_e, row_m, row_t = U
 
-    return Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt
+    # P_ab = |U_ba|^2: the evolution operator is indexed (final, initial)
+    return (_abs2(row_e[0]), _abs2(row_m[0]), _abs2(row_t[0]),
+            _abs2(row_e[1]), _abs2(row_m[1]), _abs2(row_t[1]),
+            _abs2(row_e[2]), _abs2(row_m[2]), _abs2(row_t[2]))
