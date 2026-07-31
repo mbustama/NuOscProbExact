@@ -61,12 +61,16 @@ __all__ = ['hamiltonian_2nu_coefficients', 'modulus',
            'evolution_operator_2nu_u_coefficients', 'evolution_operator_2nu',
            'probabilities_2nu']
 
+from typing import List, Tuple, Union
+
 import math
 
 import numpy as np
 
 
-def hamiltonian_2nu_coefficients(hamiltonian_matrix):
+def hamiltonian_2nu_coefficients(
+    hamiltonian_matrix: Union[list, np.ndarray]
+) -> List[float]:
     r"""Returns the :math:`h_k` of the SU(2) expansion of the Hamiltonian.
 
     Computes the coefficients :math:`h_1, h_2, h_3` of the SU(2)
@@ -114,7 +118,7 @@ def hamiltonian_2nu_coefficients(hamiltonian_matrix):
     return [float(h1), float(h2), float(h3)]
 
 
-def modulus(h_coeffs):
+def modulus(h_coeffs: Union[list, np.ndarray]) -> float:
     r"""Returns the modulus :math:`|h|` of the vector of coefficients.
 
     Returns the modulus of the vector of coefficients :math:`h_k` of the
@@ -140,7 +144,7 @@ def modulus(h_coeffs):
     return math.sqrt(sum([abs(h)**2.0 for h in h_coeffs]))
 
 
-def _hamiltonian_2nu_coefficients_batch(h_matrix):
+def _hamiltonian_2nu_coefficients_batch(h_matrix: np.ndarray) -> np.ndarray:
     r"""Returns the :math:`h_k` for a stack of Hamiltonians.
 
     The vectorised counterpart of `hamiltonian_2nu_coefficients`.
@@ -162,7 +166,7 @@ def _hamiltonian_2nu_coefficients_batch(h_matrix):
     ], axis=-1)
 
 
-def _u_coefficients_2nu_batch(h, L):
+def _u_coefficients_2nu_batch(h: np.ndarray, L: np.ndarray) -> np.ndarray:
     r"""Returns the four :math:`u_k` for a stack of Hamiltonians.
 
     Parameters
@@ -194,7 +198,10 @@ def _u_coefficients_2nu_batch(h, L):
                            h*ss[..., None]], axis=-1)
 
 
-def _evolution_operator_2nu_batch(h_matrix, L):
+def _evolution_operator_2nu_batch(
+    h_matrix: Union[list, np.ndarray],
+    L: Union[int, float, list, np.ndarray]
+) -> np.ndarray:
     r"""Returns :math:`U_2(L)` for a stack of Hamiltonians and baselines.
 
     Parameters
@@ -226,7 +233,10 @@ def _evolution_operator_2nu_batch(h_matrix, L):
     ], axis=-2)
 
 
-def _is_batched(hamiltonian_matrix, L):
+def _is_batched(
+    hamiltonian_matrix: Union[list, np.ndarray],
+    L: Union[int, float, list, np.ndarray]
+) -> bool:
     r"""Returns whether the arguments describe a stack of problems.
 
     A single Hamiltonian is an ``n``-by-``n`` matrix and a single
@@ -249,7 +259,10 @@ def _is_batched(hamiltonian_matrix, L):
     return isinstance(hamiltonian_matrix[0][0], (list, tuple, np.ndarray))
 
 
-def evolution_operator_2nu_u_coefficients(hamiltonian_matrix, L):
+def evolution_operator_2nu_u_coefficients(
+    hamiltonian_matrix: Union[list, np.ndarray],
+    L: Union[int, float]
+) -> List[float]:
     r"""Returns the coefficients :math:`u_0, \ldots, u_3`.
 
     Returns the four coefficients :math:`u_0, \ldots, u_3` of the
@@ -304,7 +317,10 @@ def evolution_operator_2nu_u_coefficients(hamiltonian_matrix, L):
     return [u0]+uk
 
 
-def evolution_operator_2nu(hamiltonian_matrix, L):
+def evolution_operator_2nu(
+    hamiltonian_matrix: Union[list, np.ndarray],
+    L: Union[int, float, list, np.ndarray]
+) -> Union[List[List[complex]], np.ndarray]:
     r"""Returns the two-neutrino time-evolution operator.
 
     Returns the two-neutrino time-evolution operator :math:`U_2(L)` in
@@ -358,7 +374,10 @@ def evolution_operator_2nu(hamiltonian_matrix, L):
     ]
 
 
-def probabilities_2nu(hamiltonian_matrix, L):
+def probabilities_2nu(
+    hamiltonian_matrix: Union[list, np.ndarray],
+    L: Union[int, float, list, np.ndarray]
+) -> Union[Tuple[float, float, float, float], np.ndarray]:
     r"""Returns the two-neutrino oscillation probabilities.
 
     Returns the two-neutrino flavor-transition probabilities

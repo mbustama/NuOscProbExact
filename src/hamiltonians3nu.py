@@ -83,6 +83,8 @@ __all__ = ['pmns_mixing_matrix',
            'probabilities_3nu_vacuum_std', 'hamiltonian_3nu_matter',
            'hamiltonian_3nu_nsi', 'hamiltonian_3nu_liv']
 
+from typing import List, Optional, Union
+
 import math
 
 import numpy as np
@@ -99,7 +101,12 @@ charged currents with the electrons in matter.
 """
 
 
-def pmns_mixing_matrix(s12, s23, s13, dCP):
+def pmns_mixing_matrix(
+    s12: Union[int, float],
+    s23: Union[int, float],
+    s13: Union[int, float],
+    dCP: Union[int, float]
+) -> List[List[complex]]:
     r"""Returns the :math:`3\times3` PMNS mixing matrix.
 
     Computes and returns the complex :math:`3\times3` PMNS mixing
@@ -152,8 +159,15 @@ def pmns_mixing_matrix(s12, s23, s13, dCP):
             [U20, U21, complex(U22)]]
 
 
-def hamiltonian_3nu_vacuum_energy_independent(s12, s23, s13, dCP, D21, D31,
-                                              compute_matrix_multiplication=False):
+def hamiltonian_3nu_vacuum_energy_independent(
+    s12: Union[int, float],
+    s23: Union[int, float],
+    s13: Union[int, float],
+    dCP: Union[int, float],
+    D21: Union[int, float],
+    D31: Union[int, float],
+    compute_matrix_multiplication: Optional[bool]=False
+) -> np.ndarray:
     r"""Returns the three-neutrino Hamiltonian for vacuum oscillations.
 
     Computes and returns the energy-independent part of the complex
@@ -258,7 +272,7 @@ def hamiltonian_3nu_vacuum_energy_independent(s12, s23, s13, dCP, D21, D31,
     return H
 
 
-def delta(a, b):
+def delta(a: int, b: int) -> int:
     r"""Returns the Kronecker delta :math:`\delta_{ab}`.
 
     Parameters
@@ -284,7 +298,13 @@ def delta(a, b):
         return 0
 
 
-def J(U, alpha, beta, k, j):
+def J(
+    U: Union[list, np.ndarray],
+    alpha: int,
+    beta: int,
+    k: int,
+    j: int
+) -> complex:
     r"""Returns the quartic product of PMNS matrix entries.
 
     Returns :math:`J = U_{\alpha k}^* U_{\beta k} U_{\alpha j}
@@ -323,7 +343,13 @@ def J(U, alpha, beta, k, j):
     return np.conj(U[alpha][k])*U[beta][k]*U[alpha][j]*np.conj(U[beta][j])
 
 
-def probabilities_3nu_vacuum_std(U, D21, D31, energy, L):
+def probabilities_3nu_vacuum_std(
+    U: Union[list, np.ndarray],
+    D21: Union[int, float],
+    D31: Union[int, float],
+    energy: Union[int, float],
+    L: Union[int, float]
+) -> List[float]:
     r"""Returns the 3nu vacuum probabilities, standard computation.
 
     Returns the probabilities for three-neutrino oscillations in vacuum,
@@ -400,7 +426,11 @@ def probabilities_3nu_vacuum_std(U, D21, D31, energy, L):
     return prob
 
 
-def hamiltonian_3nu_matter(h_vacuum_energy_independent, energy, VCC):
+def hamiltonian_3nu_matter(
+    h_vacuum_energy_independent: Union[list, np.ndarray],
+    energy: Union[int, float, list, np.ndarray],
+    VCC: Union[int, float, list, np.ndarray]
+) -> np.ndarray:
     r"""Returns the three-neutrino Hamiltonian for matter oscillations.
 
     Computes and returns the :math:`3\times3` three-neutrino
@@ -451,7 +481,12 @@ def hamiltonian_3nu_matter(h_vacuum_energy_independent, energy, VCC):
         + VCC[..., None, None]*_EE_PROJECTOR
 
 
-def hamiltonian_3nu_nsi(h_vacuum_energy_independent, energy, VCC, eps):
+def hamiltonian_3nu_nsi(
+    h_vacuum_energy_independent: Union[list, np.ndarray],
+    energy: Union[int, float, list, np.ndarray],
+    VCC: Union[int, float, list, np.ndarray],
+    eps: Union[list, np.ndarray]
+) -> np.ndarray:
     r"""Returns the three-neutrino Hamiltonian for oscillations w/ NSI.
 
     Computes and returns the :math:`3\times3` three-neutrino
@@ -512,8 +547,18 @@ def hamiltonian_3nu_nsi(h_vacuum_energy_independent, energy, VCC, eps):
     return h_vacuum/energy[..., None, None] + VCC[..., None, None]*nsi
 
 
-def hamiltonian_3nu_liv(h_vacuum_energy_independent, energy, sxi12, sxi23,
-                        sxi13, dxiCP, b1, b2, b3, Lambda):
+def hamiltonian_3nu_liv(
+    h_vacuum_energy_independent: Union[list, np.ndarray],
+    energy: Union[int, float, list, np.ndarray],
+    sxi12: Union[int, float],
+    sxi23: Union[int, float],
+    sxi13: Union[int, float],
+    dxiCP: Union[int, float],
+    b1: Union[int, float],
+    b2: Union[int, float],
+    b3: Union[int, float],
+    Lambda: Union[int, float]
+) -> np.ndarray:
     r"""Returns the three-neutrino Hamiltonian for oscillations w/ LIV.
 
     Computes and returns the :math:`3\times3` three-neutrino

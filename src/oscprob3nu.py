@@ -70,6 +70,8 @@ __all__ = ['hamiltonian_3nu_coefficients', 'tensor_d', 'star',
            'evolution_operator_3nu_u_coefficients', 'evolution_operator_3nu',
            'probabilities_3nu']
 
+from typing import List, Optional, Tuple, Union
+
 import cmath
 import math
 
@@ -95,7 +97,9 @@ degenerate spectrum is handled by a separate, exact expression.
 """
 
 
-def hamiltonian_3nu_coefficients(hamiltonian_matrix):
+def hamiltonian_3nu_coefficients(
+    hamiltonian_matrix: Union[list, np.ndarray]
+) -> List[float]:
     r"""Returns the :math:`h_k` of the SU(3) expansion of the Hamiltonian.
 
     Computes the coefficients :math:`h_1, \ldots, h_8` of the SU(3)
@@ -150,7 +154,7 @@ def hamiltonian_3nu_coefficients(hamiltonian_matrix):
             float(h6), float(h7), float(h8)]
 
 
-def tensor_d(i, j, k):
+def tensor_d(i: int, j: int, k: int) -> float:
     r"""Returns the tensor :math:`d_{ijk}` of the SU(3) algebra.
 
     Returns the totally symmetric SU(3) tensor
@@ -284,7 +288,7 @@ _TENSOR_D = np.array([[[tensor_d(i, j, k) for k in range(8)]
                        for j in range(8)] for i in range(8)])
 
 
-def star(i, h_coeffs):
+def star(i: int, h_coeffs: Union[list, np.ndarray]) -> float:
     r"""Returns the SU(3) star product :math:`(h \star h)_i`.
 
     Returns the SU(3) star product
@@ -316,7 +320,7 @@ def star(i, h_coeffs):
     return float(h @ _TENSOR_D[i] @ h)
 
 
-def su3_invariants(h_coeffs):
+def su3_invariants(h_coeffs: Union[list, np.ndarray]) -> Tuple[float, float]:
     r"""Returns the two SU(3) invariants, :math:`|h|^2` and
     :math:`\langle h \rangle`.
 
@@ -357,7 +361,7 @@ def su3_invariants(h_coeffs):
     return float(h2), float(h3)
 
 
-def psi_roots(h2, h3):
+def psi_roots(h2: Union[int, float], h3: Union[int, float]) -> List[float]:
     r"""Returns the three latent roots :math:`\psi`.
 
     Returns the three latent roots :math:`\psi` of the characteristic
@@ -417,7 +421,7 @@ TWO_SQRT3_INV = 2.0*SQRT3_INV
 r"""float: Module-level constant equal to :math:`2/\sqrt{3}`."""
 
 
-def _star_all(h):
+def _star_all(h: Union[list, np.ndarray]) -> Tuple[float, ...]:
     r"""Returns all eight components of the star product at once.
 
     The sparse expansion of :math:`(h \star h)_i = d_{ijk} h_j h_k`,
@@ -457,7 +461,7 @@ def _star_all(h):
     )
 
 
-def _abs2(z):
+def _abs2(z: complex) -> float:
     r"""Returns :math:`|z|^2` for a complex number.
 
     ``abs(z)**2`` takes a square root and then squares it again, which
@@ -468,7 +472,13 @@ def _abs2(z):
     return z.real*z.real + z.imag*z.imag
 
 
-def _u_coefficients_3nu_single(h, h2, h3, L, star_coeffs=None):
+def _u_coefficients_3nu_single(
+    h: Union[list, np.ndarray],
+    h2: Union[int, float],
+    h3: Union[int, float],
+    L: Union[int, float],
+    star_coeffs: Optional[Union[tuple, np.ndarray]]=None
+) -> List[complex]:
     r"""Returns the nine :math:`u_k` for one Hamiltonian and baseline.
 
     The shared core of the scalar and the vectorised paths: given the
@@ -546,7 +556,7 @@ def _u_coefficients_3nu_single(h, h2, h3, L, star_coeffs=None):
     return [u0]+uk
 
 
-def _hamiltonian_3nu_coefficients_batch(h_matrix):
+def _hamiltonian_3nu_coefficients_batch(h_matrix: np.ndarray) -> np.ndarray:
     r"""Returns the :math:`h_k` for a stack of Hamiltonians.
 
     The vectorised counterpart of `hamiltonian_3nu_coefficients`.
@@ -574,7 +584,7 @@ def _hamiltonian_3nu_coefficients_batch(h_matrix):
     ], axis=-1)
 
 
-def _u_coefficients_3nu_batch(h, L):
+def _u_coefficients_3nu_batch(h: np.ndarray, L: np.ndarray) -> np.ndarray:
     r"""Returns the nine :math:`u_k` for a stack of Hamiltonians.
 
     Every step of the SU(3) expansion --- the star product, the two
@@ -670,7 +680,10 @@ def _u_coefficients_3nu_batch(h, L):
     return u
 
 
-def _evolution_operator_3nu_batch(h_matrix, L):
+def _evolution_operator_3nu_batch(
+    h_matrix: Union[list, np.ndarray],
+    L: Union[int, float, list, np.ndarray]
+) -> np.ndarray:
     r"""Returns :math:`U_3(L)` for a stack of Hamiltonians and baselines.
 
     Parameters
@@ -705,7 +718,10 @@ def _evolution_operator_3nu_batch(h_matrix, L):
     ], axis=-2)
 
 
-def _is_batched(hamiltonian_matrix, L):
+def _is_batched(
+    hamiltonian_matrix: Union[list, np.ndarray],
+    L: Union[int, float, list, np.ndarray]
+) -> bool:
     r"""Returns whether the arguments describe a stack of problems.
 
     A single Hamiltonian is an ``n``-by-``n`` matrix and a single
@@ -728,7 +744,10 @@ def _is_batched(hamiltonian_matrix, L):
     return isinstance(hamiltonian_matrix[0][0], (list, tuple, np.ndarray))
 
 
-def evolution_operator_3nu_u_coefficients(hamiltonian_matrix, L):
+def evolution_operator_3nu_u_coefficients(
+    hamiltonian_matrix: Union[list, np.ndarray],
+    L: Union[int, float]
+) -> List[complex]:
     r"""Returns the coefficients :math:`u_0, \ldots, u_8`.
 
     Returns the nine coefficients :math:`u_0, \ldots, u_8` of the
@@ -785,7 +804,10 @@ def evolution_operator_3nu_u_coefficients(hamiltonian_matrix, L):
     return _u_coefficients_3nu_single(h, h2, h3, L, star_coeffs)
 
 
-def evolution_operator_3nu(hamiltonian_matrix, L):
+def evolution_operator_3nu(
+    hamiltonian_matrix: Union[list, np.ndarray],
+    L: Union[int, float, list, np.ndarray]
+) -> Union[List[List[complex]], np.ndarray]:
     r"""Returns the three-neutrino time-evolution operator.
 
     Returns the three-neutrino time-evolution operator :math:`U_3(L)` in
@@ -842,7 +864,10 @@ def evolution_operator_3nu(hamiltonian_matrix, L):
     ]
 
 
-def probabilities_3nu(hamiltonian_matrix, L):
+def probabilities_3nu(
+    hamiltonian_matrix: Union[list, np.ndarray],
+    L: Union[int, float, list, np.ndarray]
+) -> Union[Tuple[float, ...], np.ndarray]:
     r"""Returns the three-neutrino oscillation probabilities.
 
     Returns the three-neutrino flavor-transition probabilities
