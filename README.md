@@ -129,6 +129,7 @@ Instructions:
        ├── test_reference_formulas.py   # Exact result against the standard formulas
        ├── test_edge_cases.py           # Degenerate and near-degenerate Hamiltonians
        ├── test_docstrings.py           # Runs the examples embedded in the docstrings
+       ├── test_vectorized.py           # The batched path, against the scalar one
        └── test_file_tree.py            # Keeps this tree in step with the repository
    ```
    Now you are ready to start using **NuOscProbExact**.

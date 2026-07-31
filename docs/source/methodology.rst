@@ -164,14 +164,46 @@ indexed (final, initial), the probabilities (initial, final).
 Cost
 ----
 
-A single three-flavor probability evaluation takes about 300 microseconds.
 The :math:`d` tensor is constant and is tabulated once at import time as a
-dense :math:`8\times8\times8` array; the star product is a baseline-
-independent contraction, computed once per call.
+dense :math:`8\times8\times8` array; the star product and the two invariants
+are contractions against that table.
 
-For scans over energy or baseline, note that the *Hamiltonian* is the only
-thing that changes with energy, and the latent roots depend on it alone ---
-so the energy-independent vacuum term should be built once, outside the loop,
-as the bundled examples do.  Vectorising the whole expansion over a baseline
-axis is a further factor of a few hundred, and would require an interface
-that accepts arrays; it is not implemented.
+A single three-flavor probability evaluation takes a few tens of
+microseconds.  For scans, pass arrays rather than looping: the routines
+accept a stack of Hamiltonians, a stack of baselines, or both, and evaluate
+the stack in one pass.  Measured against the equivalent Python loop, on 2000
+points:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 46 27 27
+
+   * - Scan
+     - Speedup
+     - Also comparable to
+   * - Versus baseline (one :math:`H`, many :math:`L`)
+     - 80--100x
+     - one ``eigh`` plus phases
+   * - Versus energy (many :math:`H`, one :math:`L`)
+     - 20--30x
+     - batched ``numpy.linalg.eigh``
+   * - Oscillogram, 100 x 100
+     - ~80x
+     -
+
+The two scans differ because the latent roots depend on the Hamiltonian
+alone.  Scanning one Hamiltonian over many baselines solves the
+characteristic equation once and then only evaluates
+:math:`e^{i\psi_m L}`, so almost all the work is amortised; scanning over
+energy changes the Hamiltonian at every point and must solve it each time.
+
+The vectorised path is as fast as diagonalising with LAPACK, which is the
+honest comparison to draw: the SU(3) route's advantage is that it is a
+closed form, not that it outruns ``eigh``.  What the vectorisation removes
+is the *disadvantage* it used to carry.
+
+The degenerate branch cannot be taken elementwise inside a vectorised
+expression.  The general formula is therefore evaluated everywhere, with
+vanishing denominators replaced by one, and the affected elements are then
+recomputed individually.  Degeneracy is measure-zero among floating-point
+Hamiltonians, so that fallback loop is empty in essentially every real use.
