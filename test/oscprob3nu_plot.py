@@ -162,18 +162,17 @@ def plot_probability_3nu_vs_baseline(
 
 
     # Each element of prob: [Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt]
-    prob = [oscprob3nu.probabilities_3nu(   hamiltonian,
-                                            l*CONV_KM_TO_INV_EV) \
-            for l in l_val]
-    prob_ee = [x[0] for x in prob]
-    prob_em = [x[1] for x in prob]
-    prob_et = [x[2] for x in prob]
-    prob_me = [x[3] for x in prob]
-    prob_mm = [x[4] for x in prob]
-    prob_mt = [x[5] for x in prob]
-    prob_te = [x[6] for x in prob]
-    prob_tm = [x[7] for x in prob]
-    prob_tt = [x[8] for x in prob]
+    prob = oscprob3nu.probabilities_3nu(   hamiltonian,
+                                            np.array(l_val)*CONV_KM_TO_INV_EV)
+    prob_ee = prob[:, 0]
+    prob_em = prob[:, 1]
+    prob_et = prob[:, 2]
+    prob_me = prob[:, 3]
+    prob_mm = prob[:, 4]
+    prob_mt = prob[:, 5]
+    prob_te = prob[:, 6]
+    prob_tm = prob[:, 7]
+    prob_tt = prob[:, 8]
 
     # Formatting
     mpl.rcParams['xtick.labelsize']=26
@@ -348,57 +347,54 @@ def plot_probability_3nu_vs_energy(
 
     if (case.lower() == 'vacuum'):
 
-        prob = [oscprob3nu.probabilities_3nu( \
-                    np.multiply(1./energy/1.e9, h_vacuum_energy_independent),
-                    baseline)  \
-                for energy in energy_val]
+        prob = oscprob3nu.probabilities_3nu(
+                    np.multiply(1./(np.array(energy_val)*1.e9)[:, None, None],
+                    h_vacuum_energy_independent),
+                    baseline)
         label_case = r'Vacuum'
 
     elif (case.lower() == 'matter'):
 
-        prob = [oscprob3nu.probabilities_3nu( \
-                    hamiltonians3nu.hamiltonian_3nu_matter( \
+        prob = oscprob3nu.probabilities_3nu(
+                    hamiltonians3nu.hamiltonian_3nu_matter(
                                                 h_vacuum_energy_independent,
-                                                energy*1.e9,
+                                                np.array(energy_val)*1.e9,
                                                 VCC_EARTH_CRUST),
-                    baseline)  \
-                for energy in energy_val]
+                    baseline)
         label_case = r'Matter'
 
     elif (case.lower() == 'nsi'):
 
-        prob = [oscprob3nu.probabilities_3nu( \
-                    hamiltonians3nu.hamiltonian_3nu_nsi( \
+        prob = oscprob3nu.probabilities_3nu(
+                    hamiltonians3nu.hamiltonian_3nu_nsi(
                                                 h_vacuum_energy_independent,
-                                                energy*1.e9,
+                                                np.array(energy_val)*1.e9,
                                                 VCC_EARTH_CRUST,
                                                 EPS_3),
-                    baseline)  \
-                for energy in energy_val]
+                    baseline)
         label_case = r'NSI'
 
     elif (case.lower() == 'liv'):
 
-        prob = [oscprob3nu.probabilities_3nu( \
-                    hamiltonians3nu.hamiltonian_3nu_liv( \
+        prob = oscprob3nu.probabilities_3nu(
+                    hamiltonians3nu.hamiltonian_3nu_liv(
                                                 h_vacuum_energy_independent,
-                                                energy*1.e9,
+                                                np.array(energy_val)*1.e9,
                                                 SXI12, SXI23, SXI13, DXICP,
                                                 B1, B2, B3, LAMBDA),
-                    baseline)  \
-                for energy in energy_val]
+                    baseline)
         label_case = r'CPT-odd LIV'
 
     # Each element of prob: [Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt]
-    prob_ee = [x[0] for x in prob]
-    prob_em = [x[1] for x in prob]
-    prob_et = [x[2] for x in prob]
-    prob_me = [x[3] for x in prob]
-    prob_mm = [x[4] for x in prob]
-    prob_mt = [x[5] for x in prob]
-    prob_te = [x[6] for x in prob]
-    prob_tm = [x[7] for x in prob]
-    prob_tt = [x[8] for x in prob]
+    prob_ee = prob[:, 0]
+    prob_em = prob[:, 1]
+    prob_et = prob[:, 2]
+    prob_me = prob[:, 3]
+    prob_mm = prob[:, 4]
+    prob_mt = prob[:, 5]
+    prob_te = prob[:, 6]
+    prob_tm = prob[:, 7]
+    prob_tt = prob[:, 8]
 
     # Formatting
     mpl.rcParams['xtick.labelsize']=26
@@ -537,9 +533,9 @@ def plot_probability_3nu_vacuum_vs_l_std(output_format='pdf'):
     lst_prob = [hamiltonians3nu.probabilities_3nu_vacuum_std(
                     U, D21, D31, energy_nu, l*CONV_KM_TO_INV_EV)
                 for l in l_val]
-    lst_prob_ee = [x[0] for x in lst_prob]
-    lst_prob_em = [x[1] for x in lst_prob]
-    lst_prob_et = [x[2] for x in lst_prob]
+    lst_prob_ee = lst_prob[:, 0]
+    lst_prob_em = lst_prob[:, 1]
+    lst_prob_et = lst_prob[:, 2]
 
     # Plot
     mpl.rcParams['xtick.labelsize']=26

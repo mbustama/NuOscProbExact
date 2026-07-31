@@ -189,6 +189,19 @@ energy-independent term by an array of energies:
    h_stack = h_vacuum_energy_indep/energies[:, None, None]
    prob = oscprob3nu.probabilities_3nu(h_stack, baseline*CONV_KM_TO_INV_EV)
 
+The sample Hamiltonians do this for you: pass an array of energies and
+they return one Hamiltonian per energy, in exactly that shape.
+
+.. code-block:: python
+
+   h_stack = hamiltonians3nu.hamiltonian_3nu_matter(
+       h_vacuum_energy_indep, energies, VCC_EARTH_CRUST)
+   prob = oscprob3nu.probabilities_3nu(h_stack, baseline*CONV_KM_TO_INV_EV)
+
+so a whole scan in matter, with NSI, or with LIV is two calls and no
+Python loop.  The matter potential may be an array too, for a scan
+across a density profile alongside the energy.
+
 An oscillogram is the outer combination of the two: give the
 Hamiltonians and the baselines separate axes and let them broadcast.
 
@@ -206,5 +219,5 @@ More examples
 
 The ``test/`` directory holds a runnable script for each of the cases above.
 They are the same examples given in the `README
-<https://github.com/mbustama/NuOscProbExact/blob/master/README.md>`_, with the
+<https://github.com/mbustama/NuOscProbExact/blob/main/README.md>`_, with the
 output you should expect.

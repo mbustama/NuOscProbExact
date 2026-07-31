@@ -5,6 +5,53 @@ All notable changes to **NuOscProbExact** are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.3.0] - 2026-07-31
+
+Completes the vectorisation started in 1.2.0.  The expansions could already
+take a stack of Hamiltonians, but the routines that *build* those Hamiltonians
+could not, so an energy scan still had to loop before the fast path ever saw
+it.  Now the whole scan is two calls.
+
+### Added
+
+- `hamiltonian_2nu_matter`, `hamiltonian_2nu_nsi`, `hamiltonian_2nu_liv` and
+  their three-flavor counterparts accept an array of energies and return one
+  Hamiltonian per energy, stacked along a leading axis --- which is the shape
+  `probabilities_3nu` consumes.  A scalar energy still returns a single
+  `n`-by-`n` matrix.  The matter potential may also be an array, for a scan
+  across a density profile alongside the energy.
+
+  The results are bit-for-bit identical to the previous loop, not merely close:
+  the arithmetic per element is unchanged.  A 200-point three-flavor energy
+  scan in matter, Hamiltonians included, goes from 24.7 ms to 0.71 ms.
+
+- 9 tests for the batched builders (`tests/test_vectorized_hamiltonians.py`),
+  including the end-to-end scan that the plotting modules perform, an
+  energy-by-baseline grid, and an array-valued matter potential.
+
+### Changed
+
+- Each builder is now a single expression --- the vacuum term divided by the
+  energy, plus a constant matrix scaled by the potential --- rather than a
+  sequence of entry-by-entry additions.  Indexing the energy with two trailing
+  axes lets the same expression serve a scalar energy and an array of them.
+  The matter potential multiplies a named module-level projector, and the NSI
+  and LIV terms are written as the matrices they are.
+
+- The four plotting modules use the batched interface: eighteen list
+  comprehensions become single calls, and the nine `[x[k] for x in prob]`
+  column extractions become `prob[:, k]`.  All 42 figures were generated both
+  ways and are byte-for-byte identical.
+
+  This makes the *computation* in those modules about 35x faster but the suite
+  only about 6% faster --- 24.9 s to 23.3 s --- because matplotlib dominates
+  the wall time. The case for the change is consistency with the library's own
+  recommended usage, not speed.
+
+- The default branch is renamed from `master` to `main`, and the documentation
+  links that named it are updated.  GitHub redirects the old URLs, but a
+  redirect is not a reason to keep serving stale links from our own docs.
+
 ## [1.2.0] - 2026-07-31
 
 Performance.  The exact SU(2) and SU(3) expansions now evaluate a whole stack

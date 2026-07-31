@@ -167,12 +167,11 @@ def plot_probability_2nu_vs_baseline(
 
 
     # Each element of prob: [Pee, Pem, Pmm]
-    prob = [oscprob2nu.probabilities_2nu(   hamiltonian,
-                                            l*CONV_KM_TO_INV_EV) \
-            for l in l_val]
-    prob_ee = [x[0] for x in prob]
-    prob_em = [x[1] for x in prob]
-    prob_mm = [x[3] for x in prob]
+    prob = oscprob2nu.probabilities_2nu(   hamiltonian,
+                                            np.array(l_val)*CONV_KM_TO_INV_EV)
+    prob_ee = prob[:, 0]
+    prob_em = prob[:, 1]
+    prob_mm = prob[:, 3]
 
     # Formatting
     mpl.rcParams['xtick.labelsize']=26
@@ -335,51 +334,48 @@ def plot_probability_2nu_vs_energy(
 
     if (case.lower() == 'vacuum'):
 
-        prob = [oscprob2nu.probabilities_2nu( \
-                    np.multiply(1./energy/1.e9, h_vacuum_energy_independent),
-                    baseline)  \
-                for energy in energy_val]
+        prob = oscprob2nu.probabilities_2nu(
+                    np.multiply(1./(np.array(energy_val)*1.e9)[:, None, None],
+                    h_vacuum_energy_independent),
+                    baseline)
         label_case = r'Vacuum'
 
     elif (case.lower() == 'matter'):
 
-        prob = [oscprob2nu.probabilities_2nu( \
-                    hamiltonians2nu.hamiltonian_2nu_matter( \
+        prob = oscprob2nu.probabilities_2nu(
+                    hamiltonians2nu.hamiltonian_2nu_matter(
                                                 h_vacuum_energy_independent,
-                                                energy*1.e9,
+                                                np.array(energy_val)*1.e9,
                                                 VCC_EARTH_CRUST),
-                    baseline)  \
-                for energy in energy_val]
+                    baseline)
         label_case = r'Matter'
 
     elif (case.lower() == 'nsi'):
 
-        prob = [oscprob2nu.probabilities_2nu( \
-                    hamiltonians2nu.hamiltonian_2nu_nsi( \
+        prob = oscprob2nu.probabilities_2nu(
+                    hamiltonians2nu.hamiltonian_2nu_nsi(
                                                 h_vacuum_energy_independent,
-                                                energy*1.e9,
+                                                np.array(energy_val)*1.e9,
                                                 VCC_EARTH_CRUST,
                                                 EPS_2),
-                    baseline)  \
-                for energy in energy_val]
+                    baseline)
         label_case = r'NSI'
 
     elif (case.lower() == 'liv'):
 
-        prob = [oscprob2nu.probabilities_2nu( \
-                    hamiltonians2nu.hamiltonian_2nu_liv( \
+        prob = oscprob2nu.probabilities_2nu(
+                    hamiltonians2nu.hamiltonian_2nu_liv(
                                                 h_vacuum_energy_independent,
-                                                energy*1.e9,
+                                                np.array(energy_val)*1.e9,
                                                 SXI12,
                                                 B1, B3, LAMBDA),
-                    baseline)  \
-                for energy in energy_val]
+                    baseline)
         label_case = r'CPT-odd LIV'
 
     # Each element of prob: [Pee, Pem, Pmm]
-    prob_ee = [x[0] for x in prob]
-    prob_em = [x[1] for x in prob]
-    prob_mm = [x[3] for x in prob]
+    prob_ee = prob[:, 0]
+    prob_em = prob[:, 1]
+    prob_mm = prob[:, 3]
 
     # Formatting
     mpl.rcParams['xtick.labelsize']=26

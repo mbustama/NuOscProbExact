@@ -13,6 +13,11 @@ The Hamiltonians built here are meant to be passed to
 :func:`oscprob2nu.probabilities_2nu`.  They are examples: the exact
 computation accepts *any* Hermitian :math:`2\times2` Hamiltonian.
 
+The routines that take a neutrino energy also accept an *array* of
+energies, and then return one Hamiltonian per energy, stacked along a
+leading axis.  That stack is exactly what :func:`oscprob2nu.probabilities_2nu`
+expects, so a whole energy scan is two calls rather than a loop.
+
 Units
 -----
 
@@ -85,6 +90,15 @@ __all__ = ['mixing_matrix_2nu', 'hamiltonian_2nu_vacuum_energy_independent',
            'hamiltonian_2nu_liv']
 
 import numpy as np
+
+
+_EE_PROJECTOR = np.array([[1.0, 0.0], [0.0, 0.0]], dtype=complex)
+r"""numpy.ndarray: Module-level constant.
+
+The matrix that the charged-current matter potential multiplies: it
+selects the :math:`ee` entry, since only :math:`\nu_e` interacts through
+charged currents with the electrons in matter.
+"""
 
 
 def mixing_matrix_2nu(sth):
@@ -255,8 +269,9 @@ def hamiltonian_2nu_matter(h_vacuum_energy_independent, energy, VCC):
         [eV\ :sup:`2`], as returned by
         `hamiltonian_2nu_vacuum_energy_independent`.  It is not
         modified.
-    energy : float
-        Neutrino energy [eV].
+    energy : float or array_like
+        Neutrino energy [eV], or an array of energies, in which case one
+        Hamiltonian is returned per energy.
     VCC : float
         Potential due to charged-current interactions of
         :math:`\nu_e` with electrons [eV].  Positive for neutrinos,
@@ -265,7 +280,8 @@ def hamiltonian_2nu_matter(h_vacuum_energy_independent, energy, VCC):
     Returns
     -------
     numpy.ndarray
-        The :math:`2\times2` Hamiltonian [eV].
+        The :math:`2\times2` Hamiltonian [eV], of shape ``(2, 2)`` for a
+        scalar energy and ``(..., 2, 2)`` for an array of energies.
 
     Examples
     --------
@@ -274,13 +290,15 @@ def hamiltonian_2nu_matter(h_vacuum_energy_independent, energy, VCC):
     >>> print('%.6e' % H[0][0].real)
     -2.125000e-13
     """
-    h_matter = np.array(h_vacuum_energy_independent, dtype=complex)/energy
+    h_vacuum = np.asarray(h_vacuum_energy_independent, dtype=complex)
+    energy = np.asarray(energy, dtype=float)
+    VCC = np.asarray(VCC, dtype=float)
 
-    # Add the matter potential to the ee entry to find the matter
-    # Hamiltonian
-    h_matter[0][0] += VCC
-
-    return h_matter
+    # Indexing the energy with two trailing axes lets a scalar energy
+    # return a single 2x2 matrix and an array of energies return one
+    # matrix per energy, through the same expression
+    return h_vacuum/energy[..., None, None] \
+        + VCC[..., None, None]*_EE_PROJECTOR
 
 
 def probabilities_2nu_matter_std(sth, Dm2, VCC, energy, L):
@@ -374,8 +392,9 @@ def hamiltonian_2nu_nsi(h_vacuum_energy_independent, energy, VCC, eps):
         [eV\ :sup:`2`], as returned by
         `hamiltonian_2nu_vacuum_energy_independent`.  It is not
         modified.
-    energy : float
-        Neutrino energy [eV].
+    energy : float or array_like
+        Neutrino energy [eV], or an array of energies, in which case one
+        Hamiltonian is returned per energy.
     VCC : float
         Potential due to charged-current interactions of
         :math:`\nu_e` with electrons [eV].
@@ -390,7 +409,9 @@ def hamiltonian_2nu_nsi(h_vacuum_energy_independent, energy, VCC, eps):
     Returns
     -------
     numpy.ndarray
-        The :math:`2\times2` complex Hamiltonian [eV].
+        The :math:`2\times2` complex Hamiltonian [eV], of shape
+        ``(2, 2)`` for a scalar energy and ``(..., 2, 2)`` for an
+        array of energies.
 
     Examples
     --------
@@ -400,18 +421,18 @@ def hamiltonian_2nu_nsi(h_vacuum_energy_independent, energy, VCC, eps):
     >>> print('%+.6e%+.6ej' % (H[0][1].real, H[0][1].imag))
     +5.352659e-13+3.000000e-15j
     """
-    # The array is complex so that a complex eps_em keeps its imaginary
-    # part; a real array would silently discard it.
-    h_nsi = np.array(h_vacuum_energy_independent, dtype=complex)/energy
+    h_vacuum = np.asarray(h_vacuum_energy_independent, dtype=complex)
+    energy = np.asarray(energy, dtype=float)
+    VCC = np.asarray(VCC, dtype=float)
 
     eps_ee, eps_em, eps_mm = eps
 
-    h_nsi[0][0] += VCC*(1.0+eps_ee)
-    h_nsi[0][1] += VCC*eps_em
-    h_nsi[1][0] += VCC*np.conj(eps_em)
-    h_nsi[1][1] += VCC*eps_mm
+    # The matrix is complex so that a complex eps_em keeps its imaginary
+    # part; a real one would silently discard it
+    nsi = np.array([[1.0+eps_ee, eps_em],
+                    [np.conj(eps_em), eps_mm]], dtype=complex)
 
-    return h_nsi
+    return h_vacuum/energy[..., None, None] + VCC[..., None, None]*nsi
 
 
 def hamiltonian_2nu_liv(h_vacuum_energy_independent, energy, sxi, b1, b2,
@@ -432,8 +453,9 @@ def hamiltonian_2nu_liv(h_vacuum_energy_independent, energy, sxi, b1, b2,
         [eV\ :sup:`2`], as returned by
         `hamiltonian_2nu_vacuum_energy_independent`.  It is not
         modified.
-    energy : float
-        Neutrino energy [eV].
+    energy : float or array_like
+        Neutrino energy [eV], or an array of energies, in which case one
+        Hamiltonian is returned per energy.
     sxi : float
         :math:`\sin\xi`, with :math:`\xi` the rotation angle between the
         space of the eigenvectors of :math:`B_2` and the flavor states.
@@ -448,7 +470,9 @@ def hamiltonian_2nu_liv(h_vacuum_energy_independent, energy, sxi, b1, b2,
     Returns
     -------
     numpy.ndarray
-        The :math:`2\times2` complex Hamiltonian [eV].
+        The :math:`2\times2` complex Hamiltonian [eV], of shape
+        ``(2, 2)`` for a scalar energy and ``(..., 2, 2)`` for an
+        array of energies.
 
     Examples
     --------
@@ -457,14 +481,16 @@ def hamiltonian_2nu_liv(h_vacuum_energy_independent, energy, sxi, b1, b2,
     >>> print('%.6e' % H[0][0].real)
     1.047500e-12
     """
-    h_liv = np.array(h_vacuum_energy_independent, dtype=complex)/energy
+    h_vacuum = np.asarray(h_vacuum_energy_independent, dtype=complex)
+    energy = np.asarray(energy, dtype=float)
 
-    f = energy/Lambda
     cxi = np.sqrt(1.0-sxi*sxi)
 
-    h_liv[0][0] += f*(b1*cxi*cxi + b2*sxi*sxi)
-    h_liv[0][1] += f*((-b1+b2)*cxi*sxi)
-    h_liv[1][0] += f*((-b1+b2)*cxi*sxi)
-    h_liv[1][1] += f*(b2*cxi*cxi + b1*sxi*sxi)
+    # R.B2.R^T, with R the rotation by xi and B2 = diag(b1, b2)
+    liv = np.array([[b1*cxi*cxi + b2*sxi*sxi, (-b1+b2)*cxi*sxi],
+                    [(-b1+b2)*cxi*sxi, b2*cxi*cxi + b1*sxi*sxi]],
+                   dtype=complex)
 
-    return h_liv
+    f = energy/Lambda
+
+    return h_vacuum/energy[..., None, None] + f[..., None, None]*liv
