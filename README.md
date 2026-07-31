@@ -1,7 +1,14 @@
+[![tests](https://github.com/mbustama/NuOscProbExact/actions/workflows/tests.yml/badge.svg)](https://github.com/mbustama/NuOscProbExact/actions/workflows/tests.yml)
+[![Code Quality](https://github.com/mbustama/NuOscProbExact/actions/workflows/lint.yml/badge.svg)](https://github.com/mbustama/NuOscProbExact/actions/workflows/lint.yml)
+[![codecov](https://codecov.io/gh/mbustama/NuOscProbExact/branch/main/graph/badge.svg)](https://codecov.io/gh/mbustama/NuOscProbExact)
+[![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue.svg)](https://mbustama.github.io/NuOscProbExact/)
+[![PyPI](https://img.shields.io/pypi/v/nuoscprobexact.svg)](https://pypi.org/project/nuoscprobexact/)
+[![Downloads](https://pepy.tech/badge/nuoscprobexact)](https://pepy.tech/project/nuoscprobexact)
 [![arXiv](https://img.shields.io/badge/arXiv-1904.12391-orange.svg)](https://arxiv.org/abs/1904.12391)
 [![DOI](https://zenodo.org/badge/182178323.svg)](https://zenodo.org/badge/latestdoi/182178323)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 # NuOscProbExact
 Code to compute exact two- and three-neutrino oscillation probabilities using SU(2) and SU(3) expansions
