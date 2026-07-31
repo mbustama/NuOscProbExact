@@ -5,7 +5,76 @@ All notable changes to **NuOscProbExact** are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project uses [Semantic Versioning](https://semver.org/).
 
-## [1.6.0] - 2026-07-31
+## [1.7.0] - 2026-07-31
+
+Continuous integration, an automatic coverage gate, and linting.  Nothing in
+the library changed: no module in `src/` was touched except for a coverage
+pragma, the 279 tests are the same 279 tests, and every probability this code
+computes is the one it computed before.  What changed is that all of it is now
+checked on every push instead of whenever someone remembered.
+
+The one thing users will notice is the supported Python range.
+
+### Added
+
+- Four GitHub Actions workflows, in `.github/workflows/`.
+
+  | Workflow | What it does |
+  |---|---|
+  | `tests.yml` | The suite on Python 3.9–3.13, plus a job for each of the three backend configurations, plus coverage |
+  | `lint.yml` | `ruff check`, and a Sphinx build under `-W --keep-going` |
+  | `pages.yml` | Builds and deploys the documentation to GitHub Pages on push to `main` |
+  | `publish.yml` | Builds and publishes to PyPI on a published GitHub Release |
+
+  The three backend configurations are separate jobs because they are separate
+  claims: that the compiled kernels work, that the NumPy path gives the same
+  answers across the whole suite, and that a plain `pip install` with no
+  `numba` still works.  Each of the two backend jobs asserts its own
+  preconditions, so neither can quietly become a duplicate of another and keep
+  reporting success.
+
+- An automatic coverage gate, configured in `[tool.coverage]` in
+  `pyproject.toml` so that a local `pytest --cov` measures and gates exactly as
+  CI does.  Branch coverage is on, and the floor is 98%.
+
+  The `@njit` kernels in `fastkernels` are excluded, because Numba compiles
+  them to machine code that `coverage.py` cannot trace at all — they were
+  reported as 118 missing lines that no test could ever close, despite being
+  exercised against the NumPy path on every run.  Excluding the decorator
+  rather than omitting the file keeps `available`, `worthwhile`, `_run` and
+  both public wrappers measured, which is where a dispatch bug would hide.
+  Coverage of what can be traced is 100%.
+
+- A `[tool.ruff]` configuration and `ruff check` in CI.  The rule selection is
+  pinned rather than left to ruff's default, which moves between releases.
+  Three codebase-wide conventions are exempted with the reason recorded at
+  each: `l` for the baseline, one-line guards in the `d_ijk` lookup table, and
+  the star imports in the paper's worked examples.
+
+- `pytest-cov` in the `test` extra, and version classifiers for Python 3.9
+  through 3.13.
+
+- Seven badges in `README.md` and `docs/source/index.rst`: tests, Code Quality,
+  codecov, Documentation, PyPI, Downloads, and Code style: ruff.  The PyPI and
+  Downloads badges will not resolve until the first release is published.
+
+### Changed
+
+- **`requires-python` is now `>=3.9`, raised from `>=3.7`.**  The old floor was
+  never tested and its stated justification — the `@` operator — has held since
+  Python 3.5, so it did not pin 3.7 or anything else.  3.9 is what the code
+  actually needs: the batched paths call `numpy.broadcast_shapes`, which
+  arrived in NumPy 1.20, and 3.9 is the oldest interpreter for which the
+  optional `numba` backend still has a wheel.  All five supported versions are
+  now in the CI matrix.
+
+### Removed
+
+- Eight unused imports, in three of the worked examples in `test/` and two
+  modules in `tests/`.  These were what running a linter for the first time
+  actually found.
+
+
 
 An optional Numba backend for the batched paths, and a shortcut for very short
 stacks.  The library's only required dependency is still NumPy, and the
