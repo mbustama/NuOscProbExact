@@ -10,6 +10,7 @@ import doctest
 
 import pytest
 
+import fastkernels
 import globaldefs
 import hamiltonians2nu
 import hamiltonians3nu
@@ -18,7 +19,7 @@ import oscprob3nu
 
 
 MODULES = [globaldefs, oscprob2nu, oscprob3nu, hamiltonians2nu,
-           hamiltonians3nu]
+           hamiltonians3nu, fastkernels]
 
 
 @pytest.mark.parametrize('module', MODULES, ids=[m.__name__ for m in MODULES])

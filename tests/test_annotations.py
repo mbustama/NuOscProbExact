@@ -13,6 +13,7 @@ import typing
 
 import pytest
 
+import fastkernels
 import globaldefs
 import hamiltonians2nu
 import hamiltonians3nu
@@ -20,7 +21,8 @@ import oscprob2nu
 import oscprob3nu
 
 
-MODULES = [oscprob2nu, oscprob3nu, hamiltonians2nu, hamiltonians3nu]
+MODULES = [oscprob2nu, oscprob3nu, hamiltonians2nu, hamiltonians3nu,
+           fastkernels]
 
 
 def routines(module, private=False):

@@ -172,4 +172,5 @@ File tree
        ├── test_vectorized_hamiltonians.py  # Hamiltonians built for an array of energies
        ├── test_annotations.py          # Annotations, and their agreement with the docs
        ├── test_fastkernels.py          # Both backends, against each other
+       ├── test_physical_scales.py      # Both backends at the scales actually used
        └── test_file_tree.py            # Keeps this tree in step with the repository

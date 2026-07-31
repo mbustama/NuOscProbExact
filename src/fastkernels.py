@@ -73,6 +73,8 @@ __all__ = ['HAVE_NUMBA', 'USE_NUMBA', 'MIN_BATCH', 'PARALLEL_THRESHOLD',
            'available', 'worthwhile',
            'probabilities_2nu_kernel', 'probabilities_3nu_kernel']
 
+from typing import Callable
+
 import cmath
 import math
 
@@ -346,8 +348,33 @@ if HAVE_NUMBA:
         for n in prange(h_stack.shape[0]):
             _one_2nu(h_stack[n], l_stack[n], out, n)
 
-    def _run(h_stack, l_stack, width, serial, parallel):
-        r"""Flattens, dispatches, and restores the batch shape."""
+    def _run(
+        h_stack: np.ndarray,
+        l_stack: np.ndarray,
+        width: int,
+        serial: Callable,
+        parallel: Callable
+    ) -> np.ndarray:
+        r"""Flattens, dispatches, and restores the batch shape.
+
+        Parameters
+        ----------
+        h_stack : numpy.ndarray
+            Hamiltonians, of shape ``(..., width, width)``.
+        l_stack : numpy.ndarray
+            Baselines, of shape ``(...)``.
+        width : int
+            Number of flavors, 2 or 3.
+        serial : Callable
+            Kernel to use below `PARALLEL_THRESHOLD`.
+        parallel : Callable
+            Kernel to use at or above it.
+
+        Returns
+        -------
+        numpy.ndarray
+            The probabilities, of shape ``(..., width*width)``.
+        """
         batch = l_stack.shape
         flat_h = np.ascontiguousarray(h_stack).reshape(-1, width, width)
         flat_l = np.ascontiguousarray(l_stack).reshape(-1)
