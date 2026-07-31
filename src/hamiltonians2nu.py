@@ -69,8 +69,13 @@ def hamiltonian_2nu_vacuum_energy_independent(sth, Dm2,
     Computes and returns the 2x2 real two-neutrino Hamiltonian for
     oscillations in vacuum, parametrized by a single mixing angle theta
     and a single mass-squared difference Dm2.  The Hamiltonian is
-    H = (1/2)*R.M2.R^dagger, with R the 2x2 rotation matrix and M2 the
-    mass matrix.  The multiplicative factor 1/E is not applied.
+    H = (1/4)*R.M2.R^T, with R the 2x2 rotation matrix and
+    M2 = diag(-Dm2, Dm2) the traceless mass matrix.  The multiplicative
+    factor 1/E is not applied.
+
+    The sign convention matters: the mass eigenstate with the larger
+    mass-squared value is the second one, so that adding a positive
+    matter potential to the ee entry describes neutrinos.
 
     Parameters
     ----------
@@ -95,8 +100,8 @@ def hamiltonian_2nu_vacuum_energy_independent(sth, Dm2,
 
     if not compute_matrix_multiplication:
 
-        H00 = Dm2*c2th
-        H01 = -Dm2*s2th
+        H00 = -Dm2*c2th
+        H01 = Dm2*s2th
         H10 = H01
         H11 = -H00
 
@@ -107,7 +112,7 @@ def hamiltonian_2nu_vacuum_energy_independent(sth, Dm2,
         # PMNS matrix
         R = np.array(mixing_matrix_2nu(sth))
         # Mass matrix
-        M2 = np.array([[Dm2, 0.0], [0.0, -Dm2]])
+        M2 = np.array([[-Dm2, 0.0], [0.0, Dm2]])
         # Hamiltonian
         H = list(f*np.matmul(R, np.matmul(M2, matrix.transpose(R))))
 
