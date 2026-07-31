@@ -168,8 +168,9 @@ The :math:`d` tensor is constant and is tabulated once at import time as a
 dense :math:`8\times8\times8` array; the star product and the two invariants
 are contractions against that table.
 
-A single three-flavor probability evaluation takes a little over ten
-microseconds.  For scans, pass arrays rather than looping: the routines
+A single three-flavor probability evaluation takes about thirteen
+microseconds, and a two-flavor one about 1.3.  For scans, pass arrays rather
+than looping: the routines
 accept a stack of Hamiltonians, a stack of baselines, or both, and evaluate
 the stack in one pass.  Measured against the equivalent Python loop, on 2000
 points:
@@ -209,6 +210,70 @@ The vectorised path is as fast as diagonalising with LAPACK, which is the
 honest comparison to draw: the SU(3) route's advantage is that it is a
 closed form, not that it outruns ``eigh``.  What the vectorisation removes
 is the *disadvantage* it used to carry.
+
+Short stacks
+^^^^^^^^^^^^
+
+A batched call carries a couple of hundred microseconds of fixed cost
+whatever its length --- allocating and reducing a dozen small arrays --- so
+for a handful of points it spends more on the machinery than the scalar path
+spends on the whole job.  Stacks below
+:data:`oscprob3nu.SMALL_BATCH` are therefore evaluated one element at a time.
+
+The thresholds are measured, not guessed, and differ between the two
+expansions because the two-flavor one does much less work per element and so
+amortises its overhead sooner: eleven elements for three flavors, seven for
+two.  Nothing about this is visible from the outside; the answers are the
+same either way.
+
+The optional compiled backend
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+With :mod:`fastkernels` --- that is, with Numba installed --- the batched
+paths are compiled instead.  The NumPy path evaluates the expansion as a
+chain of whole-array operations, so a stack of :math:`N` Hamiltonians makes
+roughly fifteen passes over :math:`N`-element arrays, each writing a
+temporary that the next reads back.  The compiled kernel does the same
+arithmetic one element at a time, keeping every intermediate in registers,
+and spreads the elements over the available cores.  Against the NumPy path:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 55 45
+
+   * - Stack
+     - Speedup
+   * - 200 000 energies, three flavors
+     - ~15x
+   * - 20 000 energies, three flavors
+     - ~13x
+   * - 2 000 energies, three flavors
+     - ~3x
+   * - 200 000 baselines, two flavors
+     - ~1.4x
+   * - 2 000 baselines, two flavors
+     - NumPy is quicker
+
+The two-flavor rows are the honest caveat: that path reduces to a square root
+and a sine per element, which NumPy already does about as well as compiled
+code can, and the kernel additionally has to materialise the Hamiltonian
+stack --- for a scan over baselines, the same matrix repeated, which costs
+2.5 ms to copy at two hundred thousand points.
+
+So the backend is not used unconditionally.  :func:`fastkernels.worthwhile`
+declines it below the per-flavor thresholds in
+:data:`fastkernels.MIN_BATCH`, which were found by alternating the two paths
+and taking the best of nine rounds each: for three flavors the kernel wins at
+every size, for two it wins from about fifty thousand elements.  A backend
+that is sometimes slower than the path it replaces is worse than no backend,
+and a test asserts the thresholds are honoured.
+
+The scalar path is deliberately left uncompiled.  One probability takes
+about thirteen microseconds; compiling it would save twelve, at the cost of
+a multi-second pause on a user's first call.
+
+Degenerate spectra on the batched path
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The degenerate branch cannot be taken elementwise inside a vectorised
 expression.  The general formula is therefore evaluated everywhere, with

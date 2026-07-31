@@ -24,6 +24,8 @@ want to do:
      - ``numpy``, ``matplotlib``
    * - Run the regression suite (``tests/``)
      - ``numpy``, ``pytest``, ``scipy``
+   * - Speed up large scans (optional)
+     - ``numba``
    * - Build this documentation
      - the contents of ``docs/requirements.txt``
 
@@ -60,6 +62,7 @@ Optional extras install the dependencies for each task:
 
 .. code-block:: shell
 
+   pip install -e ".[fast]"    # numba, for the compiled batched kernels
    pip install -e ".[plots]"   # matplotlib, for the figures
    pip install -e ".[test]"    # pytest and scipy, for the regression suite
    pip install -e ".[docs]"    # sphinx and friends, for this documentation

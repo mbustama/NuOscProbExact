@@ -81,6 +81,66 @@ When is NuOscProbExact a good fit?
    :func:`oscprob3nu.evolution_operator_3nu` returns :math:`U_3(L)` itself, so
    it can be composed across segments or used to propagate a density matrix.
 
+Performance
+-----------
+
+A single probability takes about 13 microseconds for three flavors and 1.3
+for two.  Scans --- a curve versus baseline or energy, an oscillogram over
+both --- are what the code mostly does, and two things make those much
+faster without changing any answer.
+
+**Pass arrays instead of looping.**  Every core routine takes a stack of
+Hamiltonians, an array of baselines, or both, and evaluates them in one
+call.  That is worth roughly 25 to 60 times the equivalent Python loop, and
+needs no extra dependency: the expensive part of the expansion, the
+characteristic equation whose roots give the oscillation phases, depends on
+the Hamiltonian alone, so a scan over baselines solves it once instead of
+once per point.  See :ref:`scanning` for the three patterns.
+
+**Install Numba, if the scans are large.**  With
+``pip install "nuoscprobexact[fast]"`` the batched paths run as compiled
+loops spread over the available cores; without it the NumPy path is used and
+the results are the same to round-off.  On 2000-point scans, against the
+Python loop:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 20 20 20
+
+   * - Scan
+     - Loop
+     - Arrays
+     - Arrays + Numba
+   * - Three flavors, versus baseline
+     - 30 ms
+     - 1.1 ms
+     - **0.24 ms**
+   * - Three flavors, versus energy
+     - 41 ms
+     - 1.6 ms
+     - **0.43 ms**
+   * - Oscillogram, 100 x 100
+     - 195 ms
+     - 4.4 ms
+     - **0.78 ms**
+   * - Two flavors, versus baseline
+     - 4.4 ms
+     - **0.07 ms**
+     - not used
+
+Repeated runs on one machine vary by up to half again, so read these as
+orders of magnitude.
+
+The last row is not an omission.  The backend is used only where it has been
+measured to win: for three flavors that is every stack size, but the
+two-flavor expansion reduces to a square root and a sine per element, which
+NumPy already does about as well as compiled code can.  Below fifty thousand
+elements the NumPy path is kept; above it the kernel leads by about 1.3 to
+1.8 times.  The library chooses without being asked.
+
+:doc:`methodology` explains where the time goes, and what was tried and
+rejected.
+
 Getting started
 ---------------
 

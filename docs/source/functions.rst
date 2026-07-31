@@ -55,6 +55,13 @@ hamiltonians3nu
    :members:
    :undoc-members:
 
+Optional compiled backend
+-------------------------
+
+.. automodule:: fastkernels
+   :members:
+   :undoc-members:
+
 Constants
 ---------
 
