@@ -61,10 +61,16 @@ __all__ = ['hamiltonian_2nu_coefficients', 'modulus',
            'evolution_operator_2nu_u_coefficients', 'evolution_operator_2nu',
            'probabilities_2nu']
 
+from typing import List, Tuple, Union
+
+import math
+
 import numpy as np
 
 
-def hamiltonian_2nu_coefficients(hamiltonian_matrix):
+def hamiltonian_2nu_coefficients(
+    hamiltonian_matrix: Union[list, np.ndarray]
+) -> List[float]:
     r"""Returns the :math:`h_k` of the SU(2) expansion of the Hamiltonian.
 
     Computes the coefficients :math:`h_1, h_2, h_3` of the SU(2)
@@ -105,14 +111,14 @@ def hamiltonian_2nu_coefficients(hamiltonian_matrix):
     # h0 = (H11+H22)/2.0 is not returned: it multiplies the identity and
     # so contributes only an overall phase to U2, which cancels in the
     # oscillation probabilities.
-    h1 = np.real(H12)
-    h2 = -np.imag(H12)
-    h3 = np.real(H11-H22)/2.0
+    h1 = H12.real
+    h2 = -H12.imag
+    h3 = (H11-H22).real/2.0
 
     return [float(h1), float(h2), float(h3)]
 
 
-def modulus(h_coeffs):
+def modulus(h_coeffs: Union[list, np.ndarray]) -> float:
     r"""Returns the modulus :math:`|h|` of the vector of coefficients.
 
     Returns the modulus of the vector of coefficients :math:`h_k` of the
@@ -135,10 +141,10 @@ def modulus(h_coeffs):
     >>> print('%.6f' % modulus([0.0, -2.0, -1.0]))
     2.236068
     """
-    return float(np.sqrt(sum([abs(h)**2.0 for h in h_coeffs])))
+    return math.sqrt(sum([abs(h)**2.0 for h in h_coeffs]))
 
 
-def _hamiltonian_2nu_coefficients_batch(h_matrix):
+def _hamiltonian_2nu_coefficients_batch(h_matrix: np.ndarray) -> np.ndarray:
     r"""Returns the :math:`h_k` for a stack of Hamiltonians.
 
     The vectorised counterpart of `hamiltonian_2nu_coefficients`.
@@ -151,48 +157,65 @@ def _hamiltonian_2nu_coefficients_batch(h_matrix):
     Returns
     -------
     numpy.ndarray
-        The coefficients, of shape ``(..., 3)``, real.
+        The coefficients, of shape ``(3, ...)``.
+
+    Notes
+    -----
+    The component index is the *first* axis, so that each :math:`h_k` is
+    a contiguous array and the batch axes are the trailing ones, which
+    is what lets NumPy right-align them against the baselines.  This
+    mirrors :func:`oscprob3nu._hamiltonian_3nu_coefficients_batch`.
     """
     return np.stack([
         h_matrix[..., 0, 1].real,
         -h_matrix[..., 0, 1].imag,
         (h_matrix[..., 0, 0]-h_matrix[..., 1, 1]).real/2.0,
-    ], axis=-1)
+    ], axis=0)
 
 
-def _u_coefficients_2nu_batch(h, L):
+def _u_coefficients_2nu_batch(h: np.ndarray, L: np.ndarray) -> np.ndarray:
     r"""Returns the four :math:`u_k` for a stack of Hamiltonians.
 
     Parameters
     ----------
     h : numpy.ndarray
-        The coefficients :math:`h_k`, of shape ``(..., 3)``, real.
+        The coefficients :math:`h_k`, of shape ``(3, ...)``, real.
     L : numpy.ndarray
-        Baselines, of shape ``(...)``, already broadcast against `h`.
+        Baselines, of shape ``(...)``, broadcastable against `h`.
 
     Returns
     -------
     numpy.ndarray
-        The coefficients, of shape ``(..., 4)``, real.
+        The coefficients, of shape ``(4, ...)``, real.
     """
+    # Pad the Hamiltonian's batch axes so that they right-align against
+    # the baselines; reshape returns a view, so this costs nothing
+    full = np.broadcast_shapes(h.shape[1:], np.shape(L))
+    extra = len(full) - (h.ndim - 1)
+    if extra > 0:
+        h = h.reshape(h.shape[:1] + (1,)*extra + h.shape[1:])
+
     # |h| depends on the Hamiltonian alone; the baselines enter only in
     # the trigonometric factors below
-    h_abs = np.sqrt(np.einsum('...i,...i->...', h, h))
+    h_abs = np.sqrt((h*h).sum(0))
 
     positive = h_abs > 0.0
     safe_h_abs = np.where(positive, h_abs, 1.0)
 
     phase = h_abs*L
-    u0 = np.cos(phase)
+    u0 = np.broadcast_to(np.cos(phase), full)
     # The limit of -sin(|h|L)/|h| as |h| -> 0 is -L
     ss = np.where(positive, -np.sin(phase)/safe_h_abs,
-                  -np.broadcast_to(L, np.shape(phase)))
+                  -np.broadcast_to(L, full))
 
-    return np.concatenate([np.broadcast_to(u0, np.shape(ss))[..., None],
-                           h*ss[..., None]], axis=-1)
+    return np.concatenate([u0[None], np.broadcast_to(h*ss, (3,)+full)],
+                          axis=0)
 
 
-def _evolution_operator_2nu_batch(h_matrix, L):
+def _evolution_operator_2nu_batch(
+    h_matrix: Union[list, np.ndarray],
+    L: Union[int, float, list, np.ndarray]
+) -> np.ndarray:
     r"""Returns :math:`U_2(L)` for a stack of Hamiltonians and baselines.
 
     Parameters
@@ -214,9 +237,8 @@ def _evolution_operator_2nu_batch(h_matrix, L):
     # a clear message rather than deep inside the expansion
     np.broadcast_shapes(h_matrix.shape[:-2], L.shape)
 
-    u = _u_coefficients_2nu_batch(
+    u0, u1, u2, u3 = _u_coefficients_2nu_batch(
         _hamiltonian_2nu_coefficients_batch(h_matrix), L)
-    u0, u1, u2, u3 = [u[..., k] for k in range(4)]
 
     return np.stack([
         np.stack([u0+1.j*u3, 1.j*u1+u2], axis=-1),
@@ -224,7 +246,62 @@ def _evolution_operator_2nu_batch(h_matrix, L):
     ], axis=-2)
 
 
-def _is_batched(hamiltonian_matrix, L):
+def _probabilities_2nu_batch(
+    h_matrix: Union[list, np.ndarray],
+    L: Union[int, float, list, np.ndarray]
+) -> np.ndarray:
+    r"""Returns the four probabilities for a stack, without forming U.
+
+    For a Hermitian :math:`2\times2` Hamiltonian the coefficients
+    :math:`u_k` are real, so
+
+    .. math::
+       |U_{ee}|^2 = u_0^2 + u_3^2 , \qquad
+       |U_{\mu e}|^2 = |U_{e\mu}|^2 = u_1^2 + u_2^2 ,
+
+    which leaves only two distinct numbers, and unitarity makes the
+    second the complement of the first.  So neither the evolution
+    operator nor the coefficients need to be built: the transition
+    probability follows from the Hamiltonian directly, exactly as on
+    the scalar path.
+
+    Parameters
+    ----------
+    h_matrix : array_like
+        Hamiltonians, of shape ``(..., 2, 2)``.
+    L : array_like
+        Baselines, broadcastable against the leading axes of `h_matrix`.
+
+    Returns
+    -------
+    numpy.ndarray
+        The probabilities, of shape ``(..., 4)``, ordered
+        ``(Pee, Pem, Pme, Pmm)``.
+    """
+    h_matrix = np.asarray(h_matrix, dtype=complex)
+    L = np.asarray(L, dtype=float)
+    np.broadcast_shapes(h_matrix.shape[:-2], L.shape)
+
+    h = _hamiltonian_2nu_coefficients_batch(h_matrix)
+    h1, h2, h3 = h
+
+    h_sq = h1*h1 + h2*h2 + h3*h3
+    positive = h_sq > 0.0
+    safe_h_sq = np.where(positive, h_sq, 1.0)
+
+    sin_phase = np.sin(np.sqrt(safe_h_sq)*L)
+    # A Hamiltonian proportional to the identity drives no transitions
+    p_em = np.where(positive, (h1*h1 + h2*h2)/safe_h_sq*sin_phase*sin_phase,
+                    0.0)
+    p_ee = 1.0 - p_em
+
+    return np.stack([p_ee, p_em, p_em, p_ee], axis=-1)
+
+
+def _is_batched(
+    hamiltonian_matrix: Union[list, np.ndarray],
+    L: Union[int, float, list, np.ndarray]
+) -> bool:
     r"""Returns whether the arguments describe a stack of problems.
 
     A single Hamiltonian is an ``n``-by-``n`` matrix and a single
@@ -247,7 +324,10 @@ def _is_batched(hamiltonian_matrix, L):
     return isinstance(hamiltonian_matrix[0][0], (list, tuple, np.ndarray))
 
 
-def evolution_operator_2nu_u_coefficients(hamiltonian_matrix, L):
+def evolution_operator_2nu_u_coefficients(
+    hamiltonian_matrix: Union[list, np.ndarray],
+    L: Union[int, float]
+) -> List[float]:
     r"""Returns the coefficients :math:`u_0, \ldots, u_3`.
 
     Returns the four coefficients :math:`u_0, \ldots, u_3` of the
@@ -292,16 +372,20 @@ def evolution_operator_2nu_u_coefficients(hamiltonian_matrix, L):
     # h_abs = |h|
     h_abs = modulus(h_coeffs)
 
-    u0 = np.cos(h_abs*L)
+    phase = h_abs*L
+    u0 = math.cos(phase)
     # The limit of -sin(|h|L)/|h| as |h| -> 0 is -L
-    ss = -L if h_abs == 0.0 else -np.sin(h_abs*L)/h_abs
+    ss = -L if h_abs == 0.0 else -math.sin(phase)/h_abs
     uk = [h_coeffs[k]*ss for k in range(0, 3)]
 
     # [u0, u1, u2, u3]
     return [u0]+uk
 
 
-def evolution_operator_2nu(hamiltonian_matrix, L):
+def evolution_operator_2nu(
+    hamiltonian_matrix: Union[list, np.ndarray],
+    L: Union[int, float, list, np.ndarray]
+) -> Union[List[List[complex]], np.ndarray]:
     r"""Returns the two-neutrino time-evolution operator.
 
     Returns the two-neutrino time-evolution operator :math:`U_2(L)` in
@@ -355,7 +439,10 @@ def evolution_operator_2nu(hamiltonian_matrix, L):
     ]
 
 
-def probabilities_2nu(hamiltonian_matrix, L):
+def probabilities_2nu(
+    hamiltonian_matrix: Union[list, np.ndarray],
+    L: Union[int, float, list, np.ndarray]
+) -> Union[Tuple[float, float, float, float], np.ndarray]:
     r"""Returns the two-neutrino oscillation probabilities.
 
     Returns the two-neutrino flavor-transition probabilities
@@ -405,11 +492,7 @@ def probabilities_2nu(hamiltonian_matrix, L):
     0.504821  0.495179  0.495179  0.504821
     """
     if _is_batched(hamiltonian_matrix, L):
-        U = _evolution_operator_2nu_batch(hamiltonian_matrix, L)
-        # P_ab = |U_ba|^2: the evolution operator is indexed
-        # (final, initial), the probabilities (initial, final)
-        prob = np.abs(U)**2.
-        return np.swapaxes(prob, -1, -2).reshape(prob.shape[:-2]+(4,))
+        return _probabilities_2nu_batch(hamiltonian_matrix, L)
 
     # [h1, h2, h3]
     h_coeffs = hamiltonian_2nu_coefficients(hamiltonian_matrix)
@@ -422,8 +505,9 @@ def probabilities_2nu(hamiltonian_matrix, L):
         # transitions occur, whatever the baseline.
         Pem = 0.0
     else:
-        Pem = (abs(h_coeffs[0])**2.0 + abs(h_coeffs[1])**2.0) / h_abs**2.0 \
-            * pow(np.sin(h_abs*L), 2.0)
+        h1, h2 = h_coeffs[0], h_coeffs[1]
+        sin_phase = math.sin(h_abs*L)
+        Pem = (h1*h1 + h2*h2)/(h_abs*h_abs) * sin_phase*sin_phase
 
     Pme = Pem
     Pee = 1.0-Pem

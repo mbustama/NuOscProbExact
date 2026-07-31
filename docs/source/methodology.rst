@@ -168,7 +168,7 @@ The :math:`d` tensor is constant and is tabulated once at import time as a
 dense :math:`8\times8\times8` array; the star product and the two invariants
 are contractions against that table.
 
-A single three-flavor probability evaluation takes a few tens of
+A single three-flavor probability evaluation takes a little over ten
 microseconds.  For scans, pass arrays rather than looping: the routines
 accept a stack of Hamiltonians, a stack of baselines, or both, and evaluate
 the stack in one pass.  Measured against the equivalent Python loop, on 2000
@@ -182,14 +182,22 @@ points:
      - Speedup
      - Also comparable to
    * - Versus baseline (one :math:`H`, many :math:`L`)
-     - 80--100x
+     - ~30x
      - one ``eigh`` plus phases
    * - Versus energy (many :math:`H`, one :math:`L`)
-     - 20--30x
+     - ~25x
      - batched ``numpy.linalg.eigh``
    * - Oscillogram, 100 x 100
-     - ~80x
+     - ~40x
      -
+   * - Two flavors, versus baseline
+     - ~70x
+     -
+
+These ratios have *narrowed* across successive releases even as both sides got
+quicker: the scalar path has itself sped up several-fold, so the loop being
+compared against is no longer as slow as it was.  In absolute terms the
+vectorised scan is faster than it has ever been.
 
 The two scans differ because the latent roots depend on the Hamiltonian
 alone.  Scanning one Hamiltonian over many baselines solves the

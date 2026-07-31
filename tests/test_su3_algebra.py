@@ -127,3 +127,26 @@ def test_psi_roots_are_eigenvalues_of_minus_the_hamiltonian(rng):
         psi = np.sort(np.real(oscprob3nu.psi_roots(h2, h3)))
         expected = np.sort(-np.linalg.eigvalsh(h_matrix))
         assert np.allclose(psi, expected, atol=1.0e-10)
+
+
+def test_star_all_matches_the_tensor_contraction(rng):
+    r"""The hand-written sparse expansion agrees with the d tensor.
+
+    ``_star_all`` writes out :math:`(h \star h)_i = d_{ijk} h_j h_k`
+    term by term, because contracting the dense table costs more NumPy
+    dispatch than the arithmetic is worth for eight numbers.  That
+    expansion has to stay in step with `tensor_d`, which is what this
+    checks.
+    """
+    for _ in range(200):
+        h = list(rng.normal(size=8))
+        explicit = oscprob3nu._star_all(h)
+        reference = [oscprob3nu.star(i, h) for i in range(8)]
+        assert np.allclose(explicit, reference, atol=ATOL)
+
+
+def test_star_all_handles_arrays_and_lists(rng):
+    r"""_star_all accepts either a list or an array of coefficients."""
+    h = rng.normal(size=8)
+    assert np.allclose(oscprob3nu._star_all(list(h)),
+                       oscprob3nu._star_all(h), atol=ATOL)

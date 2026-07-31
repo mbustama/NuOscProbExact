@@ -89,6 +89,10 @@ __all__ = ['mixing_matrix_2nu', 'hamiltonian_2nu_vacuum_energy_independent',
            'probabilities_2nu_matter_std', 'hamiltonian_2nu_nsi',
            'hamiltonian_2nu_liv']
 
+from typing import List, Optional, Union
+
+import math
+
 import numpy as np
 
 
@@ -101,7 +105,7 @@ charged currents with the electrons in matter.
 """
 
 
-def mixing_matrix_2nu(sth):
+def mixing_matrix_2nu(sth: Union[int, float]) -> List[List[float]]:
     r"""Returns the :math:`2\times2` rotation matrix.
 
     Computes and returns the real :math:`2\times2` rotation matrix
@@ -125,13 +129,16 @@ def mixing_matrix_2nu(sth):
     >>> print('%.6f  %.6f' % (R[0][0], R[0][1]))
     0.800000  0.600000
     """
-    cth = np.sqrt(1.0-sth*sth)
+    cth = math.sqrt(1.0-sth*sth)
 
     return [[cth, sth], [-sth, cth]]
 
 
-def hamiltonian_2nu_vacuum_energy_independent(sth, Dm2,
-                                              compute_matrix_multiplication=False):
+def hamiltonian_2nu_vacuum_energy_independent(
+    sth: Union[int, float],
+    Dm2: Union[int, float],
+    compute_matrix_multiplication: Optional[bool]=False
+) -> np.ndarray:
     r"""Returns the two-neutrino Hamiltonian for vacuum oscillations.
 
     Computes and returns the energy-independent part of the real
@@ -177,7 +184,7 @@ def hamiltonian_2nu_vacuum_energy_independent(sth, Dm2,
     # Trigonometric identities, rather than arcsin followed by cos and
     # sin, keep this consistent with mixing_matrix_2nu and avoid a
     # needless round trip through the angle itself.
-    cth = np.sqrt(1.0-sth*sth)
+    cth = math.sqrt(1.0-sth*sth)
     c2th = 1.0-2.0*sth*sth
     s2th = 2.0*sth*cth
 
@@ -204,7 +211,12 @@ def hamiltonian_2nu_vacuum_energy_independent(sth, Dm2,
     return H
 
 
-def probabilities_2nu_vacuum_std(sth, Dm2, energy, L):
+def probabilities_2nu_vacuum_std(
+    sth: Union[int, float],
+    Dm2: Union[int, float],
+    energy: Union[int, float],
+    L: Union[int, float]
+) -> List[float]:
     r"""Returns the 2nu vacuum probabilities, standard computation.
 
     Returns the probabilities for two-neutrino oscillations in vacuum,
@@ -254,7 +266,11 @@ def probabilities_2nu_vacuum_std(sth, Dm2, energy, L):
     return [Pee, Pem, Pme, Pmm]
 
 
-def hamiltonian_2nu_matter(h_vacuum_energy_independent, energy, VCC):
+def hamiltonian_2nu_matter(
+    h_vacuum_energy_independent: Union[list, np.ndarray],
+    energy: Union[int, float, list, np.ndarray],
+    VCC: Union[int, float, list, np.ndarray]
+) -> np.ndarray:
     r"""Returns the two-neutrino Hamiltonian for matter oscillations.
 
     Computes and returns the :math:`2\times2` two-neutrino Hamiltonian
@@ -272,10 +288,11 @@ def hamiltonian_2nu_matter(h_vacuum_energy_independent, energy, VCC):
     energy : float or array_like
         Neutrino energy [eV], or an array of energies, in which case one
         Hamiltonian is returned per energy.
-    VCC : float
+    VCC : float or array_like
         Potential due to charged-current interactions of
         :math:`\nu_e` with electrons [eV].  Positive for neutrinos,
-        negative for antineutrinos.
+        negative for antineutrinos.  May be an array, to scan across a
+        density profile alongside the energy.
 
     Returns
     -------
@@ -301,7 +318,13 @@ def hamiltonian_2nu_matter(h_vacuum_energy_independent, energy, VCC):
         + VCC[..., None, None]*_EE_PROJECTOR
 
 
-def probabilities_2nu_matter_std(sth, Dm2, VCC, energy, L):
+def probabilities_2nu_matter_std(
+    sth: Union[int, float],
+    Dm2: Union[int, float],
+    VCC: Union[int, float],
+    energy: Union[int, float],
+    L: Union[int, float]
+) -> List[float]:
     r"""Returns the 2nu matter probabilities, standard computation.
 
     Returns the probabilities for two-neutrino oscillations in matter of
@@ -378,7 +401,12 @@ def probabilities_2nu_matter_std(sth, Dm2, VCC, energy, L):
     return [Pee, Pem, Pme, Pmm]
 
 
-def hamiltonian_2nu_nsi(h_vacuum_energy_independent, energy, VCC, eps):
+def hamiltonian_2nu_nsi(
+    h_vacuum_energy_independent: Union[list, np.ndarray],
+    energy: Union[int, float, list, np.ndarray],
+    VCC: Union[int, float, list, np.ndarray],
+    eps: Union[list, np.ndarray]
+) -> np.ndarray:
     r"""Returns the two-neutrino Hamiltonian for oscillations with NSI.
 
     Computes and returns the :math:`2\times2` two-neutrino Hamiltonian
@@ -395,9 +423,10 @@ def hamiltonian_2nu_nsi(h_vacuum_energy_independent, energy, VCC, eps):
     energy : float or array_like
         Neutrino energy [eV], or an array of energies, in which case one
         Hamiltonian is returned per energy.
-    VCC : float
+    VCC : float or array_like
         Potential due to charged-current interactions of
-        :math:`\nu_e` with electrons [eV].
+        :math:`\nu_e` with electrons [eV].  May be an array, to scan
+        across a density profile alongside the energy.
     eps : array_like
         The three NSI strength parameters
         ``[eps_ee, eps_em, eps_mm]``, adimensional.  The diagonal
@@ -435,8 +464,14 @@ def hamiltonian_2nu_nsi(h_vacuum_energy_independent, energy, VCC, eps):
     return h_vacuum/energy[..., None, None] + VCC[..., None, None]*nsi
 
 
-def hamiltonian_2nu_liv(h_vacuum_energy_independent, energy, sxi, b1, b2,
-                        Lambda):
+def hamiltonian_2nu_liv(
+    h_vacuum_energy_independent: Union[list, np.ndarray],
+    energy: Union[int, float, list, np.ndarray],
+    sxi: Union[int, float],
+    b1: Union[int, float],
+    b2: Union[int, float],
+    Lambda: Union[int, float]
+) -> np.ndarray:
     r"""Returns the two-neutrino Hamiltonian for oscillations with LIV.
 
     Computes and returns the :math:`2\times2` two-neutrino Hamiltonian

@@ -282,3 +282,92 @@ def test_zero_baseline_in_a_batch(rng):
     h_stack = stack_of_hermitians(rng, 10, 3)
     prob = oscprob3nu.probabilities_3nu(h_stack, np.zeros(10))
     assert np.allclose(prob.reshape(10, 3, 3), np.eye(3), atol=ATOL)
+
+
+# --------------------------------------------------------------------------
+# Broadcasting patterns for two flavors, and shape errors for both
+# --------------------------------------------------------------------------
+
+def test_2nu_one_hamiltonian_many_baselines(rng):
+    r"""A single 2nu Hamiltonian broadcasts against an array of
+    baselines.
+
+    The three-flavor equivalent was covered from the start; this one was
+    not, and it is the shape that the plotting modules use most.
+    """
+    h = random_hermitian(rng, 2)
+    l_stack = np.linspace(0.1, 20.0, 50)
+
+    batched = oscprob2nu.probabilities_2nu(as_nested_list(h), l_stack)
+    scalar = np.array([oscprob2nu.probabilities_2nu(as_nested_list(h), l)
+                       for l in l_stack])
+
+    assert batched.shape == (50, 4)
+    assert np.allclose(batched, scalar, atol=ATOL)
+
+
+def test_2nu_many_hamiltonians_one_baseline(rng):
+    r"""An array of 2nu Hamiltonians broadcasts against one baseline."""
+    h_stack = stack_of_hermitians(rng, 40, 2)
+
+    batched = oscprob2nu.probabilities_2nu(h_stack, 2.5)
+    scalar = np.array([oscprob2nu.probabilities_2nu(as_nested_list(h), 2.5)
+                       for h in h_stack])
+
+    assert batched.shape == (40, 4)
+    assert np.allclose(batched, scalar, atol=ATOL)
+
+
+def test_2nu_two_dimensional_grid(rng):
+    r"""Two flavors broadcast into a grid as well."""
+    h_stack = stack_of_hermitians(rng, 6, 2)
+    l_stack = np.linspace(0.5, 4.0, 5)
+
+    grid = oscprob2nu.probabilities_2nu(h_stack[:, None, :, :],
+                                        l_stack[None, :])
+    assert grid.shape == (6, 5, 4)
+    for i in range(6):
+        for j in range(5):
+            expected = oscprob2nu.probabilities_2nu(
+                as_nested_list(h_stack[i]), l_stack[j])
+            assert np.allclose(grid[i, j], expected, atol=ATOL)
+
+
+def test_2nu_batched_evolution_operator_broadcasts(rng):
+    r"""The 2nu evolution operator broadcasts the same way."""
+    h = random_hermitian(rng, 2)
+    l_stack = np.linspace(0.1, 8.0, 25)
+
+    batched = oscprob2nu.evolution_operator_2nu(as_nested_list(h), l_stack)
+    scalar = np.array([oscprob2nu.evolution_operator_2nu(as_nested_list(h), l)
+                       for l in l_stack])
+
+    assert batched.shape == (25, 2, 2)
+    assert np.allclose(batched, scalar, atol=ATOL)
+
+
+@pytest.mark.parametrize('module,size', [(oscprob2nu, 2), (oscprob3nu, 3)])
+def test_incompatible_shapes_raise(module, size, rng):
+    r"""Hamiltonians and baselines that do not broadcast are rejected,
+    rather than silently producing a wrong shape."""
+    h_stack = stack_of_hermitians(rng, 5, size)
+    probabilities = getattr(module, 'probabilities_%dnu' % size)
+    with pytest.raises(ValueError):
+        probabilities(h_stack, np.zeros(4))
+
+
+@pytest.mark.parametrize('module,size', [(oscprob2nu, 2), (oscprob3nu, 3)])
+def test_three_dimensional_batch(module, size, rng):
+    r"""Stacks with more than one leading axis work, and agree
+    elementwise with the scalar path."""
+    h_stack = stack_of_hermitians(rng, 12, size).reshape(3, 4, size, size)
+    l_stack = rng.uniform(0.1, 5.0, (3, 4))
+    probabilities = getattr(module, 'probabilities_%dnu' % size)
+
+    batched = probabilities(h_stack, l_stack)
+    assert batched.shape == (3, 4, size*size)
+    for i in range(3):
+        for j in range(4):
+            expected = probabilities(as_nested_list(h_stack[i, j]),
+                                     l_stack[i, j])
+            assert np.allclose(batched[i, j], expected, atol=ATOL)
