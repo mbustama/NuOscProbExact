@@ -77,6 +77,8 @@ import math
 
 import numpy as np
 
+import fastkernels
+
 
 SQRT3 = np.sqrt(3.0)
 r"""float: Module-level constant equal to :math:`\sqrt{3}`."""
@@ -99,7 +101,6 @@ Hamiltonian and baseline costs about a third of what the array path
 would.  The two-flavor expansion does less work per element, so its
 threshold is lower; see :data:`oscprob2nu.SMALL_BATCH`.
 """
-
 
 DEGENERACY_TOL = 1.e-12
 r"""float: Module-level constant.
@@ -795,6 +796,11 @@ def _probabilities_3nu_batch(
     L = np.asarray(L, dtype=float)
     batch = np.broadcast_shapes(h_matrix.shape[:-2], L.shape)
     size = int(np.prod(batch, dtype=np.int64))
+
+    if fastkernels.available() and size > 0:
+        return fastkernels.probabilities_3nu_kernel(
+            np.broadcast_to(h_matrix, batch+(3, 3)),
+            np.broadcast_to(L, batch))
 
     if size <= SMALL_BATCH:
         # Below this size the fixed cost of the array machinery exceeds

@@ -67,6 +67,8 @@ import math
 
 import numpy as np
 
+import fastkernels
+
 
 SMALL_BATCH = 6
 r"""int: Module-level constant.
@@ -295,9 +297,12 @@ def _probabilities_2nu_batch(
     batch = np.broadcast_shapes(h_matrix.shape[:-2], L.shape)
     size = int(np.prod(batch, dtype=np.int64))
 
+    if fastkernels.available() and size > 0:
+        return fastkernels.probabilities_2nu_kernel(
+            np.broadcast_to(h_matrix, batch+(2, 2)),
+            np.broadcast_to(L, batch))
+
     if size <= SMALL_BATCH:
-        # Below this size the fixed cost of the array machinery exceeds
-        # what the scalar path spends on the whole stack
         flat_h = np.broadcast_to(h_matrix, batch+(2, 2)).reshape(-1, 2, 2)
         flat_l = np.broadcast_to(L, batch).reshape(-1)
         out = np.empty((flat_l.shape[0], 4))

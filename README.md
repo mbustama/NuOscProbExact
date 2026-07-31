@@ -105,7 +105,8 @@ Instructions:
    │   ├── oscprob3nu.py                # Three-flavor probabilities, SU(3) expansion
    │   ├── hamiltonians2nu.py           # Example two-flavor Hamiltonians
    │   ├── hamiltonians3nu.py           # Example three-flavor Hamiltonians
-   │   └── globaldefs.py                # Physical constants and unit conversions
+   │   ├── globaldefs.py                # Physical constants and unit conversions
+   │   └── fastkernels.py               # Optional Numba kernels, with a NumPy fallback
    ├── test/                            # Worked examples and figure generators
    │   ├── example_2nu_trivial.py       # Two-flavor, arbitrary Hamiltonian
    │   ├── example_2nu_vacuum.py        # Two-flavor, oscillations in vacuum
@@ -132,6 +133,7 @@ Instructions:
        ├── test_vectorized.py           # The batched path, against the scalar one
        ├── test_vectorized_hamiltonians.py  # Hamiltonians built for an array of energies
        ├── test_annotations.py          # Annotations, and their agreement with the docs
+       ├── test_fastkernels.py          # Both backends, against each other
        └── test_file_tree.py            # Keeps this tree in step with the repository
    ```
    Now you are ready to start using **NuOscProbExact**.
