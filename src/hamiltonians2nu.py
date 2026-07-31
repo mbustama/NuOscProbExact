@@ -309,7 +309,7 @@ def hamiltonian_2nu_liv(h_vacuum_energy_independent, energy, sxi,
     h_liv = np.multiply(1.0/energy, h_liv)
 
     f = energy/Lambda
-    cxi = sqrt(1.0-sxi-sxi)
+    cxi = sqrt(1.0-sxi*sxi)
 
     h_liv[0][0] += f*(b1*cxi*cxi + b2*sxi*sxi)
     h_liv[0][1] += f*((-b1+b2)*cxi*sxi)
