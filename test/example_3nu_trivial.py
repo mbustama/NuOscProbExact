@@ -6,9 +6,9 @@ Runs the trivial three-neutrino example shown in README.md
 References
 ----------
 
-.. [1] Mauricio Bustamante, "Exact neutrino oscillation probabilities:
-   a fast general-purpose computation method for two and three neutrino
-   flavors", arXiv:1904.XXXXX.
+.. [1] Mauricio Bustamante, "NuOscProbExact: a general-purpose code
+   to compute exact two-flavor and three-flavor neutrino oscillation
+   probabilities", arXiv:1904.12391.
 
 Created: 2019/04/29 23:22
 Last modified: 2019/04/29 23:22

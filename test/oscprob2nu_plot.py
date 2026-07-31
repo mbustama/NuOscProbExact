@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 r"""Routines to plot two-neutrino flavor-transition probabilities.
 
-This module contains contains routines to plot two-neutrino
+This module contains routines to plot two-neutrino
 oscillation probabilities vs. the neutrino baseline and energy.  These
 routines are used by run_testsuite.py to produce a suite of test plots.
 
@@ -10,6 +10,13 @@ Routine listings
 
     * plot_probability_2nu_vs_baseline - Plot probabilities vs. baseline
     * plot_probability_2nu_vs_energy - Plot probabilities vs. energy
+
+References
+----------
+
+.. [1] Mauricio Bustamante, "NuOscProbExact: a general-purpose code
+   to compute exact two-flavor and three-flavor neutrino oscillation
+   probabilities", arXiv:1904.12391.
 
 Created: 2019/04/22 18:35
 Last modified: 2019/04/22 19:31

@@ -12,8 +12,9 @@ Routine listings
 References
 ----------
 
-.. [1] Mauricio Bustamante, "Exact neutrino oscillation probabilities
-   with arbitrary time-independent Hamiltonians", arXiv:1904.XXXXX.
+.. [1] Mauricio Bustamante, "NuOscProbExact: a general-purpose code
+   to compute exact two-flavor and three-flavor neutrino oscillation
+   probabilities", arXiv:1904.12391.
 
 Created: 2019/04/26 21:20
 Last modified: 2019/04/26 21:20
@@ -93,7 +94,7 @@ def plot_probability_2nu_vs_energy_compare(output_format='pdf',
     # Uncomment to compare to the probability computed with the standard
     # ocillation formula in vacuum
     # prob_vacuum_std = [hamiltonians2nu.probabilities_2nu_vacuum_std( \
-    #                     S23_NO_BF, D31_NO_BF, x, l/CONV_KM_TO_INV_EV) \
+    #                     S23_NO_BF, D31_NO_BF, x*1.e9, l) \
     #                 for x in energy_nu]
 
     prob_matter = [oscprob2nu.probabilities_2nu( \
@@ -104,8 +105,8 @@ def plot_probability_2nu_vs_energy_compare(output_format='pdf',
     # Uncomment to compare to the probability computed with the standard
     # ocillation formula in matter
     # prob_matter_std = [hamiltonians2nu.probabilities_2nu_matter_std( \
-    #                     S23_NO_BF, D31_NO_BF, VCC_EARTH_CRUST, x,
-    #                     l/CONV_KM_TO_INV_EV) \
+    #                     S23_NO_BF, D31_NO_BF, VCC_EARTH_CRUST, x*1.e9,
+    #                     l) \
     #                 for x in energy_nu]
 
     prob_nsi = [oscprob2nu.probabilities_2nu( \
