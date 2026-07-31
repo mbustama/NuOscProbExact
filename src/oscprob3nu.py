@@ -618,9 +618,13 @@ def _u_coefficients_3nu_batch(h: np.ndarray, L: np.ndarray) -> np.ndarray:
     # evaluated at the shape of `h` and only then broadcast against the
     # baselines.  Scanning one Hamiltonian over N baselines therefore
     # solves the characteristic equation once, not N times.
-    star = np.einsum('ijk,...j,...k->...i', _TENSOR_D, h, h)
-    h2 = np.einsum('...i,...i->...', h, h)
-    h3 = np.einsum('...i,...i->...', h, star)
+    # The same sparse expansion the scalar path uses.  Contracting the
+    # dense table with einsum instead costs an order of magnitude more:
+    # without a path plan it walks the 8x8x8 tensor for every element,
+    # where this is a few dozen array multiplications.
+    star = np.stack(_star_all(np.moveaxis(h, -1, 0)), axis=-1)
+    h2 = (h*h).sum(-1)
+    h3 = (h*star).sum(-1)
 
     positive = h2 > 0.0
     safe_h2 = np.where(positive, h2, 1.0)
