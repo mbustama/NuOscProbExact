@@ -83,6 +83,8 @@ __all__ = ['pmns_mixing_matrix',
            'probabilities_3nu_vacuum_std', 'hamiltonian_3nu_matter',
            'hamiltonian_3nu_nsi', 'hamiltonian_3nu_liv']
 
+import math
+
 import numpy as np
 
 
@@ -128,21 +130,21 @@ def pmns_mixing_matrix(s12, s23, s13, dCP):
     >>> print('%.6f  %.6f' % (U[0][0].real, U[0][1].real))
     0.825716  0.543777
     """
-    c12 = np.sqrt(1.0-s12*s12)
-    c23 = np.sqrt(1.0-s23*s23)
-    c13 = np.sqrt(1.0-s13*s13)
+    c12 = math.sqrt(1.0-s12*s12)
+    c23 = math.sqrt(1.0-s23*s23)
+    c13 = math.sqrt(1.0-s13*s13)
 
-    cdCP = np.cos(dCP)
-    sdCP = np.sin(dCP)
+    phase = complex(math.cos(dCP), math.sin(dCP))
+    phase_conj = phase.conjugate()
 
     U00 = c12*c13
     U01 = s12*c13
-    U02 = s13*complex(cdCP, -sdCP)
-    U10 = -s12*c23 - c12*s23*s13*complex(cdCP, sdCP)
-    U11 = c12*c23 - s12*s23*s13*complex(cdCP, sdCP)
+    U02 = s13*phase_conj
+    U10 = -s12*c23 - c12*s23*s13*phase
+    U11 = c12*c23 - s12*s23*s13*phase
     U12 = s23*c13
-    U20 = s12*s23 - c12*c23*s13*complex(cdCP, sdCP)
-    U21 = -c12*s23 - s12*c23*s13*complex(cdCP, sdCP)
+    U20 = s12*s23 - c12*c23*s13*phase
+    U21 = -c12*s23 - s12*c23*s13*phase
     U22 = c23*c13
 
     return [[complex(U00), complex(U01), U02],
@@ -201,39 +203,44 @@ def hamiltonian_3nu_vacuum_energy_independent(s12, s23, s13, dCP, D21, D31,
     >>> print('%.6e' % H[0][0].real)
     3.906567e-05
     """
-    c12 = np.sqrt(1.0-s12*s12)
-    c23 = np.sqrt(1.0-s23*s23)
-    c13 = np.sqrt(1.0-s13*s13)
+    c12 = math.sqrt(1.0-s12*s12)
+    c23 = math.sqrt(1.0-s23*s23)
+    c13 = math.sqrt(1.0-s13*s13)
 
     f = 1./2.
 
     if not compute_matrix_multiplication:
 
+        # The CP phase enters only through these two conjugate factors,
+        # which the expressions below would otherwise rebuild fifteen
+        # times between them
+        cdCP = math.cos(dCP)
+        sdCP = math.sin(dCP)
+        phase = complex(cdCP, sdCP)
+        phase_conj = complex(cdCP, -sdCP)
+
+        # ... as do these products of mixing-matrix entries
+        d21_s12sq = D21*s12*s12
+        d31_minus = D31 - d21_s12sq
+
         # All Hij have units of [eV^2]
-        H00 = c13*c13*D21*s12*s12 + D31*s13*s13
-        H01 = c12*c13*c23*D21*s12 + \
-            c13*(D31-D21*s12*s12)*s13*s23*complex(np.cos(dCP), -np.sin(dCP))
-        H02 = c13*c23*(D31-D21*s12*s12)*s13*complex(np.cos(dCP),
-                                                    -np.sin(dCP)) - \
-            c12*c13*D21*s12*s23
-        H10 = c12*c13*c23*D21*s12 + \
-            c13*(D31-D21*s12*s12)*s13*s23*complex(np.cos(dCP), np.sin(dCP))
-        H11 = c12*c12*c23*c23*D21 + \
-            (c13*c13*D31 + D21*s12*s12*s13*s13)*s23*s23 - \
-            2.0*c12*c23*D21*s12*s13*s23*np.cos(dCP)
-        H12 = c13*c13*c23*D31*s23 + \
-            (c23*s12*s13*complex(np.cos(dCP), -np.sin(dCP)) + c12*s23) * \
-            (-c12*c23*D21 + D21*s12*s13*s23*complex(np.cos(dCP),
-                                                    np.sin(dCP)))
-        H20 = c13*c23*(D31-D21*s12*s12)*s13*complex(np.cos(dCP),
-                                                    np.sin(dCP)) - \
-            c12*c13*D21*s12*s23
-        H21 = c13*c13*c23*D31*s23 - \
-            D21*(c23*s12*s13*complex(np.cos(dCP), np.sin(dCP)) + c12*s23) * \
-            (c12*c23 - s12*s13*s23*complex(np.cos(dCP), -np.sin(dCP)))
-        H22 = c23*c23*(c13*c13*D31 + D21*s12*s12*s13*s13) + \
-            c12*c12*D21*s23*s23 + \
-            2.0*c12*c23*D21*s12*s13*s23*np.cos(dCP)
+        H00 = c13*c13*d21_s12sq + D31*s13*s13
+        H01 = c12*c13*c23*D21*s12 + c13*d31_minus*s13*s23*phase_conj
+        H02 = c13*c23*d31_minus*s13*phase_conj - c12*c13*D21*s12*s23
+        H10 = c12*c13*c23*D21*s12 + c13*d31_minus*s13*s23*phase
+        H11 = c12*c12*c23*c23*D21 \
+            + (c13*c13*D31 + d21_s12sq*s13*s13)*s23*s23 \
+            - 2.0*c12*c23*D21*s12*s13*s23*cdCP
+        H12 = c13*c13*c23*D31*s23 \
+            + (c23*s12*s13*phase_conj + c12*s23) \
+            * (-c12*c23*D21 + D21*s12*s13*s23*phase)
+        H20 = c13*c23*d31_minus*s13*phase - c12*c13*D21*s12*s23
+        H21 = c13*c13*c23*D31*s23 \
+            - D21*(c23*s12*s13*phase + c12*s23) \
+            * (c12*c23 - s12*s13*s23*phase_conj)
+        H22 = c23*c23*(c13*c13*D31 + d21_s12sq*s13*s13) \
+            + c12*c12*D21*s23*s23 \
+            + 2.0*c12*c23*D21*s12*s13*s23*cdCP
 
         H = np.array([[H00*f, H01*f, H02*f],
                       [H10*f, H11*f, H12*f],
@@ -411,10 +418,11 @@ def hamiltonian_3nu_matter(h_vacuum_energy_independent, energy, VCC):
     energy : float or array_like
         Neutrino energy [eV], or an array of energies, in which case one
         Hamiltonian is returned per energy.
-    VCC : float
+    VCC : float or array_like
         Potential due to charged-current interactions of
         :math:`\nu_e` with electrons [eV].  Positive for neutrinos,
-        negative for antineutrinos.
+        negative for antineutrinos.  May be an array, to scan across a
+        density profile alongside the energy.
 
     Returns
     -------
@@ -460,9 +468,10 @@ def hamiltonian_3nu_nsi(h_vacuum_energy_independent, energy, VCC, eps):
     energy : float or array_like
         Neutrino energy [eV], or an array of energies, in which case one
         Hamiltonian is returned per energy.
-    VCC : float
+    VCC : float or array_like
         Potential due to charged-current interactions of
-        :math:`\nu_e` with electrons [eV].
+        :math:`\nu_e` with electrons [eV].  May be an array, to scan
+        across a density profile alongside the energy.
     eps : array_like
         The six NSI strength parameters ``[eps_ee, eps_em, eps_et,
         eps_mm, eps_mt, eps_tt]``, adimensional.  The diagonal

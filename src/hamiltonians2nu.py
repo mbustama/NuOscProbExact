@@ -89,6 +89,8 @@ __all__ = ['mixing_matrix_2nu', 'hamiltonian_2nu_vacuum_energy_independent',
            'probabilities_2nu_matter_std', 'hamiltonian_2nu_nsi',
            'hamiltonian_2nu_liv']
 
+import math
+
 import numpy as np
 
 
@@ -125,7 +127,7 @@ def mixing_matrix_2nu(sth):
     >>> print('%.6f  %.6f' % (R[0][0], R[0][1]))
     0.800000  0.600000
     """
-    cth = np.sqrt(1.0-sth*sth)
+    cth = math.sqrt(1.0-sth*sth)
 
     return [[cth, sth], [-sth, cth]]
 
@@ -177,7 +179,7 @@ def hamiltonian_2nu_vacuum_energy_independent(sth, Dm2,
     # Trigonometric identities, rather than arcsin followed by cos and
     # sin, keep this consistent with mixing_matrix_2nu and avoid a
     # needless round trip through the angle itself.
-    cth = np.sqrt(1.0-sth*sth)
+    cth = math.sqrt(1.0-sth*sth)
     c2th = 1.0-2.0*sth*sth
     s2th = 2.0*sth*cth
 
@@ -272,10 +274,11 @@ def hamiltonian_2nu_matter(h_vacuum_energy_independent, energy, VCC):
     energy : float or array_like
         Neutrino energy [eV], or an array of energies, in which case one
         Hamiltonian is returned per energy.
-    VCC : float
+    VCC : float or array_like
         Potential due to charged-current interactions of
         :math:`\nu_e` with electrons [eV].  Positive for neutrinos,
-        negative for antineutrinos.
+        negative for antineutrinos.  May be an array, to scan across a
+        density profile alongside the energy.
 
     Returns
     -------
@@ -395,9 +398,10 @@ def hamiltonian_2nu_nsi(h_vacuum_energy_independent, energy, VCC, eps):
     energy : float or array_like
         Neutrino energy [eV], or an array of energies, in which case one
         Hamiltonian is returned per energy.
-    VCC : float
+    VCC : float or array_like
         Potential due to charged-current interactions of
-        :math:`\nu_e` with electrons [eV].
+        :math:`\nu_e` with electrons [eV].  May be an array, to scan
+        across a density profile alongside the energy.
     eps : array_like
         The three NSI strength parameters
         ``[eps_ee, eps_em, eps_mm]``, adimensional.  The diagonal
