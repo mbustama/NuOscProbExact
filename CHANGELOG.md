@@ -33,10 +33,12 @@ The one thing users will notice is the supported Python range.
   preconditions, so neither can quietly become a duplicate of another and keep
   reporting success.
 
-  `publish.yml` also carries a commented-out TestPyPI step, with instructions,
-  for rehearsing a release against a throwaway index before the real upload —
-  which cannot be retried, since PyPI refuses a second upload of a version
-  permanently.
+  `publish.yml` can also rehearse a release against TestPyPI, run manually from
+  the Actions tab.  Worth doing because the real upload cannot be retried: PyPI
+  refuses a second upload of a version permanently, even after the file is
+  deleted.  The event picks the index — a published Release goes to PyPI, a
+  manual run goes to TestPyPI — so neither can reach the other, and a rehearsal
+  is stamped `.devN` so it can be repeated as often as needed.
 
 - An automatic coverage gate, configured in `[tool.coverage]` in
   `pyproject.toml` so that a local `pytest --cov` measures and gates exactly as

@@ -1,21 +1,33 @@
 name: Publish to PyPI
 
-# Dormant, and expected to stay that way until two things are true: the project has been
-# registered on PyPI as a trusted publisher for this repository and this workflow file, and
-# a GitHub Release has been published.  Neither can be done from here -- see the
-# "Manual steps" note below.  Until then this workflow never fires, which is the point: it
-# costs nothing to have ready and cannot fail while it is not being used.
+# Two entry points, and which one fired decides which index is published to.  Nothing
+# selects the target, because nothing needs to: the event is the selector.
 #
-# Triggering on a published Release rather than on a tag is what makes the act of releasing
-# deliberate.  A tag can be pushed by accident; a release is written and published on
-# purpose, and it is the same object the changelog entry is attached to.
+#   release: published   ->  PyPI.  The real thing.
+#   workflow_dispatch    ->  TestPyPI.  A rehearsal, run from the Actions tab.
+#
+# Triggering the real publish on a published Release rather than on a tag is what makes
+# releasing deliberate.  A tag can be pushed by accident; a release is written and published
+# on purpose, and it is the same object the changelog entry is attached to.
+#
+# The rehearsal has no way to reach PyPI and the release has no way to reach TestPyPI, which
+# is the entire point of splitting them by event rather than by an input.  The obvious
+# alternative -- a `choice` input listing both indexes -- was rejected: it puts a real
+# publish one wrong dropdown away, and the version it would upload is unrepeatable.  A knob
+# that can do the irreversible thing is worse than no knob.
+#
+# This replaces a commented-out TestPyPI step.  That arrangement worked but required editing
+# this file onto main to rehearse and editing it back afterwards, so a forgotten revert
+# would have sent the next real release to TestPyPI -- the exact misfire a rehearsal exists
+# to prevent.
 on:
   release:
     types: [published]
+  workflow_dispatch:
 
 jobs:
   build-and-publish:
-    name: Build and publish to PyPI
+    name: Build and publish to ${{ github.event_name == 'release' && 'PyPI' || 'TestPyPI' }}
     runs-on: ubuntu-latest
 
     # Required for PyPI Trusted Publishing (OIDC).  The runner exchanges a short-lived
@@ -39,6 +51,41 @@ jobs:
           python -m pip install --upgrade pip
           pip install build
 
+      - name: Stamp a unique .devN version (rehearsal only)
+        # TestPyPI burns version numbers exactly as PyPI does: upload 1.7.0 once and every
+        # later attempt at 1.7.0 is refused, permanently, even after the file is deleted.
+        # A rehearsal you can only run once is not much of a rehearsal -- the second run,
+        # after fixing whatever the first one found, would fail on the version rather than
+        # on the thing being tested.
+        #
+        # So a dispatched build is stamped 1.7.0.devN, where N is the run number and
+        # therefore never repeats.  Under PEP 440 a .devN release sorts *below* the release
+        # it is derived from, so these can never shadow a real 1.7.0, and `pip install
+        # nuoscprobexact` will not pick one up even from TestPyPI without --pre.
+        #
+        # Only the checkout on the runner is edited.  Nothing is committed, and the release
+        # path never reaches this step, so the version that goes to PyPI is always the one
+        # written in pyproject.toml.
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          python - <<'PY'
+          import os
+          import pathlib
+          import re
+
+          path = pathlib.Path('pyproject.toml')
+          text = path.read_text()
+          suffix = '.dev' + os.environ['GITHUB_RUN_NUMBER']
+          text, count = re.subn(r'(?m)^version = "([^"]+)"$',
+                                lambda m: 'version = "%s%s"' % (m.group(1), suffix),
+                                text, count=1)
+          # If the version line is ever reshaped, fail here rather than silently
+          # rehearsing the same number twice and blaming TestPyPI for rejecting it.
+          assert count == 1, 'no [project] version line found in pyproject.toml'
+          path.write_text(text)
+          print('rehearsing as', re.search(r'(?m)^version = "([^"]+)"$', text).group(1))
+          PY
+
       - name: Build the package (sdist and wheel)
         # Pure Python, so the wheel is universal and one build serves every interpreter in
         # the test matrix.  The sdist matters more than usual for this project: it is what
@@ -55,39 +102,29 @@ jobs:
           pip install twine
           twine check dist/*
 
-      # - name: Publish package to TestPyPI
-      #   uses: pypa/gh-action-pypi-publish@release/v1
-      #   with:
-      #     repository-url: https://test.pypi.org/legacy/
-      #
-      # A rehearsal of the step below, against https://test.pypi.org, which is a
-      # throwaway index that exists for exactly this.  Left commented out rather than
-      # guarded by a condition because there is no secret or variable to key it on:
-      # trusted publishing carries no token, so dormancy here has to be textual.
-      #
-      # Worth rehearsing at all because the real upload is unrepeatable.  PyPI refuses a
-      # second upload of a version permanently, even after the file is deleted, so a
-      # release that fails partway through cannot be retried -- it can only be renumbered.
-      # `twine check` above catches a README the renderer will reject, which is the most
-      # likely such failure, but it does not exercise the OIDC exchange, the trusted
-      # publisher configuration, or the upload itself.
-      #
-      # To use it:
-      #
-      #   1. Create a pending publisher at https://test.pypi.org/manage/account/publishing/
-      #      -- a separate account and a separate registration from PyPI proper, with the
-      #      same four values: nuoscprobexact, mbustama, NuOscProbExact, publish.yml, and
-      #      an empty environment name.
-      #   2. Uncomment the four lines above, and comment out the PyPI step below, so that
-      #      the rehearsal does not become the performance.
-      #   3. Publish a GitHub Release and watch it land at
-      #      https://test.pypi.org/project/nuoscprobexact/.
-      #   4. Restore this file before releasing for real.
-      #
-      # TestPyPI burns version numbers the same way PyPI does, so rehearse with a version
-      # you do not intend to ship -- 1.7.0.dev1 rather than 1.7.0.  It also does not mirror
-      # PyPI's dependencies, which does not matter here: numpy is the only requirement and
-      # the wheel is universal.
+      - name: Publish package to TestPyPI (rehearsal)
+        # The rehearsal, against https://test.pypi.org -- a throwaway index that exists for
+        # exactly this.  `twine check` above catches the likeliest release failure, a README
+        # the renderer rejects, but it cannot exercise the OIDC exchange, the trusted
+        # publisher registration, or the upload itself.  Those are only ever tested by
+        # uploading, and on PyPI proper the first test is also the last: a version refused
+        # halfway through cannot be retried, only renumbered.
+        #
+        # Run it from the Actions tab -> "Publish to PyPI" -> "Run workflow".  Nothing needs
+        # to be edited, no release is cut, and nothing is left behind to revert.
+        #
+        # TestPyPI is a separate site with a separate account and its own pending-publisher
+        # registration, at https://test.pypi.org/manage/account/publishing/, using the same
+        # four values as PyPI: nuoscprobexact, mbustama, NuOscProbExact, publish.yml, and an
+        # empty environment name.  It also does not mirror PyPI's dependencies, which does
+        # not matter here -- numpy is the only requirement and the wheel is universal.
+        if: github.event_name == 'workflow_dispatch'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
 
       - name: Publish package to PyPI
+        # Reachable only from a published Release.  A manual run cannot get here however the
+        # button is pressed, which is what makes the rehearsal above safe to use casually.
+        if: github.event_name == 'release'
         uses: pypa/gh-action-pypi-publish@release/v1
