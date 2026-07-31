@@ -147,11 +147,11 @@ def hamiltonian_3nu_vacuum_energy_independent(s12, s23, s13, dCP, D21, D31,
     else:
 
         # PMNS matrix
-        R = np.array(pmns_mixing_matrix(s12, s23, s13, dCP))
+        U = np.array(pmns_mixing_matrix(s12, s23, s13, dCP))
         # Mass matrix
         M2 = np.array([[0.0, 0.0, 0.0], [0.0, D21, 0.0], [0.0, 0.0, D31]])
         # Hamiltonian
-        H = list(f*np.matmul(R, np.matmul(M2, np.conj(matrix.transpose(R)))))
+        H = (f*(U @ M2 @ U.conj().T)).astype(complex)
 
     return H
 
@@ -385,7 +385,7 @@ def hamiltonian_3nu_liv(h_vacuum_energy_independent, energy, sxi12, sxi23,
     # B matrix
     B = np.array([[b1, 0.0, 0.0], [0.0, b2, 0.0], [0.0, 0.0, b3]])
     # LIV term
-    H = list(f*np.matmul(R, np.matmul(B, np.conj(matrix.transpose(R)))))
+    H = f*(R @ B @ R.conj().T)
 
     h_liv[0][0] += H[0][0]
     h_liv[0][1] += H[0][1]

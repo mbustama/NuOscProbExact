@@ -113,7 +113,7 @@ def hamiltonian_2nu_vacuum_energy_independent(sth, Dm2,
         # Mass matrix
         M2 = np.array([[-Dm2, 0.0], [0.0, Dm2]])
         # Hamiltonian
-        H = list(f*np.matmul(R, np.matmul(M2, matrix.transpose(R))))
+        H = (f*(R @ M2 @ R.T)).astype(complex)
 
     return H
 
