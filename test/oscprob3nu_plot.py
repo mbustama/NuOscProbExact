@@ -493,11 +493,13 @@ def plot_probability_3nu_vacuum_vs_l_std(output_format='pdf'):
     log10_l_val = np.linspace(log10_l_min, log10_l_max, log10_l_npts)
     l_val =[10.**x for x in log10_l_val]
 
-    U = pmns_mixing_matrix(s12, s23, s13, dCP)
+    U = hamiltonians3nu.pmns_mixing_matrix(s12, s23, s13, dCP)
 
     # Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt
-    lst_prob = [probabilities_3nu_std(  U, D21, D31, energy_nu,
-                                        l/CONV_KM_TO_INV_EV) \
+    # probabilities_3nu_vacuum_std takes the energy in eV and the
+    # baseline in eV^{-1}; l_val holds baselines in km
+    lst_prob = [hamiltonians3nu.probabilities_3nu_vacuum_std(
+                    U, D21, D31, energy_nu, l*CONV_KM_TO_INV_EV)
                 for l in l_val]
     lst_prob_ee = [x[0] for x in lst_prob]
     lst_prob_em = [x[1] for x in lst_prob]
