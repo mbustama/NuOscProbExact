@@ -5,6 +5,91 @@ All notable changes to **NuOscProbExact** are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.5.0] - 2026-07-31
+
+A deep pass over the whole computation, looking for work that was being done
+and thrown away.  Nothing about the results changes: all 42 figures generated
+by `run_testsuite.py` remain byte-for-byte identical, and the probabilities
+agree with 1.4.0 to 1.6e-13 across every code path.
+
+Measured best-of-seven, interleaved against 1.4.0:
+
+| Benchmark | 1.4.0 | 1.5.0 | Speedup |
+|---|---|---|---|
+| Energy scan, 2000 points | 4.91 ms | 1.42 ms | **3.5x** |
+| Two-flavor scan, 2000 points | 0.23 ms | 0.05 ms | **4.6x** |
+| Oscillogram, 100 x 100 | 6.61 ms | 3.65 ms | **1.8x** |
+| Baseline scan, 2000 points | 1.12 ms | 0.70 ms | **1.6x** |
+| Three-flavor probability, scalar | 40.4 µs | 12.5 µs | **3.2x** |
+| Two-flavor probability, scalar | 4.95 µs | 1.51 µs | **3.3x** |
+
+Cumulatively, against the 1.1.0 audit release --- which had no batched
+interface, so the comparison is a Python loop against a single call --- a
+2000-point energy scan with the Hamiltonians built goes from 93 ms to 1.9 ms,
+a factor of 48.  The same loop written today, still one point at a time, takes
+39 ms: the scalar path accounts for 2.4x of that and vectorising for the rest.
+
+### Changed
+
+- The batched star product no longer contracts the dense 8x8x8 `d` tensor
+  through `np.einsum`, which with no path plan walks the whole table for every
+  element: for a 2000-point energy scan that single line was 70% of the total.
+  `_star_all`, the sparse expansion the scalar path already used, vectorises
+  unchanged and is 14x quicker there. (`optimize=True` was tried first: 1.1x.)
+
+- `probabilities_2nu` and `probabilities_3nu` no longer build the evolution
+  operator, square it, and then transpose and reshape the result into the
+  order they return. They form the entries and square them as they go.
+
+  For two flavors the saving is larger still. The coefficients of a Hermitian
+  2x2 Hamiltonian are real, so |U_ee|² = u₀²+u₃² and |U_μe|² = |U_eμ|² =
+  u₁²+u₂² — two distinct numbers, the second the complement of the first by
+  unitarity. Neither the operator nor the coefficients are needed.
+
+- The batched coefficients are laid out with the component index **first**, so
+  that each h_k is contiguous. Every downstream step works one component at a
+  time, and reading those from a strided `(..., 8)` view costs about a third
+  more. On an oscillogram: forming u_k, 746 → 480 µs; the nine entries and
+  their moduli, 2175 → 1598 µs. The two-flavor module gets the same layout, so
+  the two mirror each other as their documentation claims.
+
+- The coefficients u₀ and u_k are returned separately rather than concatenated
+  into a `(..., 9)` array that every caller took apart again.
+
+- Around the latent roots: √(|h|²) is taken once rather than three times; the
+  arc-cosine argument is a division rather than a power of −1.5 (26.9 → 3.8
+  µs); and the degeneracy test uses two calls to `np.minimum` instead of
+  stacking three gap arrays to reduce along the axis it just created (106 → 13
+  µs).
+
+- The scalar exponentials use `cmath.rect(1, t)` rather than
+  `cmath.exp(1j*t)` — the same value by construction, a third quicker.
+
+### Added
+
+- Tests for two-flavor broadcasting: one Hamiltonian against many baselines,
+  and a grid. Neither had coverage, and the first is the shape that the layout
+  change initially broke. Also: stacks with more than one leading axis, and
+  shapes that do not broadcast, which must raise rather than quietly produce
+  the wrong thing.
+
+Note that the *ratio* between a vectorised scan and the equivalent Python loop
+has narrowed across releases, from about 80x to about 30x for a baseline scan,
+even though the vectorised scan itself keeps getting quicker: the loop got
+quicker too.  `docs/source/methodology.rst` now carries measured ratios rather
+than ones carried forward from an earlier release.
+
+### Not changed, having been measured
+
+Two plausible-looking optimisations were tested and rejected:
+
+- `|z|²` as `z.real² + z.imag²` or `(z·z̄).real` beats `np.abs(z)**2` below
+  about 10⁵ elements but is up to 1.6x **worse** above it, where the extra
+  temporary stops fitting in cache. `np.abs(z)**2` is kept.
+
+- Computing the batched complex exponential as `cos + i·sin` is slower than
+  `np.exp` at every size that matters here.
+
 ## [1.4.0] - 2026-07-31
 
 Type annotations throughout, and a pass over the arithmetic that was spending
