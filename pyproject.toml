@@ -22,7 +22,7 @@ dependencies = ["numpy"]
 [project.optional-dependencies]
 plots = ["matplotlib"]
 test = ["pytest", "scipy"]
-docs = ["sphinx", "numpydoc"]
+docs = ["sphinx", "numpydoc", "myst-parser"]
 
 [project.urls]
 Homepage = "https://github.com/mbustama/NuOscProbExact"

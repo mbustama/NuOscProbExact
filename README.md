@@ -783,6 +783,13 @@ All of the modules provided in **NuOscProbExact** have been documented using Pyt
 
 Every `Examples` block in the docstrings is executable, and is run as a doctest by the regression suite (`tests/test_docstrings.py`), so the numbers quoted in the documentation cannot drift out of step with what the code returns.
 
+A Sphinx project lives in `docs/`; build it with
+```shell
+pip install -e ".[docs]"
+sphinx-build -b html docs/source docs/build
+```
+Notable changes between versions are recorded in [CHANGELOG.md](CHANGELOG.md), which the documentation renders as its own page.
+
 To view the documentation of a module from within an interactive Python session, run, *e.g.*,
 ```python
 import oscprob3nu
