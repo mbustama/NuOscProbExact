@@ -68,6 +68,18 @@ import math
 import numpy as np
 
 
+SMALL_BATCH = 6
+r"""int: Module-level constant.
+
+Stacks with at most this many elements are evaluated one at a time
+through the scalar path, whose fixed cost is lower than the array
+machinery's.  The threshold is lower than
+:data:`oscprob3nu.SMALL_BATCH` because the two-flavor expansion does
+much less work per element, so the array path amortises its overhead
+sooner: the measured crossover is seven elements.
+"""
+
+
 def hamiltonian_2nu_coefficients(
     hamiltonian_matrix: Union[list, np.ndarray]
 ) -> List[float]:
@@ -280,7 +292,21 @@ def _probabilities_2nu_batch(
     """
     h_matrix = np.asarray(h_matrix, dtype=complex)
     L = np.asarray(L, dtype=float)
-    np.broadcast_shapes(h_matrix.shape[:-2], L.shape)
+    batch = np.broadcast_shapes(h_matrix.shape[:-2], L.shape)
+    size = int(np.prod(batch, dtype=np.int64))
+
+    if size <= SMALL_BATCH:
+        # Below this size the fixed cost of the array machinery exceeds
+        # what the scalar path spends on the whole stack
+        flat_h = np.broadcast_to(h_matrix, batch+(2, 2)).reshape(-1, 2, 2)
+        flat_l = np.broadcast_to(L, batch).reshape(-1)
+        out = np.empty((flat_l.shape[0], 4))
+        for n in range(flat_l.shape[0]):
+            # .tolist() gives Python complex numbers, on which the scalar
+            # path is quicker than on NumPy scalars, by more than the
+            # conversion costs
+            out[n] = probabilities_2nu(flat_h[n].tolist(), float(flat_l[n]))
+        return out.reshape(batch+(4,))
 
     h = _hamiltonian_2nu_coefficients_batch(h_matrix)
     h1, h2, h3 = h

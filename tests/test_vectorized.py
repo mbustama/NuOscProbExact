@@ -371,3 +371,43 @@ def test_three_dimensional_batch(module, size, rng):
             expected = probabilities(as_nested_list(h_stack[i, j]),
                                      l_stack[i, j])
             assert np.allclose(batched[i, j], expected, atol=ATOL)
+
+
+# --------------------------------------------------------------------------
+# The short-stack shortcut
+# --------------------------------------------------------------------------
+
+@pytest.mark.parametrize('module,size', [(oscprob2nu, 2), (oscprob3nu, 3)])
+def test_short_stacks_agree_with_long_ones(module, size, rng):
+    r"""Stacks below `SMALL_BATCH` go through the scalar path, and must
+    give what the array path would.
+
+    A batched call carries a fixed cost of a couple of hundred
+    microseconds, which for a handful of elements exceeds the whole job,
+    so short stacks are evaluated one at a time.  The two routes have to
+    agree, or the answer would depend on how many points were asked for.
+    """
+    n = 4*module.SMALL_BATCH
+    h_stack = np.stack([random_hermitian(rng, size) for _ in range(n)])
+    l_stack = rng.uniform(0.1, 20.0, n)
+    probabilities = getattr(module, 'probabilities_%dnu' % size)
+
+    long = probabilities(h_stack, l_stack)
+    for short_n in (1, 2, module.SMALL_BATCH, module.SMALL_BATCH+1):
+        short = probabilities(h_stack[:short_n], l_stack[:short_n])
+        assert short.shape == (short_n, size*size)
+        assert np.allclose(short, long[:short_n], atol=ATOL)
+
+
+@pytest.mark.parametrize('module,size', [(oscprob2nu, 2), (oscprob3nu, 3)])
+def test_short_stacks_match_the_scalar_path(module, size, rng):
+    r"""The shortcut returns exactly what calling the scalar routine
+    would."""
+    probabilities = getattr(module, 'probabilities_%dnu' % size)
+    h_stack = np.stack([random_hermitian(rng, size) for _ in range(3)])
+    l_stack = rng.uniform(0.1, 20.0, 3)
+
+    batched = probabilities(h_stack, l_stack)
+    scalar = np.array([probabilities(as_nested_list(h), l)
+                       for h, l in zip(h_stack, l_stack)])
+    assert np.allclose(batched, scalar, atol=ATOL)
