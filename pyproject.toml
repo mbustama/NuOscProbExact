@@ -48,7 +48,52 @@ py-modules = ["oscprob2nu", "oscprob3nu", "hamiltonians2nu",
 testpaths = ["tests"]
 filterwarnings = ["error::RuntimeWarning"]
 
-# Every setting coverage needs lives here rather than on the command line, so
+[tool.ruff]
+line-length = 79
+# Matches requires-python.  Stated rather than inferred so that raising the
+# floor and changing what ruff assumes about the language stay one decision.
+target-version = "py39"
+
+[tool.ruff.lint]
+# Pinned explicitly rather than left to ruff's default.  The default selection
+# is not stable across ruff releases -- 0.16 widened it, which turned a green
+# CI red overnight on a codebase that had not changed -- and a blocking lint
+# whose rule set moves with whatever version the runner happens to install is
+# not a check, it is a tripwire.  This is the set the codebase was cleaned
+# against: the pycodestyle errors worth having, and all of Pyflakes.
+#
+# Note E501 is deliberately not reachable from this selection.  Line length is
+# left to `line-length` above and to `ruff format --check`, which is
+# informational: the docstrings are numpydoc with LaTeX in them, and breaking a
+# formula to satisfy a column limit makes it harder to read against the
+# equations in docs/source/methodology.rst.
+select = ["E4", "E7", "E9", "F"]
+
+# Both of these flag deliberate, codebase-wide conventions rather than defects.
+ignore = [
+    # `l` is the baseline along the neutrino trajectory, the standard symbol in
+    # the physics this implements and the one used throughout the paper.
+    # Renaming it everywhere would make the code harder to check against the
+    # expressions it evaluates, which is the property that matters most here.
+    "E741",
+    # One-line guards.  All 58 occurrences are in the d_ijk lookup table in
+    # oscprob3nu.tensor_d and its two-flavor counterpart, written as a dense
+    # column of `if jkp1 == (4, 3): return 0.5`.  That table is a transcription
+    # of a matrix of structure constants; expanding each entry to two lines
+    # would double its height and destroy the alignment that makes it legible
+    # as the table it is.
+    "E701",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# The worked examples in test/ open with `from globaldefs import *`, which is
+# what makes them read the way they do in the paper: the constants appear in
+# the expressions under the names the equations give them, with no module
+# prefix.  These files are documentation that happens to execute, they are
+# published alongside arXiv:1904.12391, and changing their imports to satisfy a
+# linter would put the repository and the paper out of step.  Everything else
+# in them is still checked.
+"test/*" = ["F403", "F405"]
 # that a local `pytest --cov` measures, reports, and gates exactly as CI does.
 # A threshold passed as a flag in a workflow is a threshold that only CI knows
 # about, and the two drift the first time one of them is edited.

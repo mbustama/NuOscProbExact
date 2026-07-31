@@ -82,7 +82,8 @@ Instructions:
    NuOscProbExact/
    ├── .github/                         # Continuous integration (GitHub Actions)
    │   └── workflows/
-   │       └── tests.yml                # The suite: five Pythons, all three backends
+   │       ├── tests.yml                # The suite: five Pythons, all three backends
+   │       └── lint.yml                 # ruff, and the docs build under -W
    ├── .gitignore                       # Build, cache, and generated-output artefacts
    ├── CHANGELOG.md                     # Notable changes, rendered as a docs page
    ├── LICENSE                          # MIT license
