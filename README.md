@@ -1,7 +1,7 @@
 [![arXiv](https://img.shields.io/badge/arXiv-1904.12391-orange.svg)](https://arxiv.org/abs/1904.12391)
 [![DOI](https://zenodo.org/badge/182178323.svg)](https://zenodo.org/badge/latestdoi/182178323)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.7+](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 
 # NuOscProbExact
 Code to compute exact two- and three-neutrino oscillation probabilities using SU(2) and SU(3) expansions
@@ -62,7 +62,7 @@ The method relies on expansions of the Hamiltonian and time-evolution operators 
 
 Because **NuOscProbExact** is written fully in Python, no compilation or linking is necessary.  The installation is simple and consists only in fetching the files from GitHub.
 
-> **Python version:** The code requires Python 3.7 or newer.  It uses the `@` matrix-multiplication operator, so it will not run under Python 2.
+> **Python version:** The code requires Python 3.9 or newer, and every release is tested on 3.9, 3.10, 3.11, 3.12, and 3.13.  The floor comes from `numpy.broadcast_shapes`, which the batched paths use and which arrived in NumPy 1.20; 3.9 is also the oldest version for which the optional `numba` backend still has a wheel.
 
 Instructions:
 

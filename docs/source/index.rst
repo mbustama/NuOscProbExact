@@ -15,9 +15,9 @@ NuOscProbExact: Exact Neutrino Oscillation Probabilities
    :target: https://opensource.org/licenses/MIT
    :alt: License: MIT
 
-.. image:: https://img.shields.io/badge/python-3.7+-blue.svg
+.. image:: https://img.shields.io/badge/python-3.9+-blue.svg
    :target: https://www.python.org/downloads/
-   :alt: Python 3.7+
+   :alt: Python 3.9+
 
 .. important::
    **Important links:**
