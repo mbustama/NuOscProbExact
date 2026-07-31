@@ -526,8 +526,8 @@ def _u_coefficients_3nu_single(
         # Doubly degenerate root: the general expression would divide by
         # zero, so use the two-projector form instead.
         psi_deg = (psi[a]+psi[b])/2.0
-        exp_deg = cmath.exp(1.j*L*psi_deg)
-        exp_odd = cmath.exp(1.j*L*psi[c])
+        exp_deg = cmath.rect(1.0, L*psi_deg)
+        exp_odd = cmath.rect(1.0, L*psi[c])
         weight = (exp_odd-exp_deg)/(psi_deg-psi[c])
         u0 = exp_deg + weight*psi_deg
         uk = [-1.j*weight*h[k] for k in range(0, 8)]
@@ -536,9 +536,10 @@ def _u_coefficients_3nu_single(
 
     # e^{i*L*psi_m}, and the same divided by the denominators of the
     # Lagrange interpolation, which do not depend on k
-    exp0 = cmath.exp(1.j*L*psi0)
-    exp1 = cmath.exp(1.j*L*psi1)
-    exp2 = cmath.exp(1.j*L*psi2)
+    # cmath.rect(1, t) is e^{it} without forming the complex argument
+    exp0 = cmath.rect(1.0, L*psi0)
+    exp1 = cmath.rect(1.0, L*psi1)
+    exp2 = cmath.rect(1.0, L*psi2)
     w0 = exp0/(3.*psi0*psi0-h2)
     w1 = exp1/(3.*psi1*psi1-h2)
     w2 = exp2/(3.*psi2*psi2-h2)
