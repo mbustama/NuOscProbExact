@@ -136,9 +136,12 @@ def mixing_matrix_2nu(sth: Union[int, float]) -> List[List[float]]:
 
     Examples
     --------
-    >>> R = mixing_matrix_2nu(0.6)
-    >>> print('%.6f  %.6f' % (R[0][0], R[0][1]))
-    0.800000  0.600000
+    .. jupyter-execute::
+
+        import hamiltonians2nu
+
+        R = hamiltonians2nu.mixing_matrix_2nu(0.6)
+        print('%.6f  %.6f' % (R[0][0], R[0][1]))
     """
     cth = math.sqrt(1.0-sth*sth)
 
@@ -207,9 +210,12 @@ def hamiltonian_2nu_vacuum_energy_independent(
 
     Examples
     --------
-    >>> H = hamiltonian_2nu_vacuum_energy_independent(0.5, 1.0)
-    >>> print('%.6f  %.6f' % (H[0][0].real, H[0][1].real))
-    -0.125000  0.216506
+    .. jupyter-execute::
+
+        import hamiltonians2nu
+
+        H = hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(0.5, 1.0)
+        print('%.6f  %.6f' % (H[0][0].real, H[0][1].real))
     """
     # Trigonometric identities, rather than arcsin followed by cos and
     # sin, keep this consistent with mixing_matrix_2nu and avoid a
@@ -289,9 +295,12 @@ def probabilities_2nu_vacuum_std(
 
     Examples
     --------
-    >>> prob = probabilities_2nu_vacuum_std(0.5, 2.5e-3, 1.0e9, 5.0e12)
-    >>> print('%.6f  %.6f' % (prob[0], prob[1]))
-    0.999794  0.000206
+    .. jupyter-execute::
+
+        import hamiltonians2nu
+
+        prob = hamiltonians2nu.probabilities_2nu_vacuum_std(0.5, 2.5e-3, 1.0e9, 5.0e12)
+        print('%.6f  %.6f' % (prob[0], prob[1]))
     """
     arg = Dm2*L/4.0/energy
     cth = np.sqrt(1.0-sth*sth)
@@ -356,10 +365,13 @@ def hamiltonian_2nu_matter(
 
     Examples
     --------
-    >>> H_vac = hamiltonian_2nu_vacuum_energy_independent(0.5, 2.5e-3)
-    >>> H = hamiltonian_2nu_matter(H_vac, 1.0e9, 1.0e-13)
-    >>> print('%.6e' % H[0][0].real)
-    -2.125000e-13
+    .. jupyter-execute::
+
+        import hamiltonians2nu
+
+        H_vac = hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(0.5, 2.5e-3)
+        H = hamiltonians2nu.hamiltonian_2nu_matter(H_vac, 1.0e9, 1.0e-13)
+        print('%.6e' % H[0][0].real)
     """
     h_vacuum = np.asarray(h_vacuum_energy_independent, dtype=complex)
     energy = np.asarray(energy, dtype=float)
@@ -440,10 +452,13 @@ def probabilities_2nu_matter_std(
 
     Examples
     --------
-    >>> prob = probabilities_2nu_matter_std(0.5, 2.5e-3, 1.0e-13, 1.0e9,
-    ...                                     5.0e12)
-    >>> print('%.6f  %.6f' % (prob[0], prob[1]))
-    0.985595  0.014405
+    .. jupyter-execute::
+
+        import hamiltonians2nu
+
+        prob = hamiltonians2nu.probabilities_2nu_matter_std(0.5, 2.5e-3, 1.0e-13, 1.0e9,
+                                            5.0e12)
+        print('%.6f  %.6f' % (prob[0], prob[1]))
     """
     x = 2.0*VCC*energy/Dm2
     cth = np.sqrt(1.0-sth*sth)
@@ -525,11 +540,14 @@ def hamiltonian_2nu_nsi(
 
     Examples
     --------
-    >>> H_vac = hamiltonian_2nu_vacuum_energy_independent(0.5, 2.5e-3)
-    >>> H = hamiltonian_2nu_nsi(H_vac, 1.0e9, 1.0e-13, [0.06, -0.06+0.03j,
-    ...                                                 1.2])
-    >>> print('%+.6e%+.6ej' % (H[0][1].real, H[0][1].imag))
-    +5.352659e-13+3.000000e-15j
+    .. jupyter-execute::
+
+        import hamiltonians2nu
+
+        H_vac = hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(0.5, 2.5e-3)
+        H = hamiltonians2nu.hamiltonian_2nu_nsi(H_vac, 1.0e9, 1.0e-13, [0.06, -0.06+0.03j,
+                                                        1.2])
+        print('%+.6e%+.6ej' % (H[0][1].real, H[0][1].imag))
     """
     h_vacuum = np.asarray(h_vacuum_energy_independent, dtype=complex)
     energy = np.asarray(energy, dtype=float)
@@ -608,10 +626,13 @@ def hamiltonian_2nu_liv(
 
     Examples
     --------
-    >>> H_vac = hamiltonian_2nu_vacuum_energy_independent(0.5, 2.5e-3)
-    >>> H = hamiltonian_2nu_liv(H_vac, 1.0e9, 0.6, 1.0e-9, 2.0e-9, 1.0e12)
-    >>> print('%.6e' % H[0][0].real)
-    1.047500e-12
+    .. jupyter-execute::
+
+        import hamiltonians2nu
+
+        H_vac = hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(0.5, 2.5e-3)
+        H = hamiltonians2nu.hamiltonian_2nu_liv(H_vac, 1.0e9, 0.6, 1.0e-9, 2.0e-9, 1.0e12)
+        print('%.6e' % H[0][0].real)
     """
     h_vacuum = np.asarray(h_vacuum_energy_independent, dtype=complex)
     energy = np.asarray(energy, dtype=float)

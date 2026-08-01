@@ -23,16 +23,24 @@ over N-element arrays, each writing a temporary that the next pass
 reads back.  The compiled kernel does the same arithmetic one element at
 a time, keeping every intermediate in registers, and spreads the
 elements over the available cores.  Measured against the NumPy path on
-this library's own benchmarks:
+this library's own benchmarks, best of seven runs with the two paths
+interleaved:
 
 ===============================  ==========
 Stack                            Speedup
 ===============================  ==========
-200 000 energies, three flavors  ~20x
-20 000 energies, three flavors   ~15x
-100 x 100 oscillogram            ~5x
-200 000 baselines, two flavors   ~4x
+200 000 energies, three flavors  ~15x
+20 000 energies, three flavors   ~9x
+100 x 100 oscillogram            ~3.5x
+200 000 baselines, two flavors   ~1.5x
 ===============================  ==========
+
+These are one machine on one day, and they move by tens of per cent
+between runs; read them as the shape of the gain rather than as
+constants.  The figures quoted for 1.6.0 in ``CHANGELOG.md`` came from a
+different session and differ by up to a factor of two --- which is why
+notebook 09 measures the comparison when it runs, on whatever machine
+is running it, rather than repeating a number from here.
 
 Costs, so that the trade is visible
 -----------------------------------
@@ -44,7 +52,7 @@ Costs, so that the trade is visible
 
 Both are why this is an optional extra rather than a dependency, and why
 the scalar path is deliberately left alone: a single probability takes
-about 17 microseconds, which is not worth a compilation pause.
+about 16 microseconds, which is not worth a compilation pause.
 
 Turning it off
 --------------

@@ -231,8 +231,8 @@ Going faster still
 ------------------
 
 If `Numba <https://numba.pydata.org>`_ is installed, the batched paths are
-evaluated by compiled kernels instead of NumPy, which is worth between
-2x and 15x on large stacks:
+evaluated by compiled kernels instead of NumPy, which is worth roughly
+1.5x to 15x on large stacks, depending on the number of flavors:
 
 .. code-block:: shell
 
@@ -258,14 +258,21 @@ path --- to compare the two, say --- set
    fastkernels.USE_NUMBA = False
 
 The scalar path is deliberately left uncompiled: a single probability
-takes about fifteen microseconds, which is not worth a compilation
+takes about sixteen microseconds, which is not worth a compilation
 pause.  Short *stacks* are also evaluated one element at a time, since
 below about ten elements the array machinery costs more than it saves.
 
 More examples
 -------------
 
-The ``test/`` directory holds a runnable script for each of the cases above.
-They are the same examples given in the `README
+The ``examples/`` directory holds a runnable script for each of the cases
+above.  They are the same examples given in the `README
 <https://github.com/mbustama/NuOscProbExact/blob/main/README.md>`_, with the
 output you should expect.
+
+.. note::
+
+   This directory was called ``test/`` in version 1.0.0 of the code, and is
+   named that way in version 2 of `the paper
+   <https://arxiv.org/abs/1904.12391>`_.  It was renamed to ``examples/`` to
+   stop it being confused with ``tests/``, which holds the regression suite.

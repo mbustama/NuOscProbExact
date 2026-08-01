@@ -204,12 +204,15 @@ def evolution_operator_2nu_slabs(
 
     Examples
     --------
-    >>> import numpy as np
-    >>> H = np.array([[[0.0, 1.0], [1.0, 0.0]],
-    ...               [[0.0, 0.5], [0.5, 0.0]]])
-    >>> U = evolution_operator_2nu_slabs(H, [0.3, 0.4])
-    >>> print('%.6f' % abs(U[0][0]))
-    0.877583
+    .. jupyter-execute::
+
+        import slabs
+
+        import numpy as np
+        H = np.array([[[0.0, 1.0], [1.0, 0.0]],
+                      [[0.0, 0.5], [0.5, 0.0]]])
+        U = slabs.evolution_operator_2nu_slabs(H, [0.3, 0.4])
+        print('%.6f' % abs(U[0][0]))
     """
     return _evolution_operator_slabs(hamiltonian_matrices, widths, 2,
                                      'evolution_operator_2nu_slabs')
@@ -253,12 +256,15 @@ def evolution_operator_3nu_slabs(
 
     Examples
     --------
-    >>> import numpy as np
-    >>> H = np.array([np.diag([1.0, 0.0, -1.0]),
-    ...               np.diag([0.5, 0.0, -0.5])], dtype=complex)
-    >>> U = evolution_operator_3nu_slabs(H, [0.2, 0.3])
-    >>> print('%.6f' % abs(U[0][0]))
-    1.000000
+    .. jupyter-execute::
+
+        import slabs
+
+        import numpy as np
+        H = np.array([np.diag([1.0, 0.0, -1.0]),
+                      np.diag([0.5, 0.0, -0.5])], dtype=complex)
+        U = slabs.evolution_operator_3nu_slabs(H, [0.2, 0.3])
+        print('%.6f' % abs(U[0][0]))
     """
     return _evolution_operator_slabs(hamiltonian_matrices, widths, 3,
                                      'evolution_operator_3nu_slabs')
@@ -298,12 +304,15 @@ def probabilities_2nu_slabs(
 
     Examples
     --------
-    >>> import numpy as np
-    >>> H = np.array([[[0.0, 1.0], [1.0, 0.0]],
-    ...               [[0.0, 0.5], [0.5, 0.0]]])
-    >>> Pee, Pem, Pme, Pmm = probabilities_2nu_slabs(H, [0.3, 0.4])
-    >>> print('%.6f  %.6f' % (Pee, Pem))
-    0.770151  0.229849
+    .. jupyter-execute::
+
+        import slabs
+
+        import numpy as np
+        H = np.array([[[0.0, 1.0], [1.0, 0.0]],
+                      [[0.0, 0.5], [0.5, 0.0]]])
+        Pee, Pem, Pme, Pmm = slabs.probabilities_2nu_slabs(H, [0.3, 0.4])
+        print('%.6f  %.6f' % (Pee, Pem))
     """
     u = evolution_operator_2nu_slabs(hamiltonian_matrices, widths)
 
@@ -346,12 +355,15 @@ def probabilities_3nu_slabs(
 
     Examples
     --------
-    >>> import numpy as np
-    >>> H = np.array([np.diag([1.0, 0.0, -1.0]),
-    ...               np.diag([0.5, 0.0, -0.5])], dtype=complex)
-    >>> prob = probabilities_3nu_slabs(H, [0.2, 0.3])
-    >>> print('%.6f  %.6f' % (prob[0], prob[1]))
-    1.000000  0.000000
+    .. jupyter-execute::
+
+        import slabs
+
+        import numpy as np
+        H = np.array([np.diag([1.0, 0.0, -1.0]),
+                      np.diag([0.5, 0.0, -0.5])], dtype=complex)
+        prob = slabs.probabilities_3nu_slabs(H, [0.2, 0.3])
+        print('%.6f  %.6f' % (prob[0], prob[1]))
     """
     u = evolution_operator_3nu_slabs(hamiltonian_matrices, widths)
 

@@ -124,11 +124,14 @@ def hamiltonian_2nu_coefficients(
 
     Examples
     --------
-    >>> hamiltonian_matrix = [[1.0+0.0j, 0.0+2.0j],
-    ...                       [0.0-2.0j, 3.0+0.0j]]
-    >>> h_coeffs = hamiltonian_2nu_coefficients(hamiltonian_matrix)
-    >>> print('%.6f  %.6f  %.6f' % tuple(h_coeffs))
-    0.000000  -2.000000  -1.000000
+    .. jupyter-execute::
+
+        import oscprob2nu
+
+        hamiltonian_matrix = [[1.0+0.0j, 0.0+2.0j],
+                              [0.0-2.0j, 3.0+0.0j]]
+        h_coeffs = oscprob2nu.hamiltonian_2nu_coefficients(hamiltonian_matrix)
+        print('%.6f  %.6f  %.6f' % tuple(h_coeffs))
     """
     H11 = hamiltonian_matrix[0][0]
     H12 = hamiltonian_matrix[0][1]
@@ -171,8 +174,11 @@ def modulus(h_coeffs: Union[list, np.ndarray]) -> float:
 
     Examples
     --------
-    >>> print('%.6f' % modulus([0.0, -2.0, -1.0]))
-    2.236068
+    .. jupyter-execute::
+
+        import oscprob2nu
+
+        print('%.6f' % oscprob2nu.modulus([0.0, -2.0, -1.0]))
     """
     return math.sqrt(sum([abs(h)**2.0 for h in h_coeffs]))
 
@@ -423,12 +429,15 @@ def evolution_operator_2nu_u_coefficients(
 
     Examples
     --------
-    >>> hamiltonian_matrix = [[1.0+0.0j, 0.0+2.0j],
-    ...                       [0.0-2.0j, 3.0+0.0j]]
-    >>> u_coeffs = evolution_operator_2nu_u_coefficients(hamiltonian_matrix,
-    ...                                                  1.0)
-    >>> print('%.6f  %.6f  %.6f  %.6f' % tuple(u+0.0 for u in u_coeffs))
-    -0.617273  0.000000  0.703690  0.351845
+    .. jupyter-execute::
+
+        import oscprob2nu
+
+        hamiltonian_matrix = [[1.0+0.0j, 0.0+2.0j],
+                              [0.0-2.0j, 3.0+0.0j]]
+        u_coeffs = oscprob2nu.evolution_operator_2nu_u_coefficients(hamiltonian_matrix,
+                                                         1.0)
+        print('%.6f  %.6f  %.6f  %.6f' % tuple(u+0.0 for u in u_coeffs))
     """
     # [h1, h2, h3]
     h_coeffs = hamiltonian_2nu_coefficients(hamiltonian_matrix)
@@ -511,14 +520,16 @@ def evolution_operator_2nu(
 
     Examples
     --------
-    >>> hamiltonian_matrix = [[1.0+0.0j, 0.0+2.0j],
-    ...                       [0.0-2.0j, 3.0+0.0j]]
-    >>> U2 = evolution_operator_2nu(hamiltonian_matrix, 1.0)
-    >>> for row in U2:
-    ...     print('  '.join(['%+.6f%+.6fj' % (z.real+0.0, z.imag+0.0)
-    ...                      for z in row]))
-    -0.617273+0.351845j  +0.703690+0.000000j
-    -0.703690+0.000000j  -0.617273-0.351845j
+    .. jupyter-execute::
+
+        import oscprob2nu
+
+        hamiltonian_matrix = [[1.0+0.0j, 0.0+2.0j],
+                              [0.0-2.0j, 3.0+0.0j]]
+        U2 = oscprob2nu.evolution_operator_2nu(hamiltonian_matrix, 1.0)
+        for row in U2:
+            print('  '.join(['%+.6f%+.6fj' % (z.real+0.0, z.imag+0.0)
+                             for z in row]))
     """
     if _is_batched(hamiltonian_matrix, L):
         return _evolution_operator_2nu_batch(hamiltonian_matrix, L)
@@ -630,11 +641,14 @@ def probabilities_2nu(
 
     Examples
     --------
-    >>> hamiltonian_matrix = [[1.0+0.0j, 0.0+2.0j],
-    ...                       [0.0-2.0j, 3.0+0.0j]]
-    >>> Pee, Pem, Pme, Pmm = probabilities_2nu(hamiltonian_matrix, 1.0)
-    >>> print('%.6f  %.6f  %.6f  %.6f' % (Pee, Pem, Pme, Pmm))
-    0.504821  0.495179  0.495179  0.504821
+    .. jupyter-execute::
+
+        import oscprob2nu
+
+        hamiltonian_matrix = [[1.0+0.0j, 0.0+2.0j],
+                              [0.0-2.0j, 3.0+0.0j]]
+        Pee, Pem, Pme, Pmm = oscprob2nu.probabilities_2nu(hamiltonian_matrix, 1.0)
+        print('%.6f  %.6f  %.6f  %.6f' % (Pee, Pem, Pme, Pmm))
     """
     if _is_batched(hamiltonian_matrix, L):
         return _probabilities_2nu_batch(hamiltonian_matrix, L)

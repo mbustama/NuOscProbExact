@@ -95,7 +95,7 @@ The method relies on expansions of the Hamiltonian and time-evolution operators 
 
 * **To run the regression tests:** The test suite in `tests/` requires `pytest` and `scipy`, the latter only to cross-check the evolution operator against an independent matrix exponential
 
-* **To go faster on large scans (optional):** Installing `numba`, via `pip install "nuoscprobexact[fast]"`, lets the batched paths run on compiled kernels instead of NumPy — worth between 2x and 15x depending on the size of the scan. It is entirely optional: without it the NumPy path is used, and the results are identical to round-off
+* **To go faster on large scans (optional):** Installing `numba`, via `pip install "nuoscprobexact[fast]"`, lets the batched paths run on compiled kernels instead of NumPy — worth roughly 1.5x to 15x depending on the size of the scan and the number of flavors. It is entirely optional: without it the NumPy path is used, and the results are identical to round-off
 
 
 ## Installation
@@ -166,6 +166,16 @@ NuOscProbExact/
 ├── LICENSE                          # MIT license
 ├── README.md                        # The file that you are reading
 ├── pyproject.toml                   # Packaging metadata and pytest configuration
+├── examples/                        # Runnable scripts, the ones the README walks through
+│   ├── example_2nu_trivial.py       # Two-flavor, arbitrary Hamiltonian
+│   ├── example_2nu_vacuum.py        # Two-flavor, oscillations in vacuum
+│   ├── example_2nu_vacuum_coeffs.py # Two-flavor, expansion coefficients
+│   ├── example_3nu_trivial.py       # Three-flavor, arbitrary Hamiltonian
+│   ├── example_3nu_vacuum.py        # Three-flavor, oscillations in vacuum
+│   ├── example_3nu_vacuum_coeffs.py # Three-flavor, expansion coefficients
+│   ├── example_3nu_matter.py        # Three-flavor, oscillations in matter
+│   ├── example_3nu_nsi.py           # Three-flavor, matter with NSI
+│   └── example_3nu_liv.py           # Three-flavor, LIV background
 ├── docs/                            # Sphinx documentation
 │   ├── Makefile                     # `make html` on Linux and macOS
 │   ├── make.bat                     # `make html` on Windows
@@ -221,16 +231,6 @@ NuOscProbExact/
 │   ├── fastkernels.py               # Optional Numba kernels, with a NumPy fallback
 │   ├── slabs.py                     # Propagation across adjacent slabs
 │   └── earth.py                     # PREM, chord geometry, and Earth crossings
-├── test/                            # The worked examples from the paper
-│   ├── example_2nu_trivial.py       # Two-flavor, arbitrary Hamiltonian
-│   ├── example_2nu_vacuum.py        # Two-flavor, oscillations in vacuum
-│   ├── example_2nu_vacuum_coeffs.py # Two-flavor, expansion coefficients
-│   ├── example_3nu_trivial.py       # Three-flavor, arbitrary Hamiltonian
-│   ├── example_3nu_vacuum.py        # Three-flavor, oscillations in vacuum
-│   ├── example_3nu_vacuum_coeffs.py # Three-flavor, expansion coefficients
-│   ├── example_3nu_matter.py        # Three-flavor, oscillations in matter
-│   ├── example_3nu_nsi.py           # Three-flavor, matter with NSI
-│   └── example_3nu_liv.py           # Three-flavor, LIV background
 └── tests/                           # Regression suite, run with pytest
     ├── conftest.py                  # Shared fixtures and path setup
     ├── test_su3_algebra.py          # d tensor, star product, SU(3) invariants
@@ -264,11 +264,13 @@ import oscprob3nu
 ### Checking the installation
 
 **Run the worked examples.**
-   Inside the directory `test/`, we provide several example files to get you started.  We also elaborate on these examples later in this README, and show the output thay you should expect from them.  To run any of the examples, just execute, *e.g.*,
+   Inside the directory `examples/`, we provide several example files to get you started.  We also elaborate on these examples later in this README, and show the output thay you should expect from them.  To run any of the examples, just execute, *e.g.*,
    ```shell
    python example_2nu_trivial.py
    ```
    Inspecting the example files and reading their description below will help you to learn how to use **NuOscProbExact** in your own project.
+
+   > **Renamed:** this directory was called `test/` in version 1.0.0 of the code, and is named that way in version 2 of [the paper](https://arxiv.org/abs/1904.12391).  It became `examples/` to stop it being confused with `tests/`, which holds the regression suite.
 
 **Run the regression tests.**
    ```shell
@@ -283,11 +285,11 @@ import oscprob3nu
    pip install -e ".[notebooks]"
    jupyter lab notebooks/
    ```
-   Nine worked notebooks, numbered in reading order, covering the probabilities against baseline and against energy, matter and new physics, oscillograms, bi-probability plots, the Earth, arbitrary matter profiles, and performance.  They carry their figures inline, so they can also just be read on GitHub.
+   Fifteen worked notebooks, numbered in reading order, covering the probabilities against baseline and against energy, matter and new physics, oscillograms, bi-probability plots, the Earth, arbitrary matter profiles, performance, the paper's own figures, the textbook approximations, mass ordering and the octant, antineutrinos, solar neutrinos, and numerical edge cases.  They carry their figures inline, so they can also just be read on GitHub.
 
 ## Performance
 
-The probabilities are computed from a closed form, so a single one is quick — about **13 µs** for three flavors and **1.3 µs** for two.  Most real use, though, is a *scan*: a curve versus baseline or energy, or an oscillogram over both.  Two things make those much faster, and neither changes the answers.
+The probabilities are computed from a closed form, so a single one is quick — about **16 µs** for three flavors and **2 µs** for two.  Most real use, though, is a *scan*: a curve versus baseline or energy, or an oscillogram over both.  Two things make those much faster, and neither changes the answers.
 
 ### 1. Pass arrays instead of looping
 
@@ -309,7 +311,7 @@ h_stack = hamiltonians3nu.hamiltonian_3nu_matter(h_vacuum_energy_indep,
 prob = oscprob3nu.probabilities_3nu(h_stack, baseline)
 ```
 
-This is the single biggest win — **roughly 25–60×** — and it needs no extra dependency.  It works because the expansion's expensive part, the characteristic equation whose roots give the oscillation phases, depends on the Hamiltonian alone: a scan over baselines solves it *once* rather than once per point.
+This is the single biggest win — **roughly 20–90×** — and it needs no extra dependency.  It works because the expansion's expensive part, the characteristic equation whose roots give the oscillation phases, depends on the Hamiltonian alone: a scan over baselines solves it *once* rather than once per point.
 
 ### 2. Install Numba, if the scans are large
 
@@ -323,12 +325,12 @@ Measured on 2000-point scans, against the equivalent Python loop:
 
 | Scan | loop | arrays | arrays + Numba |
 |---|---|---|---|
-| Three-flavor, vs. baseline | 30 ms | 1.1 ms (~28×) | 0.24 ms (**~130×**) |
-| Three-flavor, vs. energy | 41 ms | 1.6 ms (~25×) | 0.43 ms (**~95×**) |
-| Three-flavor oscillogram, 100×100 | 195 ms | 4.4 ms (~44×) | 0.78 ms (**~250×**) |
-| Two-flavor, vs. baseline | 4.4 ms | 0.07 ms (~59×) | *not used — see below* |
+| Three-flavor, vs. baseline | 38 ms | 1.8 ms (~21×) | 0.31 ms (**~120×**) |
+| Three-flavor, vs. energy | 34 ms | 1.5 ms (~23×) | 0.20 ms (**~170×**) |
+| Three-flavor oscillogram, 100×100 | 197 ms | 5.3 ms (~37×) | 0.85 ms (**~230×**) |
+| Two-flavor, vs. baseline | 6.9 ms | 0.07 ms (~93×) | *not used — see below* |
 
-These are indicative, not precise: repeated runs on the same machine vary by up to ~1.5×, so treat them as orders of magnitude.
+Best of seven runs, interleaved, on one machine.  These are indicative, not precise: repeated runs vary by tens of per cent, so treat them as orders of magnitude.  [Notebook 09](notebooks/09_performance.ipynb) measures the same comparison on whatever machine runs it, which is the number to trust.
 
 **The backend is not used where it would not help.**  For three flavors it wins at every stack size, by between two and sixteen times.  For two flavors it does not: that expansion reduces to a square root and a sine per element, which NumPy already does about as well as compiled code can, and the kernel additionally has to materialise the Hamiltonian stack.  Below fifty thousand elements the NumPy path is quicker, so it is kept; above, the kernel leads by about 1.3–1.8×.  The thresholds are measured, and the library picks whichever is faster without you doing anything.
 
@@ -337,7 +339,7 @@ Two costs, so the trade is visible: importing Numba takes about 140 ms against 6
 ### What you do not have to think about
 
 * **Short stacks.** Below about ten elements the array machinery costs more than it saves, so those are evaluated one at a time automatically.
-* **The scalar path.** It is deliberately left uncompiled: 13 µs is not worth a compilation pause on a first call.
+* **The scalar path.** It is deliberately left uncompiled: 16 µs is not worth a compilation pause on a first call.
 * **Turning Numba off.** `fastkernels.USE_NUMBA = False` forces the NumPy path, which is how the test suite checks that the two agree.
 
 One thing that *is* worth doing by hand: build the energy-independent part of the vacuum Hamiltonian once, outside any scan, since it does not depend on the energy.  The bundled examples all do this.
@@ -397,7 +399,7 @@ Pee, Pem, Pme, Pmm = oscprob2nu.probabilities_2nu(hamiltonian, L)
 
 As a first, trivial example, we pass an arbitrary Hamiltonian and baseline to `probabilities_3nu`:
 ```python
-# Find this example in NuOscProbExact/test/example_3nu_trivial.py
+# Find this example in NuOscProbExact/examples/example_3nu_trivial.py
 
 import oscprob3nu
 
@@ -428,7 +430,7 @@ As expected, `Pme + Pmm + Pmt = 1`, and `Pte + Ptm + Ptt = 1`.
 
 In this case, we use `probabilities_2nu`:
 ```python
-# Find this example in NuOscProbExact/test/example_2nu_trivial.py
+# Find this example in NuOscProbExact/examples/example_2nu_trivial.py
 
 import oscprob2nu
 
@@ -466,7 +468,7 @@ that is provided in the `hamiltonians3nu` module.  It returns the 3x3 Hamiltonia
 > **Important:** The function `hamiltonian_3nu_vacuum_energy_independent` returns the Hamiltonian in vacuum **without** multiplying it by the *1/E* prefactor, where *E* is the neutrino energy.  It was done in this way so that, if we wish to compute the probabilities at different energies, we need to compute `hamiltonian_3nu_vacuum_energy_independent` only once, and then multiply it by a varying *1/E* prefactor.
 
 ```python
-# Find this example in NuOscProbExact/test/example_3nu_vacuum.py
+# Find this example in NuOscProbExact/examples/example_3nu_vacuum.py
 
 import numpy as np
 
@@ -500,7 +502,7 @@ Pme = 0.04023, Pmm = 0.37887, Pmt = 0.58090
 Pte = 0.03210, Ptm = 0.60680, Ptt = 0.36110
 ```
 
-> **Computing anti-neutrino probabilities**: All of the examples shown in this README (and in the files inside the `test/` directory) are for neutrinos, not anti-neutrinos.  If you wish to compute probabilities for anti-neutrinos, a simple way to do this is to pass `-dCP` instead of `dCP` to `hamiltonian_3nu_vacuum_energy_independent` (or to `hamiltonian_2nu_vacuum_energy_independent`).
+> **Computing anti-neutrino probabilities**: All of the examples shown in this README (and in the files inside the `examples/` directory) are for neutrinos, not anti-neutrinos.  If you wish to compute probabilities for anti-neutrinos, a simple way to do this is to pass `-dCP` instead of `dCP` to `hamiltonian_3nu_vacuum_energy_independent` (or to `hamiltonian_2nu_vacuum_energy_independent`).
 
 > **About `globaldefs`**: This module contains physical constants and unit-conversion constants that are used in the examples and that you can use in your code.
 
@@ -508,7 +510,7 @@ Sometimes, you might be interested also in returning the coefficients `h1`, ...,
 
 The module `oscprob3nu` has functions to do this:
 ```python
-# Find this example in NuOscProbExact/test/example_3nu_vacuum_coefficients.py
+# Find this example in NuOscProbExact/examples/example_3nu_vacuum_coeffs.py
 
 import numpy as np
 
@@ -592,7 +594,7 @@ hamiltonian_2nu_vacuum_energy_independent(sth, Dm2)
 that is provided in the `hamiltonians2nu` module.  The input parameters `sth`, and `Dm2` are, respectively, sin(theta), and Delta m^2.  For this example, we set them to current best-fit values for atmospheric neutrinos.
 
 ```python
-# Find this example in NuOscProbExact/test/example_2nu_vacuum.py
+# Find this example in NuOscProbExact/examples/example_2nu_vacuum.py
 
 import numpy as np
 
@@ -619,7 +621,7 @@ Pme = 0.70405, Pmm = 0.29595
 
 Like in the three-neutrino case, we can also return the coefficients `h1`, `h2`, `h3` of the expansion of the Hamiltonian in terms of Pauli matrices (Table I in the paper), or the time-evolution operator `evol_operator` itself, as a 2x2 matrix (Eq. (5) in the paper).
 ```python
-# Find this example in NuOscProbExact/test/example_2nu_vacuum_coefficients.py
+# Find this example in NuOscProbExact/examples/example_2nu_vacuum_coeffs.py
 
 import numpy as np
 
@@ -861,7 +863,7 @@ hamiltonian_3nu_matter(h_vacuum_energy_independent, energy, VCC)
 
 In the example below, we set the matter potential to `VCC_EARTH_CRUST`, which is computed using the averaage electron density of the crust of the Earth (3 g cm^{-3}), and is read from `globaldefs`.
 ```python
-# Find this example in NuOscProbExact/test/example_3nu_matter.py
+# Find this example in NuOscProbExact/examples/example_3nu_matter.py
 
 import oscprob3nu
 import hamiltonians3nu
@@ -905,7 +907,7 @@ hamiltonian_3nu_nsi(h_vacuum_energy_independent, energy, VCC, eps)
 
 In the example below, we set `eps` to its default value `EPS_3` pulled from `globaldefs`:
 ```python
-# Find this example in NuOscProbExact/test/example_3nu_nsi.py
+# Find this example in NuOscProbExact/examples/example_3nu_nsi.py
 
 import oscprob3nu
 import hamiltonians3nu
@@ -948,7 +950,7 @@ hamiltonian_3nu_liv(h_vacuum_energy_independent, energy, sxi12, sxi23, sxi13, dx
 
 In the example below, we set the LIV parameters to their default values pulled from `globaldefs`:
 ```python
-# Find this example in NuOscProbExact/test/example_3nu_liv.py
+# Find this example in NuOscProbExact/examples/example_3nu_liv.py
 
 import oscprob3nu
 import hamiltonians3nu
@@ -1036,7 +1038,7 @@ Run them with `pip install -e ".[notebooks]"` and `jupyter lab notebooks/`.  Eve
 
 All of the modules provided in **NuOscProbExact** have been documented using Python docstrings, written in [numpydoc](https://numpydoc.readthedocs.io/) format so that they can be rendered directly by [Sphinx](https://www.sphinx-doc.org/) with the `sphinx.ext.napoleon` and `numpydoc` extensions.  They are human-readable by opening the source `.py` files.  Alternatively, they can be printed from within an interactive Python session.
 
-Every `Examples` block in the docstrings is executable, and is run as a doctest by the regression suite (`tests/test_docstrings.py`), so the numbers quoted in the documentation cannot drift out of step with what the code returns.
+Every `Examples` block in the docstrings is executed when the documentation is built, so the results shown on the [API page](https://mbustama.github.io/NuOscProbExact/functions.html) are produced by the code rather than pasted beside it, and cannot drift.  The regression suite runs the same blocks on every supported Python (`tests/test_docstrings.py`), which the documentation build --- one job, one interpreter --- would not catch.
 
 A full Sphinx project lives in `docs/`.  Build it with
 ```shell

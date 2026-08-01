@@ -32,8 +32,8 @@ SETUP = '''\
 import sys
 import os
 
-# Works whether or not the package is installed: the notebooks sit one level
-# below the repository root, as the worked examples in test/ do.
+# Works whether or not the package is installed: these notebooks sit one
+# level below the repository root, so src/ is one directory up.
 sys.path.insert(0, os.path.abspath(os.path.join('..', 'src')))
 
 import numpy as np
@@ -910,8 +910,8 @@ books['09_performance.ipynb'] = notebook(
 books['10_paper_figures.ipynb'] = notebook(
     "The paper's figures",
     'The two figures in [arXiv:1904.12391](https://arxiv.org/abs/1904.12391), '
-    'reproduced here. They were previously drawn by two modules under '
-    '`test/`, which this notebook replaces: three-flavor and two-flavor '
+    'reproduced here. They were previously drawn by two plotting modules '
+    'that this notebook replaces: three-flavor and two-flavor '
     'probabilities against energy at the DUNE baseline, for four scenarios at '
     'once.',
     [
