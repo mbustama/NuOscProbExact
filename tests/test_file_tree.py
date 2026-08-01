@@ -131,6 +131,8 @@ TREE = [
      'Degeneracies, and what does not go NaN'),
     ('notebooks/16_four_neutrinos.ipynb',
      'A 3+1 sterile state, through the SU(4) expansion'),
+    ('notebooks/17_against_other_codes.ipynb',
+     'nuSQuIDS and Zaglauer-Schwarzer, compared'),
     ('notebooks/make_notebooks.py', 'Generates and executes all of the above'),
     ('src/', 'The library'),
     ('src/oscprob2nu.py', 'Two-flavor probabilities, SU(2) expansion'),
