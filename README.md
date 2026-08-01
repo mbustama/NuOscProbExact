@@ -126,7 +126,13 @@ Instructions:
    │   ├── 06_earth_and_prem.ipynb      # PREM, chord geometry, and slabs
    │   ├── 07_earth_probabilities.ipynb # Through the Earth, and between sites
    │   ├── 08_unusual_density_profiles.ipynb  # Castle-wall and other hand-built profiles
-   │   └── 09_performance.ipynb         # Looping vs broadcasting, and the backend
+   │   ├── 09_performance.ipynb         # Looping vs broadcasting, and the backend
+   │   ├── 10_paper_figures.ipynb       # The two figures from arXiv:1904.12391
+   │   ├── 11_exact_vs_approximations.ipynb  # Where the textbook formulas break down
+   │   ├── 12_ordering_and_octant.ipynb # Normal vs inverted, and the 23 octant
+   │   ├── 13_antineutrinos.ipynb       # Conjugate and flip, and two ways to slip
+   │   ├── 14_solar_and_adiabatic_msw.ipynb  # The MSW resonance, and the cost wall
+   │   └── 15_numerical_edge_cases.ipynb  # Degeneracies, and what does not go NaN
    ├── src/                             # The library
    │   ├── oscprob2nu.py                # Two-flavor probabilities, SU(2) expansion
    │   ├── oscprob3nu.py                # Three-flavor probabilities, SU(3) expansion
@@ -919,7 +925,7 @@ Though we do not show it here, `hamiltonian_mymodel` could also depend on `energ
 
 ## Notebooks
 
-Seven worked notebooks live in [`notebooks/`](notebooks/), numbered in reading order.  They carry their figures inline, so they render on GitHub without being run:
+Fifteen worked notebooks live in [`notebooks/`](notebooks/), numbered in reading order.  They carry their figures inline, so they render on GitHub without being run:
 
 | Notebook | What it covers |
 |---|---|
@@ -930,6 +936,14 @@ Seven worked notebooks live in [`notebooks/`](notebooks/), numbered in reading o
 | [05 Bi-probability](notebooks/05_biprobability.ipynb) | CP ellipses, in vacuum and in matter |
 | [06 The Earth and PREM](notebooks/06_earth_and_prem.ipynb) | The density profile, chord geometry, slabs, and their convergence |
 | [07 Through the Earth](notebooks/07_earth_probabilities.ipynb) | Zenith-angle scans, an Earth oscillogram, and real baselines |
+| [08 Unusual density profiles](notebooks/08_unusual_density_profiles.ipynb) | Castle-wall and serrated profiles, and parametric enhancement |
+| [09 Performance](notebooks/09_performance.ipynb) | Looping versus broadcasting, and the compiled backend, measured live |
+| [10 The paper's figures](notebooks/10_paper_figures.ipynb) | The two figures from [arXiv:1904.12391](https://arxiv.org/abs/1904.12391) |
+| [11 Exact vs approximations](notebooks/11_exact_vs_approximations.ipynb) | Where the familiar formulas agree, and where they do not |
+| [12 Ordering and octant](notebooks/12_ordering_and_octant.ipynb) | Normal against inverted, and the θ₂₃ octant degeneracy |
+| [13 Antineutrinos](notebooks/13_antineutrinos.ipynb) | Conjugate *and* flip the potential — and two ways to get it wrong |
+| [14 Solar and the MSW resonance](notebooks/14_solar_and_adiabatic_msw.ipynb) | The adiabatic resonance, validated — and why slabs are the wrong tool for it |
+| [15 Numerical edge cases](notebooks/15_numerical_edge_cases.ipynb) | Degenerate spectra, and what returns a number instead of NaN |
 
 Run them with `pip install -e ".[notebooks]"` and `jupyter lab notebooks/`.  Every one of them is executed by CI, so an example that stops working fails the build.
 

@@ -12,10 +12,12 @@ to the library.
 
 ### Added
 
-- `notebooks/`, nine Jupyter notebooks numbered in reading order: the basics,
-  vacuum oscillations, matter and NSI and LIV, oscillograms, bi-probability
-  plots, the Earth and PREM, probabilities through the Earth, unusual matter
-  profiles, and performance.  They carry their figures inline, so they render
+- `notebooks/`, fifteen Jupyter notebooks numbered in reading order: the
+  basics, vacuum oscillations, matter and NSI and LIV, oscillograms,
+  bi-probability plots, the Earth and PREM, probabilities through the Earth,
+  unusual matter profiles, performance, the paper's own figures, exact versus
+  the textbook approximations, mass ordering and the octant, antineutrinos,
+  solar neutrinos, and numerical edge cases.  They carry their figures inline, so they render
   on GitHub without being run.
 
   Two of them go beyond what the old figure suite covered.  The unusual-profile
@@ -25,6 +27,14 @@ to the library.
   that a periodic profile produces.  The performance notebook measures, on the
   machine that runs it, the cost of looping against broadcasting and of the
   NumPy path against the compiled kernel.
+
+  The solar notebook is as much a warning as a demonstration.  It validates
+  the slab machinery against the analytic adiabatic MSW result — averaged over
+  a narrow energy band, the two agree to 0.0009 — and then shows why the
+  approach is impractical there anyway: a single averaged point costs 800 000
+  slab evaluations, and a realistic calculation multiplies that by the
+  production region, the spectrum and a third flavor.  It points at the
+  Magnus package for profiles that vary smoothly over an oscillation length.
 
 - A `notebooks` extra, and a `notebooks` job in `lint.yml` that executes every
   one of them.  A notebook is documentation that claims to work, and stored

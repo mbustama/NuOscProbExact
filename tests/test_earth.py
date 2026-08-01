@@ -31,7 +31,7 @@ def h_vacuum_3nu():
 def h_vacuum_2nu():
     r"""Returns the energy-independent two-flavor vacuum Hamiltonian."""
     return hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(
-        np.arcsin(gd.S12_NO_BF), gd.D21_NO_BF)
+        gd.S12_NO_BF, gd.D21_NO_BF)
 
 
 def test_dms_to_decimal_handles_the_sign():

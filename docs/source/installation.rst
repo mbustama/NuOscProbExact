@@ -159,7 +159,13 @@ File tree
    │   ├── 06_earth_and_prem.ipynb      # PREM, chord geometry, and slabs
    │   ├── 07_earth_probabilities.ipynb # Through the Earth, and between sites
    │   ├── 08_unusual_density_profiles.ipynb  # Castle-wall and other hand-built profiles
-   │   └── 09_performance.ipynb         # Looping vs broadcasting, and the backend
+   │   ├── 09_performance.ipynb         # Looping vs broadcasting, and the backend
+   │   ├── 10_paper_figures.ipynb       # The two figures from arXiv:1904.12391
+   │   ├── 11_exact_vs_approximations.ipynb  # Where the textbook formulas break down
+   │   ├── 12_ordering_and_octant.ipynb # Normal vs inverted, and the 23 octant
+   │   ├── 13_antineutrinos.ipynb       # Conjugate and flip, and two ways to slip
+   │   ├── 14_solar_and_adiabatic_msw.ipynb  # The MSW resonance, and the cost wall
+   │   └── 15_numerical_edge_cases.ipynb  # Degeneracies, and what does not go NaN
    ├── src/                             # The library
    │   ├── oscprob2nu.py                # Two-flavor probabilities, SU(2) expansion
    │   ├── oscprob3nu.py                # Three-flavor probabilities, SU(3) expansion
