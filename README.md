@@ -112,7 +112,9 @@ Instructions:
    │       ├── functions.rst            # API reference, from the docstrings
    │       ├── references.rst           # Bibliography
    │       ├── refs.bib                 # BibTeX entries for the bibliography
-   │       └── changelog.rst            # Includes the root CHANGELOG.md
+   │       ├── changelog.rst            # Includes the root CHANGELOG.md
+   │       └── _static/
+   │           └── nuoscprobexact_logo.png
    ├── fig/                             # Figures written by run_testsuite.py (initially empty)
    ├── img/                             # Pre-computed figures shown in README.md
    │   ├── prob_3nu_vacuum_vs_baseline_ee_em_et.png

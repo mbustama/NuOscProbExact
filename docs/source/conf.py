@@ -66,5 +66,19 @@ exclude_patterns = ['_build']
 # -- Options for HTML output -------------------------------------------------
 
 html_theme = 'sphinx_rtd_theme'
-html_static_path = []
+html_static_path = ['_static']
 html_title = 'NuOscProbExact %s' % version
+
+# Shown at the top of the sidebar, in place of the project name.  The theme
+# scales it to the sidebar width, so the source image being larger than it
+# needs to be costs nothing but a few hundred kilobytes in the repository.
+html_logo = '_static/nuoscprobexact_logo.png'
+
+# `logo_only = False` keeps `html_title` --- and so the version --- visible
+# under the logo, rather than letting the image stand alone.  The option names
+# here are checked against sphinx_rtd_theme's theme.conf: `display_version`
+# looks right and is not one of them, and an unsupported option is a warning,
+# which this project's -W build treats as an error.
+html_theme_options = {
+    'logo_only': False,
+}
