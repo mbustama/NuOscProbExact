@@ -336,5 +336,10 @@ Where to go next
 * :doc:`methodology` --- what the SU(2), SU(3) and SU(4) expansions actually do, and
   the sign conventions that matter once a matter potential is added.
 * :doc:`functions` --- the full API reference, generated from the docstrings.
+* `Notebook 17
+  <https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/17_cross_checks.ipynb>`_
+  --- the same probabilities cross-checked against an independent external
+  code, and against a published closed form, with the conventions that have
+  to be matched first.
 * The `notebooks <https://github.com/mbustama/NuOscProbExact/tree/main/notebooks>`_
-  --- fifteen of them, carrying their figures inline.
+  --- seventeen of them, carrying their figures inline.

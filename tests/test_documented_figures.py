@@ -18,10 +18,23 @@ gives 21x to 99x.  Both were found by hand, twice, a release apart.
 So the copies stay, and these tests make them agree by construction.  A
 figure changed in one place and not the others fails here, naming both
 the file that disagrees and the value it should carry.
+
+The second half of this module guards the *cross-check* numbers in the
+same way, and for a sharper reason: those have drifted three times.  The
+frozen nuSQuIDS set grew from seven configurations to eleven, and on each
+occasion prose describing it was left behind --- a case count in two test
+modules, an agreement range quoted before the stiffest case existed, and
+a summary in the notebook.  Every one was found by reading rather than by
+the suite, because a test that checks numbers agree says nothing about
+the sentences beside them.  These derive both the count and the range
+from the data itself.
 """
 
+import json
 import os
 import re
+
+import numpy as np
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -59,6 +72,19 @@ def read(path):
     r"""Returns the text of ``path``."""
     with open(path) as handle:
         return handle.read()
+
+
+def read_flowed(path):
+    r"""Returns the text of ``path`` with runs of whitespace collapsed.
+
+    Prose in docstrings and rst is hard-wrapped, so a phrase like "eleven
+    configurations" is routinely split across a line break and a search
+    for it as written finds nothing.  Collapsing whitespace first is the
+    difference between a check and a check that always passes --- the
+    first version of the case-count guard below matched nothing for
+    exactly this reason.
+    """
+    return re.sub(r'\s+', ' ', read(path))
 
 
 def _numbers_in(text, pattern):
@@ -142,3 +168,112 @@ def test_two_flavor_row_is_marked_as_not_using_the_backend():
             '%s should say the compiled backend is "not used" for the '
             'two-flavor row rather than leaving it blank'
             % os.path.relpath(path, ROOT))
+
+
+# ---------------------------------------------------------------------------
+# The cross-check numbers, which are described in prose in several places
+# ---------------------------------------------------------------------------
+
+NUSQUIDS_JSON = os.path.join(ROOT, 'tests', 'nusquids_reference.json')
+MAKE_NOTEBOOKS = os.path.join(ROOT, 'notebooks', 'make_notebooks.py')
+NUSQUIDS_TEST = os.path.join(ROOT, 'tests', 'test_nusquids_comparison.py')
+EIGENVALUE_TEST = os.path.join(ROOT, 'tests', 'test_matter_eigenvalues.py')
+
+COUNT_WORDS = {7: 'seven', 8: 'eight', 9: 'nine', 10: 'ten', 11: 'eleven',
+               12: 'twelve'}
+
+# Files whose prose says how many configurations are frozen.
+COUNT_FILES = [MAKE_NOTEBOOKS, NUSQUIDS_TEST, EIGENVALUE_TEST]
+
+
+def frozen_cases():
+    r"""Returns the frozen nuSQuIDS reference cases."""
+    with open(NUSQUIDS_JSON) as handle:
+        return json.load(handle)['cases']
+
+
+def measured_agreement():
+    r"""Returns ``(best, worst)`` agreement over every frozen case.
+
+    Recomputed here rather than read from anywhere, so that the range the
+    documents quote is checked against what the comparison actually
+    produces today.
+    """
+    import test_nusquids_comparison as comparison
+
+    deviations = []
+    for case in comparison.CASES:
+        density = case['density_g_cm3']
+        potentials = ((None, None) if density is None
+                      else comparison.matched_potentials(density))
+        ours = comparison.our_probabilities(
+            case, comparison.matched_km(), potentials)
+        theirs = np.asarray(case['probabilities'])
+        deviations.append(np.max(np.abs(ours - theirs)))
+
+    return min(deviations), max(deviations)
+
+
+def test_the_frozen_case_count_is_described_correctly():
+    r"""Prose saying how many cases are frozen agrees with the data.
+
+    This is the claim that has gone stale most often: the set grew from
+    seven to eleven and three separate files went on saying seven.
+    """
+    count = len(frozen_cases())
+    correct = COUNT_WORDS[count]
+
+    for path in COUNT_FILES:
+        text = read_flowed(path)
+        for number, word in COUNT_WORDS.items():
+            if number == count:
+                continue
+            stale = re.search(r'\b%s configurations\b' % word, text)
+            assert not stale, (
+                '%s says "%s configurations"; there are %d, so it should '
+                'say "%s"' % (os.path.relpath(path, ROOT), word, count,
+                              correct))
+
+
+def test_the_quoted_agreement_range_matches_the_measured_one():
+    r"""The range the documents quote brackets what is measured.
+
+    Checked as decades rather than digits: the point is that a document
+    claiming agreement "to 1e-15" when the worst case is 3e-10 is wrong
+    by five orders of magnitude, not that the mantissa has drifted.
+    """
+    best, worst = measured_agreement()
+
+    assert best < 1.0e-14, (
+        'the best frozen case now agrees only to %.2e; the documents '
+        'describe round-off agreement' % best)
+    assert worst < 1.0e-9, (
+        'the worst frozen case now agrees only to %.2e, which is outside '
+        'what oscprob4nu.POLISH_ROOTS documents' % worst)
+
+    # The superseded upper bound, written before the antineutrino case
+    # existed.  It appeared in two files and was wrong in both.
+    for path in (MAKE_NOTEBOOKS, NUSQUIDS_TEST, INDEX_RST):
+        text = read_flowed(path)
+        assert 'between 1e-11 and 1e-15' not in text, (
+            '%s quotes a superseded agreement range; the worst case is '
+            'now %.2e' % (os.path.relpath(path, ROOT), worst))
+
+
+def test_every_frozen_case_is_reachable_by_the_notebook():
+    r"""The notebook does not silently skip a case it should cover.
+
+    ``ours()`` in the notebook handles antineutrinos and a mass-ordering
+    override.  A case added to the JSON with some further variation would
+    be computed with the wrong Hamiltonian and quietly widen the range,
+    so the keys the notebook understands are pinned here.
+    """
+    understood = {'name', 'n_flavors', 'energy_gev', 'baseline_km',
+                  'density_g_cm3', 'antineutrino', 'dm31', 'probabilities'}
+
+    for case in frozen_cases():
+        unexpected = set(case) - understood
+        assert not unexpected, (
+            'the frozen case %r carries %s, which neither the notebook nor '
+            'the comparison test knows how to apply'
+            % (case['name'], sorted(unexpected)))

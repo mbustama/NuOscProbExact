@@ -13,7 +13,7 @@
 # NuOscProbExact
 Code to compute exact two-, three- and four-neutrino oscillation probabilities using SU(2), SU(3) and SU(4) expansions
 
-> **Note:** The oscillation probabilities are computed exactly, with no approximation beyond floating-point round-off.  A regression test suite lives in `tests/` and can be run with `pytest`.
+> **Note:** The oscillation probabilities are computed exactly, with no approximation beyond floating-point round-off.  A regression test suite lives in `tests/` and can be run with `pytest`, and the results are cross-checked against [nuSQuIDS](https://github.com/arguelles/nuSQuIDS), an independent external code — see [notebook 17](notebooks/17_cross_checks.ipynb).
 
 ## What you can compute
 
@@ -69,7 +69,7 @@ The method relies on expansions of the Hamiltonian and time-evolution operators 
 
 ### What it does
 
-* **Exact probabilities for any Hermitian 2×2, 3×3 or 4×4 Hamiltonian.**  There is no approximation beyond floating-point round-off.  Oscillations in vacuum, in matter, with non-standard interactions, in a Lorentz invariance-violating background and with sterile states are not special cases in the code — each is a different matrix handed to the same routine.
+* **Exact probabilities for any Hermitian 2×2, 3×3 or 4×4 Hamiltonian.**  There is no approximation beyond floating-point round-off, and the probabilities agree with the independently written [nuSQuIDS](https://github.com/arguelles/nuSQuIDS) to round-off once conventions are matched ([notebook 17](notebooks/17_cross_checks.ipynb)).  Oscillations in vacuum, in matter, with non-standard interactions, in a Lorentz invariance-violating background and with sterile states are not special cases in the code — each is a different matrix handed to the same routine.
 * **Four flavors, for 3+1 sterile scenarios.**  `oscprob4nu` carries the same closed-form treatment to SU(4), which is the last place it reaches: at five flavors the eigenvalues stop being expressible in radicals, and that is a theorem rather than a missing feature.  A 3+1 system is closed and unitary over all four states, so it sits squarely inside the method's assumptions rather than "leaking" out of a three-flavor block.
 * **The evolution operator itself**, not only the probabilities, so it can be composed across segments or used to propagate a density matrix.
 * **Whole scans in one call.**  Every core routine accepts a stack of Hamiltonians, an array of baselines, or both broadcast against each other, which is tens of times faster than the equivalent Python loop and gives identical results.
@@ -246,6 +246,7 @@ NuOscProbExact/
 │   ├── 14_solar_and_adiabatic_msw.ipynb  # The MSW resonance, and the cost wall
 │   ├── 15_numerical_edge_cases.ipynb  # Degeneracies, and what does not go NaN
 │   ├── 16_four_neutrinos.ipynb      # A 3+1 sterile state, through the SU(4) expansion
+│   ├── 17_cross_checks.ipynb        # Corroboration from nuSQuIDS and Zaglauer-Schwarzer
 │   └── make_notebooks.py            # Generates and executes all of the above
 ├── src/                             # The library
 │   ├── oscprob2nu.py                # Two-flavor probabilities, SU(2) expansion
@@ -266,6 +267,7 @@ NuOscProbExact/
     ├── test_probabilities.py        # Normalization, positivity, P = |U|^2
     ├── test_hamiltonians.py         # Sample Hamiltonians and sign conventions
     ├── test_reference_formulas.py   # Exact result against the standard formulas
+    ├── test_matter_eigenvalues.py   # Matter spectrum, against Zaglauer-Schwarzer
     ├── test_edge_cases.py           # Degenerate and near-degenerate Hamiltonians
     ├── test_docstrings.py           # Runs the examples embedded in the docstrings
     ├── test_vectorized.py           # The batched path, against the scalar one
@@ -276,6 +278,9 @@ NuOscProbExact/
     ├── test_slabs.py                # Slab composition, against expm
     ├── test_earth.py                # PREM, geometry, and Earth probabilities
     ├── test_documented_figures.py   # Keeps the quoted performance figures agreeing
+    ├── test_nusquids_comparison.py  # Against nuSQuIDS, an independent external code
+    ├── nusquids_reference.py        # Regenerates the frozen nuSQuIDS reference data
+    ├── nusquids_reference.json      # Those reference values, with their provenance
     └── test_file_tree.py            # Keeps this tree in step with the repository
 ```
 
@@ -314,7 +319,7 @@ import oscprob3nu
    pip install -e ".[notebooks]"
    jupyter lab notebooks/
    ```
-   Sixteen worked notebooks, numbered in reading order, covering the probabilities against baseline and against energy, matter and new physics, oscillograms, bi-probability plots, the Earth, arbitrary matter profiles, performance, the paper's own figures, the textbook approximations, mass ordering and the octant, antineutrinos, solar neutrinos, numerical edge cases, and four-neutrino 3+1 scenarios.  They carry their figures inline, so they can also just be read on GitHub.
+   Seventeen worked notebooks, numbered in reading order, covering the probabilities against baseline and against energy, matter and new physics, oscillograms, bi-probability plots, the Earth, arbitrary matter profiles, performance, the paper's own figures, the textbook approximations, mass ordering and the octant, antineutrinos, solar neutrinos, numerical edge cases, four-neutrino 3+1 scenarios, and cross-checks with other public codes.  They carry their figures inline, so they can also just be read on GitHub.
 
 ## Performance
 
@@ -1040,7 +1045,7 @@ Though we do not show it here, `hamiltonian_mymodel` could also depend on `energ
 
 ## Notebooks
 
-Sixteen worked notebooks live in [`notebooks/`](notebooks/), numbered in reading order.  They carry their figures inline, so they render on GitHub without being run:
+Seventeen worked notebooks live in [`notebooks/`](notebooks/), numbered in reading order.  They carry their figures inline, so they render on GitHub without being run:
 
 | Notebook | What it covers |
 |---|---|
@@ -1060,6 +1065,7 @@ Sixteen worked notebooks live in [`notebooks/`](notebooks/), numbered in reading
 | [14 Solar and the MSW resonance](notebooks/14_solar_and_adiabatic_msw.ipynb) | The adiabatic resonance, validated — and why slabs are the wrong tool for it |
 | [15 Numerical edge cases](notebooks/15_numerical_edge_cases.ipynb) | Degenerate spectra, and what returns a number instead of NaN |
 | [16 Four neutrinos](notebooks/16_four_neutrinos.ipynb) | A 3+1 sterile state through SU(4), and why the method stops at four |
+| [17 Cross-checks with other codes](notebooks/17_cross_checks.ipynb) | Corroboration from nuSQuIDS and from Zaglauer–Schwarzer, and the conventions that had to be matched |
 
 Run them with `pip install -e ".[notebooks]"` and `jupyter lab notebooks/`.  Every one of them is executed by CI, so an example that stops working fails the build.
 

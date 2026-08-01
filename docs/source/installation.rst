@@ -221,6 +221,7 @@ File tree
    │   ├── 14_solar_and_adiabatic_msw.ipynb  # The MSW resonance, and the cost wall
    │   ├── 15_numerical_edge_cases.ipynb  # Degeneracies, and what does not go NaN
    │   ├── 16_four_neutrinos.ipynb      # A 3+1 sterile state, through the SU(4) expansion
+   │   ├── 17_cross_checks.ipynb        # Corroboration from nuSQuIDS and Zaglauer-Schwarzer
    │   └── make_notebooks.py            # Generates and executes all of the above
    ├── src/                             # The library
    │   ├── oscprob2nu.py                # Two-flavor probabilities, SU(2) expansion
@@ -241,6 +242,7 @@ File tree
        ├── test_probabilities.py        # Normalization, positivity, P = |U|^2
        ├── test_hamiltonians.py         # Sample Hamiltonians and sign conventions
        ├── test_reference_formulas.py   # Exact result against the standard formulas
+       ├── test_matter_eigenvalues.py   # Matter spectrum, against Zaglauer-Schwarzer
        ├── test_edge_cases.py           # Degenerate and near-degenerate Hamiltonians
        ├── test_docstrings.py           # Runs the examples embedded in the docstrings
        ├── test_vectorized.py           # The batched path, against the scalar one
@@ -251,4 +253,7 @@ File tree
        ├── test_slabs.py                # Slab composition, against expm
        ├── test_earth.py                # PREM, geometry, and Earth probabilities
        ├── test_documented_figures.py   # Keeps the quoted performance figures agreeing
+       ├── test_nusquids_comparison.py  # Against nuSQuIDS, an independent external code
+       ├── nusquids_reference.py        # Regenerates the frozen nuSQuIDS reference data
+       ├── nusquids_reference.json      # Those reference values, with their provenance
        └── test_file_tree.py            # Keeps this tree in step with the repository

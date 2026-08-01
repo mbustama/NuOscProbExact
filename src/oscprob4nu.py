@@ -180,6 +180,12 @@ transforms that each carry a backward error of order
 Extended precision was rejected for buying under a digit, being slower,
 and silently being ``float64`` on Apple Silicon and Windows.
 
+The refined figure has been confirmed from outside: against `nuSQuIDS
+<https://github.com/arguelles/nuSQuIDS>`_, which integrates the density
+matrix numerically, the four-flavor probabilities agree to
+:math:`4 \times 10^{-16}` on a benign spectrum and
+:math:`3 \times 10^{-10}` on the stiffest one tested.  See notebook 17.
+
 In probabilities the difference is :math:`5 \times 10^{-7}` unrefined
 against :math:`10^{-9}` refined.  Both are orders of magnitude below what
 any experiment resolves; the reasons to want the smaller one are the
