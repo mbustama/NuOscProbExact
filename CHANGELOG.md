@@ -5,6 +5,60 @@ All notable changes to **NuOscProbExact** are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.8.4] - 2026-08-01
+
+### Changed
+
+- **Docstring examples are executed when the documentation is built.**  Every
+  `Examples` block is now a `.. jupyter-execute::` directive, following the
+  pattern the sibling Magnus package uses: self-contained, importing what it
+  needs, so it can be copied straight out of the page.  The API reference no
+  longer shows `>>>` prompts with results pasted beside them — 42 blocks, 0
+  prompts left.
+
+  Each converted block was checked against the output its doctest documented,
+  and all 42 reproduce it exactly, so nothing about what the examples *do*
+  changed.
+
+  `tests/test_docstrings.py` is repurposed rather than left hollow.  It now
+  extracts and executes the same blocks on every supported Python — the
+  documentation is built by one job on one interpreter, and an example that
+  works on 3.12 and not on 3.9 would otherwise reach the published page
+  unnoticed.  A second test refuses any `>>>` example that creeps back, since
+  the run-test would not see it.
+
+- **The performance figures are re-measured and reconciled.**  Three places
+  quoted different numbers for the same four benchmarks: `fastkernels` said
+  ~20x, ~15x, ~5x and ~4x; the 1.6.0 changelog entry said 12.5×, 15.0×, 2.3×
+  and 3.7×; and neither matched what the code does now, which is ~15x, ~9x,
+  ~3.5x and ~1.5x.
+
+  The live claims — in `fastkernels`, the README, `index.rst`, `quickstart.rst`
+  and `methodology.rst` — now carry the same measured figures, taken best of
+  seven with the two paths interleaved, and say plainly that they move by tens
+  of per cent between runs.  The 1.6.0 entry below is left as it was written:
+  it records what was measured then, and rewriting it would falsify the record
+  rather than correct it.
+
+  The scalar timings drifted too, and are corrected: about 16 µs for three
+  flavors and 2 µs for two, against the 13 µs and 1.3 µs previously quoted.
+
+  Notebook 09 measures the same comparison on whatever machine runs it, and the
+  documentation now points at it as the figure to trust.
+
+### Fixed
+
+- Two `test/` examples were referenced in `README.md` under names that do not
+  exist — `example_2nu_vacuum_coefficients.py` and its three-flavor
+  counterpart, where the files are `..._coeffs.py`.
+
+- Nothing executed the worked examples in `test/`, which is why the broken
+  references went unnoticed; a step in `lint.yml` now runs all nine.  They are
+  the examples the paper refers to and the ones `README.md` walks through, so
+  they are kept rather than removed, but they are now checked.
+
+- `README.md` still described the notebooks as nine; there are fifteen.
+
 ## [1.8.3] - 2026-08-01
 
 ### Changed
