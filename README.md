@@ -100,144 +100,184 @@ The method relies on expansions of the Hamiltonian and time-evolution operators 
 
 ## Installation
 
-Because **NuOscProbExact** is written fully in Python, no compilation or linking is necessary.  The installation is simple and consists only in fetching the files from GitHub.
+**NuOscProbExact** is pure Python: there is nothing to compile or link.
 
 > **Python version:** The code requires Python 3.9 or newer, and every release is tested on 3.9, 3.10, 3.11, 3.12, and 3.13.  The floor comes from `numpy.broadcast_shapes`, which the batched paths use and which arrived in NumPy 1.20; 3.9 is also the oldest version for which the optional `numba` backend still has a wheel.
 
-Instructions:
+### From PyPI (recommended)
 
-1. In the file system where you would like to install **NuOscProbExact**, go to the directory where you would like the code to be downloaded, *e.g.*,
-   ```shell
-   cd /home/MyProjects
-   ```
+```shell
+pip install nuoscprobexact
+```
 
-2. From there, fetch the code from the GitHub repository with
-   ```shell
-   git clone https://github.com/mbustama/NuOscProbExact.git
-   ```
-   (Alternatively, you can download the zip file from GitHub and uncompress it.)
+That is the whole installation.  The only required dependency is `numpy`.
 
-   Doing this will create the directory `/home/MyProjects/NuOscProbExact`, with the following file structure:
-   ```text
-   NuOscProbExact/
-   ├── .github/                         # Continuous integration (GitHub Actions)
-   │   └── workflows/
-   │       ├── tests.yml                # The suite: five Pythons, all three backends
-   │       ├── lint.yml                 # ruff, and the docs build under -W
-   │       ├── pages.yml                # Builds and deploys the docs to GitHub Pages
-   │       └── publish.yml              # Publishes to PyPI on a GitHub Release
-   ├── .gitignore                       # Build, cache, and generated-output artefacts
-   ├── CHANGELOG.md                     # Notable changes, rendered as a docs page
-   ├── LICENSE                          # MIT license
-   ├── README.md                        # The file that you are reading
-   ├── pyproject.toml                   # Packaging metadata and pytest configuration
-   ├── docs/                            # Sphinx documentation
-   │   ├── Makefile                     # `make html` on Linux and macOS
-   │   ├── make.bat                     # `make html` on Windows
-   │   ├── requirements.txt             # Documentation-only dependencies
-   │   └── source/
-   │       ├── conf.py                  # Sphinx configuration
-   │       ├── index.rst                # Landing page
-   │       ├── installation.rst         # Requirements, installation, file tree
-   │       ├── quickstart.rst           # Shortest path to a probability
-   │       ├── recipes.rst              # Numerical recipes, with pre-generated figures
-   │       ├── methodology.rst          # The SU(2) and SU(3) expansions
-   │       ├── functions.rst            # API reference, from the docstrings
-   │       ├── references.rst           # Bibliography
-   │       ├── refs.bib                 # BibTeX entries for the bibliography
-   │       ├── changelog.rst            # Includes the root CHANGELOG.md
-   │       └── _static/
-   │           └── nuoscprobexact_logo.png
-   ├── img/                             # Pre-computed figures shown in README.md
-   │   ├── prob_3nu_vacuum_vs_baseline_ee_em_et.png
-   │   ├── prob_3nu_vacuum_vs_energy_ee_em_et.png
-   │   └── gallery/                     # Figures lifted from the notebooks, shown in README.md
-   │       ├── gallery_biprobability.png
-   │       ├── gallery_earth.png
-   │       ├── gallery_matter.png
-   │       ├── gallery_ordering.png
-   │       ├── gallery_oscillogram.png
-   │       ├── gallery_prem.png
-   │       ├── gallery_profiles.png
-   │       └── gallery_vacuum.png
-   ├── notebooks/                       # Worked examples, with their figures stored inline
-   │   ├── 01_basics.ipynb              # Units, one probability, and broadcasting
-   │   ├── 02_vacuum_oscillations.ipynb # Against baseline and against energy
-   │   ├── 03_matter_nsi_liv.ipynb      # Constant-density matter, NSI, and LIV
-   │   ├── 04_oscillogram.ipynb         # Energy-baseline maps in one call
-   │   ├── 05_biprobability.ipynb       # CP ellipses, in vacuum and in matter
-   │   ├── 06_earth_and_prem.ipynb      # PREM, chord geometry, and slabs
-   │   ├── 07_earth_probabilities.ipynb # Through the Earth, and between sites
-   │   ├── 08_unusual_density_profiles.ipynb  # Castle-wall and other hand-built profiles
-   │   ├── 09_performance.ipynb         # Looping vs broadcasting, and the backend
-   │   ├── 10_paper_figures.ipynb       # The two figures from arXiv:1904.12391
-   │   ├── 11_exact_vs_approximations.ipynb  # Where the textbook formulas break down
-   │   ├── 12_ordering_and_octant.ipynb # Normal vs inverted, and the 23 octant
-   │   ├── 13_antineutrinos.ipynb       # Conjugate and flip, and two ways to slip
-   │   ├── 14_solar_and_adiabatic_msw.ipynb  # The MSW resonance, and the cost wall
-   │   ├── 15_numerical_edge_cases.ipynb  # Degeneracies, and what does not go NaN
-   │   └── make_notebooks.py            # Generates and executes all of the above
-   ├── src/                             # The library
-   │   ├── oscprob2nu.py                # Two-flavor probabilities, SU(2) expansion
-   │   ├── oscprob3nu.py                # Three-flavor probabilities, SU(3) expansion
-   │   ├── hamiltonians2nu.py           # Example two-flavor Hamiltonians
-   │   ├── hamiltonians3nu.py           # Example three-flavor Hamiltonians
-   │   ├── globaldefs.py                # Physical constants and unit conversions
-   │   ├── fastkernels.py               # Optional Numba kernels, with a NumPy fallback
-   │   ├── slabs.py                     # Propagation across adjacent slabs
-   │   └── earth.py                     # PREM, chord geometry, and Earth crossings
-   ├── test/                            # The worked examples from the paper
-   │   ├── example_2nu_trivial.py       # Two-flavor, arbitrary Hamiltonian
-   │   ├── example_2nu_vacuum.py        # Two-flavor, oscillations in vacuum
-   │   ├── example_2nu_vacuum_coeffs.py # Two-flavor, expansion coefficients
-   │   ├── example_3nu_trivial.py       # Three-flavor, arbitrary Hamiltonian
-   │   ├── example_3nu_vacuum.py        # Three-flavor, oscillations in vacuum
-   │   ├── example_3nu_vacuum_coeffs.py # Three-flavor, expansion coefficients
-   │   ├── example_3nu_matter.py        # Three-flavor, oscillations in matter
-   │   ├── example_3nu_nsi.py           # Three-flavor, matter with NSI
-   │   └── example_3nu_liv.py           # Three-flavor, LIV background
-   └── tests/                           # Regression suite, run with pytest
-       ├── conftest.py                  # Shared fixtures and path setup
-       ├── test_su3_algebra.py          # d tensor, star product, SU(3) invariants
-       ├── test_evolution_operator.py   # U against an independent matrix exponential
-       ├── test_probabilities.py        # Normalization, positivity, P = |U|^2
-       ├── test_hamiltonians.py         # Sample Hamiltonians and sign conventions
-       ├── test_reference_formulas.py   # Exact result against the standard formulas
-       ├── test_edge_cases.py           # Degenerate and near-degenerate Hamiltonians
-       ├── test_docstrings.py           # Runs the examples embedded in the docstrings
-       ├── test_vectorized.py           # The batched path, against the scalar one
-       ├── test_vectorized_hamiltonians.py  # Hamiltonians built for an array of energies
-       ├── test_annotations.py          # Annotations, and their agreement with the docs
-       ├── test_fastkernels.py          # Both backends, against each other
-       ├── test_physical_scales.py      # Both backends at the scales actually used
-       ├── test_slabs.py                # Slab composition, against expm
-       ├── test_earth.py                # PREM, geometry, and Earth probabilities
-       └── test_file_tree.py            # Keeps this tree in step with the repository
-   ```
-   Now you are ready to start using **NuOscProbExact**.
+The optional extras add what each task needs, and can be combined:
 
-3. (Optional) Install the package, so that the modules are importable from anywhere
-   ```shell
-   cd /home/MyProjects/NuOscProbExact
-   pip install -e .
-   ```
-   This puts `oscprob2nu`, `oscprob3nu`, `hamiltonians2nu`, `hamiltonians3nu`, and `globaldefs` on your Python path, so you no longer need `sys.path.append`.  Skipping this step is fine: the examples add `../src` to the path themselves.
+```shell
+pip install "nuoscprobexact[fast]"       # numba, for the compiled batched kernels
+pip install "nuoscprobexact[notebooks]"  # Jupyter, matplotlib and scipy, for notebooks/
+pip install "nuoscprobexact[test]"       # pytest and scipy, to run the regression suite
+pip install "nuoscprobexact[docs]"       # Sphinx and friends, to build the documentation
+```
 
-4. (Optional, recommended) Run the examples
+Then, in your own code:
+
+```python
+import numpy as np
+import oscprob3nu
+import hamiltonians3nu
+import globaldefs as gd
+
+h_vacuum = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(
+    gd.S12_NO_BF, gd.S23_NO_BF, gd.S13_NO_BF, gd.DCP_NO_BF,
+    gd.D21_NO_BF, gd.D31_NO_BF)
+
+prob = oscprob3nu.probabilities_3nu(
+    np.asarray(h_vacuum)/1.e9, 1300.0*gd.CONV_KM_TO_INV_EV)
+```
+
+The modules are installed under their bare names --- `oscprob2nu`, `oscprob3nu`, `hamiltonians2nu`, `hamiltonians3nu`, `globaldefs`, `fastkernels`, `slabs`, `earth` --- which is the same way the paper and the worked examples refer to them.
+
+### From GitHub
+
+Install from a clone if you want the notebooks, the worked examples from the paper, the regression suite, or a version that is not yet released:
+
+```shell
+git clone https://github.com/mbustama/NuOscProbExact.git
+cd NuOscProbExact
+pip install -e .
+```
+
+`-e` installs in editable mode, so edits to `src/` take effect without reinstalling.  The extras work the same way, for example `pip install -e ".[fast,test]"`.
+
+A clone gives you the following file structure:
+
+```text
+NuOscProbExact/
+├── .github/                         # Continuous integration (GitHub Actions)
+│   └── workflows/
+│       ├── tests.yml                # The suite: five Pythons, all three backends
+│       ├── lint.yml                 # ruff, and the docs build under -W
+│       ├── pages.yml                # Builds and deploys the docs to GitHub Pages
+│       └── publish.yml              # Publishes to PyPI on a GitHub Release
+├── .gitignore                       # Build, cache, and generated-output artefacts
+├── CHANGELOG.md                     # Notable changes, rendered as a docs page
+├── LICENSE                          # MIT license
+├── README.md                        # The file that you are reading
+├── pyproject.toml                   # Packaging metadata and pytest configuration
+├── docs/                            # Sphinx documentation
+│   ├── Makefile                     # `make html` on Linux and macOS
+│   ├── make.bat                     # `make html` on Windows
+│   ├── requirements.txt             # Documentation-only dependencies
+│   └── source/
+│       ├── conf.py                  # Sphinx configuration
+│       ├── index.rst                # Landing page
+│       ├── installation.rst         # Requirements, installation, file tree
+│       ├── quickstart.rst           # Shortest path to a probability
+│       ├── recipes.rst              # Numerical recipes, with pre-generated figures
+│       ├── methodology.rst          # The SU(2) and SU(3) expansions
+│       ├── functions.rst            # API reference, from the docstrings
+│       ├── references.rst           # Bibliography
+│       ├── refs.bib                 # BibTeX entries for the bibliography
+│       ├── changelog.rst            # Includes the root CHANGELOG.md
+│       └── _static/
+│           └── nuoscprobexact_logo.png
+├── img/                             # Pre-computed figures shown in README.md
+│   ├── prob_3nu_vacuum_vs_baseline_ee_em_et.png
+│   ├── prob_3nu_vacuum_vs_energy_ee_em_et.png
+│   └── gallery/                     # Figures lifted from the notebooks, shown in README.md
+│       ├── gallery_biprobability.png
+│       ├── gallery_earth.png
+│       ├── gallery_matter.png
+│       ├── gallery_ordering.png
+│       ├── gallery_oscillogram.png
+│       ├── gallery_prem.png
+│       ├── gallery_profiles.png
+│       └── gallery_vacuum.png
+├── notebooks/                       # Worked examples, with their figures stored inline
+│   ├── 01_basics.ipynb              # Units, one probability, and broadcasting
+│   ├── 02_vacuum_oscillations.ipynb # Against baseline and against energy
+│   ├── 03_matter_nsi_liv.ipynb      # Constant-density matter, NSI, and LIV
+│   ├── 04_oscillogram.ipynb         # Energy-baseline maps in one call
+│   ├── 05_biprobability.ipynb       # CP ellipses, in vacuum and in matter
+│   ├── 06_earth_and_prem.ipynb      # PREM, chord geometry, and slabs
+│   ├── 07_earth_probabilities.ipynb # Through the Earth, and between sites
+│   ├── 08_unusual_density_profiles.ipynb  # Castle-wall and other hand-built profiles
+│   ├── 09_performance.ipynb         # Looping vs broadcasting, and the backend
+│   ├── 10_paper_figures.ipynb       # The two figures from arXiv:1904.12391
+│   ├── 11_exact_vs_approximations.ipynb  # Where the textbook formulas break down
+│   ├── 12_ordering_and_octant.ipynb # Normal vs inverted, and the 23 octant
+│   ├── 13_antineutrinos.ipynb       # Conjugate and flip, and two ways to slip
+│   ├── 14_solar_and_adiabatic_msw.ipynb  # The MSW resonance, and the cost wall
+│   ├── 15_numerical_edge_cases.ipynb  # Degeneracies, and what does not go NaN
+│   └── make_notebooks.py            # Generates and executes all of the above
+├── src/                             # The library
+│   ├── oscprob2nu.py                # Two-flavor probabilities, SU(2) expansion
+│   ├── oscprob3nu.py                # Three-flavor probabilities, SU(3) expansion
+│   ├── hamiltonians2nu.py           # Example two-flavor Hamiltonians
+│   ├── hamiltonians3nu.py           # Example three-flavor Hamiltonians
+│   ├── globaldefs.py                # Physical constants and unit conversions
+│   ├── fastkernels.py               # Optional Numba kernels, with a NumPy fallback
+│   ├── slabs.py                     # Propagation across adjacent slabs
+│   └── earth.py                     # PREM, chord geometry, and Earth crossings
+├── test/                            # The worked examples from the paper
+│   ├── example_2nu_trivial.py       # Two-flavor, arbitrary Hamiltonian
+│   ├── example_2nu_vacuum.py        # Two-flavor, oscillations in vacuum
+│   ├── example_2nu_vacuum_coeffs.py # Two-flavor, expansion coefficients
+│   ├── example_3nu_trivial.py       # Three-flavor, arbitrary Hamiltonian
+│   ├── example_3nu_vacuum.py        # Three-flavor, oscillations in vacuum
+│   ├── example_3nu_vacuum_coeffs.py # Three-flavor, expansion coefficients
+│   ├── example_3nu_matter.py        # Three-flavor, oscillations in matter
+│   ├── example_3nu_nsi.py           # Three-flavor, matter with NSI
+│   └── example_3nu_liv.py           # Three-flavor, LIV background
+└── tests/                           # Regression suite, run with pytest
+    ├── conftest.py                  # Shared fixtures and path setup
+    ├── test_su3_algebra.py          # d tensor, star product, SU(3) invariants
+    ├── test_evolution_operator.py   # U against an independent matrix exponential
+    ├── test_probabilities.py        # Normalization, positivity, P = |U|^2
+    ├── test_hamiltonians.py         # Sample Hamiltonians and sign conventions
+    ├── test_reference_formulas.py   # Exact result against the standard formulas
+    ├── test_edge_cases.py           # Degenerate and near-degenerate Hamiltonians
+    ├── test_docstrings.py           # Runs the examples embedded in the docstrings
+    ├── test_vectorized.py           # The batched path, against the scalar one
+    ├── test_vectorized_hamiltonians.py  # Hamiltonians built for an array of energies
+    ├── test_annotations.py          # Annotations, and their agreement with the docs
+    ├── test_fastkernels.py          # Both backends, against each other
+    ├── test_physical_scales.py      # Both backends at the scales actually used
+    ├── test_slabs.py                # Slab composition, against expm
+    ├── test_earth.py                # PREM, geometry, and Earth probabilities
+    └── test_file_tree.py            # Keeps this tree in step with the repository
+```
+
+### Without installing anything
+
+The two core modules are self-contained --- they need only `numpy` and `cmath` --- so copying `src/oscprob2nu.py` or `src/oscprob3nu.py` into your own project is a supported way to use **NuOscProbExact**.  Adding `src/` to the path works too, and is what the bundled examples do:
+
+```python
+import sys
+sys.path.append('/path/to/NuOscProbExact/src')
+
+import oscprob3nu
+```
+
+### Checking the installation
+
+**Run the worked examples.**
    Inside the directory `test/`, we provide several example files to get you started.  We also elaborate on these examples later in this README, and show the output thay you should expect from them.  To run any of the examples, just execute, *e.g.*,
    ```shell
    python example_2nu_trivial.py
    ```
    Inspecting the example files and reading their description below will help you to learn how to use **NuOscProbExact** in your own project.
 
-5. (Optional, recommended) Run the regression tests
+**Run the regression tests.**
    ```shell
    cd /home/MyProjects/NuOscProbExact
    pytest
    ```
    These check the SU(2) and SU(3) machinery against independent computations --- unitarity of the evolution operator, agreement with `scipy.linalg.expm`, agreement with the standard oscillation formulas, and the sign conventions of the sample Hamiltonians --- and run every example embedded in the docstrings.
 
-6. (Optional) Open the notebooks
+**Open the notebooks.**
    ```shell
    cd /home/MyProjects/NuOscProbExact
    pip install -e ".[notebooks]"

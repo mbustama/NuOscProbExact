@@ -42,33 +42,59 @@ backend still has a wheel.
 Installing
 ----------
 
-Clone the repository:
+From PyPI (recommended)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: shell
+
+   pip install nuoscprobexact
+
+That is the whole installation.  The only required dependency is ``numpy``.
+
+The optional extras add what each task needs, and can be combined:
+
+.. code-block:: shell
+
+   pip install "nuoscprobexact[fast]"       # numba, for the compiled kernels
+   pip install "nuoscprobexact[notebooks]"  # Jupyter, matplotlib and scipy
+   pip install "nuoscprobexact[test]"       # pytest and scipy
+   pip install "nuoscprobexact[docs]"       # Sphinx and friends
+
+This puts ``oscprob2nu``, ``oscprob3nu``, ``hamiltonians2nu``,
+``hamiltonians3nu``, ``globaldefs``, ``fastkernels``, ``slabs`` and ``earth``
+on your Python path under exactly those names --- the same names the paper and
+the worked examples use.
+
+From GitHub
+^^^^^^^^^^^
+
+Install from a clone if you want the notebooks, the worked examples from the
+paper, the regression suite, or a version that is not yet released:
 
 .. code-block:: shell
 
    git clone https://github.com/mbustama/NuOscProbExact.git
    cd NuOscProbExact
-
-Then, optionally, install it so the modules are importable from anywhere:
-
-.. code-block:: shell
-
    pip install -e .
 
-This puts ``oscprob2nu``, ``oscprob3nu``, ``hamiltonians2nu``,
-``hamiltonians3nu``, ``globaldefs``, ``fastkernels``, ``slabs`` and ``earth``
-on your Python path under exactly those names.  Skipping this step is fine: the bundled examples add ``../src`` to
-``sys.path`` themselves, and you can do the same, or simply copy the two core
-modules into your own project.
+``-e`` installs in editable mode, so edits to ``src/`` take effect without
+reinstalling.  The extras work the same way, for example
+``pip install -e ".[fast,test]"``.
 
-Optional extras install the dependencies for each task:
+Without installing anything
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. code-block:: shell
+The two core modules are self-contained --- they need only ``numpy`` and
+``cmath`` --- so copying ``src/oscprob2nu.py`` or ``src/oscprob3nu.py`` into
+your own project is a supported way to use **NuOscProbExact**.  Adding
+``src/`` to the path works too, and is what the bundled examples do:
 
-   pip install -e ".[fast]"    # numba, for the compiled batched kernels
-   pip install -e ".[plots]"   # matplotlib, for the figures
-   pip install -e ".[test]"    # pytest and scipy, for the regression suite
-   pip install -e ".[docs]"    # sphinx and friends, for this documentation
+.. code-block:: python
+
+   import sys
+   sys.path.append('/path/to/NuOscProbExact/src')
+
+   import oscprob3nu
 
 Checking the installation
 -------------------------

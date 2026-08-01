@@ -200,6 +200,12 @@ Getting started
 
 .. code-block:: shell
 
+   pip install nuoscprobexact
+
+or, for a clone with the notebooks, the worked examples and the test suite:
+
+.. code-block:: shell
+
    git clone https://github.com/mbustama/NuOscProbExact.git
    cd NuOscProbExact
    pip install -e .
