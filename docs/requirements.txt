@@ -1,19 +1,21 @@
-# Documentation-only dependencies.  The library itself needs only numpy.
+# Documentation dependencies.  The library itself needs only numpy.
+#
+# This file used to list the dozen Sphinx packages by name, alongside a
+# `docs` extra in pyproject.toml that listed some of them.  The two drifted:
+# the extra was four packages short of being able to build anything, and
+# nothing noticed because the workflows installed this file instead.  So
+# there is now one list, in pyproject.toml, and this file points at it.
+#
+# Run from the repository root, since `-e .` is resolved relative to the
+# working directory and not to this file:
 #
 #     pip install -r docs/requirements.txt
 #     cd docs && make html
 #
-sphinx
-sphinx-rtd-theme
-sphinx-copybutton
-sphinxcontrib-bibtex
-numpydoc
-myst-parser
-# Executes the example blocks in quickstart.rst and recipes.rst at build
-# time, so the numbers and figures on those pages are produced by the code
-# being documented rather than pasted beside it.
-jupyter-sphinx
-ipykernel
-matplotlib
-scipy
-numpy
+# The install is *editable*, and that matters beyond convenience:
+# jupyter-sphinx executes the `.. jupyter-execute::` blocks in
+# quickstart.rst, recipes.rst and the docstrings in a real kernel, which is
+# a separate process.  The `sys.path.insert` in docs/source/conf.py applies
+# to Sphinx itself and never reaches that kernel, so the modules have to be
+# importable properly rather than merely findable from the source tree.
+-e .[docs]
