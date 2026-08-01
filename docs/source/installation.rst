@@ -241,6 +241,7 @@ File tree
        ├── test_probabilities.py        # Normalization, positivity, P = |U|^2
        ├── test_hamiltonians.py         # Sample Hamiltonians and sign conventions
        ├── test_reference_formulas.py   # Exact result against the standard formulas
+       ├── test_matter_eigenvalues.py   # Matter spectrum, against Zaglauer-Schwarzer
        ├── test_edge_cases.py           # Degenerate and near-degenerate Hamiltonians
        ├── test_docstrings.py           # Runs the examples embedded in the docstrings
        ├── test_vectorized.py           # The batched path, against the scalar one

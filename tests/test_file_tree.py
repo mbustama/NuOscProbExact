@@ -153,6 +153,8 @@ TREE = [
     ('tests/test_hamiltonians.py', 'Sample Hamiltonians and sign conventions'),
     ('tests/test_reference_formulas.py',
      'Exact result against the standard formulas'),
+    ('tests/test_matter_eigenvalues.py',
+     'Matter spectrum, against Zaglauer-Schwarzer'),
     ('tests/test_edge_cases.py',
      'Degenerate and near-degenerate Hamiltonians'),
     ('tests/test_docstrings.py',
