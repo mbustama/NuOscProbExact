@@ -71,7 +71,15 @@ The roots are therefore refined against the *matrix*, by one Newton step
 on :math:`\chi(\psi) = \det(\psi \mathbb{1} - \tilde{H})`, which uses the
 Hamiltonian entries rather than the three compressed invariants.  That
 restores the roots to round-off and the probabilities from about
-:math:`5 \times 10^{-7}` to :math:`10^{-9}`; see :data:`POLISH_ROOTS`.
+:math:`5 \times 10^{-7}` to :math:`10^{-9}`.
+
+Neither figure is anywhere near a measurable effect --- probabilities
+are confronted with data at the per-cent level --- so this matters for
+the exactness claim, for error accumulating when :mod:`slabs` and
+:mod:`earth` compose operators across layers, and for a regression suite
+tight enough to catch a real mistake.  :data:`POLISH_ROOTS` has the
+measured comparison against the alternatives, including why LAPACK and
+extended precision both lose.
 
 `evolution_operator_4nu` and `probabilities_4nu` accept either a single
 Hamiltonian and baseline or a stack of them, in which case the whole
@@ -149,17 +157,40 @@ limited by the conditioning of :math:`I_2, I_3, I_4`, not by the quartic
 solver: perturbing the three invariants at the :math:`10^{-16}` level
 moves the roots of a stiff 3+1 spectrum by :math:`6 \times 10^{-11}`
 relative, which is what the unrefined closed form achieves and what no
-better root-finder can beat.  The Newton step is evaluated from the
-matrix entries instead, and is not subject to that floor.
+better root-finder can beat.  The Newton step reads the matrix entries
+instead, and is not subject to that floor.
 
-Measured on a 200 000-point energy scan of a 3+1 Hamiltonian with
-:math:`\Delta m^2_{41} = 1` eV\ :sup:`2`, against
-:func:`numpy.linalg.eigh`: without it the probabilities agree to
-:math:`4.8 \times 10^{-7}`, with it to :math:`8.9 \times 10^{-10}`.  A
-second step changes nothing, so exactly one is taken.  It costs about
-45% of the total, which brings the closed form to parity with a batched
-``eigh`` rather than ahead of it --- an honest trade of speed for four
-digits of accuracy.
+Measured against ``mpmath`` at fifty decimal digits, on stiff 3+1
+Hamiltonians, with cost quoted for a 200 000-point scan:
+
+======================================  ==========  =======
+Strategy for the latent roots           Rel. error  Cost
+======================================  ==========  =======
+Closed form alone                       8.3e-11     0.17 s
+Closed form + one Newton step           1.1e-16     0.41 s
+``numpy.linalg.eigvalsh``               7.4e-16     0.17 s
+Closed form in ``numpy.longdouble``     4.5e-11     0.43 s
+======================================  ==========  =======
+
+Note the second row beats the third: the Newton step is some seven times
+more accurate than LAPACK, because ``eigvalsh`` reduces by similarity
+transforms that each carry a backward error of order
+:math:`\epsilon\|H\|`, while this converges onto the root of
+:math:`\det(\psi\mathbb{1} - \tilde{H})` for the matrix it was given.
+Extended precision was rejected for buying under a digit, being slower,
+and silently being ``float64`` on Apple Silicon and Windows.
+
+In probabilities the difference is :math:`5 \times 10^{-7}` unrefined
+against :math:`10^{-9}` refined.  Both are orders of magnitude below what
+any experiment resolves; the reasons to want the smaller one are the
+library's claim to exactness, error accumulating when :mod:`slabs` and
+:mod:`earth` compose operators across many layers, and a regression
+suite with no room for a bug to hide in.
+
+A second Newton step changes nothing --- one already reaches the floor
+--- so exactly one is taken.  It costs about 40% of the runtime, which
+brings the four-flavor closed form to parity with a batched ``eigh``
+rather than ahead of it.
 
 Set to ``False`` to skip it, which is useful only for reproducing the
 unrefined figures or for spectra known to be well separated.

@@ -215,34 +215,111 @@ it is exactly what 3+1 sterile scenarios need.
 Stiff spectra, and what they cost
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-At two and three flavors the expansion is exact to round-off and there is
-nothing more to say.  At four there is, and it is worth saying plainly.
+First, the perspective, because the numbers below are small enough to be
+misread as a problem.
 
-A 3+1 Hamiltonian with :math:`\Delta m^2_{41} \sim 1` eV\ :sup:`2` has a
-*stiff* spectrum: the eigenvalues span four orders of magnitude, with three
-of them clustered.  The invariants :math:`I_2, I_3, I_4` are sums over that
-spectrum, and forming them in double precision destroys the information that
-separates the cluster.  Perturbing the three invariants at the
-:math:`10^{-16}` level moves the roots by :math:`6\times10^{-11}` relative,
-which is a property of the problem and not of the solver: no better
-root-finder recovers it, and deflating the quartic to a cubic first does not
-either.  Both were measured before this was believed.
+**None of this is near any measurable effect.**  Oscillation probabilities
+are confronted with data at the per-cent level at best, and the systematic
+uncertainties of a real experiment dominate long before the fourth decimal
+place.  Even the *worst* number on this page --- the unrefined four-flavor
+result at :math:`5\times10^{-7}` --- sits four or five orders of magnitude
+below anything an experiment can resolve, and the refined one at
+:math:`10^{-9}` is far beyond any physics requirement.
+
+So why care?  Three reasons, none of them about a single probability:
+
+* **The claim.**  This library says it computes probabilities exactly, with
+  no approximation beyond round-off.  A figure of :math:`5\times10^{-7}` is
+  still round-off-limited in a sense, but it is not the same claim, and the
+  difference should be stated rather than glossed.
+* **Composition.**  :mod:`slabs` and :mod:`earth` multiply evolution
+  operators across many layers, so a per-layer error accumulates.  What is
+  invisible in one probability need not stay invisible across a hundred.
+* **Regression testing.**  A suite that pins agreement at :math:`10^{-9}`
+  catches a real mistake; one that pins it at :math:`10^{-6}` has room for a
+  bug to hide in.
+
+Now the mechanism.  A 3+1 Hamiltonian with :math:`\Delta m^2_{41} \sim 1`
+eV\ :sup:`2` has a *stiff* spectrum: the eigenvalues span four orders of
+magnitude, with three of them clustered.  The invariants
+:math:`I_2, I_3, I_4` are sums over that spectrum, so forming them in double
+precision compresses a :math:`4\times4` matrix into three numbers and loses
+what separates the cluster.  Perturbing the three invariants at the
+:math:`10^{-16}` level --- their own rounding --- moves the roots by
+:math:`6\times10^{-11}` relative.  That is a property of the problem, not of
+the solver: it is the classic ill-conditioning of polynomial roots with
+respect to their coefficients, and it means no better root-finder helps.
+Deflating the quartic to a cubic first was tried, and does not.
 
 The fix is to stop asking the invariants.  After the closed form supplies the
 roots, one Newton step on
 
 .. math:: \chi(\psi) = \det\left(\psi \mathbb{1} - \tilde{H}\right)
 
-refines them using the Hamiltonian *entries*, which are not subject to that
-floor.  It restores the roots to :math:`10^{-16}` and the probabilities from
-:math:`5\times10^{-7}` to :math:`10^{-9}`; a second step changes nothing, so
-exactly one is taken.  It costs roughly 40% of the runtime, which brings the
-four-flavor closed form to parity with a batched ``eigh`` rather than ahead
-of it.  That is an honest trade and :data:`oscprob4nu.POLISH_ROOTS` records
-it; it can be switched off.
+refines them using the Hamiltonian *entries* at full precision, which never
+pass through the three-number bottleneck.  A second step changes nothing ---
+Newton doubles the correct digits, and one step already reaches the floor ---
+so exactly one is taken.
 
-This is specific to four flavors, not a general caveat.  The same measurement
-on :mod:`oscprob3nu` gives :math:`10^{-14}`, because there
+What it gains, and what the alternatives gain
+"""""""""""""""""""""""""""""""""""""""""""""
+
+Measured against ground truth from ``mpmath`` at fifty decimal digits, on
+stiff 3+1 Hamiltonians, with the cost quoted for a 200 000-point scan:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 20 15 25
+
+   * - Strategy for the latent roots
+     - Relative error
+     - Cost
+     - Keeps the closed form?
+   * - Closed form alone
+     - 8.3e-11
+     - 0.17 s
+     - yes
+   * - **Closed form + one Newton step**
+     - **1.1e-16**
+     - 0.41 s
+     - yes
+   * - ``numpy.linalg.eigvalsh``
+     - 7.4e-16
+     - 0.17 s
+     - no
+   * - Closed form in ``numpy.longdouble``
+     - 4.5e-11
+     - 0.43 s
+     - yes
+
+Three things in that table are worth reading twice.
+
+The Newton step is **more accurate than LAPACK**, by about a factor of seven.
+That is not a fluke: ``eigvalsh`` reduces the matrix by Householder and QR
+similarity transforms, each carrying a backward error of order
+:math:`\epsilon \|H\|`, while the Newton step converges onto the root of
+:math:`\det(\psi\mathbb{1} - \tilde{H})` for the matrix it was handed.
+
+Extended precision is a **poor trade**.  It buys under one digit rather than
+the three its extra mantissa suggests, because the cluster amplifies
+coefficient error, and it is slower because ``float128`` is not
+hardware-vectorised.  It is also silently platform-dependent: on Apple
+Silicon and on Windows ``numpy.longdouble`` *is* ``float64``, so this
+"fix" would quietly do nothing on those machines.
+
+``eigvalsh`` is genuinely cheaper --- it replaces the quartic rather than
+adding to it --- and it needs no eigenvectors, so it would not violate that
+principle either.  It is rejected because it is less accurate and because it
+would mean the four-flavor module obtains its eigenvalues from LAPACK, which
+is the one thing this library exists not to do.
+
+The refinement costs roughly 40% of the runtime, which brings the four-flavor
+closed form to parity with a batched ``eigh`` rather than ahead of it.  That
+is the honest summary: four flavors costs more per point than three.
+:data:`oscprob4nu.POLISH_ROOTS` records the trade and can switch it off.
+
+Finally, this is specific to four flavors rather than a general caveat.  The
+same measurement on :mod:`oscprob3nu` gives :math:`10^{-14}`, because there
 :math:`\Delta m^2_{31}/\Delta m^2_{21}` is 34 rather than 13500.
 
 Degenerate spectra at four flavors

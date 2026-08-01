@@ -102,13 +102,15 @@ against an independent computation:
    * - Four flavors with the sterile angles off, vs :mod:`oscprob3nu`
      - 7e-12
 
-One caveat belongs next to that table rather than in a footnote.  At four
-flavors a *stiff* spectrum --- a 3+1 scenario with an eV-scale
-:math:`\Delta m^2_{41}`, which is the interesting case --- is limited not by
-the expansion but by what double precision retains when the SU(4) invariants
-are formed.  It reaches about :math:`10^{-9}` rather than
-:math:`10^{-14}`.  See :ref:`stiff-spectra`, which explains what the code
-does about it and what it costs.
+One line of context for the four-flavor row.  A *stiff* spectrum --- a 3+1
+scenario with an eV-scale :math:`\Delta m^2_{41}` --- reaches about
+:math:`10^{-9}` rather than :math:`10^{-14}`, limited by what double
+precision retains when the SU(4) invariants are formed rather than by the
+expansion itself.  Both figures are far below anything an experiment can
+resolve, so this is a statement about the *exactness claim* and about error
+accumulating over composed slabs, not about whether the probabilities are
+good enough to use.  :ref:`stiff-spectra` gives the mechanism, what the code
+does about it, and what the alternatives measured.
 
 When is NuOscProbExact a good fit?
 -----------------------------------
