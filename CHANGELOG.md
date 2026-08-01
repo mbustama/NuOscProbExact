@@ -5,6 +5,179 @@ All notable changes to **NuOscProbExact** are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.8.6] - 2026-08-01
+
+A pre-publication audit, before the first upload to PyPI.  Nothing here
+changes a probability; it is documentation that had drifted from the code,
+metadata that had gone stale, and one extra that could not do what it
+promised.
+
+Two of the entries below deserve reading together, because they are the same
+decision applied twice.  The file tree and the performance figures were both
+kept in more than one place, both drifted, and both were caught by hand
+rather than by the suite.  Neither copy is deleted — `README.md` is the PyPI
+long description and has to stand alone — so instead the duplication is made
+safe: the tree is now generated from one table, and the figures are now
+checked against one table.  Duplication that cannot drift is not the same
+problem as duplication that can.
+
+### Fixed
+
+- **Three recipes on the "Numerical recipes" page stopped short of what they
+  promised.**  The page opens by saying each recipe is "a few lines and a
+  figure", that the code shown is the same calculation as the notebook linked
+  beside it, and that anything short enough to run is executed at build time
+  and shows its output.
+
+  "Between two places on the Earth" said "the chord between two named sites,
+  and the probability along it", then printed only chords.  The probability was
+  the point, and `earth.probabilities_3nu_between_locations` — the reason the
+  named-location table exists at all — appeared nowhere on the page.  It is now
+  called, and the section links notebook 07, which it had also been missing
+  while every other recipe carried a link.
+
+  "An oscillogram" was a static `code-block` whose last statement assigned
+  `grid` and stopped, so it produced no output even in principle.  Nothing
+  justified the exception: the 240×240 grid evaluates in 0.14 s.  It now runs
+  and prints its shape and range.
+
+  "Mass ordering and the octant" promised two open questions in its title and
+  printed two mass-squared differences, with no probability anywhere and no
+  mention of the octant, beneath a figure captioned with a claim the code did
+  not support.  Both are now computed, following notebook 12.  The octant block
+  is evaluated at 5 GeV rather than at the 2.5 GeV used for the ordering: at
+  2.5 GeV the two octants give `P_mumu` of 0.019 against 0.0067, which is the
+  deep disappearance minimum rather than an error, but would have read as
+  contradicting the octant degeneracy it illustrates.  At 5 GeV `P_mumu` is
+  0.4816 against 0.4768 — one per cent apart — while `P_mue` is 0.0245 against
+  0.0299, twenty-two per cent apart.
+
+- **The `docs` extra could not build the documentation.**  `pip install -e
+  '.[docs]'` installed four of the ten packages `cd docs && make html` needs,
+  and failed on the first missing Sphinx extension.  `conf.py` loads
+  `sphinx-copybutton`, `sphinxcontrib-bibtex` and `jupyter-sphinx`, sets
+  `html_theme` to `sphinx_rtd_theme`, and executes the narrative blocks in a
+  real kernel, which needs `ipykernel`, `matplotlib` and `scipy`.  Nothing
+  caught this because nothing uses the extra — both documentation jobs install
+  `docs/requirements.txt`, which has always been complete.  The two lists are
+  now the same set, bar `numpy`, which the extra omits as already a hard
+  dependency.
+
+- **`methodology.rst` contradicted itself on the scalar timing.**  The page
+  states it twice, and the 1.8.4 reconciliation updated only the second
+  occurrence, so one page has since said "about thirteen microseconds" and
+  "about sixteen microseconds" a hundred lines apart.
+
+- **`fastkernels`'s "Routine listings" omitted `available` and `worthwhile`**,
+  two of its four public functions, and `worthwhile` is the one that decides
+  whether the compiled path is taken at all.  The other seven modules were
+  checked the same way, by parsing each listing against the public functions
+  defined in the file; this was the only gap, in both directions.
+
+- **`index.rst` contradicted its own benchmark table.**  It described the gain
+  from passing arrays as "roughly 25 to 60 times" three lines above a table
+  whose rows give 21×, 23×, 37× and 99×.  `README.md`, which carries the same
+  table, had it right at "20–90×".  The page now says 20 to 90 as well, and a
+  test derives the span from the table rather than trusting the prose.
+
+### Added
+
+- **`tests/test_documented_figures.py`, so the repeated performance figures
+  cannot drift apart again.**  The same measurements appear in `README.md`,
+  `index.rst`, `quickstart.rst`, `methodology.rst` and `fastkernels`, and they
+  have to: the README is the PyPI long description and must stand alone.  The
+  figures are now held once in the test and checked against every document
+  that quotes them — the scalar timing in digits or in words, whichever that
+  file uses; the twelve numbers of the 2000-point table, compared as the
+  strings the documents print, so that "0.20 ms" drifting to "0.2 ms" is
+  caught too; the quoted speedup span against the table's own ratios; and an
+  explicit refusal of the superseded 13 and 16, so a stale copy-paste cannot
+  reintroduce one quietly.  Each failure names the file that disagrees and the
+  value it should carry.
+
+### Changed
+
+- **The scalar timings are re-measured: about 8 microseconds for three flavors
+  and 1 for two, against the 16 and 2 quoted since 1.8.4.**  The figure
+  appeared in five files and seven places, all agreeing with each other and
+  none reproducing.  Measured after a warm-up loop, fastest of fifteen rounds
+  of two thousand calls, timing overhead subtracted, repeated three times end
+  to end: 8.18, 7.99 and 8.12 µs for three flavors, 1.10, 1.11 and 1.15 for
+  two.  The spread within a case is under four per cent, far tighter than the
+  gap to the figure replaced, so this is not the run-to-run variation the
+  surrounding prose already warns about.
+
+  The four batched speedups measured at the same 1.8.4 sitting are **not**
+  re-checked here.  They are ratios between two paths measured together, which
+  is more robust than an absolute time, and notebook 09 measures them on
+  whatever machine runs it.
+
+- **The file tree is generated rather than maintained by hand in two places.**
+  It appears in `README.md` and in `installation.rst`, and both were edited by
+  hand.  The old tests compared the two and checked that every tracked file's
+  *basename* appeared in one of them, which left three ways to be wrong: the
+  comparison was between stripped lines, so indentation could drift unnoticed;
+  matching on basenames meant a file listed under the wrong directory still
+  passed; and adding a file meant editing two documents, in the right place,
+  with the box-drawing characters aligned.
+
+  Both are now rendered from one ordered table in `tests/test_file_tree.py`,
+  which pairs each path with the comment beside it.  Order and comments stay
+  written down, since neither can be derived from the filesystem; membership
+  is derived, and `test_tree_matches_git` requires the file entries to be
+  exactly `git ls-files` in both directions.  `python tests/test_file_tree.py
+  --write` updates both documents; with no arguments it reports whether they
+  are current.  The renderer was written against the existing tree, and
+  reproduces all 94 lines of both copies byte for byte, so the change altered
+  no rendered output at all.
+
+- **`docs/requirements.txt` is now just `-e .[docs]`.**  Two lists of
+  documentation dependencies, which this same release had just finished making
+  agree — and the reason they disagreed for so long is that nothing installed
+  the extra, so nothing noticed.  There is now one list, in `pyproject.toml`.
+  The editable install that requirements.txt performs makes the separate
+  `pip install -e .` step redundant, so the two steps are merged into one in
+  `lint.yml` and `pages.yml`, keeping the note about *why* it must be editable:
+  jupyter-sphinx executes the narrative blocks in a real kernel, a separate
+  process that `conf.py`'s `sys.path.insert` never reaches.
+
+  Verified in a fresh virtualenv: `pip install -r docs/requirements.txt` from
+  the repository root installs the package plus all ten documentation
+  packages, `oscprob3nu.__file__` resolves into the working tree, and Sphinx
+  then builds clean under `-W` with no separate package install.
+
+- **`README.md` no longer lists the optional extras twice.**  "Requirements"
+  gave two of them as install commands and "Installation", twenty lines below,
+  gave all four again.  Requirements now says what each task needs and which
+  extra provides it, as a table; Installation owns the commands.  No fact is
+  dropped, and the `docs` row is new — Requirements had never mentioned it.
+
+### Removed
+
+- **The module `__version__` strings.**  Eight modules carried one by hand:
+  five said `"1.1"`, `fastkernels` said `"1.6"`, `slabs` and `earth` said
+  `"1.8"`, against a project at 1.8.5.  No release commit had ever touched
+  them, so all eight had drifted — `oscprob3nu` claimed `"1.1"` while holding
+  the vectorised batch path, the degeneracy handling and the Numba dispatch,
+  none of which existed at 1.1.
+
+  Syncing them would add eight more places every release must update, which is
+  what produced the drift.  Deriving them from `importlib.metadata` would raise
+  `PackageNotFoundError` for a copy used off `sys.path` without being
+  installed, which is what the scripts in `examples/` do and what the paper
+  tells readers to do.  So they are deleted.  Nothing in the repository read
+  them: the documentation takes its version from `docs/source/conf.py` and the
+  package metadata from `pyproject.toml`.  `__author__` and `__email__` are
+  kept — still true, and they do not drift.
+
+- **`from __future__ import print_function`, from the eight modules.**  A
+  Python 2 shim in a package whose floor is 3.9, and a no-op on every
+  interpreter this project has ever supported.  The nine scripts in `examples/`
+  keep theirs: they are published alongside
+  [arXiv:1904.12391](https://arxiv.org/abs/1904.12391), and the repository
+  already treats their period character as deliberate — the star imports they
+  open with are ruff-exempted in `pyproject.toml` for that reason.
+
 ## [1.8.5] - 2026-08-01
 
 ### Changed
