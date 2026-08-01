@@ -42,8 +42,10 @@ import matplotlib.pyplot as plt
 import globaldefs as gd
 import oscprob2nu
 import oscprob3nu
+import oscprob4nu
 import hamiltonians2nu
 import hamiltonians3nu
+import hamiltonians4nu
 
 %matplotlib inline
 plt.rcParams.update({'figure.figsize': (7.2, 4.2), 'figure.dpi': 90,
@@ -93,8 +95,8 @@ books['01_basics.ipynb'] = notebook(
     '**NuOscProbExact** computes oscillation probabilities *exactly*, with no '
     'approximation beyond floating-point round-off, for any time-independent '
     'Hamiltonian. The method expands the Hamiltonian and the evolution '
-    'operator in the SU(2) and SU(3) bases, which gives closed forms rather '
-    'than a numerical integration.',
+    'operator in the SU(2), SU(3) and SU(4) bases, which gives closed forms '
+    'rather than a numerical integration.',
     [
         md('## Units\n\n'
            'The library is unit-agnostic: it asks only that the Hamiltonian '
@@ -1595,6 +1597,235 @@ books['15_numerical_edge_cases.ipynb'] = notebook(
            'that it is neither.'),
     ])
 
+# ------------------------------------------------------- 16 four neutrinos
+books['16_four_neutrinos.ipynb'] = notebook(
+    'Four neutrinos, and a sterile state',
+    'Everything so far has been two or three flavors. `oscprob4nu` carries '
+    'the same closed-form treatment to **four**, through the SU(4) algebra — '
+    'and four is where the road ends, for a reason worth knowing.\n\n'
+    'The payoff is 3+1 sterile scenarios. A 3+1 system is often called '
+    '"leaky", because probability drains out of the three active flavors; but '
+    'that is a statement about the $3\\times3$ block, not about the physics. '
+    'Over all four states the evolution is closed and unitary, which is '
+    'exactly what the method assumes.',
+    [
+        code('# A 3+1 scenario: the NuFit best fit for the active sector,\n'
+             '# plus an eV-scale sterile with sin^2(th14) = sin^2(th24) = 0.1\n'
+             'DM41 = 1.0                       # [eV^2]\n'
+             'S14 = S24 = np.sqrt(0.10)\n'
+             'S34 = 0.0\n\n'
+             'H_VAC_4NU = '
+             'hamiltonians4nu.hamiltonian_4nu_vacuum_energy_independent(\n'
+             '    gd.S12_NO_BF, gd.S23_NO_BF, gd.S13_NO_BF,\n'
+             '    S14, S24, S34,\n'
+             '    gd.DCP_NO_BF, gd.D21_NO_BF, gd.D31_NO_BF, DM41)\n\n'
+             'print("H_vac shape:", H_VAC_4NU.shape)'),
+        md('## One four-flavor probability\n\n'
+           'Sixteen probabilities come back, with the *initial* flavor '
+           'varying slowest — the same ordering as at three flavors. The '
+           'fourth state is the sterile one.'),
+        code('energy = 1.0*GEV\n'
+             'baseline = 1300.0*KM\n\n'
+             'H = hamiltonians4nu.hamiltonian_4nu_matter(\n'
+             '    H_VAC_4NU, energy, gd.VCC_EARTH_CRUST, gd.VNC_EARTH_CRUST)\n'
+             'prob = np.array(oscprob4nu.probabilities_4nu(H, baseline))\n\n'
+             'flavors = ["e", "mu", "tau", "s"]\n'
+             'table = prob.reshape(4, 4)\n'
+             'print("P(alpha -> beta), rows = initial flavor\\n")\n'
+             'print("%-8s" % "" + "".join("%10s" % ("-> " + f) '
+             'for f in flavors))\n'
+             'for i, a in enumerate(flavors):\n'
+             '    print("%-8s" % ("nu_" + a)\n'
+             '          + "".join("%10.5f" % v for v in table[i]))\n'
+             'print("\\nrows sum to:", np.round(table.sum(axis=1), 12))'),
+        md('## The matter potential has a sterile entry\n\n'
+           'This is the four-flavor trap, and it is the analogue of getting '
+           'antineutrinos wrong: it is **invisible in vacuum** and it moves '
+           'the resonance.\n\n'
+           'Active neutrinos feel the charged-current potential $V_{CC}$ (the '
+           'electron flavor) and the flavor-universal neutral-current '
+           'potential $V_{NC}$ (all three). A sterile state feels neither. '
+           'Since a term proportional to the identity is only a global phase, '
+           'subtracting $V_{NC}\\mathbb{1}$ from all four costs nothing and '
+           'leaves\n\n'
+           '$$A_4 = \\mathrm{diag}(V_{CC},\\, 0,\\, 0,\\, -V_{NC})$$\n\n'
+           'so the sterile entry is *not* zero.'),
+        code('added = H - H_VAC_4NU/energy\n'
+             'print("diagonal of the matter term [eV]:")\n'
+             'for f, v in zip(flavors, np.diag(added).real):\n'
+             '    print("  nu_%-4s %+.6e" % (f, v))\n'
+             'print("\\n-V_NC / V_CC = %.4f"\n'
+             '      % (-gd.VNC_EARTH_CRUST/gd.VCC_EARTH_CRUST))'),
+        md('## Sterile oscillations against energy\n\n'
+           'An eV-scale splitting oscillates *fast*: the phase goes as '
+           '$\\Delta m^2_{41} L / 4E$, so at a long-baseline energy and '
+           'distance it has already averaged out and only its mean survives. '
+           'That is precisely why short-baseline experiments are the probe — '
+           'at $L/E \\sim 1$ km/GeV the oscillation is resolved rather than '
+           'averaged.\n\n'
+           'So this is a short baseline, 600 m, which is where the structure '
+           'actually lives.'),
+        code('L_sbl = 0.6*KM                      # 600 m\n'
+             'E_gev = np.linspace(0.02, 3.0, 1500)\n\n'
+             'H_stack = hamiltonians4nu.hamiltonian_4nu_matter(\n'
+             '    H_VAC_4NU, E_gev*GEV, gd.VCC_EARTH_CRUST,\n'
+             '    gd.VNC_EARTH_CRUST)\n'
+             'p = oscprob4nu.probabilities_4nu(H_stack, L_sbl)\n\n'
+             'fig, ax = plt.subplots()\n'
+             'ax.plot(E_gev, p[:, 5], label=r"$P_{\\mu\\mu}$")\n'
+             'ax.plot(E_gev, p[:, 7], label=r"$P_{\\mu s}$")\n'
+             'ax.plot(E_gev, p[:, 0], label=r"$P_{ee}$")\n'
+             'ax.set_xlim(E_gev[0], E_gev[-1])\n'
+             'ax.set_ylim(0.0, 1.05)\n'
+             'ax.set_xlabel("Energy [GeV]")\n'
+             'ax.set_ylabel("Probability")\n'
+             'ax.set_title(r"3+1 at $L = 600$ m, "\n'
+             '             r"$\\Delta m^2_{41} = 1$ eV$^2$, "\n'
+             '             r"$\\sin^2\\theta_{14} = \\sin^2\\theta_{24} '
+             '= 0.1$")\n'
+             'ax.legend(ncol=3, loc="lower right")\n'
+             'plt.show()'),
+        md('The active flavors are barely oscillating at 600 m through the '
+           'standard splittings — those need hundreds of kilometres — so '
+           'everything visible here is the sterile state, and $P_{\\mu\\mu}$ '
+           'and $P_{ee}$ dip exactly where $P_{\\mu s}$ rises. At '
+           '$L = 1300$ km the same curves would be a solid averaged band, '
+           'which is the point: the two regimes probe different things.'),
+        md('## The sterile matter resonance through the Earth\n\n'
+           'The reason four flavors is worth having in a code like this. An '
+           'eV-scale sterile driven through Earth matter develops a resonance '
+           'in the TeV range for antineutrinos — the signature IceCube '
+           'searches for. Here it is as a map in energy and zenith angle, '
+           'built the same way as the three-flavor oscillogram: broadcast the '
+           'two axes and let one call fill the grid.'),
+        code('import earth\n\n'
+             'n_e, n_c = 150, 150\n'
+             'E_tev = np.logspace(-0.5, 1.5, n_e)          # 0.3 - 30 TeV\n'
+             'costhz = np.linspace(-1.0, -0.05, n_c)\n\n'
+             '# Antineutrinos: conjugate the vacuum term and flip both\n'
+             '# potentials.  Constant mantle density is enough to show the\n'
+             '# resonance; `earth` does the full PREM profile.\n'
+             'rho_mantle = 4.5                              # [g cm^-3]\n'
+             'vcc = earth.matter_potential(rho_mantle)\n'
+             'H_bar = hamiltonians4nu.hamiltonian_4nu_matter(\n'
+             '    np.conj(H_VAC_4NU), E_tev[:, None]*1.0e3*GEV,\n'
+             '    -vcc, -gd.VNC_EARTH_CRUST*rho_mantle/3.0)\n\n'
+             '# Path length through the Earth at each zenith angle\n'
+             'L_grid = np.array([earth.distance_traveled_inside_earth(c)\n'
+             '                   for c in costhz])*KM\n\n'
+             'grid = oscprob4nu.probabilities_4nu(H_bar, L_grid[None, :])\n'
+             'p_mumu = grid[:, :, 5]\n\n'
+             'fig, ax = plt.subplots()\n'
+             'mesh = ax.pcolormesh(costhz, E_tev, p_mumu,\n'
+             '                     shading="auto", cmap="viridis",\n'
+             '                     vmin=0.0, vmax=1.0)\n'
+             'ax.set_yscale("log")\n'
+             'ax.set_xlabel(r"$\\cos\\theta_z$")\n'
+             'ax.set_ylabel("Energy [TeV]")\n'
+             'ax.set_title(r"$P_{\\bar\\mu\\bar\\mu}$, 3+1 through the Earth")\n'
+             'ax.grid(False)\n'
+             'fig.colorbar(mesh, ax=ax, label=r"$P_{\\bar\\mu\\bar\\mu}$")\n'
+             'plt.show()'),
+        md('The dark band is the sterile matter resonance: a region of '
+           'energy and zenith angle where muon antineutrinos are strongly '
+           'depleted into the sterile state. Its position depends on '
+           '$\\Delta m^2_{41}$, which is what makes it a search channel.'),
+        md('## What is actually new at four flavors\n\n'
+           'Three things, and each follows from SU(4) having rank three '
+           'where SU(3) has rank two.'),
+        code('I2, I3, I4 = oscprob4nu.su4_invariants(H)\n'
+             'print("three invariants, not two:")\n'
+             'print("  I2 = %+.6e" % I2)\n'
+             'print("  I3 = %+.6e" % I3)\n'
+             'print("  I4 = %+.6e" % I4)\n\n'
+             'psi = oscprob4nu.psi_roots_4nu(I2, I3, I4)\n'
+             'print("\\nthe characteristic equation is a quartic; its roots:")\n'
+             'print(" ", np.array(psi))\n'
+             'print("  vs numpy.linalg.eigvalsh:")\n'
+             'H_traceless = H - np.trace(H).real/4.0*np.eye(4)\n'
+             'print(" ", np.sort(np.linalg.eigvalsh(H_traceless)))'),
+        md('And the star-product tower grows a rung. At three flavors '
+           '$(h \\star h) \\star h = \\frac{1}{3}|h|^2 h$, which is what lets '
+           '`oscprob3nu` stop after two terms. That identity is a '
+           'Cayley–Hamilton accident of $n = 3$ and is simply **false** at '
+           '$n = 4$:'),
+        code('lam = oscprob4nu.LAMBDA_SU4\n'
+             'rng = np.random.default_rng(7)\n'
+             'h = rng.standard_normal(15)\n'
+             'Ht = np.einsum("a,aij->ij", h, lam)\n'
+             'i2, _, _ = oscprob4nu.su4_invariants(Ht)\n'
+             'tower = (0.5*np.einsum("aij,ji->a", lam, Ht @ Ht @ Ht).real\n'
+             '         - 0.5*i2*h)\n'
+             'deviation = (np.max(np.abs(tower - i2*h/3.0))\n'
+             '             / np.max(np.abs(tower)))\n'
+             'print("relative deviation from the SU(3) identity: %.0f%%"\n'
+             '      % (100*deviation))\n'
+             'print("-> ((h*h)*h)_a is independent data at n = 4")'),
+        md('## Accuracy, honestly\n\n'
+           'For a generic Hamiltonian the four-flavor expansion is exact to '
+           'round-off, like its two- and three-flavor siblings. A **stiff** '
+           'spectrum is different, and 3+1 with an eV-scale sterile is '
+           'stiff: the eigenvalues span four orders of magnitude with three '
+           'of them clustered, and forming the invariants in double '
+           'precision destroys the information that separates the cluster.\n\n'
+           'The library refines the roots against the *matrix* — one Newton '
+           'step on $\\chi(\\psi) = \\det(\\psi\\mathbb{1} - \\tilde H)$, '
+           'which reads the Hamiltonian entries rather than the compressed '
+           'invariants. `POLISH_ROOTS` controls it, and here is what it '
+           'buys:'),
+        code('def reference(Hs, L):\n'
+             '    Ht = Hs - np.einsum("...ii->...", Hs).real[..., None, None]'
+             '/4.0*np.eye(4)\n'
+             '    w, V = np.linalg.eigh(Ht)\n'
+             '    U = np.einsum("...ik,...k,...jk->...ij", V,\n'
+             '                  np.exp(-1j*w*L), V.conj())\n'
+             '    return np.abs(np.swapaxes(U, -1, -2))**2\n\n\n'
+             'P_ref = reference(H_stack, baseline).reshape(-1, 16)\n'
+             'for flag in (True, False):\n'
+             '    oscprob4nu.POLISH_ROOTS = flag\n'
+             '    P = oscprob4nu.probabilities_4nu(H_stack, baseline)\n'
+             '    print("POLISH_ROOTS = %-5s : max |P - P_eigh| = %.2e"\n'
+             '          % (flag, np.max(np.abs(P - P_ref))))\n'
+             'oscprob4nu.POLISH_ROOTS = True'),
+        md('## A decoupled sterile state reproduces three flavors\n\n'
+           'The strongest check available, and the one worth running if you '
+           'ever doubt a four-flavor number: switch the three sterile angles '
+           'off and the active block must be exactly what `oscprob3nu` gives '
+           '— a different module, written against a different algebra.'),
+        code('H_decoupled = '
+             'hamiltonians4nu.hamiltonian_4nu_vacuum_energy_independent(\n'
+             '    gd.S12_NO_BF, gd.S23_NO_BF, gd.S13_NO_BF, 0.0, 0.0, 0.0,\n'
+             '    gd.DCP_NO_BF, gd.D21_NO_BF, gd.D31_NO_BF, DM41)\n\n'
+             'four = np.array(oscprob4nu.probabilities_4nu(\n'
+             '    H_decoupled/energy, baseline)).reshape(4, 4)\n'
+             'three = np.array(oscprob3nu.probabilities_3nu(\n'
+             '    np.asarray(H_VAC_3NU)/energy, baseline)).reshape(3, 3)\n\n'
+             'print("max |4nu active block - 3nu| = %.2e"\n'
+             '      % np.max(np.abs(four[:3, :3] - three)))\n'
+             'print("leakage into the sterile state = %.2e"\n'
+             '      % np.max(np.abs(four[:3, 3])))'),
+        md('## Why it stops at four\n\n'
+           'Not for want of trying. The whole construction rests on writing '
+           'the eigenvalues of the traceless Hamiltonian in closed form — '
+           'that is, solving its characteristic polynomial **in radicals**. '
+           'That polynomial has degree $n$.\n\n'
+           'Quadratics, cubics and quartics are solvable in radicals. The '
+           'general quintic is not: that is the Abel–Ruffini theorem, and '
+           'Galois theory says why — $S_5$ is not a soluble group, while '
+           '$S_2$, $S_3$ and $S_4$ are. At $n = 5$ there is simply no formula '
+           'to write down, and the shortfall is a theorem rather than a gap '
+           'in anyone\'s algebra.\n\n'
+           'What does *not* stop is the philosophy. Nothing above the '
+           'eigenvalues needs radicals — the interpolation over the roots, '
+           'the fact that eigenvectors are never required, the probability '
+           'construction — so feeding numerically computed eigenvalues into '
+           'the same machinery degrades gracefully at any $n$. It would just '
+           'no longer be a closed form, which is this library\'s reason to '
+           'exist.\n\n'
+           'So four flavors is both the natural stopping point and a useful '
+           'one: it is exactly what 3+1 needs.'),
+    ])
+
 # Figures lifted out of the executed notebooks for the README gallery and the
 # documentation's recipes page.  Extracting them rather than drawing them
 # again is what keeps the three in step: there is one piece of code behind
@@ -1610,6 +1841,8 @@ GALLERY = {
     ('07_earth_probabilities.ipynb', 1): 'gallery_earth.png',
     ('08_unusual_density_profiles.ipynb', 1): 'gallery_profiles.png',
     ('12_ordering_and_octant.ipynb', 2): 'gallery_ordering.png',
+    ('16_four_neutrinos.ipynb', 0): 'gallery_sterile.png',
+    ('16_four_neutrinos.ipynb', 1): 'gallery_sterile_earth.png',
 }
 
 GALLERY_DIR = pathlib.Path('img') / 'gallery'

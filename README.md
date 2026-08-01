@@ -11,7 +11,7 @@
 [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 # NuOscProbExact
-Code to compute exact two- and three-neutrino oscillation probabilities using SU(2) and SU(3) expansions
+Code to compute exact two-, three- and four-neutrino oscillation probabilities using SU(2), SU(3) and SU(4) expansions
 
 > **Note:** The oscillation probabilities are computed exactly, with no approximation beyond floating-point round-off.  A regression test suite lives in `tests/` and can be run with `pytest`.
 
@@ -21,10 +21,11 @@ Every figure below is produced by a notebook in [`notebooks/`](notebooks/), and 
 
 | | |
 |:--:|:--:|
-| <img src="img/gallery/gallery_vacuum.png" width="380"/><br/>**Oscillation probabilities** against baseline or energy, for two or three flavors.<br/>[notebook 02](notebooks/02_vacuum_oscillations.ipynb) | <img src="img/gallery/gallery_matter.png" width="380"/><br/>**Matter, NSI and Lorentz-invariance violation** — each just a different Hermitian matrix.<br/>[notebook 03](notebooks/03_matter_nsi_liv.ipynb) |
+| <img src="img/gallery/gallery_vacuum.png" width="380"/><br/>**Oscillation probabilities** against baseline or energy, for two, three or four flavors.<br/>[notebook 02](notebooks/02_vacuum_oscillations.ipynb) | <img src="img/gallery/gallery_matter.png" width="380"/><br/>**Matter, NSI and Lorentz-invariance violation** — each just a different Hermitian matrix.<br/>[notebook 03](notebooks/03_matter_nsi_liv.ipynb) |
 | <img src="img/gallery/gallery_oscillogram.png" width="380"/><br/>**Oscillograms** over energy and baseline: 57 600 probabilities in a single call.<br/>[notebook 04](notebooks/04_oscillogram.ipynb) | <img src="img/gallery/gallery_biprobability.png" width="380"/><br/>**CP violation**, as bi-probability ellipses in vacuum and in matter.<br/>[notebook 05](notebooks/05_biprobability.ipynb) |
 | <img src="img/gallery/gallery_prem.png" width="380"/><br/>**The Earth's density**, from the Preliminary Reference Earth Model.<br/>[notebook 06](notebooks/06_earth_and_prem.ipynb) | <img src="img/gallery/gallery_earth.png" width="380"/><br/>**Neutrinos through the Earth**, in energy and zenith angle, or between two named sites.<br/>[notebook 07](notebooks/07_earth_probabilities.ipynb) |
 | <img src="img/gallery/gallery_profiles.png" width="380"/><br/>**Arbitrary matter profiles** — castle walls and worse, exactly.<br/>[notebook 08](notebooks/08_unusual_density_profiles.ipynb) | <img src="img/gallery/gallery_ordering.png" width="380"/><br/>**Mass ordering and the θ₂₃ octant**, separated by matter through the Earth.<br/>[notebook 12](notebooks/12_ordering_and_octant.ipynb) |
+| <img src="img/gallery/gallery_sterile.png" width="380"/><br/>**Four flavors: a 3+1 sterile state**, resolved at a short baseline.<br/>[notebook 16](notebooks/16_four_neutrinos.ipynb) | <img src="img/gallery/gallery_sterile_earth.png" width="380"/><br/>**The sterile matter resonance** through the Earth, in energy and zenith angle.<br/>[notebook 16](notebooks/16_four_neutrinos.ipynb) |
 
 ## Contents
 
@@ -36,9 +37,11 @@ Every figure below is produced by a notebook in [`notebooks/`](notebooks/), and 
 
 4. [Installation](#installation)
 
-5. [Performance](#performance)
+5. [When to use Magnus instead](#when-to-use-magnus-instead)
 
-6. [Usage and examples](#usage-and-examples)
+6. [Performance](#performance)
+
+7. [Usage and examples](#usage-and-examples)
    1. [Basics](#basics)
    2. [Trivial example](#trivial-example)
    3. [Oscillations in vacuum: fixed energy and baseline](#oscillations-in-vacuum-fixed-energy-and-baseline)
@@ -49,22 +52,23 @@ Every figure below is produced by a notebook in [`notebooks/`](notebooks/), and 
    8. [Three-neutrino oscillations in a Lorentz invariance-violating (LIV) background](#three-neutrino-oscillations-in-a-lorentz-invariance-violating-liv-background)
    9. [Arbitrary Hamiltonians](#arbitrary-hamiltonians)
 
-7. [Notebooks](#notebooks)
+8. [Notebooks](#notebooks)
 
-8. [Documentation and help](#documentation-and-help)
+9. [Documentation and help](#documentation-and-help)
 
-9. [Citing](#citing)
+10. [Citing](#citing)
 
 
 ## What is NuOscProbExact?
 
 **NuOscProbExact** is a Python implementation of the method developed by [Ohlsson & Snellman](https://arxiv.org/abs/hep-ph/9910546) to compute exact two-flavor and three-flavor neutrino oscillation probabilities for arbitrary time-independent Hamiltonians.  The method was revisited and the code presented in the paper *NuOscProbExact: a general-purpose code to compute exact two-flavor and three-flavor neutrino oscillation probabilities* ([arXiv:1904.12391](http://arxiv.org/abs/1904.12391)), by Mauricio Bustamante.
 
-The method relies on expansions of the Hamiltonian and time-evolution operators in terms of SU(2) and SU(3) matrices in order to obtain concise, analytical, and exact expressions for the probabilities, that are also easy to implement and evaluate.  For details of the method, see the paper above.
+The method relies on expansions of the Hamiltonian and time-evolution operators in terms of SU(2), SU(3) and SU(4) matrices in order to obtain concise, analytical, and exact expressions for the probabilities, that are also easy to implement and evaluate.  For details of the method, see the paper above; the four-flavor extension is documented in [the methodology page](https://mbustama.github.io/NuOscProbExact/methodology.html).
 
 ### What it does
 
-* **Exact probabilities for any Hermitian 2×2 or 3×3 Hamiltonian.**  There is no approximation beyond floating-point round-off.  Oscillations in vacuum, in matter, with non-standard interactions, in a Lorentz invariance-violating background and with sterile-like perturbations are not special cases in the code — each is a different matrix handed to the same routine.
+* **Exact probabilities for any Hermitian 2×2, 3×3 or 4×4 Hamiltonian.**  There is no approximation beyond floating-point round-off.  Oscillations in vacuum, in matter, with non-standard interactions, in a Lorentz invariance-violating background and with sterile states are not special cases in the code — each is a different matrix handed to the same routine.
+* **Four flavors, for 3+1 sterile scenarios.**  `oscprob4nu` carries the same closed-form treatment to SU(4), which is the last place it reaches: at five flavors the eigenvalues stop being expressible in radicals, and that is a theorem rather than a missing feature.  A 3+1 system is closed and unitary over all four states, so it sits squarely inside the method's assumptions rather than "leaking" out of a three-flavor block.
 * **The evolution operator itself**, not only the probabilities, so it can be composed across segments or used to propagate a density matrix.
 * **Whole scans in one call.**  Every core routine accepts a stack of Hamiltonians, an array of baselines, or both broadcast against each other, which is tens of times faster than the equivalent Python loop and gives identical results.
 * **Piecewise-constant matter.**  `slabs` propagates across a sequence of adjacent slabs of arbitrary width and density, solving each exactly and multiplying the operators.
@@ -73,10 +77,26 @@ The method relies on expansions of the Hamiltonian and time-evolution operators 
 
 ### What it does not do
 
-* **Hamiltonians that vary continuously along the trajectory.**  The method assumes a Hamiltonian that does not change, and in exchange gives a closed form rather than a numerical integration.  A smoothly varying profile has to be approximated by slabs, and that is only practical while the profile varies slowly compared with the oscillation length.  It works well for the Earth; it is the wrong tool for the Sun, where the step size would be set by the oscillation rather than by the density, needing of order 10<sup>4</sup> slabs per crossing.  [Notebook 14](notebooks/14_solar_and_adiabatic_msw.ipynb) works that case through and shows where the wall is; for smoothly varying profiles use a Magnus-type method such as [Magnus](https://github.com/mbustama/Magnus).
-* **More than three flavors.**  The SU(2) and SU(3) expansions are specific to two and three flavors.  A fourth, sterile flavor is outside what the closed forms cover.
+* **Hamiltonians that vary continuously along the trajectory.**  See [When to use Magnus instead](#when-to-use-magnus-instead) below — this is the one case where a different tool is the right answer, and it is worth knowing before you start.
+* **More than four flavors.**  The expansions run to SU(4) and stop, because the closed form does: solving for the eigenvalues means solving the characteristic polynomial in radicals, and at degree five Abel–Ruffini says that cannot be done.  Four flavors covers 3+1, which is the case people actually ask for.
 * **Neutrino production, cross sections, fluxes or detector response.**  This computes oscillation probabilities and nothing downstream of them.
 * **Fitting or statistics.**  There is no likelihood machinery here; the probabilities are meant to be handed to whatever does that.
+
+### When to use Magnus instead
+
+**NuOscProbExact** assumes the Hamiltonian is constant, or piecewise constant.  Everything it is good at follows from that — and so does the one case where it is the wrong tool.
+
+Use [**Magnus**](https://github.com/mbustama/Magnus) instead when **the Hamiltonian varies continuously and appreciably over an oscillation length**.  A smoothly varying profile can always be approximated by slabs, but then the step size is set by the oscillation rather than by the density, and the slab count grows until the calculation is neither exact nor quick.
+
+| Situation | Use | Because |
+|---|---|---|
+| Constant density | **NuOscProbExact** | One closed form, no integration |
+| Piecewise constant, tens of layers — the Earth through PREM | **NuOscProbExact** (`slabs`, `earth`) | Each layer solved exactly, operators multiplied |
+| Smoothly varying, slow against the oscillation | either | Slabbing converges quickly |
+| Smoothly varying, fast against the oscillation — the Sun, adiabatic MSW | **Magnus** | Slabbing needs ~10<sup>4</sup> steps per resonance crossing |
+| Open systems: decay, decoherence | neither | Needs a Lindblad solver, not a unitary one |
+
+[Notebook 14](notebooks/14_solar_and_adiabatic_msw.ipynb) works the solar case through and shows exactly where the wall is, rather than asserting it.
 
 **NuOscProbExact** was developed by Mauricio Bustamante.  If you use it in your work, please follow the directions on [Citing](#citing).
 
@@ -186,7 +206,7 @@ NuOscProbExact/
 │       ├── installation.rst         # Requirements, installation, file tree
 │       ├── quickstart.rst           # Shortest path to a probability
 │       ├── recipes.rst              # Numerical recipes, with pre-generated figures
-│       ├── methodology.rst          # The SU(2) and SU(3) expansions
+│       ├── methodology.rst          # The SU(2), SU(3) and SU(4) expansions
 │       ├── functions.rst            # API reference, from the docstrings
 │       ├── references.rst           # Bibliography
 │       ├── refs.bib                 # BibTeX entries for the bibliography
@@ -204,6 +224,8 @@ NuOscProbExact/
 │       ├── gallery_oscillogram.png
 │       ├── gallery_prem.png
 │       ├── gallery_profiles.png
+│       ├── gallery_sterile.png
+│       ├── gallery_sterile_earth.png
 │       └── gallery_vacuum.png
 ├── notebooks/                       # Worked examples, with their figures stored inline
 │   ├── 01_basics.ipynb              # Units, one probability, and broadcasting
@@ -221,6 +243,7 @@ NuOscProbExact/
 │   ├── 13_antineutrinos.ipynb       # Conjugate and flip, and two ways to slip
 │   ├── 14_solar_and_adiabatic_msw.ipynb  # The MSW resonance, and the cost wall
 │   ├── 15_numerical_edge_cases.ipynb  # Degeneracies, and what does not go NaN
+│   ├── 16_four_neutrinos.ipynb      # A 3+1 sterile state, through the SU(4) expansion
 │   └── make_notebooks.py            # Generates and executes all of the above
 ├── src/                             # The library
 │   ├── oscprob2nu.py                # Two-flavor probabilities, SU(2) expansion
@@ -281,7 +304,7 @@ import oscprob3nu
    cd /home/MyProjects/NuOscProbExact
    pytest
    ```
-   These check the SU(2) and SU(3) machinery against independent computations --- unitarity of the evolution operator, agreement with `scipy.linalg.expm`, agreement with the standard oscillation formulas, and the sign conventions of the sample Hamiltonians --- and run every example embedded in the docstrings.
+   These check the SU(2), SU(3) and SU(4) machinery against independent computations --- unitarity of the evolution operator, agreement with `scipy.linalg.expm`, agreement with the standard oscillation formulas, and the sign conventions of the sample Hamiltonians --- and run every example embedded in the docstrings.
 
 **Open the notebooks.**
    ```shell
@@ -289,7 +312,7 @@ import oscprob3nu
    pip install -e ".[notebooks]"
    jupyter lab notebooks/
    ```
-   Fifteen worked notebooks, numbered in reading order, covering the probabilities against baseline and against energy, matter and new physics, oscillograms, bi-probability plots, the Earth, arbitrary matter profiles, performance, the paper's own figures, the textbook approximations, mass ordering and the octant, antineutrinos, solar neutrinos, and numerical edge cases.  They carry their figures inline, so they can also just be read on GitHub.
+   Sixteen worked notebooks, numbered in reading order, covering the probabilities against baseline and against energy, matter and new physics, oscillograms, bi-probability plots, the Earth, arbitrary matter profiles, performance, the paper's own figures, the textbook approximations, mass ordering and the octant, antineutrinos, solar neutrinos, numerical edge cases, and four-neutrino 3+1 scenarios.  They carry their figures inline, so they can also just be read on GitHub.
 
 ## Performance
 
@@ -1015,7 +1038,7 @@ Though we do not show it here, `hamiltonian_mymodel` could also depend on `energ
 
 ## Notebooks
 
-Fifteen worked notebooks live in [`notebooks/`](notebooks/), numbered in reading order.  They carry their figures inline, so they render on GitHub without being run:
+Sixteen worked notebooks live in [`notebooks/`](notebooks/), numbered in reading order.  They carry their figures inline, so they render on GitHub without being run:
 
 | Notebook | What it covers |
 |---|---|
@@ -1034,6 +1057,7 @@ Fifteen worked notebooks live in [`notebooks/`](notebooks/), numbered in reading
 | [13 Antineutrinos](notebooks/13_antineutrinos.ipynb) | Conjugate *and* flip the potential — and two ways to get it wrong |
 | [14 Solar and the MSW resonance](notebooks/14_solar_and_adiabatic_msw.ipynb) | The adiabatic resonance, validated — and why slabs are the wrong tool for it |
 | [15 Numerical edge cases](notebooks/15_numerical_edge_cases.ipynb) | Degenerate spectra, and what returns a number instead of NaN |
+| [16 Four neutrinos](notebooks/16_four_neutrinos.ipynb) | A 3+1 sterile state through SU(4), and why the method stops at four |
 
 Run them with `pip install -e ".[notebooks]"` and `jupyter lab notebooks/`.  Every one of them is executed by CI, so an example that stops working fails the build.
 

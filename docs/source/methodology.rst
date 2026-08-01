@@ -120,6 +120,145 @@ The argument of the arc cosine that produces the roots lies in
 is clipped, so that a marginally out-of-range value cannot yield complex
 roots and a non-unitary evolution operator.
 
+Four flavors
+------------
+
+Everything above generalizes with :math:`3 \to 4`.  Expand in the fifteen
+generalized Gell-Mann matrices,
+
+.. math:: H = h_0 \mathbb{1} + h_a \lambda^a , \qquad a = 1, \ldots, 15 ,
+
+again dropping :math:`h_0`.  Three things are new, and each of them is a
+consequence of SU(4) having rank three where SU(3) has rank two.
+
+**A third invariant.**  The traceless part carries
+
+.. math::
+   I_2 = \tfrac12 \mathrm{Tr}\,\tilde{H}^2 , \qquad
+   I_3 = \tfrac12 \mathrm{Tr}\,\tilde{H}^3 , \qquad
+   I_4 = \tfrac12 \left(\mathrm{Tr}\,\tilde{H}^4 - I_2^2\right) ,
+
+the first two being the :math:`|h|^2` and :math:`\langle h \rangle` of the
+three-flavor case.  Taking them from traces means the SU(4) :math:`d` tensor
+--- a :math:`15\times15\times15` table --- is never built.
+
+**A quartic, which still solves.**  The characteristic equation becomes
+
+.. math::
+   \psi^4 - I_2 \psi^2 - \tfrac23 I_3 \psi
+   + \tfrac14\left(I_2^2 - 2 I_4\right) = 0 ,
+
+and Euler's reduction turns it into the *resolvent cubic*
+
+.. math:: z^3 - 2 I_2 z^2 + 2 I_4 z - \tfrac49 I_3^2 = 0 ,
+
+whose roots are :math:`z_i = (\psi_i + \psi_j)^2` --- real and non-negative
+precisely because :math:`\tilde{H}` is Hermitian.  So the same trigonometric
+formula used at three flavors solves it, and then
+
+.. math::
+   \psi_m = \tfrac12\left(s_1\sqrt{z_1} + s_2\sqrt{z_2} + s_3\sqrt{z_3}\right),
+   \qquad s_1 s_2 s_3 \sqrt{z_1 z_2 z_3} = \tfrac23 I_3 .
+
+The SU(3) machinery is literally nested inside the SU(4) solution.
+
+**A longer star-product tower.**  The three-flavor identity
+:math:`(h \star h) \star h = \tfrac13 |h|^2 h` is a Cayley-Hamilton accident
+of :math:`n = 3` and is *false* at :math:`n = 4` --- about 37% off on a
+random Hamiltonian --- so the third rung enters as independent data:
+
+.. math::
+   u_0 = \frac14 \sum_m e^{-i\psi_m L} , \qquad
+   i u_a = \sum_m e^{-i\psi_m L}\,
+   \frac{\left(\psi_m^2 - \tfrac12 I_2\right) h_a
+         + \psi_m (h \star h)_a + ((h \star h) \star h)_a}{\chi'(\psi_m)} .
+
+That also exposes the general-:math:`n` pattern: a numerator of degree
+:math:`n-2` in :math:`\psi_m`, a star tower cut off at length :math:`n-1`,
+and always :math:`\chi'(\psi_m)` underneath.
+
+.. _why-four-is-the-end:
+
+Why the method stops at four
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Not for want of effort, and not because :math:`n = 5` is uninteresting.  The
+whole construction rests on one thing: that the eigenvalues of the traceless
+Hamiltonian --- the roots of its characteristic polynomial --- can be written
+down *in radicals*, as an explicit formula in the invariants.
+
+That polynomial has degree :math:`n`.  Quadratics, cubics and quartics are
+solvable in radicals; the Abel-Ruffini theorem says the general quintic is
+not, and Galois theory says why: the symmetric group :math:`S_5` is not
+soluble, while :math:`S_2`, :math:`S_3` and :math:`S_4` are.  At
+:math:`n = 5` there is no formula to write, and the shortfall is a theorem
+rather than a gap in anyone's algebra.
+
+So the closed-form road ends at four, and it ends for a reason external to
+neutrino physics entirely.
+
+What does *not* end there is the philosophy.  Nothing above the eigenvalues
+needs radicals: the interpolation over the roots, the fact that no
+eigenvectors are ever required, and the whole probability construction go
+through for any :math:`n`.  Feed numerically computed eigenvalues into the
+same Sylvester sum and the method degrades gracefully rather than breaking
+--- which is what a general-SU(:math:`n`) treatment would do, and what codes
+carrying SU(:math:`N`) expansions to :math:`n = 6` in fact do.  It would no
+longer be a *closed form*, which is this library's reason to exist, so it is
+out of scope here.
+
+Four flavors is therefore both the natural stopping point and a useful one:
+it is exactly what 3+1 sterile scenarios need.
+
+.. _stiff-spectra:
+
+Stiff spectra, and what they cost
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+At two and three flavors the expansion is exact to round-off and there is
+nothing more to say.  At four there is, and it is worth saying plainly.
+
+A 3+1 Hamiltonian with :math:`\Delta m^2_{41} \sim 1` eV\ :sup:`2` has a
+*stiff* spectrum: the eigenvalues span four orders of magnitude, with three
+of them clustered.  The invariants :math:`I_2, I_3, I_4` are sums over that
+spectrum, and forming them in double precision destroys the information that
+separates the cluster.  Perturbing the three invariants at the
+:math:`10^{-16}` level moves the roots by :math:`6\times10^{-11}` relative,
+which is a property of the problem and not of the solver: no better
+root-finder recovers it, and deflating the quartic to a cubic first does not
+either.  Both were measured before this was believed.
+
+The fix is to stop asking the invariants.  After the closed form supplies the
+roots, one Newton step on
+
+.. math:: \chi(\psi) = \det\left(\psi \mathbb{1} - \tilde{H}\right)
+
+refines them using the Hamiltonian *entries*, which are not subject to that
+floor.  It restores the roots to :math:`10^{-16}` and the probabilities from
+:math:`5\times10^{-7}` to :math:`10^{-9}`; a second step changes nothing, so
+exactly one is taken.  It costs roughly 40% of the runtime, which brings the
+four-flavor closed form to parity with a batched ``eigh`` rather than ahead
+of it.  That is an honest trade and :data:`oscprob4nu.POLISH_ROOTS` records
+it; it can be switched off.
+
+This is specific to four flavors, not a general caveat.  The same measurement
+on :mod:`oscprob3nu` gives :math:`10^{-14}`, because there
+:math:`\Delta m^2_{31}/\Delta m^2_{21}` is 34 rather than 13500.
+
+Degenerate spectra at four flavors
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Reconstructing :math:`U_4` from its roots divides by their differences, so a
+repeated root needs care.  Rather than branch on a tolerance, the exponential
+is interpolated over the roots in **Newton form**, with divided differences:
+a repeated node is then a derivative, and for the exponential that derivative
+is known exactly, :math:`f^{(k)}(\psi)/k! = (-iL)^k e^{-i\psi L}/k!`.
+
+The alternative --- solving the Vandermonde system for the Cayley-Hamilton
+coefficients --- is singular the moment two roots coincide, which includes a
+Hamiltonian proportional to the identity and any triply degenerate spectrum.
+The Newton form handles every degenerate case with no special branch at all.
+
 .. _sign-convention:
 
 Sign conventions

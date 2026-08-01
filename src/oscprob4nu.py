@@ -6,8 +6,9 @@ flavor-transition probabilities for an arbitrary time-independent
 :math:`4\times4` Hermitian Hamiltonian, using the SU(4) exponential
 expansion.  It is the :math:`n = 4` member of the family whose
 :math:`n = 2` and :math:`n = 3` members are :mod:`oscprob2nu` and
-:mod:`oscprob3nu`, and it is the last one: see
-:ref:`why-four-is-the-end` in the methodology page.
+:mod:`oscprob3nu`, following the method of [1]_.  It is the last one: see
+:ref:`why-four-is-the-end` in the methodology page.  The Cayley-Hamilton
+route at :math:`n = 4` in constant matter was set out in [2]_.
 
 The Hamiltonian is expanded in the basis of the fifteen generalized
 Gell-Mann matrices,
@@ -722,7 +723,7 @@ def evolution_operator_4nu_u_coefficients(
     time-evolution operator, in the same convention as
     :func:`oscprob3nu.evolution_operator_3nu_u_coefficients`.
 
-    The four-flavor analogue of Eqs. (10)-(11) of [1]_ is
+    The four-flavor analogue of Eqs. (10)-(11) of arXiv:1904.12391 is
 
     .. math::
        u_0 = \frac14 \sum_m e^{-i \psi_m L} , \qquad

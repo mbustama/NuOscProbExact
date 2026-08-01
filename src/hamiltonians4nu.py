@@ -3,8 +3,8 @@ r"""Sample four-neutrino Hamiltonians, for 3+1 scenarios.
 
 This module builds the :math:`4\times4` Hamiltonians that
 :mod:`oscprob4nu` evaluates, in the same spirit as
-:mod:`hamiltonians3nu` does at three flavors: they are *examples*, not
-limitations.  :func:`oscprob4nu.probabilities_4nu` takes any Hermitian
+:mod:`hamiltonians3nu` does at three flavors and as [1]_ describes: they
+are *examples*, not limitations.  :func:`oscprob4nu.probabilities_4nu` takes any Hermitian
 :math:`4\times4` matrix, so a scenario not built here is a matrix away.
 
 The fourth state is written as sterile throughout, so the flavor basis
