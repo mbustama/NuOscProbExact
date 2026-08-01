@@ -269,7 +269,7 @@ that is sometimes slower than the path it replaces is worse than no backend,
 and a test asserts the thresholds are honoured.
 
 The scalar path is deliberately left uncompiled.  One probability takes
-about thirteen microseconds; compiling it would save twelve, at the cost of
+about sixteen microseconds; compiling it would save most of that, at the cost of
 a multi-second pause on a user's first call.
 
 Degenerate spectra on the batched path

@@ -138,7 +138,7 @@ What it is not
 Performance
 -----------
 
-A single probability takes about 13 microseconds for three flavors and 1.3
+A single probability takes about 16 microseconds for three flavors and 2
 for two.  Scans --- a curve versus baseline or energy, an oscillogram over
 both --- are what the code mostly does, and two things make those much
 faster without changing any answer.
@@ -166,24 +166,27 @@ Python loop:
      - Arrays
      - Arrays + Numba
    * - Three flavors, versus baseline
-     - 30 ms
-     - 1.1 ms
-     - **0.24 ms**
+     - 38 ms
+     - 1.8 ms
+     - **0.31 ms**
    * - Three flavors, versus energy
-     - 41 ms
-     - 1.6 ms
-     - **0.43 ms**
+     - 34 ms
+     - 1.5 ms
+     - **0.20 ms**
    * - Oscillogram, 100 x 100
-     - 195 ms
-     - 4.4 ms
-     - **0.78 ms**
+     - 197 ms
+     - 5.3 ms
+     - **0.85 ms**
    * - Two flavors, versus baseline
-     - 4.4 ms
+     - 6.9 ms
      - **0.07 ms**
      - not used
 
-Repeated runs on one machine vary by up to half again, so read these as
-orders of magnitude.
+Best of seven runs, interleaved, on one machine.  Repeated runs vary by tens
+of per cent, so read these as orders of magnitude rather than constants ---
+and if the exact figures matter to you, `notebook 09
+<https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/09_performance.ipynb>`_
+measures them on the machine that runs it.
 
 The last row is not an omission.  The backend is used only where it has been
 measured to win: for three flavors that is every stack size, but the

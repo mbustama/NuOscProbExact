@@ -95,7 +95,7 @@ The method relies on expansions of the Hamiltonian and time-evolution operators 
 
 * **To run the regression tests:** The test suite in `tests/` requires `pytest` and `scipy`, the latter only to cross-check the evolution operator against an independent matrix exponential
 
-* **To go faster on large scans (optional):** Installing `numba`, via `pip install "nuoscprobexact[fast]"`, lets the batched paths run on compiled kernels instead of NumPy — worth between 2x and 15x depending on the size of the scan. It is entirely optional: without it the NumPy path is used, and the results are identical to round-off
+* **To go faster on large scans (optional):** Installing `numba`, via `pip install "nuoscprobexact[fast]"`, lets the batched paths run on compiled kernels instead of NumPy — worth roughly 1.5x to 15x depending on the size of the scan and the number of flavors. It is entirely optional: without it the NumPy path is used, and the results are identical to round-off
 
 
 ## Installation
@@ -283,11 +283,11 @@ import oscprob3nu
    pip install -e ".[notebooks]"
    jupyter lab notebooks/
    ```
-   Nine worked notebooks, numbered in reading order, covering the probabilities against baseline and against energy, matter and new physics, oscillograms, bi-probability plots, the Earth, arbitrary matter profiles, and performance.  They carry their figures inline, so they can also just be read on GitHub.
+   Fifteen worked notebooks, numbered in reading order, covering the probabilities against baseline and against energy, matter and new physics, oscillograms, bi-probability plots, the Earth, arbitrary matter profiles, performance, the paper's own figures, the textbook approximations, mass ordering and the octant, antineutrinos, solar neutrinos, and numerical edge cases.  They carry their figures inline, so they can also just be read on GitHub.
 
 ## Performance
 
-The probabilities are computed from a closed form, so a single one is quick — about **13 µs** for three flavors and **1.3 µs** for two.  Most real use, though, is a *scan*: a curve versus baseline or energy, or an oscillogram over both.  Two things make those much faster, and neither changes the answers.
+The probabilities are computed from a closed form, so a single one is quick — about **16 µs** for three flavors and **2 µs** for two.  Most real use, though, is a *scan*: a curve versus baseline or energy, or an oscillogram over both.  Two things make those much faster, and neither changes the answers.
 
 ### 1. Pass arrays instead of looping
 
@@ -309,7 +309,7 @@ h_stack = hamiltonians3nu.hamiltonian_3nu_matter(h_vacuum_energy_indep,
 prob = oscprob3nu.probabilities_3nu(h_stack, baseline)
 ```
 
-This is the single biggest win — **roughly 25–60×** — and it needs no extra dependency.  It works because the expansion's expensive part, the characteristic equation whose roots give the oscillation phases, depends on the Hamiltonian alone: a scan over baselines solves it *once* rather than once per point.
+This is the single biggest win — **roughly 20–90×** — and it needs no extra dependency.  It works because the expansion's expensive part, the characteristic equation whose roots give the oscillation phases, depends on the Hamiltonian alone: a scan over baselines solves it *once* rather than once per point.
 
 ### 2. Install Numba, if the scans are large
 
@@ -323,12 +323,12 @@ Measured on 2000-point scans, against the equivalent Python loop:
 
 | Scan | loop | arrays | arrays + Numba |
 |---|---|---|---|
-| Three-flavor, vs. baseline | 30 ms | 1.1 ms (~28×) | 0.24 ms (**~130×**) |
-| Three-flavor, vs. energy | 41 ms | 1.6 ms (~25×) | 0.43 ms (**~95×**) |
-| Three-flavor oscillogram, 100×100 | 195 ms | 4.4 ms (~44×) | 0.78 ms (**~250×**) |
-| Two-flavor, vs. baseline | 4.4 ms | 0.07 ms (~59×) | *not used — see below* |
+| Three-flavor, vs. baseline | 38 ms | 1.8 ms (~21×) | 0.31 ms (**~120×**) |
+| Three-flavor, vs. energy | 34 ms | 1.5 ms (~23×) | 0.20 ms (**~170×**) |
+| Three-flavor oscillogram, 100×100 | 197 ms | 5.3 ms (~37×) | 0.85 ms (**~230×**) |
+| Two-flavor, vs. baseline | 6.9 ms | 0.07 ms (~93×) | *not used — see below* |
 
-These are indicative, not precise: repeated runs on the same machine vary by up to ~1.5×, so treat them as orders of magnitude.
+Best of seven runs, interleaved, on one machine.  These are indicative, not precise: repeated runs vary by tens of per cent, so treat them as orders of magnitude.  [Notebook 09](notebooks/09_performance.ipynb) measures the same comparison on whatever machine runs it, which is the number to trust.
 
 **The backend is not used where it would not help.**  For three flavors it wins at every stack size, by between two and sixteen times.  For two flavors it does not: that expansion reduces to a square root and a sine per element, which NumPy already does about as well as compiled code can, and the kernel additionally has to materialise the Hamiltonian stack.  Below fifty thousand elements the NumPy path is quicker, so it is kept; above, the kernel leads by about 1.3–1.8×.  The thresholds are measured, and the library picks whichever is faster without you doing anything.
 
@@ -337,7 +337,7 @@ Two costs, so the trade is visible: importing Numba takes about 140 ms against 6
 ### What you do not have to think about
 
 * **Short stacks.** Below about ten elements the array machinery costs more than it saves, so those are evaluated one at a time automatically.
-* **The scalar path.** It is deliberately left uncompiled: 13 µs is not worth a compilation pause on a first call.
+* **The scalar path.** It is deliberately left uncompiled: 16 µs is not worth a compilation pause on a first call.
 * **Turning Numba off.** `fastkernels.USE_NUMBA = False` forces the NumPy path, which is how the test suite checks that the two agree.
 
 One thing that *is* worth doing by hand: build the energy-independent part of the vacuum Hamiltonian once, outside any scan, since it does not depend on the energy.  The bundled examples all do this.
@@ -508,7 +508,7 @@ Sometimes, you might be interested also in returning the coefficients `h1`, ...,
 
 The module `oscprob3nu` has functions to do this:
 ```python
-# Find this example in NuOscProbExact/test/example_3nu_vacuum_coefficients.py
+# Find this example in NuOscProbExact/test/example_3nu_vacuum_coeffs.py
 
 import numpy as np
 
@@ -619,7 +619,7 @@ Pme = 0.70405, Pmm = 0.29595
 
 Like in the three-neutrino case, we can also return the coefficients `h1`, `h2`, `h3` of the expansion of the Hamiltonian in terms of Pauli matrices (Table I in the paper), or the time-evolution operator `evol_operator` itself, as a 2x2 matrix (Eq. (5) in the paper).
 ```python
-# Find this example in NuOscProbExact/test/example_2nu_vacuum_coefficients.py
+# Find this example in NuOscProbExact/test/example_2nu_vacuum_coeffs.py
 
 import numpy as np
 

@@ -231,8 +231,8 @@ Going faster still
 ------------------
 
 If `Numba <https://numba.pydata.org>`_ is installed, the batched paths are
-evaluated by compiled kernels instead of NumPy, which is worth between
-2x and 15x on large stacks:
+evaluated by compiled kernels instead of NumPy, which is worth roughly
+1.5x to 15x on large stacks, depending on the number of flavors:
 
 .. code-block:: shell
 
@@ -258,7 +258,7 @@ path --- to compare the two, say --- set
    fastkernels.USE_NUMBA = False
 
 The scalar path is deliberately left uncompiled: a single probability
-takes about fifteen microseconds, which is not worth a compilation
+takes about sixteen microseconds, which is not worth a compilation
 pause.  Short *stacks* are also evaluated one element at a time, since
 below about ten elements the array machinery costs more than it saves.
 

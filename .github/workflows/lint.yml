@@ -151,6 +151,21 @@ jobs:
               sys.exit('notebooks failed to execute: %s' % ', '.join(failed))
           PY
 
+      - name: Run the worked examples
+        # The nine scripts in test/ are the examples the paper refers to and the
+        # ones README.md walks through line by line.  Nothing executed them, so
+        # they could rot silently -- and had: two were referenced under names
+        # that no longer existed.  They are cheap to run and they print
+        # probabilities, so running them is the cheapest possible check that the
+        # library still does what the paper says.
+        run: |
+          cd test
+          for example in example_*.py; do
+            echo "--- $example"
+            python "$example" > /dev/null || exit 1
+          done
+          echo "all worked examples ran"
+
       - name: Check every notebook ships its figures
         # The notebooks are committed with their outputs, so that GitHub renders them
         # without anyone having to run anything.  A notebook stripped of its outputs
