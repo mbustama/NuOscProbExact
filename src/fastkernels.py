@@ -2,13 +2,14 @@
 r"""Optional Numba-compiled kernels for the batched evaluation paths.
 
 **NuOscProbExact** needs only NumPy.  If `Numba <https://numba.pydata.org>`_
-happens to be installed, this module compiles the two- and three-neutrino
-expansions into fused machine-code loops and :mod:`oscprob2nu` and
-:mod:`oscprob3nu` use them for large stacks; if it is not, ``HAVE_NUMBA``
-is ``False``, nothing here is defined, and the NumPy path is used
-instead.  Nothing else in the library changes either way, and the
-results agree to round-off --- see ``tests/test_fastkernels.py``, which
-runs both paths against each other whichever is available.
+happens to be installed, this module compiles the two-, three- and
+four-neutrino expansions into fused machine-code loops and
+:mod:`oscprob2nu`, :mod:`oscprob3nu` and :mod:`oscprob4nu` use them for
+large stacks; if it is not, ``HAVE_NUMBA`` is ``False``, nothing here is
+defined, and the NumPy path is used instead.  Nothing else in the
+library changes either way, and the results agree to round-off --- see
+``tests/test_fastkernels.py``, which runs both paths against each other
+whichever is available.
 
 Install the optional dependency with::
 
@@ -29,11 +30,20 @@ interleaved:
 ===============================  ==========
 Stack                            Speedup
 ===============================  ==========
+200 000 energies, four flavors   ~19x
+20 000 energies, four flavors    ~18x
 200 000 energies, three flavors  ~15x
 20 000 energies, three flavors   ~9x
 100 x 100 oscillogram            ~3.5x
 200 000 baselines, two flavors   ~1.5x
 ===============================  ==========
+
+Four flavors gains the most, and not because the kernel is cleverer
+there: the NumPy path has the furthest to fall.  Its expansion needs a
+quartic, a Newton refinement of the four roots against the matrix, and
+a Newton-form reconstruction, which as whole-array operations is some
+forty passes over the stack; done one element at a time none of it
+leaves the registers.
 
 These are one machine on one day, and they move by tens of per cent
 between runs; read them as the shape of the gain rather than as
@@ -68,6 +78,7 @@ Routine listings
     * worthwhile - Whether a stack is large enough to be worth compiling
     * probabilities_2nu_kernel - Two-flavor probabilities for a stack
     * probabilities_3nu_kernel - Three-flavor probabilities for a stack
+    * probabilities_4nu_kernel - Four-flavor probabilities for a stack
 """
 
 __author__ = "Mauricio Bustamante"
@@ -75,7 +86,8 @@ __email__ = "mbustamante@gmail.com"
 
 __all__ = ['HAVE_NUMBA', 'USE_NUMBA', 'MIN_BATCH', 'PARALLEL_THRESHOLD',
            'available', 'worthwhile',
-           'probabilities_2nu_kernel', 'probabilities_3nu_kernel']
+           'probabilities_2nu_kernel', 'probabilities_3nu_kernel',
+           'probabilities_4nu_kernel']
 
 from typing import Callable
 
@@ -97,7 +109,7 @@ Set to ``False`` to force the NumPy path even when Numba is installed.
 `available` reports the two together.
 """
 
-MIN_BATCH = {2: 50000, 3: 1}
+MIN_BATCH = {2: 50000, 3: 1, 4: 1}
 r"""dict: Module-level constant.
 
 The smallest stack for which the compiled kernel is worth using, by
@@ -106,7 +118,18 @@ replaces is worse than no backend, so these are measured rather than
 assumed.
 
 For three flavors the kernel wins at every size, by between two and
-sixteen times, so the threshold is one.  For two flavors it does not:
+sixteen times, so the threshold is one.  Four flavors is the same story
+only more so, and for a reason worth stating: the NumPy path there has
+no short-stack shortcut to fall back on --- :mod:`oscprob4nu` has no
+separate scalar closed form, so even a stack of one pays for the whole
+array machinery, a batched determinant and all.  Measured by alternating
+the two paths through :func:`oscprob4nu.probabilities_4nu` and taking the
+best of nine rounds each, the kernel leads by 15x at a single element,
+falls to 5x just below `PARALLEL_THRESHOLD` where it is still
+single-threaded, and settles at 18x once the threads are in use.  It is
+never behind, so the threshold is one.
+
+For two flavors it does not:
 that expansion reduces to a square root and a sine per element, which
 NumPy already does about as well as compiled code can, and the kernel
 additionally has to materialise the Hamiltonian stack --- which for a
@@ -141,8 +164,8 @@ def available() -> bool:
     Returns
     -------
     bool
-        Whether `probabilities_2nu_kernel` and
-        `probabilities_3nu_kernel` may be called.
+        Whether `probabilities_2nu_kernel`, `probabilities_3nu_kernel`
+        and `probabilities_4nu_kernel` may be called.
     """
     return HAVE_NUMBA and USE_NUMBA
 
@@ -160,7 +183,7 @@ def worthwhile(n_flavors: int, size: int) -> bool:
     Parameters
     ----------
     n_flavors : int
-        Number of neutrino flavors, 2 or 3.
+        Number of neutrino flavors, 2, 3, or 4.
     size : int
         Number of elements in the stack.
 
@@ -336,6 +359,337 @@ if HAVE_NUMBA:                                          # pragma: no branch
         out[n, 2] = p_em
         out[n, 3] = 1.0 - p_em
 
+    @njit(cache=True, inline='always')
+    def _chi_4nu(traceless, psi, scratch):
+        r"""Returns the characteristic polynomial
+        :math:`\chi(\psi) = \det(\psi\mathbb{1} - \tilde{H})`.
+
+        Gaussian elimination with partial pivoting, written out for a
+        four-by-four in the caller's scratch buffer: the same
+        factorisation LAPACK's ``zgetrf`` performs for
+        :func:`numpy.linalg.det` on the NumPy path, with no allocation
+        and no call.
+
+        The obvious alternative --- a Laplace expansion in the six
+        two-by-two minors of the first two rows, thirty products, no
+        pivoting and no branches --- was written first and measured
+        against ``mpmath`` at sixty digits.  It is **5.9x cheaper**, and
+        it was still rejected.
+
+        The reason is that this determinant is evaluated *at a root*,
+        where it is meant to vanish.  On the stiff 3+1 spectrum the true
+        value sits some seventeen orders of magnitude below the products
+        being summed, so an expansion that cancels them only at the end
+        has no significant digits left, while elimination cancels while
+        the entries are still full precision.  On the clustered roots,
+        where :math:`\chi'` is :math:`6 \times 10^{-35}`, the expansion
+        was a thousand times the less accurate, and it refined those
+        roots to :math:`4 \times 10^{-15}` relative against
+        :math:`6 \times 10^{-16}` here; on a spectrum whose cluster is
+        :math:`10^{-3}` wide the gap widens to 54x.  The refined figure
+        :data:`oscprob4nu.POLISH_ROOTS` tabulates is
+        :math:`1.1 \times 10^{-16}`, and a backend that quietly delivers
+        forty times that whenever an optional dependency happens to be
+        installed makes that table false.
+
+        What the measurement did **not** show is any of this reaching
+        the probabilities, and the honest record is that no test here
+        distinguishes the two.  Below :math:`\psi L \sim 1` both sit on
+        the one-ulp floor; above it the Newton-form reconstruction
+        cancels by :math:`\sim 10^6` and swamps them both, and which
+        scores better is then noise --- on the stiff spectrum at 1300 km
+        the *rejected* expansion won, 3.1e-11 against 1.5e-10.  The case
+        for elimination is fidelity to the roots the NumPy path
+        computes, not a demonstrated gain in the numbers handed back.
+        It costs about 40% of the kernel's serial runtime, which is
+        cheap against the 18x the kernel wins overall.
+
+        The result is real for a Hermitian argument, so only the real
+        part is returned, exactly as the NumPy path takes ``.real`` of
+        :func:`numpy.linalg.det`.
+        """
+        for i in range(4):
+            for j in range(4):
+                scratch[i, j] = -traceless[i, j]
+            scratch[i, i] = psi - traceless[i, i]
+
+        sign = 1.0
+        for k in range(3):
+            # The pivot LAPACK would choose: ``izamax`` ranks by
+            # |Re| + |Im| rather than by the modulus
+            pivot_row = k
+            largest = abs(scratch[k, k].real) + abs(scratch[k, k].imag)
+            for i in range(k+1, 4):
+                candidate = abs(scratch[i, k].real) + abs(scratch[i, k].imag)
+                if candidate > largest:
+                    largest = candidate
+                    pivot_row = i
+
+            if pivot_row != k:
+                sign = -sign
+                for j in range(k, 4):
+                    swap = scratch[k, j]
+                    scratch[k, j] = scratch[pivot_row, j]
+                    scratch[pivot_row, j] = swap
+
+            pivot = scratch[k, k]
+            if pivot == 0.0:
+                return 0.0
+
+            for i in range(k+1, 4):
+                multiplier = scratch[i, k]/pivot
+                for j in range(k+1, 4):
+                    scratch[i, j] -= multiplier*scratch[k, j]
+
+        return sign*(scratch[0, 0]*scratch[1, 1]
+                     * scratch[2, 2]*scratch[3, 3]).real
+
+    @njit(cache=True, inline='always')
+    def _one_4nu(h_matrix, L, out, n, polish, work):
+        r"""Writes the sixteen probabilities for one Hamiltonian into
+        ``out[n]``.
+
+        A transcription of :func:`oscprob4nu._evolution_operator_4nu_array`
+        for a single element: the traceless part, the three invariants
+        from traces of powers, the quartic by Euler's reduction, the
+        Newton refinement of the roots against the matrix, the divided
+        differences of the exponential over them, and the Newton-form
+        reconstruction of :math:`U_4`.
+
+        ``work`` is scratch space of shape ``(5, 4, 4)``, supplied by the
+        caller so that the loop over a stack allocates nothing.
+        """
+        traceless = work[0]
+        operator = work[1]
+        first = work[2]
+        second = work[3]
+        shifted = work[4]
+
+        trace = (h_matrix[0, 0] + h_matrix[1, 1]
+                 + h_matrix[2, 2] + h_matrix[3, 3]).real/4.0
+        for i in range(4):
+            for j in range(4):
+                traceless[i, j] = h_matrix[i, j]
+            traceless[i, i] = h_matrix[i, i] - trace
+
+        # The invariants, from traces of powers of the traceless part.
+        # `second` holds H~^2 until the reconstruction needs it back.
+        for i in range(4):
+            for j in range(4):
+                entry = 0.0j
+                for k in range(4):
+                    entry += traceless[i, k]*traceless[k, j]
+                second[i, j] = entry
+
+        trace_2 = 0.0j
+        trace_3 = 0.0j
+        trace_4 = 0.0j
+        for i in range(4):
+            trace_2 += second[i, i]
+            row_3 = 0.0j
+            row_4 = 0.0j
+            for j in range(4):
+                row_3 += second[i, j]*traceless[j, i]
+                row_4 += second[i, j]*second[j, i]
+            trace_3 += row_3
+            trace_4 += row_4
+
+        invariant_2 = 0.5*trace_2.real
+        invariant_3 = 0.5*trace_3.real
+        invariant_4 = 0.5*(trace_4.real - invariant_2*invariant_2)
+
+        # Euler's reduction: the resolvent cubic, solved trigonometrically
+        quadratic = -invariant_2
+        linear = -(2.0/3.0)*invariant_3
+        constant = 0.25*(invariant_2*invariant_2 - 2.0*invariant_4)
+
+        coeff_2 = 2.0*quadratic
+        coeff_1 = quadratic*quadratic - 4.0*constant
+        coeff_0 = -linear*linear
+
+        depressed_p = coeff_1 - coeff_2*coeff_2/3.0
+        depressed_q = (2.0*coeff_2*coeff_2*coeff_2/27.0
+                       - coeff_2*coeff_1/3.0 + coeff_0)
+        shift = -coeff_2/3.0
+
+        scale = 2.0*math.sqrt(max(-depressed_p, 0.0)/3.0)
+        denominator = depressed_p*scale
+        if denominator != 0.0:
+            argument = 3.0*depressed_q/denominator
+        else:
+            argument = 3.0*depressed_q
+        if argument < -1.0:
+            argument = -1.0
+        elif argument > 1.0:
+            argument = 1.0
+        angle = math.acos(argument)
+
+        root_0 = math.sqrt(max(scale*math.cos(angle/3.0) + shift, 0.0))
+        root_1 = math.sqrt(max(scale*math.cos((angle + 2.0*math.pi)/3.0)
+                               + shift, 0.0))
+        root_2 = math.sqrt(max(scale*math.cos((angle + 4.0*math.pi)/3.0)
+                               + shift, 0.0))
+        if linear > 0.0:
+            root_2 = -root_2
+
+        psi_0 = 0.5*(root_0 + root_1 + root_2)
+        psi_1 = 0.5*(root_0 - root_1 - root_2)
+        psi_2 = 0.5*(-root_0 + root_1 - root_2)
+        psi_3 = 0.5*(-root_0 - root_1 + root_2)
+
+        # Ascending, by the five-comparator network for four elements
+        if psi_0 > psi_1:
+            psi_0, psi_1 = psi_1, psi_0
+        if psi_2 > psi_3:
+            psi_2, psi_3 = psi_3, psi_2
+        if psi_0 > psi_2:
+            psi_0, psi_2 = psi_2, psi_0
+        if psi_1 > psi_3:
+            psi_1, psi_3 = psi_3, psi_1
+        if psi_1 > psi_2:
+            psi_1, psi_2 = psi_2, psi_1
+
+        if polish:
+            # One Newton step on chi, with chi'(psi_m) taken as the
+            # product of the gaps to the other three roots
+            gap_01 = psi_0 - psi_1
+            gap_02 = psi_0 - psi_2
+            gap_03 = psi_0 - psi_3
+            gap_12 = psi_1 - psi_2
+            gap_13 = psi_1 - psi_3
+            gap_23 = psi_2 - psi_3
+
+            derivative = gap_01*gap_02*gap_03
+            if derivative != 0.0:
+                psi_0 -= _chi_4nu(traceless, psi_0, shifted)/derivative
+            derivative = -gap_01*gap_12*gap_13
+            if derivative != 0.0:
+                psi_1 -= _chi_4nu(traceless, psi_1, shifted)/derivative
+            derivative = gap_02*gap_12*gap_23
+            if derivative != 0.0:
+                psi_2 -= _chi_4nu(traceless, psi_2, shifted)/derivative
+            derivative = -gap_03*gap_13*gap_23
+            if derivative != 0.0:
+                psi_3 -= _chi_4nu(traceless, psi_3, shifted)/derivative
+
+            if psi_0 > psi_1:
+                psi_0, psi_1 = psi_1, psi_0
+            if psi_2 > psi_3:
+                psi_2, psi_3 = psi_3, psi_2
+            if psi_0 > psi_2:
+                psi_0, psi_2 = psi_2, psi_0
+            if psi_1 > psi_3:
+                psi_1, psi_3 = psi_3, psi_1
+            if psi_1 > psi_2:
+                psi_1, psi_2 = psi_2, psi_1
+
+        # Divided differences of exp(-i psi L) over the four roots,
+        # taking the confluent value wherever two nodes have merged
+        spectral = abs(psi_0)
+        if abs(psi_1) > spectral:
+            spectral = abs(psi_1)
+        if abs(psi_2) > spectral:
+            spectral = abs(psi_2)
+        if abs(psi_3) > spectral:
+            spectral = abs(psi_3)
+        tolerance = DEGENERACY_TOL*(spectral if spectral > 0.0 else 1.0)
+
+        phase_0 = cmath.rect(1.0, -psi_0*L)
+        phase_1 = cmath.rect(1.0, -psi_1*L)
+        phase_2 = cmath.rect(1.0, -psi_2*L)
+        phase_3 = cmath.rect(1.0, -psi_3*L)
+        minus_i_l = complex(0.0, -L)
+
+        table_0 = phase_0
+        table_1 = phase_1
+        table_2 = phase_2
+        table_3 = phase_3
+        coeff_0th = table_0
+
+        weight = minus_i_l
+        separation = psi_1 - psi_0
+        if abs(separation) > tolerance:
+            new_0 = (table_1 - table_0)/separation
+        else:
+            new_0 = weight*phase_0
+        separation = psi_2 - psi_1
+        if abs(separation) > tolerance:
+            new_1 = (table_2 - table_1)/separation
+        else:
+            new_1 = weight*phase_1
+        separation = psi_3 - psi_2
+        if abs(separation) > tolerance:
+            new_2 = (table_3 - table_2)/separation
+        else:
+            new_2 = weight*phase_2
+        table_0, table_1, table_2 = new_0, new_1, new_2
+        coeff_1st = table_0
+
+        weight = minus_i_l*minus_i_l/2.0
+        separation = psi_2 - psi_0
+        if abs(separation) > tolerance:
+            new_0 = (table_1 - table_0)/separation
+        else:
+            new_0 = weight*phase_0
+        separation = psi_3 - psi_1
+        if abs(separation) > tolerance:
+            new_1 = (table_2 - table_1)/separation
+        else:
+            new_1 = weight*phase_1
+        table_0, table_1 = new_0, new_1
+        coeff_2nd = table_0
+
+        weight = minus_i_l*minus_i_l*minus_i_l/6.0
+        separation = psi_3 - psi_0
+        if abs(separation) > tolerance:
+            coeff_3rd = (table_1 - table_0)/separation
+        else:
+            coeff_3rd = weight*phase_0
+
+        # U_4 = c_0 + c_1 (H~ - psi_0) + c_2 (H~ - psi_0)(H~ - psi_1)
+        #           + c_3 (H~ - psi_0)(H~ - psi_1)(H~ - psi_2)
+        for i in range(4):
+            for j in range(4):
+                first[i, j] = traceless[i, j]
+            first[i, i] = traceless[i, i] - psi_0
+
+        for i in range(4):
+            for j in range(4):
+                operator[i, j] = coeff_1st*first[i, j]
+            operator[i, i] += coeff_0th
+
+        for i in range(4):
+            for j in range(4):
+                shifted[i, j] = traceless[i, j]
+            shifted[i, i] = traceless[i, i] - psi_1
+
+        for i in range(4):
+            for j in range(4):
+                entry = 0.0j
+                for k in range(4):
+                    entry += first[i, k]*shifted[k, j]
+                second[i, j] = entry
+                operator[i, j] += coeff_2nd*entry
+
+        for i in range(4):
+            for j in range(4):
+                shifted[i, j] = traceless[i, j]
+            shifted[i, i] = traceless[i, i] - psi_2
+
+        for i in range(4):
+            for j in range(4):
+                entry = 0.0j
+                for k in range(4):
+                    entry += second[i, k]*shifted[k, j]
+                operator[i, j] += coeff_3rd*entry
+
+        # P_ab = |U_ba|^2, initial flavor slowest
+        for alpha in range(4):
+            for beta in range(4):
+                entry = operator[beta, alpha]
+                out[n, 4*alpha + beta] = (entry.real*entry.real
+                                          + entry.imag*entry.imag)
+
     @njit(cache=True)
     def _run_3nu_serial(h_stack, l_stack, out):
         for n in range(h_stack.shape[0]):
@@ -356,12 +710,25 @@ if HAVE_NUMBA:                                          # pragma: no branch
         for n in prange(h_stack.shape[0]):
             _one_2nu(h_stack[n], l_stack[n], out, n)
 
+    @njit(cache=True)
+    def _run_4nu_serial(h_stack, l_stack, out, polish):
+        work = np.empty((5, 4, 4), dtype=np.complex128)
+        for n in range(h_stack.shape[0]):
+            _one_4nu(h_stack[n], l_stack[n], out, n, polish, work)
+
+    @njit(cache=True, parallel=True)
+    def _run_4nu_parallel(h_stack, l_stack, out, polish):
+        for n in prange(h_stack.shape[0]):
+            work = np.empty((5, 4, 4), dtype=np.complex128)
+            _one_4nu(h_stack[n], l_stack[n], out, n, polish, work)
+
     def _run(
         h_stack: np.ndarray,
         l_stack: np.ndarray,
         width: int,
         serial: Callable,
-        parallel: Callable
+        parallel: Callable,
+        extra: tuple = ()
     ) -> np.ndarray:
         r"""Flattens, dispatches, and restores the batch shape.
 
@@ -372,11 +739,16 @@ if HAVE_NUMBA:                                          # pragma: no branch
         l_stack : numpy.ndarray
             Baselines, of shape ``(...)``.
         width : int
-            Number of flavors, 2 or 3.
+            Number of flavors, 2, 3, or 4.
         serial : Callable
             Kernel to use below `PARALLEL_THRESHOLD`.
         parallel : Callable
             Kernel to use at or above it.
+        extra : tuple, optional
+            Further arguments passed on to the kernel after the output
+            array.  Empty at two and three flavors; at four it carries
+            the root-polishing switch, which an ``@njit`` function cannot
+            read from module state at call time.
 
         Returns
         -------
@@ -388,9 +760,9 @@ if HAVE_NUMBA:                                          # pragma: no branch
         flat_l = np.ascontiguousarray(l_stack).reshape(-1)
         out = np.empty((flat_l.shape[0], width*width))
         if flat_l.shape[0] >= PARALLEL_THRESHOLD:
-            parallel(flat_h, flat_l, out)
+            parallel(flat_h, flat_l, out, *extra)
         else:
-            serial(flat_h, flat_l, out)
+            serial(flat_h, flat_l, out, *extra)
         return out.reshape(batch + (width*width,))
 
     def probabilities_3nu_kernel(
@@ -441,3 +813,36 @@ if HAVE_NUMBA:                                          # pragma: no branch
             ``(Pee, Pem, Pme, Pmm)``.
         """
         return _run(h_stack, l_stack, 2, _run_2nu_serial, _run_2nu_parallel)
+
+    def probabilities_4nu_kernel(
+        h_stack: np.ndarray,
+        l_stack: np.ndarray,
+        polish: bool = True
+    ) -> np.ndarray:
+        r"""Returns the sixteen probabilities for a stack of Hamiltonians.
+
+        .. versionadded:: 1.10.0
+
+        Parameters
+        ----------
+        h_stack : numpy.ndarray
+            Hamiltonians, of shape ``(..., 4, 4)``, already broadcast
+            against `l_stack`.
+        l_stack : numpy.ndarray
+            Baselines, of shape ``(...)``.
+        polish : bool, optional
+            Whether to refine the latent roots against the Hamiltonian
+            matrix, as :data:`oscprob4nu.POLISH_ROOTS` asks the NumPy
+            path to.  It is an argument rather than a module constant
+            because a compiled kernel cannot read a Python global at
+            call time without recompiling.
+
+        Returns
+        -------
+        numpy.ndarray
+            The probabilities, of shape ``(..., 16)``, ordered with the
+            initial flavor varying slowest --- the same ordering, and
+            the same values to round-off, as the NumPy path.
+        """
+        return _run(h_stack, l_stack, 4, _run_4nu_serial, _run_4nu_parallel,
+                    (bool(polish),))
