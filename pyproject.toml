@@ -29,10 +29,14 @@ fast = ["numba"]
 test = ["pytest", "scipy", "coverage", "pytest-cov"]
 docs = ["sphinx", "numpydoc", "myst-parser"]
 # Everything needed to *execute* the notebooks in notebooks/, which is what
-# the notebooks job in .github/workflows/lint.yml does.  matplotlib is
-# listed again rather than depended on through `plots`, so that installing
-# this extra alone is enough.
-notebooks = ["jupyter", "nbclient", "nbformat", "ipykernel", "matplotlib"]
+# the notebooks job in .github/workflows/lint.yml does.  Deliberately
+# self-contained: installing this extra alone must be enough, which is why
+# matplotlib and scipy are listed here rather than leaned on through another
+# extra.  scipy is needed by the numerical-edge-cases notebook, which checks
+# the evolution operator against `scipy.linalg.expm` -- the point being that
+# the comparison is independent of this library.
+notebooks = ["jupyter", "nbclient", "nbformat", "ipykernel", "matplotlib",
+             "scipy"]
 
 [project.urls]
 Homepage = "https://github.com/mbustama/NuOscProbExact"

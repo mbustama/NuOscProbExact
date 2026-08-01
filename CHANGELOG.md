@@ -36,7 +36,8 @@ to the library.
   production region, the spectrum and a third flavor.  It points at the
   Magnus package for profiles that vary smoothly over an oscillation length.
 
-- A `notebooks` extra, and a `notebooks` job in `lint.yml` that executes every
+- A `notebooks` extra — Jupyter, matplotlib and scipy — and a `notebooks` job
+  in `lint.yml` that executes every
   one of them.  A notebook is documentation that claims to work, and stored
   outputs make that claim persuasive without making it true — they were
   correct whenever the notebook was last run, which may predate the change
