@@ -5,6 +5,31 @@ All notable changes to **NuOscProbExact** are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.8.5] - 2026-08-01
+
+### Changed
+
+- **`test/` is now `examples/`.**  Having `test/` and `tests/` side by side was
+  a standing invitation to open the wrong one, and tab-completion could not
+  tell them apart.  The new name says what the directory holds: nine runnable
+  scripts, the ones `README.md` walks through line by line.
+
+  Nothing functional depended on the old name.  `pytest` never collected from
+  it (`testpaths = ["tests"]`), so the clash was cosmetic rather than real, and
+  the scripts locate `src/` relative to themselves, so they run from the new
+  location unchanged.  `git mv` keeps their history.
+
+  The directory is called `test/` in version 1.0.0 of the code and in version 2
+  of [arXiv:1904.12391](https://arxiv.org/abs/1904.12391).  `README.md` and the
+  installation and quickstart pages say so, for anyone arriving from the paper.
+  The layout had already moved away from what the paper describes — 1.8.1
+  removed `run_testsuite.py` and the four plotting modules, and `src/` has
+  gained three modules since — so this is one more difference in a list, not a
+  new kind of divergence.
+
+  Entries below this one still say `test/`.  They are dated records of what was
+  true when written, and are left alone.
+
 ## [1.8.4] - 2026-08-01
 
 ### Changed
