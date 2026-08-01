@@ -43,7 +43,7 @@ jobs:
         # Blocking on purpose: a new finding should fail the build rather than be reported
         # into a green checkmark.  The codebase is clean against this selection as of the
         # commit that introduced it, so anything this reports is new.
-        run: ruff check src/ tests/ test/ docs/ run_testsuite.py
+        run: ruff check src/ tests/ test/ docs/ notebooks/
 
       - name: Run Ruff Formatter (Check Only)
         # Informational, and expected to stay that way.  The codebase predates ruff format

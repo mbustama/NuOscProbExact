@@ -18,9 +18,12 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 README = os.path.join(ROOT, 'README.md')
 INSTALL_RST = os.path.join(ROOT, 'docs', 'source', 'installation.rst')
 
-# Entries that are directories holding generated output, so the tree
-# lists the directory but not the files inside it.
-GENERATED_DIRS = {'fig/'}
+# Entries that are directories holding generated output, so the tree lists
+# the directory but not the files inside it.  Empty since 1.8.1, when `fig/`
+# stopped being tracked: the notebooks carry their figures inline, so nothing
+# in the repository is generated output any more.  Kept because the rule it
+# encodes is about the tree, not about `fig/` in particular.
+GENERATED_DIRS = set()
 
 
 def extract_tree(path):

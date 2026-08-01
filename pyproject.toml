@@ -26,7 +26,6 @@ dependencies = ["numpy"]
 
 [project.optional-dependencies]
 fast = ["numba"]
-plots = ["matplotlib"]
 test = ["pytest", "scipy", "coverage", "pytest-cov"]
 docs = ["sphinx", "numpydoc", "myst-parser"]
 # Everything needed to *execute* the notebooks in notebooks/, which is what
@@ -100,6 +99,13 @@ ignore = [
 # linter would put the repository and the paper out of step.  Everything else
 # in them is still checked.
 "test/*" = ["F403", "F405"]
+# The notebooks share one setup cell, which imports the whole library so that
+# every notebook starts from the same place and a reader can lift the cell
+# wholesale.  That leaves some imports unused in any given notebook --- the
+# oscillogram notebook never touches the two-flavor modules --- and trimming
+# them per notebook would mean nine slightly different setup cells, which is
+# exactly what sharing one was meant to avoid.  Everything else is checked.
+"notebooks/*" = ["F401"]
 
 # Every setting coverage needs lives here rather than on the command line, so
 # that a local `pytest --cov` measures, reports, and gates exactly as CI does.

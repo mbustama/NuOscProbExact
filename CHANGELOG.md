@@ -12,11 +12,19 @@ to the library.
 
 ### Added
 
-- `notebooks/`, seven Jupyter notebooks numbered in reading order: the basics,
+- `notebooks/`, nine Jupyter notebooks numbered in reading order: the basics,
   vacuum oscillations, matter and NSI and LIV, oscillograms, bi-probability
-  plots, the Earth and PREM, and probabilities through the Earth.  They carry
-  their figures inline, so they render on GitHub without being run, and they
-  cover the plots `run_testsuite.py` writes plus the 1.8.0 Earth machinery.
+  plots, the Earth and PREM, probabilities through the Earth, unusual matter
+  profiles, and performance.  They carry their figures inline, so they render
+  on GitHub without being run.
+
+  Two of them go beyond what the old figure suite covered.  The unusual-profile
+  notebook builds castle-wall, serrated and shuffled profiles by hand and holds
+  their mean density fixed, so that any difference in the probabilities is due
+  to the arrangement of the matter alone — including the parametric enhancement
+  that a periodic profile produces.  The performance notebook measures, on the
+  machine that runs it, the cost of looping against broadcasting and of the
+  NumPy path against the compiled kernel.
 
 - A `notebooks` extra, and a `notebooks` job in `lint.yml` that executes every
   one of them.  A notebook is documentation that claims to work, and stored
@@ -28,13 +36,26 @@ to the library.
 - The project logo, wired in as `html_logo`, at the top of the documentation
   sidebar.
 
-### Changed
+### Removed
 
-- `fig/` is no longer tracked.  It held one committed `.gitignore` whose only
-  job was to keep an empty directory alive; the notebooks carry their figures
-  inline now, so there is nothing to keep.  `run_testsuite.py` creates the
-  directory itself, since a fresh clone no longer has it and `savefig` would
-  otherwise fail on the first plot.
+- `run_testsuite.py` and the four plotting modules it drove
+  (`test/oscprob2nu_plot.py`, `test/oscprob3nu_plot.py`, and the two
+  `*_plotpaper.py`).  The notebooks cover the same figures and show them
+  without anyone having to run anything or go looking in a directory
+  afterwards, and the plotting modules had no other caller.  The worked
+  examples in `test/`, which the paper refers to, are untouched.
+
+  Two code blocks in `README.md` went with them.  Both called a module named
+  `oscprob3nu_tests`, which has not existed under that name for years, so they
+  had been broken well before this release; they now point at the notebook that
+  draws the same curve.
+
+- `fig/`, which is no longer tracked or written.  It held one committed
+  `.gitignore` whose only job was to keep an empty directory alive.
+
+- The `plots` extra, which existed for the plotting modules and had nothing
+  left to install for.  `matplotlib` is still available through the new
+  `notebooks` extra.
 
 ## [1.8.0] - 2026-08-01
 
