@@ -342,4 +342,4 @@ Where to go next
   code, and against a published closed form, with the conventions that have
   to be matched first.
 * The `notebooks <https://github.com/mbustama/NuOscProbExact/tree/main/notebooks>`_
-  --- seventeen of them, carrying their figures inline.
+  --- eighteen of them, carrying their figures inline.
