@@ -30,6 +30,7 @@ __version__ = "1.1"
 __author__ = "Mauricio Bustamante"
 __email__ = "mbustamante@gmail.com"
 
+import os
 import sys
 
 sys.path.append('./src')
@@ -40,6 +41,13 @@ import oscprob3nu_plot
 import oscprob2nu_plotpaper
 import oscprob3nu_plotpaper
 
+
+# `fig/` is no longer tracked, so a fresh clone does not have it and
+# `savefig` would fail with FileNotFoundError on the very first plot.  It
+# used to be held open by a committed `fig/.gitignore`; now that the
+# notebooks carry their figures inline there is nothing to commit there,
+# and the directory is created on demand instead.
+os.makedirs('./fig', exist_ok=True)
 
 print('NuOscProbExact: Running test suite (plots will be stored inside ./fig)')
 print()

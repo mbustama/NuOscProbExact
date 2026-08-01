@@ -115,10 +115,17 @@ Instructions:
    │       ├── changelog.rst            # Includes the root CHANGELOG.md
    │       └── _static/
    │           └── nuoscprobexact_logo.png
-   ├── fig/                             # Figures written by run_testsuite.py (initially empty)
    ├── img/                             # Pre-computed figures shown in README.md
    │   ├── prob_3nu_vacuum_vs_baseline_ee_em_et.png
    │   └── prob_3nu_vacuum_vs_energy_ee_em_et.png
+   ├── notebooks/                       # Worked examples, with their figures stored inline
+   │   ├── 01_basics.ipynb              # Units, one probability, and broadcasting
+   │   ├── 02_vacuum_oscillations.ipynb # Against baseline and against energy
+   │   ├── 03_matter_nsi_liv.ipynb      # Constant-density matter, NSI, and LIV
+   │   ├── 04_oscillogram.ipynb         # Energy-baseline maps in one call
+   │   ├── 05_biprobability.ipynb       # CP ellipses, in vacuum and in matter
+   │   ├── 06_earth_and_prem.ipynb      # PREM, chord geometry, and slabs
+   │   └── 07_earth_probabilities.ipynb # Through the Earth, and between sites
    ├── src/                             # The library
    │   ├── oscprob2nu.py                # Two-flavor probabilities, SU(2) expansion
    │   ├── oscprob3nu.py                # Three-flavor probabilities, SU(3) expansion
@@ -883,6 +890,23 @@ Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( h_my
 
 ```
 Though we do not show it here, `hamiltonian_mymodel` could also depend on `energy`.  The code for two-neutrino oscillations is analogous, but `hamiltonian_mymodel` should return a 2x2 matrix instead.
+
+
+## Notebooks
+
+Seven worked notebooks live in [`notebooks/`](notebooks/), numbered in reading order.  They carry their figures inline, so they render on GitHub without being run:
+
+| Notebook | What it covers |
+|---|---|
+| [01 Basics](notebooks/01_basics.ipynb) | Units, one probability, and why to pass arrays rather than loop |
+| [02 Vacuum oscillations](notebooks/02_vacuum_oscillations.ipynb) | Against baseline and against energy, checked against the textbook formula |
+| [03 Matter, NSI, LIV](notebooks/03_matter_nsi_liv.ipynb) | Constant-density matter and two kinds of new physics |
+| [04 Oscillograms](notebooks/04_oscillogram.ipynb) | A 240x240 energy-baseline map in a single call |
+| [05 Bi-probability](notebooks/05_biprobability.ipynb) | CP ellipses, in vacuum and in matter |
+| [06 The Earth and PREM](notebooks/06_earth_and_prem.ipynb) | The density profile, chord geometry, slabs, and their convergence |
+| [07 Through the Earth](notebooks/07_earth_probabilities.ipynb) | Zenith-angle scans, an Earth oscillogram, and real baselines |
+
+Run them with `pip install -e ".[notebooks]"` and `jupyter lab notebooks/`.  Every one of them is executed by CI, so an example that stops working fails the build.
 
 
 ## Documentation and help

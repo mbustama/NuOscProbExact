@@ -109,7 +109,17 @@ and, if you have ``matplotlib``, the figure suite:
 
    python run_testsuite.py
 
-which writes 42 figures to ``fig/``.
+which writes 42 figures to ``fig/``.  That directory is created on demand and
+is not part of the repository.
+
+The same material, and a good deal more, is in ``notebooks/`` as seven Jupyter
+notebooks that carry their figures inline, so they read on GitHub without
+being run.  To run them yourself:
+
+.. code-block:: shell
+
+   pip install -e ".[notebooks]"
+   jupyter lab notebooks/
 
 Building the documentation
 --------------------------
@@ -156,10 +166,17 @@ File tree
    │       ├── changelog.rst            # Includes the root CHANGELOG.md
    │       └── _static/
    │           └── nuoscprobexact_logo.png
-   ├── fig/                             # Figures written by run_testsuite.py (initially empty)
    ├── img/                             # Pre-computed figures shown in README.md
    │   ├── prob_3nu_vacuum_vs_baseline_ee_em_et.png
    │   └── prob_3nu_vacuum_vs_energy_ee_em_et.png
+   ├── notebooks/                       # Worked examples, with their figures stored inline
+   │   ├── 01_basics.ipynb              # Units, one probability, and broadcasting
+   │   ├── 02_vacuum_oscillations.ipynb # Against baseline and against energy
+   │   ├── 03_matter_nsi_liv.ipynb      # Constant-density matter, NSI, and LIV
+   │   ├── 04_oscillogram.ipynb         # Energy-baseline maps in one call
+   │   ├── 05_biprobability.ipynb       # CP ellipses, in vacuum and in matter
+   │   ├── 06_earth_and_prem.ipynb      # PREM, chord geometry, and slabs
+   │   └── 07_earth_probabilities.ipynb # Through the Earth, and between sites
    ├── src/                             # The library
    │   ├── oscprob2nu.py                # Two-flavor probabilities, SU(2) expansion
    │   ├── oscprob3nu.py                # Three-flavor probabilities, SU(3) expansion

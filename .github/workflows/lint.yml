@@ -86,3 +86,83 @@ jobs:
         run: |
           cd docs
           make html SPHINXOPTS="-W --keep-going"
+
+  notebooks:
+    name: Notebooks execute
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        # The `fast` extra is included so the notebooks run against the compiled
+        # backend, which is what a reader following the Performance section will have.
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e '.[notebooks,fast]'
+
+      - name: Execute every notebook
+        # Blocking, and the reason is the whole point of the job: a notebook is
+        # documentation that claims to work.  The stored outputs make that claim
+        # persuasive without being evidence -- they were true whenever the notebook was
+        # last run, which may predate the API change that broke it.  Running them here
+        # is what makes the claim checkable.
+        #
+        # Executed into a throwaway copy rather than in place: a notebook whose stored
+        # outputs differ from a fresh run is not a failure (figures are not
+        # reproducible bit-for-bit across matplotlib versions), so nothing is written
+        # back and the working tree stays clean.
+        run: |
+          python - <<'PY'
+          import pathlib
+          import sys
+
+          import nbformat
+          from nbclient import NotebookClient
+          from nbclient.exceptions import CellExecutionError
+
+          failed = []
+          for path in sorted(pathlib.Path('notebooks').glob('*.ipynb')):
+              nb = nbformat.read(path, as_version=4)
+              try:
+                  NotebookClient(
+                      nb, timeout=1800, kernel_name='python3',
+                      resources={'metadata': {'path': str(path.parent)}}).execute()
+                  print('ok    %s' % path.name)
+              except CellExecutionError as error:
+                  failed.append(path.name)
+                  print('FAIL  %s\n%s' % (path.name, error))
+
+          if failed:
+              sys.exit('notebooks failed to execute: %s' % ', '.join(failed))
+          PY
+
+      - name: Check every notebook ships its figures
+        # The notebooks are committed with their outputs, so that GitHub renders them
+        # without anyone having to run anything.  A notebook stripped of its outputs
+        # still executes and would pass the step above while showing a reader nothing.
+        run: |
+          python - <<'PY'
+          import pathlib
+          import sys
+
+          import nbformat
+
+          bare = []
+          for path in sorted(pathlib.Path('notebooks').glob('*.ipynb')):
+              nb = nbformat.read(path, as_version=4)
+              code = [c for c in nb.cells if c.cell_type == 'code']
+              if not any(c.get('outputs') for c in code):
+                  bare.append(path.name)
+
+          if bare:
+              sys.exit('notebooks carry no stored outputs: %s' % ', '.join(bare))
+          print('all %d notebooks carry stored outputs'
+                % len(list(pathlib.Path('notebooks').glob('*.ipynb'))))
+          PY

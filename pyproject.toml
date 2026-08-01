@@ -29,6 +29,11 @@ fast = ["numba"]
 plots = ["matplotlib"]
 test = ["pytest", "scipy", "coverage", "pytest-cov"]
 docs = ["sphinx", "numpydoc", "myst-parser"]
+# Everything needed to *execute* the notebooks in notebooks/, which is what
+# the notebooks job in .github/workflows/lint.yml does.  matplotlib is
+# listed again rather than depended on through `plots`, so that installing
+# this extra alone is enough.
+notebooks = ["jupyter", "nbclient", "nbformat", "ipykernel", "matplotlib"]
 
 [project.urls]
 Homepage = "https://github.com/mbustama/NuOscProbExact"

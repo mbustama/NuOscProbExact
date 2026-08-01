@@ -7,3 +7,6 @@ dist/
 docs/build/
 .coverage
 htmlcov/
+
+# Figures written by run_testsuite.py; the notebooks carry theirs inline
+fig/
