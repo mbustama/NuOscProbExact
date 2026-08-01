@@ -221,7 +221,7 @@ File tree
    │   ├── 14_solar_and_adiabatic_msw.ipynb  # The MSW resonance, and the cost wall
    │   ├── 15_numerical_edge_cases.ipynb  # Degeneracies, and what does not go NaN
    │   ├── 16_four_neutrinos.ipynb      # A 3+1 sterile state, through the SU(4) expansion
-   │   ├── 17_against_other_codes.ipynb # nuSQuIDS and Zaglauer-Schwarzer, compared
+   │   ├── 17_cross_checks.ipynb        # Corroboration from nuSQuIDS and Zaglauer-Schwarzer
    │   └── make_notebooks.py            # Generates and executes all of the above
    ├── src/                             # The library
    │   ├── oscprob2nu.py                # Two-flavor probabilities, SU(2) expansion

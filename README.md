@@ -246,7 +246,7 @@ NuOscProbExact/
 │   ├── 14_solar_and_adiabatic_msw.ipynb  # The MSW resonance, and the cost wall
 │   ├── 15_numerical_edge_cases.ipynb  # Degeneracies, and what does not go NaN
 │   ├── 16_four_neutrinos.ipynb      # A 3+1 sterile state, through the SU(4) expansion
-│   ├── 17_against_other_codes.ipynb # nuSQuIDS and Zaglauer-Schwarzer, compared
+│   ├── 17_cross_checks.ipynb        # Corroboration from nuSQuIDS and Zaglauer-Schwarzer
 │   └── make_notebooks.py            # Generates and executes all of the above
 ├── src/                             # The library
 │   ├── oscprob2nu.py                # Two-flavor probabilities, SU(2) expansion
@@ -319,7 +319,7 @@ import oscprob3nu
    pip install -e ".[notebooks]"
    jupyter lab notebooks/
    ```
-   Seventeen worked notebooks, numbered in reading order, covering the probabilities against baseline and against energy, matter and new physics, oscillograms, bi-probability plots, the Earth, arbitrary matter profiles, performance, the paper's own figures, the textbook approximations, mass ordering and the octant, antineutrinos, solar neutrinos, numerical edge cases, four-neutrino 3+1 scenarios, and comparisons against other public codes.  They carry their figures inline, so they can also just be read on GitHub.
+   Seventeen worked notebooks, numbered in reading order, covering the probabilities against baseline and against energy, matter and new physics, oscillograms, bi-probability plots, the Earth, arbitrary matter profiles, performance, the paper's own figures, the textbook approximations, mass ordering and the octant, antineutrinos, solar neutrinos, numerical edge cases, four-neutrino 3+1 scenarios, and cross-checks with other public codes.  They carry their figures inline, so they can also just be read on GitHub.
 
 ## Performance
 
@@ -1065,7 +1065,7 @@ Seventeen worked notebooks live in [`notebooks/`](notebooks/), numbered in readi
 | [14 Solar and the MSW resonance](notebooks/14_solar_and_adiabatic_msw.ipynb) | The adiabatic resonance, validated — and why slabs are the wrong tool for it |
 | [15 Numerical edge cases](notebooks/15_numerical_edge_cases.ipynb) | Degenerate spectra, and what returns a number instead of NaN |
 | [16 Four neutrinos](notebooks/16_four_neutrinos.ipynb) | A 3+1 sterile state through SU(4), and why the method stops at four |
-| [17 Against other codes](notebooks/17_against_other_codes.ipynb) | Compared with nuSQuIDS and with Zaglauer–Schwarzer, and the conventions that had to be matched |
+| [17 Cross-checks with other codes](notebooks/17_cross_checks.ipynb) | Corroboration from nuSQuIDS and from Zaglauer–Schwarzer, and the conventions that had to be matched |
 
 Run them with `pip install -e ".[notebooks]"` and `jupyter lab notebooks/`.  Every one of them is executed by CI, so an example that stops working fails the build.
 
