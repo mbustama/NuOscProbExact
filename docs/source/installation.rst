@@ -222,6 +222,7 @@ File tree
    │   ├── 15_numerical_edge_cases.ipynb  # Degeneracies, and what does not go NaN
    │   ├── 16_four_neutrinos.ipynb      # A 3+1 sterile state, through the SU(4) expansion
    │   ├── 17_cross_checks.ipynb        # Corroboration from nuSQuIDS and Zaglauer-Schwarzer
+   │   ├── 18_evolution_operator.ipynb  # The operator, and the SU(n) coefficients
    │   └── make_notebooks.py            # Generates and executes all of the above
    ├── src/                             # The library
    │   ├── oscprob2nu.py                # Two-flavor probabilities, SU(2) expansion

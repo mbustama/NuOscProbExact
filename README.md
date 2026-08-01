@@ -247,6 +247,7 @@ NuOscProbExact/
 │   ├── 15_numerical_edge_cases.ipynb  # Degeneracies, and what does not go NaN
 │   ├── 16_four_neutrinos.ipynb      # A 3+1 sterile state, through the SU(4) expansion
 │   ├── 17_cross_checks.ipynb        # Corroboration from nuSQuIDS and Zaglauer-Schwarzer
+│   ├── 18_evolution_operator.ipynb  # The operator, and the SU(n) coefficients
 │   └── make_notebooks.py            # Generates and executes all of the above
 ├── src/                             # The library
 │   ├── oscprob2nu.py                # Two-flavor probabilities, SU(2) expansion
@@ -319,7 +320,7 @@ import oscprob3nu
    pip install -e ".[notebooks]"
    jupyter lab notebooks/
    ```
-   Seventeen worked notebooks, numbered in reading order, covering the probabilities against baseline and against energy, matter and new physics, oscillograms, bi-probability plots, the Earth, arbitrary matter profiles, performance, the paper's own figures, the textbook approximations, mass ordering and the octant, antineutrinos, solar neutrinos, numerical edge cases, four-neutrino 3+1 scenarios, and cross-checks with other public codes.  They carry their figures inline, so they can also just be read on GitHub.
+   Eighteen worked notebooks, numbered in reading order, covering the probabilities against baseline and against energy, matter and new physics, oscillograms, bi-probability plots, the Earth, arbitrary matter profiles, performance, the paper's own figures, the textbook approximations, mass ordering and the octant, antineutrinos, solar neutrinos, numerical edge cases, four-neutrino 3+1 scenarios, cross-checks with other public codes, and the evolution operator itself.  They carry their figures inline, so they can also just be read on GitHub.
 
 ## Performance
 
@@ -1045,7 +1046,7 @@ Though we do not show it here, `hamiltonian_mymodel` could also depend on `energ
 
 ## Notebooks
 
-Seventeen worked notebooks live in [`notebooks/`](notebooks/), numbered in reading order.  They carry their figures inline, so they render on GitHub without being run:
+Eighteen worked notebooks live in [`notebooks/`](notebooks/), numbered in reading order.  They carry their figures inline, so they render on GitHub without being run:
 
 | Notebook | What it covers |
 |---|---|
@@ -1066,6 +1067,7 @@ Seventeen worked notebooks live in [`notebooks/`](notebooks/), numbered in readi
 | [15 Numerical edge cases](notebooks/15_numerical_edge_cases.ipynb) | Degenerate spectra, and what returns a number instead of NaN |
 | [16 Four neutrinos](notebooks/16_four_neutrinos.ipynb) | A 3+1 sterile state through SU(4), and why the method stops at four |
 | [17 Cross-checks with other codes](notebooks/17_cross_checks.ipynb) | Corroboration from nuSQuIDS and from Zaglauer–Schwarzer, and the conventions that had to be matched |
+| [18 The evolution operator](notebooks/18_evolution_operator.ipynb) | The operator itself, the group property, and the SU(*n*) coefficients underneath |
 
 Run them with `pip install -e ".[notebooks]"` and `jupyter lab notebooks/`.  Every one of them is executed by CI, so an example that stops working fails the build.
 

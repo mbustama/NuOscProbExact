@@ -108,6 +108,54 @@ books['01_basics.ipynb'] = notebook(
              '"1 km          = %.4e eV^-1" % KM)\n'
              'print("1 GeV         = %.0e eV" % GEV)\n'
              'print("crust V_CC    = %.4e eV" % gd.VCC_EARTH_CRUST)'),
+        md('## What the Hamiltonian is\n\n'
+           'Every routine here takes a Hamiltonian — a Hermitian matrix — '
+           'and a baseline. If you have not met the oscillation Hamiltonian '
+           'before, this is the one piece of physics worth having up front, '
+           'because everything else in these notebooks is a variation on '
+           'it.\n\n'
+           'Neutrinos are produced and detected as **flavor** states '
+           '($\\nu_e, \\nu_\\mu, \\nu_\\tau$) but propagate as **mass** '
+           'states ($\\nu_1, \\nu_2, \\nu_3$). The two bases are related by '
+           'the PMNS matrix $U$ — three angles $\\theta_{12}, \\theta_{13}, '
+           '\\theta_{23}$ and a CP-violating phase $\\delta_{CP}$ — and the '
+           'Hamiltonian is diagonal in the mass basis, so in the flavor '
+           'basis it reads\n\n'
+           '$$ H_{\\rm vac} = \\frac{1}{2E}\\, U M^2 U^\\dagger , \\qquad '
+           'M^2 = \\mathrm{diag}\\left(0,\\, \\Delta m^2_{21},\\, '
+           '\\Delta m^2_{31}\\right) . $$\n\n'
+           'Only mass-squared *differences* appear, which is why the first '
+           'entry can be set to zero. Matter adds a potential that the '
+           'electron flavor feels and the others do not,\n\n'
+           '$$ H = H_{\\rm vac} + \\mathrm{diag}(V_{CC},\\, 0,\\, 0) , $$\n\n'
+           'and that is the whole content. Non-standard interactions, '
+           'Lorentz-invariance violation and a sterile state are each a '
+           'different Hermitian matrix in that same slot, evaluated by the '
+           'same routine.\n\n'
+           '`H_VAC_3NU` in the setup cell is exactly $U M^2 U^\\dagger/2$ at '
+           'the NuFit 4.0 best fit for the normal ordering. Building it by '
+           'hand shows there is nothing hidden in the builder:'),
+        code('# The mixing angles, as sin^2(theta) -- which is how they are\n'
+             '# quoted -- and the phase in degrees.\n'
+             'print("sin^2(th12) = %.3f" % gd.S12_NO_BF**2)\n'
+             'print("sin^2(th23) = %.3f" % gd.S23_NO_BF**2)\n'
+             'print("sin^2(th13) = %.5f" % gd.S13_NO_BF**2)\n'
+             'print("delta_CP    = %.0f degrees" '
+             '% np.degrees(gd.DCP_NO_BF))\n'
+             'print("dm21^2      = %.3e eV^2" % gd.D21_NO_BF)\n'
+             'print("dm31^2      = %.3e eV^2" % gd.D31_NO_BF)\n\n'
+             '# Note: the builders take sin(theta), not theta itself.\n'
+             'U = np.asarray(hamiltonians3nu.pmns_mixing_matrix(\n'
+             '    gd.S12_NO_BF, gd.S23_NO_BF, gd.S13_NO_BF, gd.DCP_NO_BF))\n'
+             'M2 = np.diag([0.0, gd.D21_NO_BF, gd.D31_NO_BF]).astype(complex)\n\n'
+             'by_hand = U @ M2 @ U.conj().T / 2.0\n'
+             'reference = np.asarray(H_VAC_3NU)\n'
+             'print("\\nU M^2 U^dag / 2  vs  H_VAC_3NU")\n'
+             'print("  absolute : %.2e eV^2"\n'
+             '      % np.max(np.abs(by_hand - reference)))\n'
+             'print("  relative : %.2e"\n'
+             '      % (np.max(np.abs(by_hand - reference))\n'
+             '         / np.max(np.abs(reference))))'),
         md('## One three-flavor probability\n\n'
            'A 1 GeV neutrino travelling 1300 km in vacuum — roughly the DUNE '
            'baseline. The nine probabilities come back with the *initial* '
@@ -117,16 +165,54 @@ books['01_basics.ipynb'] = notebook(
              '# The vacuum Hamiltonian at this energy\n'
              'H = np.asarray(H_VAC_3NU)/energy\n\n'
              'prob = oscprob3nu.probabilities_3nu(H, baseline)\n\n'
-             'labels = ["ee", "emu", "etau", "mue", "mumu", "mutau",\n'
-             '          "taue", "taumu", "tautau"]\n'
-             'for name, value in zip(labels, prob):\n'
-             '    print("P_%-7s = %.6f" % (name, value))'),
+             'flavors = ["e", "mu", "tau"]\n'
+             'for k, value in enumerate(prob):\n'
+             '    a, b = divmod(k, 3)\n'
+             '    print("P_%-7s = %.6f"\n'
+             '          % (flavors[a]+flavors[b], value))'),
+        md('### Reading the nine numbers\n\n'
+           'The convention, used everywhere in this library and in every '
+           'notebook after this one:\n\n'
+           '$$ P_{\\alpha\\beta} \\equiv P(\\nu_\\alpha \\to \\nu_\\beta) '
+           '= \\left|[U(L)]_{\\beta\\alpha}\\right|^2 $$\n\n'
+           'so the **initial** flavor varies slowest. Later notebooks index '
+           'the result directly — `p[:, 3]` for $P_{\\mu e}$, `p[:, 4]` for '
+           '$P_{\\mu\\mu}$ — and this is the map they are using:'),
+        code('print("index   from      to        symbol")\n'
+             'for k in range(9):\n'
+             '    a, b = divmod(k, 3)\n'
+             '    print("  %d     nu_%-4s -> nu_%-5s  P_%s%s"\n'
+             '          % (k, flavors[a], flavors[b],\n'
+             '             flavors[a], flavors[b]))'),
         md('Each initial flavor conserves probability, which is the first '
            'thing to check of any oscillation code:'),
         code('prob = np.array(prob)\n'
              'for start, flavor in zip((0, 3, 6), ("e", "mu", "tau")):\n'
              '    print("sum over final flavors, from nu_%-4s = %.15f"\n'
              '          % (flavor, prob[start:start+3].sum()))'),
+        md('## The trace does not matter\n\n'
+           'Adding a multiple of the identity to $H$ shifts every eigenvalue '
+           'by the same amount, so it contributes an overall phase that '
+           'cancels in $|U_{\\beta\\alpha}|^2$. The library drops the trace '
+           'internally and works with the traceless part throughout.\n\n'
+           'This is worth knowing because it means an overall energy offset '
+           'in your Hamiltonian — a flavor-universal potential, for instance '
+           '— can simply be left out.'),
+        code('shift = 3.0*np.max(np.abs(H))     # comparable to H itself\n\n'
+             'p_plain = np.array(oscprob3nu.probabilities_3nu(H, baseline))\n'
+             'p_shift = np.array(oscprob3nu.probabilities_3nu(\n'
+             '    H + shift*np.eye(3), baseline))\n\n'
+             'print("max |P(H) - P(H + c*1)| = %.2e"\n'
+             '      % np.max(np.abs(p_plain - p_shift)))'),
+        md('One caveat, since someone will try it: that holds *arithmetically* '
+           'for any shift, but not numerically for an absurd one. The '
+           'traceless part is recovered by subtracting numbers of order the '
+           'shift, so adding $10^{10}\\,|H|$ leaves only a few significant '
+           'digits of the physics and the agreement degrades to about '
+           '$10^{-7}$. That is ordinary floating-point cancellation rather '
+           'than anything about the method — but if your Hamiltonian carries '
+           'a huge flavor-universal term, subtract it yourself before '
+           'passing it in.'),
         md('## Two flavors\n\n'
            'The same interface, with four probabilities instead of nine.'),
         code('# The builders take sin(theta), not theta itself.\n'
@@ -142,17 +228,24 @@ books['01_basics.ipynb'] = notebook(
            'Hermitian matrix, which is what makes the library useful for '
            'non-standard scenarios: new interactions, Lorentz-invariance '
            'violation and sterile-like perturbations are all just entries in '
-           'that matrix.'),
+           'that matrix.\n\n'
+           'The matrix below is not any physical scenario — it is a reminder '
+           'that the routine neither knows nor needs to know where the '
+           'numbers came from.'),
         code('H_arbitrary = np.array([[0.0, 1.0+2.0j, 0.5],\n'
              '                        [1.0-2.0j, 1.0, 0.0],\n'
              '                        [0.5, 0.0, -1.0]], dtype=complex)\n\n'
-             'print(oscprob3nu.probabilities_3nu(H_arbitrary, 1.0))'),
+             'p_arb = oscprob3nu.probabilities_3nu(H_arbitrary, 1.0)\n\n'
+             'for k, value in enumerate(p_arb):\n'
+             '    a, b = divmod(k, 3)\n'
+             '    print("P_%s%s = %.6f" % (flavors[a], flavors[b], value))'),
         md('## Pass arrays, do not loop\n\n'
            'The single most useful thing to know about performance here: the '
            'routines broadcast. A stack of Hamiltonians, an array of '
            'baselines, or both, are evaluated in one pass — tens of times '
-           'faster than the equivalent Python loop, and the results are '
-           'identical.'),
+           'faster than the equivalent Python loop, and the results agree to '
+           'round-off. Notebook 09 measures both the speedup and the '
+           'agreement.'),
         code('baselines = np.linspace(1.0, 3000.0, 5)*KM\n'
              'prob_scan = oscprob3nu.probabilities_3nu(H, baselines)\n\n'
              'print("shape:", np.shape(prob_scan))\n'
@@ -164,8 +257,8 @@ books['01_basics.ipynb'] = notebook(
 books['02_vacuum_oscillations.ipynb'] = notebook(
     'Oscillations in vacuum',
     'The probabilities against baseline and against energy, in vacuum — the '
-    'figures that `run_testsuite.py` writes to `fig/`, produced here inline '
-    'instead.',
+    'two figures of [arXiv:1904.12391](https://arxiv.org/abs/1904.12391), '
+    'produced inline and reproducible from the repository alone.',
     [
         md('## Three flavors, against baseline\n\n'
            'Fixed energy, varying distance. The fast oscillation is the '
@@ -268,8 +361,23 @@ books['03_matter_nsi_liv.ipynb'] = notebook(
            'Hamiltonian per energy, stacked. That is why the matter curve '
            'above needed no loop.'),
         md('## Non-standard interactions\n\n'
-           'NSI add an effective potential with its own flavor structure, '
-           'parametrised by the $\\epsilon$ matrix.'),
+           'A non-standard interaction (NSI) is a hypothetical extra '
+           'neutrino–matter coupling. It enters as a potential with its own '
+           'flavor structure, written relative to $V_{CC}$ as a matrix of '
+           'dimensionless strengths $\\epsilon_{\\alpha\\beta}$:\n\n'
+           '$$ H = H_{\\rm vac} + V_{CC}\\begin{pmatrix}'
+           '1 + \\epsilon_{ee} & \\epsilon_{e\\mu} & \\epsilon_{e\\tau} \\\\'
+           '\\epsilon_{e\\mu}^* & \\epsilon_{\\mu\\mu} & \\epsilon_{\\mu\\tau} \\\\'
+           '\\epsilon_{e\\tau}^* & \\epsilon_{\\mu\\tau}^* & '
+           '\\epsilon_{\\tau\\tau}\\end{pmatrix} $$\n\n'
+           'The `1` recovers standard matter when every $\\epsilon$ '
+           'vanishes. `globaldefs` carries an illustrative set — these are '
+           'the values the curve below actually uses, not a fit to '
+           'anything:'),
+        code('names = ["eps_ee", "eps_emu", "eps_etau",\n'
+             '         "eps_mumu", "eps_mutau", "eps_tautau"]\n'
+             'for n, v in zip(names, gd.EPS_3):\n'
+             '    print("  %-11s = %s" % (n, v))'),
         code('H_nsi = hamiltonians3nu.hamiltonian_3nu_nsi(\n'
              '    H_VAC_3NU, E_gev*GEV, gd.VCC_EARTH_CRUST, gd.EPS_3)\n'
              'p_nsi = oscprob3nu.probabilities_3nu(H_nsi, L)\n\n'
@@ -282,8 +390,45 @@ books['03_matter_nsi_liv.ipynb'] = notebook(
              'ax.legend()\n'
              'plt.show()'),
         md('## Lorentz-invariance violation\n\n'
-           'A CPT-odd LIV background contributes a term that grows with '
-           'energy rather than falling, so it shows up at the high end.'),
+           'A CPT-odd Lorentz-invariance-violating (LIV) background couples '
+           'to neutrinos through a term that is *added* to the Hamiltonian '
+           'with its own mixing structure. The physically important point is '
+           'the energy dependence: the vacuum term falls as $1/E$ and this '
+           'one does not, so it is invisible at low energy and dominant at '
+           'high energy — which is why the curve below only separates at the '
+           'right-hand end.\n\n'
+           'The parameters below are illustrative defaults from '
+           '`globaldefs`, shown because a plot of "LIV" means nothing '
+           'without them:'),
+        code('print("mixing, as sin(xi):")\n'
+             'for n, v in (("sin(xi12)", gd.SXI12), ("sin(xi23)", gd.SXI23),\n'
+             '             ("sin(xi13)", gd.SXI13)):\n'
+             '    print("  %-10s = %.3f" % (n, v))\n'
+             'print("phase  : %.3f rad" % gd.DXICP)\n'
+             'print("eigenvalues b1, b2, b3 : %.1e, %.1e, %.1e"\n'
+             '      % (gd.B1, gd.B2, gd.B3))\n'
+             'print("scale  Lambda          : %.1e eV" % gd.LAMBDA)'),
+        md('Two things in that list are worth reading rather than skipping '
+           'past, and they are the reason it is printed at all.\n\n'
+           'The LIV mixing angles are all **zero**, so the rotation is the '
+           'identity and the added term is simply\n\n'
+           '$$ \\frac{E}{\\Lambda}\\,\\mathrm{diag}(b_1, b_2, b_3) $$\n\n'
+           'in the flavor basis — a background that shifts the flavor '
+           'eigenvalues without introducing any mixing of its own. That is '
+           'the simplest non-trivial case, and it is enough to move the '
+           'curve. And since $b_1 = b_2$ here, only the difference '
+           '$b_3 - b_1$ survives dropping the trace; a common $b$ would do '
+           'nothing at all.\n\n'
+           'The energy dependence is the signature. The vacuum term falls '
+           'as $1/E$ while this one *rises* as $E$, so there is a crossover '
+           'where they are equal, at\n\n'
+           '$$ E_\\times = \\sqrt{\\frac{\\Delta m^2_{31}\\Lambda}{2b_3}} '
+           '\\approx 0.8~\\mathrm{GeV} $$\n\n'
+           'for these values. Below it the vacuum term wins and the curve is '
+           'the ordinary one; above it the LIV term takes over, and by '
+           '100 GeV it is four orders of magnitude larger. That growth with '
+           'energy is what makes high-energy neutrinos the place to look for '
+           'this kind of physics.'),
         code('H_liv = hamiltonians3nu.hamiltonian_3nu_liv(\n'
              '    H_VAC_3NU, E_gev*GEV, gd.SXI12, gd.SXI23, gd.SXI13,\n'
              '    gd.DXICP, gd.B1, gd.B2, gd.B3, gd.LAMBDA)\n'
@@ -345,8 +490,8 @@ books['04_oscillogram.ipynb'] = notebook(
              'plt.show()'),
         md('Both maps above are a single call each on a '
            '240 x 240 grid — 57 600 probabilities. Written as a Python loop '
-           'this is tens of times slower; see the Performance section of the '
-           'README.'),
+           'this is tens of times slower; **notebook 09** measures exactly '
+           'how much, on whatever machine runs it.'),
     ])
 
 # --------------------------------------------------------- 05 biprobability
@@ -433,6 +578,57 @@ books['05_biprobability.ipynb'] = notebook(
              'ax.set_ylabel(r"$P(\\bar\\nu_\\mu \\to \\bar\\nu_e)$")\n'
              'ax.set_title("E = 1 GeV, L = 1300 km, matter")\n'
              'plt.show()'),
+        md('## What sets the size of the effect\n\n'
+           'The ellipse is a picture; the number behind it is the '
+           '**Jarlskog invariant**, the one parametrisation-independent '
+           'measure of CP violation in the mixing matrix:\n\n'
+           '$$ J_{CP} = c_{12}s_{12}\\,c_{23}s_{23}\\,c_{13}^2 s_{13}\\,'
+           '\\sin\\delta_{CP} . $$\n\n'
+           'It vanishes if any mixing angle is zero or if '
+           '$\\sin\\delta_{CP} = 0$ — and when it does, the vacuum ellipse '
+           'collapses onto the diagonal and there is nothing to measure. '
+           'Every CP-odd term in the vacuum probabilities is proportional '
+           'to it.\n\n'
+           '`hamiltonians3nu.J` returns the quartic product '
+           '$U^*_{\\alpha k}U_{\\beta k}U_{\\alpha j}U^*_{\\beta j}$, whose '
+           'imaginary part is $J_{CP}$ up to a sign convention:'),
+        code('def jarlskog(dcp):\n'
+             '    # J_CP from the library quartic product\n'
+             '    U = hamiltonians3nu.pmns_mixing_matrix(\n'
+             '        gd.S12_NO_BF, gd.S23_NO_BF, gd.S13_NO_BF, dcp)\n'
+             '    return -np.imag(hamiltonians3nu.J(U, 0, 1, 0, 1))\n\n\n'
+             'def jarlskog_closed_form(dcp):\n'
+             '    # The textbook expression, for comparison\n'
+             '    s12, s23, s13 = gd.S12_NO_BF, gd.S23_NO_BF, gd.S13_NO_BF\n'
+             '    c12, c23, c13 = [np.sqrt(1.0-s*s)\n'
+             '                     for s in (s12, s23, s13)]\n'
+             '    return c12*s12*c23*s23*c13*c13*s13*np.sin(dcp)\n\n\n'
+             'for d in (0.0, np.pi/2, gd.DCP_NO_BF, np.pi):\n'
+             '    print("dCP = %6.1f deg :  J = %+.5e   "\n'
+             '          "(closed form %+.5e)"\n'
+             '          % (np.degrees(d), jarlskog(d),\n'
+             '             jarlskog_closed_form(d)))'),
+        code('dcp_scan = np.linspace(0.0, 2.0*np.pi, 400)\n'
+             'J_scan = np.array([jarlskog(d) for d in dcp_scan])\n\n'
+             'fig, ax = plt.subplots(figsize=(6.4, 3.4))\n'
+             'ax.plot(np.degrees(dcp_scan), J_scan)\n'
+             'ax.axhline(0.0, color="0.7", lw=0.8)\n'
+             'ax.axvline(np.degrees(gd.DCP_NO_BF), color="k", ls=":",\n'
+             '           lw=1)\n'
+             'ax.set_xlim(0.0, 360.0)\n'
+             'ax.set_xlabel(r"$\\delta_{CP}$ [degrees]")\n'
+             'ax.set_ylabel(r"$J_{CP}$")\n'
+             'ax.set_title("The Jarlskog invariant "\n'
+             '             "(dotted: the NuFit best fit)")\n'
+             'plt.show()\n\n'
+             'print("largest |J| over the scan : %.5e"\n'
+             '      % np.max(np.abs(J_scan)))'),
+        md('The zeros at $\\delta_{CP} = 0$ and $180^\\circ$ are exactly '
+           'where the vacuum ellipse degenerates to a point on the '
+           'diagonal. Note the scale: $J_{CP}$ peaks near $0.033$, small '
+           'because it carries a factor of $s_{13}$ — the CP-violating '
+           'effect is suppressed by the smallest mixing angle, which is a '
+           'large part of why the measurement is hard.'),
     ])
 
 # ---------------------------------------------------------- 06 Earth / PREM
@@ -511,6 +707,52 @@ books['06_earth_and_prem.ipynb'] = notebook(
              'ax.legend()\n'
              'plt.show()\n\n'
              'print("%d slabs, total %.1f km" % (len(widths), widths.sum()))'),
+        md('## From slabs to a probability\n\n'
+           'The pieces are now in place, and this is where `slabs` earns its '
+           'name. `earth` gives the widths and densities; '
+           '`hamiltonians3nu.hamiltonian_3nu_matter` turns each density into '
+           'a Hamiltonian; and `slabs.probabilities_3nu_slabs` solves each '
+           'piece exactly and multiplies the evolution operators together, '
+           'in order.\n\n'
+           'Nothing here is approximated except the profile itself: the '
+           'evolution *within* each slab is the same closed form as anywhere '
+           'else in this library. `earth.probabilities_3nu_earth` is exactly '
+           'this three-step recipe wrapped up, and doing it by hand once is '
+           'the way to see what it does — and the way to build a profile of '
+           'your own, which is what notebook 08 goes on to do.'),
+        code('widths_km, densities = earth.earth_slabs(\n'
+             '    -0.8, n_slabs_per_segment=6)\n\n'
+             '# One Hamiltonian per slab, from that slab\'s density\n'
+             'H_slabs = hamiltonians3nu.hamiltonian_3nu_matter(\n'
+             '    H_VAC_3NU, 10.0*GEV,\n'
+             '    earth.matter_potential(densities))\n\n'
+             '# Solve each exactly, multiply the operators in order\n'
+             'p_by_hand = slabs.probabilities_3nu_slabs(\n'
+             '    H_slabs, widths_km*KM)\n\n'
+             '# The wrapper that does all three steps for you\n'
+             'p_wrapped = earth.probabilities_3nu_earth(\n'
+             '    H_VAC_3NU, 10.0*GEV, -0.8, n_slabs_per_segment=6)\n\n'
+             'print("%d slabs, %.0f km total" % (len(widths_km), '
+             'widths_km.sum()))\n'
+             'print("P_mumu, by hand   = %.9f" % p_by_hand[4])\n'
+             'print("P_mumu, wrapped   = %.9f" % p_wrapped[4])\n'
+             'print("difference        = %.2e"\n'
+             '      % abs(p_by_hand[4] - p_wrapped[4]))'),
+        md('Identical, as they must be — the wrapper is the recipe, not a '
+           'different calculation.\n\n'
+           'If you need the evolution **operator** across the trajectory '
+           'rather than the probabilities — to compose it with something '
+           'else, or to propagate a density matrix — '
+           '`slabs.evolution_operator_3nu_slabs` returns it from the same '
+           'inputs.'),
+        code('U = np.array(slabs.evolution_operator_3nu_slabs(\n'
+             '    H_slabs, widths_km*KM))\n\n'
+             'print("U has shape", U.shape)\n'
+             'print("unitary to      %.2e"\n'
+             '      % np.max(np.abs(U.conj().T @ U - np.eye(3))))\n'
+             '# P_(alpha->beta) = |U_(beta,alpha)|^2\n'
+             'print("|U[1,1]|^2      = %.9f  (= P_mumu above)"\n'
+             '      % abs(U[1, 1])**2)'),
         md('## Convergence\n\n'
            'The slicing is the only approximation in the whole calculation, '
            'so it is worth watching it converge rather than trusting it. '
@@ -563,8 +805,21 @@ books['07_earth_probabilities.ipynb'] = notebook(
            'outer core, and the density it crosses jumps.'),
         md('## An Earth oscillogram\n\n'
            'Energy against zenith angle — the map an atmospheric-neutrino '
-           'experiment measures. Each point is a full slab calculation, so '
-           'this one does loop; the grid is kept modest for that reason.'),
+           'experiment measures.\n\n'
+           '**A boundary worth stating plainly**, because it runs against '
+           'the advice of every notebook so far. `earth` and `slabs` do '
+           '*not* broadcast over energy: `probabilities_3nu_earth` takes '
+           'one energy and one zenith angle, and '
+           '`slabs.probabilities_3nu_slabs` expects one Hamiltonian per '
+           'slab, not a stack of them per slab. So this grid genuinely '
+           'has to loop, and so do the scans in notebooks 08, 11, 12 and '
+           '13.\n\n'
+           'The reason is that the number and position of the slabs '
+           'depend on the trajectory, so a stack of energies through '
+           'different zenith angles is not a rectangular array of '
+           'Hamiltonians. Inside each slab the batched machinery is still '
+           'doing the work — what loops is the composition across slabs. '
+           'The grid is kept modest for that reason.'),
         code('n_e, n_c = 60, 60\n'
              'E_gev = np.logspace(0.0, 2.0, n_e)\n'
              'cz = np.linspace(-0.999, -0.05, n_c)\n\n'
@@ -811,8 +1066,11 @@ books['09_performance.ipynb'] = notebook(
              't_loop*1e3))\n'
              'print("one batched call   : %8.2f ms" % (t_batch*1e3))\n'
              'print("speedup            : %8.1fx" % (t_loop/t_batch))'),
-        md('The two agree exactly — this is the same arithmetic, organised '
-           'differently:'),
+        md('The two agree to round-off — the same arithmetic, organised '
+           'differently. Not *bit for bit*: the batched path sums and '
+           'multiplies in a different order, and floating-point addition is '
+           'not associative, so the last digit or two can differ. The '
+           'number below is the honest measure of that.'),
         code('print("max |batched - looped| = %.2e"\n'
              '      % np.max(np.abs(np.array(batched()) - '
              'np.array(looped()))))'),
@@ -899,13 +1157,82 @@ books['09_performance.ipynb'] = notebook(
              'print()\n'
              'print("below these sizes the NumPy path is used, whether or "\n'
              '      "not numba is installed")'),
+        md('## Four flavors cost more\n\n'
+           '`oscprob4nu` broadcasts exactly like its three-flavor sibling, '
+           'but two things make it dearer per element, and it is worth '
+           'separating them from a third that is easy to mistake for '
+           'them.\n\n'
+           '1. **More algebra.** Fifteen generators rather than eight, a '
+           'quartic characteristic equation rather than a cubic.\n'
+           '2. **The root refinement.** `oscprob4nu.POLISH_ROOTS`, on by '
+           'default, is what keeps a stiff 3+1 spectrum accurate.\n'
+           '3. **There is no compiled kernel for four flavors.** '
+           '`fastkernels` covers two and three; `oscprob4nu` is pure NumPy '
+           'whether or not `numba` is installed.\n\n'
+           'That third point matters for the comparison: measuring '
+           'four-flavor NumPy against three-flavor *Numba* would blame the '
+           'algebra for the absence of a kernel. Both are timed on the '
+           'NumPy path below, and the Numba figure is shown separately.'),
+        code('H4_VAC = hamiltonians4nu.'
+             'hamiltonian_4nu_vacuum_energy_independent(\n'
+             '    gd.S12_NO_BF, gd.S23_NO_BF, gd.S13_NO_BF,\n'
+             '    np.sqrt(0.10), np.sqrt(0.10), 0.0,\n'
+             '    gd.DCP_NO_BF, gd.D21_NO_BF, gd.D31_NO_BF, 1.0)\n\n'
+             'n4 = 20000\n'
+             'E4 = np.logspace(-1.0, 1.5, n4)*GEV\n'
+             'H4 = hamiltonians4nu.hamiltonian_4nu_matter(\n'
+             '    H4_VAC, E4, gd.VCC_EARTH_CRUST, gd.VNC_EARTH_CRUST)\n'
+             'H3 = hamiltonians3nu.hamiltonian_3nu_matter(\n'
+             '    H_VAC_3NU, E4, gd.VCC_EARTH_CRUST)\n\n'
+             '# Warm both paths before timing either\n'
+             'oscprob3nu.probabilities_3nu(H3, L)\n'
+             'oscprob4nu.probabilities_4nu(H4, L)\n\n'
+             'fastkernels.USE_NUMBA = True\n'
+             't3_numba = best_of(lambda: '
+             'oscprob3nu.probabilities_3nu(H3, L))\n'
+             'fastkernels.USE_NUMBA = False\n'
+             't3_numpy = best_of(lambda: '
+             'oscprob3nu.probabilities_3nu(H3, L))\n'
+             'fastkernels.USE_NUMBA = True\n\n'
+             'oscprob4nu.POLISH_ROOTS = True\n'
+             't4 = best_of(lambda: oscprob4nu.probabilities_4nu(H4, L))\n'
+             'oscprob4nu.POLISH_ROOTS = False\n'
+             't4_raw = best_of(lambda: '
+             'oscprob4nu.probabilities_4nu(H4, L))\n'
+             'oscprob4nu.POLISH_ROOTS = True\n\n'
+             'print("%d energies" % n4)\n'
+             'print("  3 flavors, NumPy path      : %7.1f ms" '
+             '% (t3_numpy*1e3))\n'
+             'print("  4 flavors, NumPy, polished : %7.1f ms" '
+             '% (t4*1e3))\n'
+             'print("  4 flavors, NumPy, no polish: %7.1f ms" '
+             '% (t4_raw*1e3))\n'
+             'print("\\n  like for like, 4nu / 3nu   : %.1fx" '
+             '% (t4/t3_numpy))\n'
+             'print("  the refinement is           : %.0f%% of the "\n'
+             '      "four-flavor call" % (100*(t4-t4_raw)/t4))\n'
+             'print("\\n  for scale, 3 flavors with the compiled kernel: "\n'
+             '      "%.1f ms" % (t3_numba*1e3))'),
+        md('So four flavors costs about ten times three, like for like — '
+           'the algebra and the refinement — and a further factor on top of '
+           'that if you are comparing against a three-flavor run that has '
+           'the compiled kernel available and the four-flavor one does '
+           'not.\n\n'
+           'Switching the refinement off buys back roughly a third and '
+           'gives up about three orders of magnitude of accuracy on a stiff '
+           'spectrum, which is almost never the right trade. Notebook 16 '
+           'measures both figures against an independent reference.'),
         md('## What to take away\n\n'
            '1. Replace loops with array arguments. This is the large win, it '
-           'needs no extra dependency, and the results are identical.\n'
+           'needs no extra dependency, and the results agree to round-off.\n'
            '2. If the scans are large and three-flavor, `pip install '
            '"nuoscprobexact[fast]"` on top of that.\n'
            '3. Do not bother for a handful of points: the library already '
-           'takes the quicker path there on its own.'),
+           'takes the quicker path there on its own.\n'
+           '4. At four flavors, expect about ten times the per-element '
+           'cost of three and no compiled kernel — and leave '
+           '`POLISH_ROOTS` alone unless you have measured that you can '
+           'afford not to.'),
     ])
 
 # ------------------------------------------------------- 10 the paper figures
@@ -1209,10 +1536,31 @@ books['12_ordering_and_octant.ipynb'] = notebook(
              'axes[0].legend()\n'
              'fig.tight_layout()\n'
              'plt.show()'),
-        md('Disappearance can hardly tell the two apart; appearance can, '
-           'because it carries a factor of $\\sin^2\\theta_{23}$ rather than '
-           '$\\sin^2 2\\theta_{23}$. That asymmetry is why resolving the '
-           'octant needs the appearance channel.'),
+        md('The reason is in the two combinations of $\\theta_{23}$ that the '
+           'channels carry, and it is worth doing the arithmetic rather '
+           'than asserting it:'),
+        code('for x in (0.45, 0.55):\n'
+             '    print("sin^2(th23) = %.2f  ->  sin^2(2 th23) = %.4f"\n'
+             '          % (x, 4.0*x*(1.0-x)))'),
+        md('$\\sin^2 2\\theta_{23}$ is the *same* for both — that is the '
+           'degeneracy — while $\\sin^2\\theta_{23}$ differs by about 20%. '
+           'Disappearance is governed by the first at leading order and '
+           'appearance by the second, so the leading term cancels in one '
+           'channel and not the other.\n\n'
+           'What that does *not* mean is that the disappearance curves lie '
+           'on top of each other. Over the range plotted above the largest '
+           'separation is about 0.017 in $P_{\\mu\\mu}$ and 0.013 in '
+           '$P_{\\mu e}$ — comparable in absolute terms. The difference is '
+           '*where* they sit: the disappearance gap is concentrated near '
+           'the oscillation minimum, where $P_{\\mu\\mu}$ has fallen to a '
+           'few per cent and there are correspondingly few events, whereas '
+           'the appearance gap is a steady fraction of a signal that is '
+           'small everywhere.\n\n'
+           'So the honest statement is not that disappearance cannot see '
+           'the octant, but that its sensitivity comes from subleading '
+           'terms in the least favourable place, while appearance carries '
+           'it at leading order. That is why the appearance channel drives '
+           'the measurement.'),
     ])
 
 # ---------------------------------------------------------- 13 antineutrinos
@@ -1424,8 +1772,10 @@ books['14_solar_and_adiabatic_msw.ipynb'] = notebook(
              'for n in (100, 300, 1000, 3000, 10000, 30000):\n'
              '    print("%7d slabs -> P_ee = %.6f" % (n, '
              'probabilities_sun(n, E)[0]))'),
-        md('It converges, at around ten thousand slabs — exactly the estimate '
-           'above. So far so good.\n\n'
+        md('It converges at around ten thousand slabs, against an estimate of '
+           'twenty thousand — the right order, which is all a '
+           'back-of-the-envelope count of oscillation lengths can be '
+           'expected to give. So far so good.\n\n'
            'And then the trap.'),
         md('## The converged number is meaningless on its own\n\n'
            'That $P_{ee}$ is the survival probability for one energy, at one '
@@ -1730,6 +2080,52 @@ books['16_four_neutrinos.ipynb'] = notebook(
            'energy and zenith angle where muon antineutrinos are strongly '
            'depleted into the sterile state. Its position depends on '
            '$\\Delta m^2_{41}$, which is what makes it a search channel.'),
+        md('## Sterile states and new interactions together\n\n'
+           '3+1 does not have to be the only new physics in the problem. '
+           '`hamiltonians4nu.hamiltonian_4nu_nsi` adds non-standard '
+           'interactions on top of the sterile state, and the flavor '
+           'structure is the physically interesting part: NSI are a '
+           'modification of a *standard-model* interaction, and a sterile '
+           'state has none — so the $\\epsilon$ matrix acts on the active '
+           'block only, and the sterile row and column stay '
+           'untouched.\n\n'
+           'The sterile entry keeps the $-V_{NC}$ it had before, since '
+           'that came from removing the neutral-current potential of the '
+           'active states, not from any interaction of the sterile one.'),
+        code('H_nsi = hamiltonians4nu.hamiltonian_4nu_nsi(\n'
+             '    H_VAC_4NU, energy, gd.VCC_EARTH_CRUST,\n'
+             '    gd.VNC_EARTH_CRUST, gd.EPS_3)\n\n'
+             '# What the NSI term added, on top of standard matter\n'
+             'added = np.array(H_nsi) - np.array(H)\n'
+             'print("NSI contribution [eV], real part:")\n'
+             'print("%8s" % "" + "".join("%12s" % f '
+             'for f in flavors))\n'
+             'for i, a in enumerate(flavors):\n'
+             '    print("%8s" % a\n'
+             '          + "".join("%12.3e" % added[i, j].real\n'
+             '                     for j in range(4)))\n\n'
+             'print("\\nsterile row and column untouched : %s"\n'
+             '      % bool(np.all(np.abs(added[3, :]) == 0.0)\n'
+             '             and np.all(np.abs(added[:, 3]) == 0.0)))'),
+        code('p_nsi = np.array(oscprob4nu.probabilities_4nu(\n'
+             '    H_nsi, baseline)).reshape(4, 4)\n'
+             'p_std = np.array(oscprob4nu.probabilities_4nu(\n'
+             '    H, baseline)).reshape(4, 4)\n\n'
+             'print("%-10s %12s %12s %12s"\n'
+             '      % ("channel", "3+1", "3+1 with NSI", "change"))\n'
+             'for i, a in enumerate(flavors):\n'
+             '    for j, b in enumerate(flavors):\n'
+             '        if i == j or (i, j) not in ((0, 1), (1, 0), (1, 3)):\n'
+             '            continue\n'
+             '        print("P(%s->%s)%s %12.6f %12.6f %+12.6f"\n'
+             '              % (a, b, " "*(3-len(a)-len(b)),\n'
+             '                 p_std[i, j], p_nsi[i, j],\n'
+             '                 p_nsi[i, j]-p_std[i, j]))'),
+        md('The sterile channel $P(\\nu_\\mu \\to \\nu_s)$ moves too, even '
+           'though the sterile state feels no NSI directly — because NSI '
+           'reshape the active block, and the active and sterile states '
+           'are mixed. Nothing in this calculation is a special case: it '
+           'is still one Hermitian matrix handed to the same routine.'),
         md('## What is actually new at four flavors\n\n'
            'Three things, and each follows from SU(4) having rank three '
            'where SU(3) has rank two.'),
@@ -2319,6 +2715,230 @@ books['17_cross_checks.ipynb'] = notebook(
            'the same loose tolerance.'),
     ])
 
+# ------------------------------------------- 18 the operator and the algebra
+books['18_evolution_operator.ipynb'] = notebook(
+    'The evolution operator, and the SU($n$) coefficients',
+    'Every notebook so far has asked for probabilities. This one asks for '
+    'the machinery underneath — the evolution operator itself, and the '
+    'expansion coefficients the method is built on.\n\n'
+    'Two reasons to care. If you want to **compose** evolution across '
+    'segments, or propagate a **density matrix**, or feed an oscillation '
+    'calculation into something larger, a probability is a dead end and the '
+    'operator is not. And if you want to see *how* the closed form works '
+    'rather than take it on trust, the coefficients are where it lives.',
+    [
+        md('## The operator, not the probability\n\n'
+           'Every `probabilities_*` routine has an `evolution_operator_*` '
+           'twin taking the same arguments. It returns\n\n'
+           '$$ U(L) = e^{-i\\tilde{H}L} $$\n\n'
+           'with $\\tilde H$ the traceless part of the Hamiltonian, since '
+           'the trace is only an overall phase.\n\n'
+           'The probabilities are read off it as '
+           '$P_{\\alpha\\beta} = |U_{\\beta\\alpha}|^2$ — note the index '
+           'order, which is the one place this is easy to get backwards: the '
+           'operator is indexed (final, initial), the probabilities '
+           '(initial, final).'),
+        code('energy = 1.0*GEV\n'
+             'baseline = 1300.0*KM\n'
+             'H = np.asarray(H_VAC_3NU)/energy\n\n'
+             'U = np.array(oscprob3nu.evolution_operator_3nu(H, baseline))\n'
+             'p = np.array(oscprob3nu.probabilities_3nu(H, baseline))\n\n'
+             'print("U is %s, complex" % (U.shape,))\n'
+             'print("unitary to        %.2e"\n'
+             '      % np.max(np.abs(U.conj().T @ U - np.eye(3))))\n\n'
+             '# P[3*alpha + beta] = |U[beta, alpha]|^2\n'
+             'from_U = np.array([abs(U[b, a])**2\n'
+             '                   for a in range(3) for b in range(3)])\n'
+             'print("max |P - |U|^2|   %.2e" % np.max(np.abs(p - from_U)))'),
+        md('## The group property, and why slabbing is legitimate\n\n'
+           'Because $\\tilde H$ does not depend on $L$, the operator obeys\n\n'
+           '$$ U(L_1 + L_2) = U(L_2)\\, U(L_1) . $$\n\n'
+           'This is not a detail — it is the licence for everything the '
+           '`slabs` and `earth` modules do. A trajectory through varying '
+           'matter is cut into pieces over which $H$ is taken constant, each '
+           'piece is solved *exactly*, and the operators are multiplied. The '
+           'only approximation is the cutting, never the solving.\n\n'
+           'Note the order: the operator for the **first** segment travelled '
+           'goes on the **right**.'),
+        code('L1, L2 = 0.4*baseline, 0.6*baseline\n\n'
+             'U_whole = np.array(oscprob3nu.evolution_operator_3nu(\n'
+             '    H, L1 + L2))\n'
+             'U_1 = np.array(oscprob3nu.evolution_operator_3nu(H, L1))\n'
+             'U_2 = np.array(oscprob3nu.evolution_operator_3nu(H, L2))\n\n'
+             'print("max |U(L1+L2) - U(L2) U(L1)| = %.2e"\n'
+             '      % np.max(np.abs(U_2 @ U_1 - U_whole)))\n\n'
+             '# Both segments share one Hamiltonian, so their operators\n'
+             '# commute and the order happens not to matter *here*:\n'
+             'print("with the factors swapped     = %.2e"\n'
+             '      % np.max(np.abs(U_1 @ U_2 - U_whole)))'),
+        md('That second line is not the general case, and it is worth being '
+           'clear about why it came out the same. Both segments carry the '
+           '*same* Hamiltonian, so their operators are functions of one '
+           'matrix and commute. The moment the segments differ — which is '
+           'what varying matter means — the order matters, and the next '
+           'section shows it costing you a visibly different answer.'),
+        md('`slabs.evolution_operator_3nu_slabs` does that multiplication '
+           'for you, in order, given one Hamiltonian per slab:'),
+        code('import earth\n'
+             'import slabs\n\n'
+             '# Deliberately asymmetric: the order is then observable\n'
+             'widths = np.array([300.0, 600.0, 500.0])*KM\n'
+             'densities = np.array([2.6, 4.5, 9.0])          # g/cm^3\n\n'
+             'H_seg = hamiltonians3nu.hamiltonian_3nu_matter(\n'
+             '    H_VAC_3NU, energy, earth.matter_potential(densities))\n\n'
+             'U_slabs = np.array(slabs.evolution_operator_3nu_slabs(\n'
+             '    H_seg, widths))\n\n'
+             '# The same product, written out\n'
+             'U_manual = np.eye(3, dtype=complex)\n'
+             'for k in range(len(widths)):\n'
+             '    U_manual = np.array(oscprob3nu.evolution_operator_3nu(\n'
+             '        H_seg[k], widths[k])) @ U_manual\n\n'
+             'print("max |slabs - by hand| = %.2e"\n'
+             '      % np.max(np.abs(U_slabs - U_manual)))\n\n'
+             '# Now traverse the same three slabs in reverse\n'
+             'U_rev = np.array(slabs.evolution_operator_3nu_slabs(\n'
+             '    H_seg[::-1], widths[::-1]))\n'
+             'print("max |forward - reversed| = %.2e" \n'
+             '      % np.max(np.abs(U_slabs - U_rev)))\n'
+             'print("P_mue forward  = %.6f" % abs(U_slabs[0, 1])**2)\n'
+             'print("P_mue reversed = %.6f" % abs(U_rev[0, 1])**2)'),
+        md('Same three slabs, same total length, same mean density — and a '
+           'different answer, because matrix multiplication does not '
+           'commute. A neutrino that meets dense matter last is not in the '
+           'same state as one that met it first. Notebook 08 turns that '
+           'observation into physics.'),
+        md('## Inside the closed form\n\n'
+           'The expansion writes the Hamiltonian in the basis of SU(3) '
+           'generators (the Gell-Mann matrices $\\lambda^k$),\n\n'
+           '$$ H = h_0\\mathbb{1} + h_k\\lambda^k , $$\n\n'
+           'and the evolution operator in the same basis,\n\n'
+           '$$ U_3(L) = u_0\\mathbb{1} + i\\,u_k\\lambda^k . $$\n\n'
+           'Each of those steps is a public routine, so the method can be '
+           'inspected rather than assumed.'),
+        code('h = oscprob3nu.hamiltonian_3nu_coefficients(H)\n'
+             'print("h_k : %d real coefficients" % len(h))\n'
+             'print("     ", np.array2string(np.array(h), precision=3))\n\n'
+             '# Two invariants control the whole result\n'
+             'h2, h3 = oscprob3nu.su3_invariants(h)\n'
+             'print("\\n|h|^2      = %.6e   (= Tr(H~^2)/2)" % h2)\n'
+             'print("<h>        = %.6e   (= Tr(H~^3)/2)" % h3)'),
+        md('The oscillation frequencies are the roots of the characteristic '
+           'equation, which for SU(3) is a cubic and has a closed '
+           'trigonometric solution. Up to a sign they are the eigenvalues '
+           'of the traceless Hamiltonian — the quantities every oscillation '
+           'phase is built from. The paper writes the characteristic '
+           'equation for $-\\tilde H$, so $\\psi_m = -\\lambda_m$:'),
+        code('psi = np.sort(np.array(oscprob3nu.psi_roots(h2, h3)))\n\n'
+             '# The roots are those of the characteristic equation of -H~,\n'
+             '# so they are minus the eigenvalues of H~ itself.\n'
+             'H_traceless = H - np.trace(H)/3.0*np.eye(3)\n'
+             'reference = np.sort(-np.linalg.eigvalsh(H_traceless))\n\n'
+             'print("psi_m (closed form) :", np.array2string(psi, '
+             'precision=4))\n'
+             'print("-eigvalsh(H~)       :", np.array2string(reference, '
+             'precision=4))\n'
+             'print("max difference      : %.2e"\n'
+             '      % np.max(np.abs(psi - reference)))'),
+        md('And the coefficients of the operator, which rebuild it '
+           'exactly. The Gell-Mann matrices are written out by hand '
+           'below, and the reason is worth knowing if you go looking for '
+           'them: `oscprob4nu` exposes `generators_su4()` because at four '
+           'flavors every quantity it needs is a trace against the '
+           'generators, whereas `oscprob3nu` contracts the $d$ tensor '
+           'instead — see `oscprob3nu.tensor_d` — and so never builds the '
+           'matrices. There is no `generators_su3()` to import.'),
+        code('u = oscprob3nu.evolution_operator_3nu_u_coefficients(\n'
+             '    H, baseline)\n'
+             'print("u_0 and u_1..u_8 : %d complex coefficients" % len(u))\n\n'
+             '# Rebuild U from them, using the Gell-Mann matrices\n'
+             'lam = np.zeros((8, 3, 3), dtype=complex)\n'
+             'lam[0, 0, 1] = lam[0, 1, 0] = 1.0\n'
+             'lam[1, 0, 1], lam[1, 1, 0] = -1.0j, 1.0j\n'
+             'lam[2, 0, 0], lam[2, 1, 1] = 1.0, -1.0\n'
+             'lam[3, 0, 2] = lam[3, 2, 0] = 1.0\n'
+             'lam[4, 0, 2], lam[4, 2, 0] = -1.0j, 1.0j\n'
+             'lam[5, 1, 2] = lam[5, 2, 1] = 1.0\n'
+             'lam[6, 1, 2], lam[6, 2, 1] = -1.0j, 1.0j\n'
+             'lam[7] = np.diag([1.0, 1.0, -2.0])/np.sqrt(3.0)\n\n'
+             'U_rebuilt = (u[0]*np.eye(3)\n'
+             '             + 1.0j*np.einsum("k,kij->ij",\n'
+             '                              np.array(u[1:]), lam))\n'
+             'print("max |rebuilt - U| = %.2e"\n'
+             '      % np.max(np.abs(U_rebuilt - U)))'),
+        md('Seeing them vary is more instructive than one value of each. '
+           'The $h_k$ are fixed by the Hamiltonian and do not move with '
+           'distance; the $u_k$ carry the whole $L$ dependence, '
+           'oscillating at the three frequencies $\\psi_m$ set by the '
+           'latent roots. Every probability in every other notebook is '
+           'built from these:'),
+        code('L_km = np.linspace(0.0, 6000.0, 800)\n'
+             'u_of_L = np.array([\n'
+             '    oscprob3nu.evolution_operator_3nu_u_coefficients(\n'
+             '        H, l*KM) for l in L_km])\n\n'
+             'fig, axes = plt.subplots(2, 1, figsize=(7.2, 5.6),\n'
+             '                         sharex=True)\n'
+             'axes[0].plot(L_km, u_of_L[:, 0].real, label=r"$u_0$")\n'
+             'for k in (1, 2, 3):\n'
+             '    axes[0].plot(L_km, u_of_L[:, k].real, lw=1.0,\n'
+             '                 label=r"$u_%d$" % k)\n'
+             'axes[0].set_ylabel("coefficient (real part)")\n'
+             'axes[0].set_title("The SU(3) coefficients of $U_3(L)$")\n'
+             '# Headroom so the legend clears the u_0 peak\n'
+             'axes[0].set_ylim(-0.75, 1.55)\n'
+             'axes[0].legend(ncol=4, fontsize=9, loc="upper center")\n\n'
+             '# Rebuilt probabilities, for comparison\n'
+             'p_scan = oscprob3nu.probabilities_3nu(H, L_km*KM)\n'
+             'axes[1].plot(L_km, p_scan[:, 0], label=r"$P_{ee}$")\n'
+             'axes[1].plot(L_km, p_scan[:, 1], label=r"$P_{e\\mu}$")\n'
+             'axes[1].set_xlim(L_km[0], L_km[-1])\n'
+             'axes[1].set_ylim(0.0, 1.0)\n'
+             'axes[1].set_xlabel("Baseline [km]")\n'
+             'axes[1].set_ylabel("probability")\n'
+             'axes[1].legend(ncol=2)\n'
+             'fig.tight_layout()\n'
+             'plt.show()'),
+        md('The lower panel is what the other notebooks plot; the upper '
+           'panel is what it is made of. $u_0$ is the coefficient of the '
+           'identity, so it stays near one where little has happened, and '
+           'the $u_k$ grow as flavor content moves between states.'),
+        md('## The same shape at two and four flavors\n\n'
+           'Nothing above is specific to three. Each module carries the same '
+           'four entry points — coefficients, invariants, roots, operator — '
+           'over SU(2), SU(3) and SU(4).'),
+        code('# Two flavors\n'
+             'H2 = np.asarray(\n'
+             '    hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(\n'
+             '        gd.S23_NO_BF, gd.D31_NO_BF))/energy\n'
+             'U2 = np.array(oscprob2nu.evolution_operator_2nu(H2, baseline))\n'
+             'print("SU(2): U is %s, unitary to %.1e"\n'
+             '      % (U2.shape,\n'
+             '         np.max(np.abs(U2.conj().T @ U2 - np.eye(2)))))\n\n'
+             '# Four flavors: fifteen generators, three invariants\n'
+             'lam4 = oscprob4nu.generators_su4()\n'
+             'H4 = np.diag([1.0, 2.0, 3.0, -6.0]).astype(complex)\n'
+             'i2, i3, i4 = oscprob4nu.su4_invariants(H4)\n'
+             'U4 = np.array(oscprob4nu.evolution_operator_4nu(H4, 1.0))\n'
+             'print("SU(4): %d generators, invariants "\n'
+             '      "%.3f %.3f %.3f" % (len(lam4), i2, i3, i4))\n'
+             'print("       U is %s, unitary to %.1e"\n'
+             '      % (U4.shape,\n'
+             '         np.max(np.abs(U4.conj().T @ U4 - np.eye(4)))))'),
+        md('## Which one to reach for\n\n'
+           '| You want | Use |\n'
+           '|---|---|\n'
+           '| A probability | `probabilities_2nu` / `_3nu` / `_4nu` |\n'
+           '| To compose across segments, or a density matrix | '
+           '`evolution_operator_*` |\n'
+           '| A trajectory through layered matter | `slabs.*`, `earth.*` |\n'
+           '| The oscillation frequencies alone | `psi_roots`, '
+           '`psi_roots_4nu` |\n'
+           '| To inspect or extend the expansion | `*_coefficients`, '
+           '`su3_invariants`, `su4_invariants` |\n\n'
+           'The probability routines are the ones to use by default: they '
+           'take the shortest path and avoid building the operator when it '
+           'is not needed. Reach past them when you need what they discard.'),
+    ])
+
 # Figures lifted out of the executed notebooks for the README gallery and the
 # documentation's recipes page.  Extracting them rather than drawing them
 # again is what keeps the three in step: there is one piece of code behind
@@ -2360,10 +2980,98 @@ def extract_gallery():
     print('  wrote %d gallery figures to %s' % (written, GALLERY_DIR))
 
 
+# ---------------------------------------------------------------------------
+# Reading order, and the footer that makes it navigable
+# ---------------------------------------------------------------------------
+#
+# Seventeen notebooks described as "numbered in reading order" is only a
+# reading order if a reader can follow it from inside one.  Before this, no
+# notebook linked to any other, none linked to the documentation, and none
+# said what to read next -- so the order existed in the README and nowhere a
+# reader actually was.
+#
+# Declared once here rather than written into seventeen footers by hand, so
+# that inserting a notebook is one edit and cannot leave a dangling link.
+# `test_file_tree.py` already guarantees the filenames exist; the assertion
+# in `add_footers` guarantees this list matches them.
+
+READING_ORDER = [
+    ('01_basics.ipynb', 'Basics',
+     'units, one probability, and why to pass arrays'),
+    ('02_vacuum_oscillations.ipynb', 'Oscillations in vacuum',
+     'the probabilities against baseline and against energy'),
+    ('03_matter_nsi_liv.ipynb', 'Matter, NSI, and LIV',
+     'constant-density matter and two kinds of new physics'),
+    ('04_oscillogram.ipynb', 'Oscillograms',
+     'a two-dimensional map in a single call'),
+    ('05_biprobability.ipynb', 'Bi-probability plots',
+     'CP violation, as an ellipse'),
+    ('06_earth_and_prem.ipynb', 'The Earth: PREM, chords, and slabs',
+     'how a varying profile becomes a sequence of exact pieces'),
+    ('07_earth_probabilities.ipynb', 'Probabilities through the Earth',
+     'zenith-angle scans, an Earth oscillogram, and real baselines'),
+    ('08_unusual_density_profiles.ipynb', 'Unusual density profiles',
+     'castle walls, and why the arrangement of matter matters'),
+    ('09_performance.ipynb', 'Performance',
+     'looping versus broadcasting, measured on your machine'),
+    ('10_paper_figures.ipynb', "The paper's figures",
+     'the two figures of arXiv:1904.12391, reproduced'),
+    ('11_exact_vs_approximations.ipynb', 'Exact versus the approximations',
+     'where the familiar formulas break, and by how much'),
+    ('12_ordering_and_octant.ipynb', 'Mass ordering and the octant',
+     'two open questions, and how they show up'),
+    ('13_antineutrinos.ipynb', 'Antineutrinos, done properly',
+     'conjugate *and* flip -- and two ways to get it half right'),
+    ('14_solar_and_adiabatic_msw.ipynb', 'Solar neutrinos and the MSW '
+     'resonance', 'the adiabatic resonance, and the limits of slabbing'),
+    ('15_numerical_edge_cases.ipynb', 'Numerical edge cases',
+     'degeneracies, and what returns a number instead of NaN'),
+    ('16_four_neutrinos.ipynb', 'Four neutrinos, and a sterile state',
+     'a 3+1 system through SU(4), and why the method stops there'),
+    ('17_cross_checks.ipynb', 'Cross-checks with other codes',
+     'corroboration from nuSQuIDS and Zaglauer-Schwarzer'),
+    ('18_evolution_operator.ipynb',
+     'The evolution operator and the SU(n) coefficients',
+     'the machinery underneath, for composing and extending'),
+]
+
+DOCS = 'https://mbustama.github.io/NuOscProbExact'
+
+
+def add_footers():
+    """Appends a navigation footer to every notebook.
+
+    Each carries the previous and next notebook and a pointer to the API
+    reference, so a reader who arrives at any one of them -- which is what
+    happens when a search engine or a colleague sends them a link -- can
+    find both the path through and the underlying documentation.
+    """
+    assert set(name for name, _, _ in READING_ORDER) == set(books), (
+        'READING_ORDER and the notebooks built here have diverged')
+
+    for index, (name, _, _) in enumerate(READING_ORDER):
+        parts = []
+        if index:
+            previous, title, _ = READING_ORDER[index-1]
+            parts.append('**Previous:** [%s](%s)' % (title, previous))
+        if index + 1 < len(READING_ORDER):
+            following, title, blurb = READING_ORDER[index+1]
+            parts.append('**Next:** [%s](%s) --- %s'
+                         % (title, following, blurb))
+
+        parts.append('[API reference](%s/functions.html) &middot; '
+                     '[Numerical recipes](%s/recipes.html) &middot; '
+                     '[All notebooks](.)' % (DOCS, DOCS))
+
+        books[name].cells.append(md('---\n\n' + '  \n'.join(parts)))
+
+
 def build():
     """Writes every notebook, executes it, and checks it kept its outputs."""
     from nbclient import NotebookClient
     from nbclient.exceptions import CellExecutionError
+
+    add_footers()
 
     OUT.mkdir(exist_ok=True)
     for name, nb in books.items():

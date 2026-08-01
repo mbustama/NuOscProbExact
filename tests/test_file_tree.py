@@ -133,6 +133,8 @@ TREE = [
      'A 3+1 sterile state, through the SU(4) expansion'),
     ('notebooks/17_cross_checks.ipynb',
      'Corroboration from nuSQuIDS and Zaglauer-Schwarzer'),
+    ('notebooks/18_evolution_operator.ipynb',
+     'The operator, and the SU(n) coefficients'),
     ('notebooks/make_notebooks.py', 'Generates and executes all of the above'),
     ('src/', 'The library'),
     ('src/oscprob2nu.py', 'Two-flavor probabilities, SU(2) expansion'),
