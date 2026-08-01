@@ -5,6 +5,64 @@ All notable changes to **NuOscProbExact** are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.8.0] - 2026-08-01
+
+Piecewise-constant matter.  The exact expansions assume a Hamiltonian that
+does not change along the trajectory; a neutrino crossing the Earth does not
+have one.  Two new modules close that gap without giving up exactness: the
+path is cut into slabs, each is solved exactly, and the operators are
+multiplied.  Within a slab nothing is approximated.
+
+Nothing in the existing modules changed behaviour.
+
+### Added
+
+- `slabs`, which propagates across a sequence of adjacent slabs of arbitrary
+  width and Hamiltonian, for two and three flavors:
+  `evolution_operator_2nu_slabs`, `evolution_operator_3nu_slabs`,
+  `probabilities_2nu_slabs`, `probabilities_3nu_slabs`.
+
+  The per-slab operators are evaluated in one batched call, so `n` slabs cost
+  one vectorised evaluation plus `n-1` matrix products rather than `n`
+  separate evaluations.
+
+  Note that each slab drops the phase carried by the trace of its
+  Hamiltonian, as the single-slab routines do.  Their product therefore
+  differs from the product of full matrix exponentials by one overall phase,
+  which leaves every probability unchanged but matters to anyone comparing
+  the operator itself against `scipy.linalg.expm`.
+
+- `earth`, which builds those slabs from the Preliminary Reference Earth
+  Model: `density_prem`, `matter_potential`, the chord geometry
+  (`distance_traveled_inside_earth`, `earth_radial_distance_from_depth`,
+  `prem_layer_edges_along_chord`, `chord_length_inside_earth`,
+  `costhz_between_points_on_surface`), `earth_slabs`, and the probabilities
+  across the Earth for a given zenith angle (`probabilities_2nu_earth`,
+  `probabilities_3nu_earth`) or between two named locations
+  (`probabilities_2nu_between_locations`,
+  `probabilities_3nu_between_locations`).
+
+  The chord is cut at every PREM shell boundary it crosses before being
+  subdivided, because the density is discontinuous there and no amount of
+  subdivision recovers a discontinuity that straddles a slab.  Each segment
+  is then divided into `n_slabs_per_layer` equal pieces with the density
+  taken at the midpoint, which converges at second order --- measured, not
+  assumed: past 32 sub-slabs per layer each doubling cuts the error by about
+  four.
+
+  The 15 predefined locations are the same set as the sibling Magnus
+  package, so a trajectory named in one can be reproduced in the other.
+
+- `globaldefs.EARTH_RADIUS`.
+
+- 68 tests for the two modules.  The ones that matter are the independent
+  checks: slab composition against a product of `scipy.linalg.expm` factors,
+  splitting one Hamiltonian into many slabs reproducing the single-slab
+  answer, PREM integrating to the mass of the Earth to 0.02%,
+  `matter_potential` reproducing `globaldefs.VCC_EARTH_CRUST` from the crust
+  density, and a uniform-density Earth reproducing the ordinary
+  constant-Hamiltonian result.
+
 ## [1.7.0] - 2026-07-31
 
 Continuous integration, an automatic coverage gate, and linting.  Nothing in
@@ -108,7 +166,7 @@ The one thing users will notice is the supported Python range.
   modules in `tests/`.  These were what running a linter for the first time
   actually found.
 
-
+## [1.6.0] - 2026-07-31
 
 An optional Numba backend for the batched paths, and a shortcut for very short
 stacks.  The library's only required dependency is still NumPy, and the
