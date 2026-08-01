@@ -68,27 +68,45 @@ TH14 = np.arcsin(np.sqrt(0.10))
 TH24 = np.arcsin(np.sqrt(0.10))
 TH34 = 0.0
 
+# (name, flavors, energy [GeV], baseline [km], density [g/cm^3] or None,
+#  antineutrino, dm31 override or None)
+#
+# The last four exist because the first seven did not cover the two sign
+# conventions most likely to be wrong, and which this repository's own
+# history says are the ones that bite: the antineutrino rule --- conjugate
+# the vacuum term *and* flip the potentials --- and the mass ordering.  A
+# comparison whose purpose is catching convention errors ought to include
+# the conventions worth catching.
 CASES = [
-    ('3nu vacuum, 1 GeV, 1300 km', 3, 1.0, 1300.0, None),
-    ('3nu vacuum, 0.6 GeV, 295 km', 3, 0.6, 295.0, None),
-    ('3nu matter rho=3, 1 GeV, 1300 km', 3, 1.0, 1300.0, 3.0),
-    ('3nu matter rho=3, 5 GeV, 1300 km', 3, 5.0, 1300.0, 3.0),
-    ('4nu vacuum, 1 GeV, 1300 km', 4, 1.0, 1300.0, None),
-    ('4nu vacuum, 0.5 GeV, 0.6 km', 4, 0.5, 0.6, None),
-    ('4nu matter rho=3, 1 GeV, 1300 km', 4, 1.0, 1300.0, 3.0),
+    ('3nu vacuum, 1 GeV, 1300 km', 3, 1.0, 1300.0, None, False, None),
+    ('3nu vacuum, 0.6 GeV, 295 km', 3, 0.6, 295.0, None, False, None),
+    ('3nu matter rho=3, 1 GeV, 1300 km', 3, 1.0, 1300.0, 3.0, False, None),
+    ('3nu matter rho=3, 5 GeV, 1300 km', 3, 5.0, 1300.0, 3.0, False, None),
+    ('4nu vacuum, 1 GeV, 1300 km', 4, 1.0, 1300.0, None, False, None),
+    ('4nu vacuum, 0.5 GeV, 0.6 km', 4, 0.5, 0.6, None, False, None),
+    ('4nu matter rho=3, 1 GeV, 1300 km', 4, 1.0, 1300.0, 3.0, False, None),
+    ('3nu antinu vacuum, 1 GeV, 1300 km', 3, 1.0, 1300.0, None, True, None),
+    ('3nu antinu matter rho=3, 1 GeV, 1300 km',
+     3, 1.0, 1300.0, 3.0, True, None),
+    ('3nu matter rho=3, 1 GeV, 1300 km, inverted',
+     3, 1.0, 1300.0, 3.0, False, -2.4381e-3),
+    ('4nu antinu matter rho=3, 1 GeV, 1300 km',
+     4, 1.0, 1300.0, 3.0, True, None),
 ]
 
 ELECTRON_FRACTION = 0.5
 
 
-def configured(n_flavors, body, track):
+def configured(n_flavors, body, track, antineutrino, dm31):
     r"""Returns a nuSQuIDS instance with the mixing parameters set."""
-    solver = nsq.nuSQUIDS(n_flavors, nsq.NeutrinoType.neutrino)
+    kind = (nsq.NeutrinoType.antineutrino if antineutrino
+            else nsq.NeutrinoType.neutrino)
+    solver = nsq.nuSQUIDS(n_flavors, kind)
     solver.Set_MixingAngle(0, 1, TH12)
     solver.Set_MixingAngle(0, 2, TH13)
     solver.Set_MixingAngle(1, 2, TH23)
     solver.Set_SquareMassDifference(1, DM21)
-    solver.Set_SquareMassDifference(2, DM31)
+    solver.Set_SquareMassDifference(2, DM31 if dm31 is None else dm31)
     solver.Set_CPPhase(0, 2, DCP)
 
     if n_flavors == 4:
@@ -108,7 +126,8 @@ def configured(n_flavors, body, track):
     return solver
 
 
-def probabilities(n_flavors, energy_gev, baseline_km, density):
+def probabilities(n_flavors, energy_gev, baseline_km, density,
+                  antineutrino=False, dm31=None):
     r"""Returns ``P[alpha][beta]``, the initial flavor varying slowest."""
     if density is None:
         body = nsq.Vacuum()
@@ -119,7 +138,8 @@ def probabilities(n_flavors, energy_gev, baseline_km, density):
 
     rows = []
     for alpha in range(n_flavors):
-        solver = configured(n_flavors, body, track)
+        solver = configured(n_flavors, body, track, antineutrino,
+                            dm31)
         solver.Set_E(energy_gev*UNITS.GeV)
         initial = np.zeros(n_flavors)
         initial[alpha] = 1.0
@@ -153,15 +173,18 @@ def main():
         'cases': [],
     }
 
-    for name, n_flavors, energy, baseline, density in CASES:
+    for (name, n_flavors, energy, baseline, density, antineutrino,
+         dm31) in CASES:
         reference['cases'].append({
             'name': name,
             'n_flavors': n_flavors,
             'energy_gev': energy,
             'baseline_km': baseline,
             'density_g_cm3': density,
+            'antineutrino': antineutrino,
+            'dm31': DM31 if dm31 is None else dm31,
             'probabilities': probabilities(n_flavors, energy, baseline,
-                                           density),
+                                           density, antineutrino, dm31),
         })
         print('generated: %s' % name, file=sys.stderr)
 
