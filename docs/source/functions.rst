@@ -1,9 +1,10 @@
 API reference
 =============
 
-Generated from the docstrings.  Every ``Examples`` block below is executable
-and is run as a doctest by the regression suite, so the numbers shown are
-what the code actually returns.
+Generated from the docstrings.  Every ``Examples`` block below is **executed
+when this page is built**, so the results shown are what the code returns
+rather than numbers written beside it.  The regression suite runs the same
+blocks on every supported Python.
 
 Core modules
 ------------

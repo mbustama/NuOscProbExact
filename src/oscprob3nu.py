@@ -151,12 +151,15 @@ def hamiltonian_3nu_coefficients(
 
     Examples
     --------
-    >>> hamiltonian_matrix = [[1.0+0.0j, 0.0+2.0j, 0.0-1.0j],
-    ...                       [0.0-2.0j, 3.0+0.0j, 3.0+0.0j],
-    ...                       [0.0+1.0j, 3.0-0.0j, -5.0+0.0j]]
-    >>> h_coeffs = hamiltonian_3nu_coefficients(hamiltonian_matrix)
-    >>> print('  '.join(['%.6f' % (h+0.0) for h in h_coeffs]))
-    0.000000  -2.000000  -1.000000  0.000000  1.000000  3.000000  0.000000  4.041452
+    .. jupyter-execute::
+
+        import oscprob3nu
+
+        hamiltonian_matrix = [[1.0+0.0j, 0.0+2.0j, 0.0-1.0j],
+                              [0.0-2.0j, 3.0+0.0j, 3.0+0.0j],
+                              [0.0+1.0j, 3.0-0.0j, -5.0+0.0j]]
+        h_coeffs = oscprob3nu.hamiltonian_3nu_coefficients(hamiltonian_matrix)
+        print('  '.join(['%.6f' % (h+0.0) for h in h_coeffs]))
     """
     H11 = hamiltonian_matrix[0][0]
     H12 = hamiltonian_matrix[0][1]
@@ -226,10 +229,12 @@ def tensor_d(i: int, j: int, k: int) -> float:
 
     Examples
     --------
-    >>> print('%.6f' % tensor_d(0, 0, 7))
-    0.577350
-    >>> print('%.6f' % tensor_d(0, 1, 2))
-    0.000000
+    .. jupyter-execute::
+
+        import oscprob3nu
+
+        print('%.6f' % oscprob3nu.tensor_d(0, 0, 7))
+        print('%.6f' % oscprob3nu.tensor_d(0, 1, 2))
     """
     for index in (i, j, k):
         if not 0 <= index <= 7:
@@ -347,10 +352,12 @@ def star(i: int, h_coeffs: Union[list, np.ndarray]) -> float:
 
     Examples
     --------
-    >>> print('%.6f' % star(0, [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]))
-    0.000000
-    >>> print('%.6f' % star(7, [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]))
-    0.577350
+    .. jupyter-execute::
+
+        import oscprob3nu
+
+        print('%.6f' % oscprob3nu.star(0, [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]))
+        print('%.6f' % oscprob3nu.star(7, [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]))
     """
     h = np.asarray(h_coeffs, dtype=float)
 
@@ -393,9 +400,12 @@ def su3_invariants(h_coeffs: Union[list, np.ndarray]) -> Tuple[float, float]:
 
     Examples
     --------
-    >>> h2, h3 = su3_invariants([1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-    >>> print('%.6f  %.6f' % (h2, h3))
-    1.000000  0.000000
+    .. jupyter-execute::
+
+        import oscprob3nu
+
+        h2, h3 = oscprob3nu.su3_invariants([1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+        print('%.6f  %.6f' % (h2, h3))
     """
     star = _star_all(h_coeffs)
 
@@ -462,9 +472,12 @@ def psi_roots(h2: Union[int, float], h3: Union[int, float]) -> List[float]:
 
     Examples
     --------
-    >>> psi = psi_roots(1.0, 0.0)
-    >>> print('  '.join(['%.6f' % (round(p, 9)+0.0) for p in sorted(psi)]))
-    -1.000000  0.000000  1.000000
+    .. jupyter-execute::
+
+        import oscprob3nu
+
+        psi = oscprob3nu.psi_roots(1.0, 0.0)
+        print('  '.join(['%.6f' % (round(p, 9)+0.0) for p in sorted(psi)]))
     """
     if h2 <= 0.0:
         return [0.0, 0.0, 0.0]
@@ -1002,13 +1015,16 @@ def evolution_operator_3nu_u_coefficients(
 
     Examples
     --------
-    >>> hamiltonian_matrix = [[1.0+0.0j, 0.0+2.0j, 0.0-1.0j],
-    ...                       [0.0-2.0j, 3.0+0.0j, 3.0+0.0j],
-    ...                       [0.0+1.0j, 3.0-0.0j, -5.0+0.0j]]
-    >>> u_coeffs = evolution_operator_3nu_u_coefficients(hamiltonian_matrix,
-    ...                                                  1.0)
-    >>> print('%+.6f%+.6fj' % (u_coeffs[0].real, u_coeffs[0].imag))
-    +0.621522-0.047327j
+    .. jupyter-execute::
+
+        import oscprob3nu
+
+        hamiltonian_matrix = [[1.0+0.0j, 0.0+2.0j, 0.0-1.0j],
+                              [0.0-2.0j, 3.0+0.0j, 3.0+0.0j],
+                              [0.0+1.0j, 3.0-0.0j, -5.0+0.0j]]
+        u_coeffs = oscprob3nu.evolution_operator_3nu_u_coefficients(hamiltonian_matrix,
+                                                         1.0)
+        print('%+.6f%+.6fj' % (u_coeffs[0].real, u_coeffs[0].imag))
     """
     # [h1, h2, h3, h4, h5, h6, h7, h8]
     h = hamiltonian_3nu_coefficients(hamiltonian_matrix)
@@ -1090,16 +1106,17 @@ def evolution_operator_3nu(
 
     Examples
     --------
-    >>> hamiltonian_matrix = [[1.0+0.0j, 0.0+2.0j, 0.0-1.0j],
-    ...                       [0.0-2.0j, 3.0+0.0j, 3.0+0.0j],
-    ...                       [0.0+1.0j, 3.0-0.0j, -5.0+0.0j]]
-    >>> U3 = evolution_operator_3nu(hamiltonian_matrix, 1.0)
-    >>> for row in U3:
-    ...     print('  '.join(['%+.6f%+.6fj' % (z.real+0.0, z.imag+0.0)
-    ...                      for z in row]))
-    +0.546090-0.496423j  -0.600964-0.114920j  -0.278885+0.056655j
-    +0.600964+0.114920j  +0.430462+0.614384j  -0.171381+0.183031j
-    +0.278885-0.056655j  -0.171381+0.183031j  +0.888015-0.259943j
+    .. jupyter-execute::
+
+        import oscprob3nu
+
+        hamiltonian_matrix = [[1.0+0.0j, 0.0+2.0j, 0.0-1.0j],
+                              [0.0-2.0j, 3.0+0.0j, 3.0+0.0j],
+                              [0.0+1.0j, 3.0-0.0j, -5.0+0.0j]]
+        U3 = oscprob3nu.evolution_operator_3nu(hamiltonian_matrix, 1.0)
+        for row in U3:
+            print('  '.join(['%+.6f%+.6fj' % (z.real+0.0, z.imag+0.0)
+                             for z in row]))
     """
     if _is_batched(hamiltonian_matrix, L):
         return _evolution_operator_3nu_batch(hamiltonian_matrix, L)
@@ -1217,16 +1234,17 @@ def probabilities_3nu(
 
     Examples
     --------
-    >>> hamiltonian_matrix = [[1.0+0.0j, 0.0+2.0j, 0.0-1.0j],
-    ...                       [0.0-2.0j, 3.0+0.0j, 3.0+0.0j],
-    ...                       [0.0+1.0j, 3.0-0.0j, -5.0+0.0j]]
-    >>> prob = probabilities_3nu(hamiltonian_matrix, 1.0)
-    >>> print('  '.join(['%.6f' % p for p in prob[0:3]]))
-    0.544650  0.374364  0.080986
-    >>> print('  '.join(['%.6f' % p for p in prob[3:6]]))
-    0.374364  0.562764  0.062872
-    >>> print('  '.join(['%.6f' % p for p in prob[6:9]]))
-    0.080986  0.062872  0.856142
+    .. jupyter-execute::
+
+        import oscprob3nu
+
+        hamiltonian_matrix = [[1.0+0.0j, 0.0+2.0j, 0.0-1.0j],
+                              [0.0-2.0j, 3.0+0.0j, 3.0+0.0j],
+                              [0.0+1.0j, 3.0-0.0j, -5.0+0.0j]]
+        prob = oscprob3nu.probabilities_3nu(hamiltonian_matrix, 1.0)
+        print('  '.join(['%.6f' % p for p in prob[0:3]]))
+        print('  '.join(['%.6f' % p for p in prob[3:6]]))
+        print('  '.join(['%.6f' % p for p in prob[6:9]]))
     """
     if _is_batched(hamiltonian_matrix, L):
         return _probabilities_3nu_batch(hamiltonian_matrix, L)

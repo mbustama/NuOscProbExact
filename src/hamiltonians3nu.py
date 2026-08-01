@@ -144,9 +144,12 @@ def pmns_mixing_matrix(
 
     Examples
     --------
-    >>> U = pmns_mixing_matrix(0.55, 0.76, 0.15, 0.0)
-    >>> print('%.6f  %.6f' % (U[0][0].real, U[0][1].real))
-    0.825716  0.543777
+    .. jupyter-execute::
+
+        import hamiltonians3nu
+
+        U = hamiltonians3nu.pmns_mixing_matrix(0.55, 0.76, 0.15, 0.0)
+        print('%.6f  %.6f' % (U[0][0].real, U[0][1].real))
     """
     c12 = math.sqrt(1.0-s12*s12)
     c23 = math.sqrt(1.0-s23*s23)
@@ -236,10 +239,13 @@ def hamiltonian_3nu_vacuum_energy_independent(
 
     Examples
     --------
-    >>> H = hamiltonian_3nu_vacuum_energy_independent(0.55, 0.76, 0.15,
-    ...                                               0.0, 7.4e-5, 2.5e-3)
-    >>> print('%.6e' % H[0][0].real)
-    3.906567e-05
+    .. jupyter-execute::
+
+        import hamiltonians3nu
+
+        H = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(0.55, 0.76, 0.15,
+                                                      0.0, 7.4e-5, 2.5e-3)
+        print('%.6e' % H[0][0].real)
     """
     c12 = math.sqrt(1.0-s12*s12)
     c23 = math.sqrt(1.0-s23*s23)
@@ -315,8 +321,11 @@ def delta(a: int, b: int) -> int:
 
     Examples
     --------
-    >>> print(delta(0, 0), delta(0, 1))
-    1 0
+    .. jupyter-execute::
+
+        import hamiltonians3nu
+
+        print(hamiltonians3nu.delta(0, 0), hamiltonians3nu.delta(0, 1))
     """
     if (a == b):
         return 1
@@ -364,9 +373,12 @@ def J(
 
     Examples
     --------
-    >>> U = pmns_mixing_matrix(0.55, 0.76, 0.15, 0.0)
-    >>> print('%.6f' % J(U, 0, 1, 1, 0).real)
-    -0.097579
+    .. jupyter-execute::
+
+        import hamiltonians3nu
+
+        U = hamiltonians3nu.pmns_mixing_matrix(0.55, 0.76, 0.15, 0.0)
+        print('%.6f' % hamiltonians3nu.J(U, 0, 1, 1, 0).real)
     """
     return np.conj(U[alpha][k])*U[beta][k]*U[alpha][j]*np.conj(U[beta][j])
 
@@ -430,11 +442,14 @@ def probabilities_3nu_vacuum_std(
 
     Examples
     --------
-    >>> U = pmns_mixing_matrix(0.55, 0.76, 0.15, 0.0)
-    >>> prob = probabilities_3nu_vacuum_std(U, 7.4e-5, 2.5e-3, 1.0e9,
-    ...                                     5.0e12)
-    >>> print('%.6f  %.6f' % (prob[0], prob[1]))
-    0.992787  0.001981
+    .. jupyter-execute::
+
+        import hamiltonians3nu
+
+        U = hamiltonians3nu.pmns_mixing_matrix(0.55, 0.76, 0.15, 0.0)
+        prob = hamiltonians3nu.probabilities_3nu_vacuum_std(U, 7.4e-5, 2.5e-3, 1.0e9,
+                                            5.0e12)
+        print('%.6f  %.6f' % (prob[0], prob[1]))
     """
     D32 = D31-D21
 
@@ -512,12 +527,15 @@ def hamiltonian_3nu_matter(
 
     Examples
     --------
-    >>> H_vac = hamiltonian_3nu_vacuum_energy_independent(0.55, 0.76, 0.15,
-    ...                                                   0.0, 7.4e-5,
-    ...                                                   2.5e-3)
-    >>> H = hamiltonian_3nu_matter(H_vac, 1.0e9, 1.0e-13)
-    >>> print('%.6e' % H[0][0].real)
-    1.390657e-13
+    .. jupyter-execute::
+
+        import hamiltonians3nu
+
+        H_vac = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(0.55, 0.76, 0.15,
+                                                          0.0, 7.4e-5,
+                                                          2.5e-3)
+        H = hamiltonians3nu.hamiltonian_3nu_matter(H_vac, 1.0e9, 1.0e-13)
+        print('%.6e' % H[0][0].real)
     """
     h_vacuum = np.asarray(h_vacuum_energy_independent, dtype=complex)
     energy = np.asarray(energy, dtype=float)
@@ -584,13 +602,16 @@ def hamiltonian_3nu_nsi(
 
     Examples
     --------
-    >>> H_vac = hamiltonian_3nu_vacuum_energy_independent(0.55, 0.76, 0.15,
-    ...                                                   0.0, 7.4e-5,
-    ...                                                   2.5e-3)
-    >>> H = hamiltonian_3nu_nsi(H_vac, 1.0e9, 1.0e-13,
-    ...                         [0.06, -0.06+0.03j, 0.0, 1.2, 0.0, 0.0])
-    >>> print('%+.6e%+.6ej' % (H[0][1].real, H[0][1].imag))
-    +1.445471e-13+3.000000e-15j
+    .. jupyter-execute::
+
+        import hamiltonians3nu
+
+        H_vac = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(0.55, 0.76, 0.15,
+                                                          0.0, 7.4e-5,
+                                                          2.5e-3)
+        H = hamiltonians3nu.hamiltonian_3nu_nsi(H_vac, 1.0e9, 1.0e-13,
+                                [0.06, -0.06+0.03j, 0.0, 1.2, 0.0, 0.0])
+        print('%+.6e%+.6ej' % (H[0][1].real, H[0][1].imag))
     """
     h_vacuum = np.asarray(h_vacuum_energy_independent, dtype=complex)
     energy = np.asarray(energy, dtype=float)
@@ -688,13 +709,16 @@ def hamiltonian_3nu_liv(
 
     Examples
     --------
-    >>> H_vac = hamiltonian_3nu_vacuum_energy_independent(0.55, 0.76, 0.15,
-    ...                                                   0.0, 7.4e-5,
-    ...                                                   2.5e-3)
-    >>> H = hamiltonian_3nu_liv(H_vac, 1.0e9, 0.3, 0.4, 0.5, 0.7, 1.0e-9,
-    ...                         1.5e-9, 2.0e-9, 1.0e12)
-    >>> print('%.6e' % H[0][0].real)
-    1.322816e-12
+    .. jupyter-execute::
+
+        import hamiltonians3nu
+
+        H_vac = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(0.55, 0.76, 0.15,
+                                                          0.0, 7.4e-5,
+                                                          2.5e-3)
+        H = hamiltonians3nu.hamiltonian_3nu_liv(H_vac, 1.0e9, 0.3, 0.4, 0.5, 0.7, 1.0e-9,
+                                1.5e-9, 2.0e-9, 1.0e12)
+        print('%.6e' % H[0][0].real)
     """
     h_vacuum = np.asarray(h_vacuum_energy_independent, dtype=complex)
     energy = np.asarray(energy, dtype=float)

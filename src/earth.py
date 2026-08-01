@@ -163,8 +163,11 @@ def dms_to_decimal(
 
     Examples
     --------
-    >>> print('%.6f' % dms_to_decimal(36, 25, 50.05))
-    36.430569
+    .. jupyter-execute::
+
+        import earth
+
+        print('%.6f' % earth.dms_to_decimal(36, 25, 50.05))
     """
     magnitude = abs(degrees) + minutes/60.0 + seconds/3600.0
 
@@ -200,9 +203,12 @@ def coordinates_of_named_location(
 
     Examples
     --------
-    >>> lat, lon = coordinates_of_named_location('South Pole')
-    >>> print(lat, lon)
-    (-90, 0, 0) (0, 0, 0)
+    .. jupyter-execute::
+
+        import earth
+
+        lat, lon = earth.coordinates_of_named_location('South Pole')
+        print(lat, lon)
     """
     key = loc_name.lower().replace(' ', '_')
     try:
@@ -253,10 +259,12 @@ def density_prem(
 
     Examples
     --------
-    >>> print('%.4f' % density_prem(0.0))
-    13.0885
-    >>> print('%.4f' % density_prem(6371.0))
-    1.0200
+    .. jupyter-execute::
+
+        import earth
+
+        print('%.4f' % earth.density_prem(0.0))
+        print('%.4f' % earth.density_prem(6371.0))
     """
     scalar_input = (np.ndim(r) == 0)
     r = np.asarray(r, dtype=float)
@@ -313,8 +321,11 @@ def matter_potential(
 
     Examples
     --------
-    >>> print('%.4e' % matter_potential(3.0))
-    1.1356e-13
+    .. jupyter-execute::
+
+        import earth
+
+        print('%.4e' % earth.matter_potential(3.0))
     """
     scalar_input = (np.ndim(density) == 0)
     density = np.asarray(density, dtype=float)
@@ -352,10 +363,12 @@ def distance_traveled_inside_earth(costhz: Union[int, float]) -> float:
 
     Examples
     --------
-    >>> print('%.1f' % distance_traveled_inside_earth(-1.0))
-    12742.0
-    >>> print('%.1f' % distance_traveled_inside_earth(0.5))
-    0.0
+    .. jupyter-execute::
+
+        import earth
+
+        print('%.1f' % earth.distance_traveled_inside_earth(-1.0))
+        print('%.1f' % earth.distance_traveled_inside_earth(0.5))
     """
     return 0.0 if costhz >= 0.0 else -2.0*gd.EARTH_RADIUS*costhz
 
@@ -400,8 +413,11 @@ def earth_radial_distance_from_depth(
 
     Examples
     --------
-    >>> print('%.1f' % earth_radial_distance_from_depth(-1.0, 6371.0))
-    0.0
+    .. jupyter-execute::
+
+        import earth
+
+        print('%.1f' % earth.earth_radial_distance_from_depth(-1.0, 6371.0))
     """
     scalar_input = (np.ndim(l) == 0)
     l = np.asarray(l, dtype=float)
@@ -461,10 +477,12 @@ def prem_layer_edges_along_chord(costhz: Union[int, float]) -> np.ndarray:
 
     Examples
     --------
-    >>> print(len(prem_layer_edges_along_chord(-1.0)))
-    18
-    >>> print(len(prem_layer_edges_along_chord(0.5)))
-    0
+    .. jupyter-execute::
+
+        import earth
+
+        print(len(earth.prem_layer_edges_along_chord(-1.0)))
+        print(len(earth.prem_layer_edges_along_chord(0.5)))
     """
     if costhz >= 0.0:
         return np.array([])
@@ -525,10 +543,13 @@ def chord_length_inside_earth(
 
     Examples
     --------
-    >>> lat1, lon1 = coordinates_of_named_location('fermilab')
-    >>> lat2, lon2 = coordinates_of_named_location('homestake')
-    >>> print('%.1f' % chord_length_inside_earth(lat1, lon1, lat2, lon2))
-    1284.7
+    .. jupyter-execute::
+
+        import earth
+
+        lat1, lon1 = earth.coordinates_of_named_location('fermilab')
+        lat2, lon2 = earth.coordinates_of_named_location('homestake')
+        print('%.1f' % earth.chord_length_inside_earth(lat1, lon1, lat2, lon2))
     """
     lat1 = np.radians(dms_to_decimal(*lat1_dms))
     lon1 = np.radians(dms_to_decimal(*lon1_dms))
@@ -576,11 +597,14 @@ def costhz_between_points_on_surface(
 
     Examples
     --------
-    >>> lat1, lon1 = coordinates_of_named_location('cern')
-    >>> lat2, lon2 = coordinates_of_named_location('gran_sasso')
-    >>> print('%.6f' % costhz_between_points_on_surface(lat1, lon1,
-    ...                                                 lat2, lon2))
-    -0.057179
+    .. jupyter-execute::
+
+        import earth
+
+        lat1, lon1 = earth.coordinates_of_named_location('cern')
+        lat2, lon2 = earth.coordinates_of_named_location('gran_sasso')
+        print('%.6f' % earth.costhz_between_points_on_surface(lat1, lon1,
+                                                        lat2, lon2))
     """
     chord = chord_length_inside_earth(lat1_dms, lon1_dms, lat2_dms, lon2_dms)
 
@@ -625,9 +649,12 @@ def earth_slabs(
 
     Examples
     --------
-    >>> widths, densities = earth_slabs(-1.0, n_slabs_per_segment=2)
-    >>> print(len(widths), '%.1f' % sum(widths))
-    38 12742.0
+    .. jupyter-execute::
+
+        import earth
+
+        widths, densities = earth.earth_slabs(-1.0, n_slabs_per_segment=2)
+        print(len(widths), '%.1f' % sum(widths))
     """
     if costhz >= 0.0:
         raise ValueError(

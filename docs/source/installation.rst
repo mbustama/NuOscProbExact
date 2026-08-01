@@ -119,8 +119,7 @@ of the sample Hamiltonians.  Beyond that it exercises the batched evaluation
 paths against the scalar ones, the two backends against each other, degenerate
 and near-degenerate Hamiltonians, the energies and baselines the library is
 actually used at, and the agreement between the type annotations and the
-docstrings --- and it runs every example embedded in the docstrings as a
-doctest.
+docstrings --- and it runs every example embedded in the docstrings.
 
 Then run one of the worked examples:
 

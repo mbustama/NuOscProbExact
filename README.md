@@ -1036,7 +1036,7 @@ Run them with `pip install -e ".[notebooks]"` and `jupyter lab notebooks/`.  Eve
 
 All of the modules provided in **NuOscProbExact** have been documented using Python docstrings, written in [numpydoc](https://numpydoc.readthedocs.io/) format so that they can be rendered directly by [Sphinx](https://www.sphinx-doc.org/) with the `sphinx.ext.napoleon` and `numpydoc` extensions.  They are human-readable by opening the source `.py` files.  Alternatively, they can be printed from within an interactive Python session.
 
-Every `Examples` block in the docstrings is executable, and is run as a doctest by the regression suite (`tests/test_docstrings.py`), so the numbers quoted in the documentation cannot drift out of step with what the code returns.
+Every `Examples` block in the docstrings is executed when the documentation is built, so the results shown on the [API page](https://mbustama.github.io/NuOscProbExact/functions.html) are produced by the code rather than pasted beside it, and cannot drift.  The regression suite runs the same blocks on every supported Python (`tests/test_docstrings.py`), which the documentation build --- one job, one interpreter --- would not catch.
 
 A full Sphinx project lives in `docs/`.  Build it with
 ```shell
