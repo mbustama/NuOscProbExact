@@ -56,8 +56,8 @@ Then, optionally, install it so the modules are importable from anywhere:
    pip install -e .
 
 This puts ``oscprob2nu``, ``oscprob3nu``, ``hamiltonians2nu``,
-``hamiltonians3nu`` and ``globaldefs`` on your Python path under exactly those
-names.  Skipping this step is fine: the bundled examples add ``../src`` to
+``hamiltonians3nu``, ``globaldefs``, ``fastkernels``, ``slabs`` and ``earth``
+on your Python path under exactly those names.  Skipping this step is fine: the bundled examples add ``../src`` to
 ``sys.path`` themselves, and you can do the same, or simply copy the two core
 modules into your own project.
 
@@ -164,7 +164,9 @@ File tree
    │   ├── hamiltonians2nu.py           # Example two-flavor Hamiltonians
    │   ├── hamiltonians3nu.py           # Example three-flavor Hamiltonians
    │   ├── globaldefs.py                # Physical constants and unit conversions
-   │   └── fastkernels.py               # Optional Numba kernels, with a NumPy fallback
+   │   ├── fastkernels.py               # Optional Numba kernels, with a NumPy fallback
+   │   ├── slabs.py                     # Propagation across adjacent slabs
+   │   └── earth.py                     # PREM, chord geometry, and Earth crossings
    ├── test/                            # Worked examples and figure generators
    │   ├── example_2nu_trivial.py       # Two-flavor, arbitrary Hamiltonian
    │   ├── example_2nu_vacuum.py        # Two-flavor, oscillations in vacuum
@@ -193,4 +195,6 @@ File tree
        ├── test_annotations.py          # Annotations, and their agreement with the docs
        ├── test_fastkernels.py          # Both backends, against each other
        ├── test_physical_scales.py      # Both backends at the scales actually used
+       ├── test_slabs.py                # Slab composition, against expm
+       ├── test_earth.py                # PREM, geometry, and Earth probabilities
        └── test_file_tree.py            # Keeps this tree in step with the repository

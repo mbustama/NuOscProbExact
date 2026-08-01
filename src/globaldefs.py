@@ -112,6 +112,23 @@ Units: [eV].
 
 
 ###############################################################################
+# Earth geometry
+###############################################################################
+
+EARTH_RADIUS = 6371.0
+r"""float: Mean radius of the Earth.
+
+The IUGG mean radius, which is what the Preliminary Reference Earth
+Model in :mod:`earth` is normalised against and what the chord geometry
+there assumes.  The Earth is treated as a sphere throughout; the
+equatorial and polar radii differ from this by about 0.3%, which is far
+below the accuracy of any matter-density model.
+
+Units: [km].
+"""
+
+
+###############################################################################
 # Matter density in the Earth's crust
 ###############################################################################
 

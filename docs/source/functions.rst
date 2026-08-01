@@ -55,6 +55,29 @@ hamiltonians3nu
    :members:
    :undoc-members:
 
+Piecewise-constant matter
+-------------------------
+
+The exact expansions assume a Hamiltonian that does not change along the
+trajectory.  A neutrino crossing the Earth does not have one, so its path is
+cut into slabs, each solved exactly and the results multiplied.  Within a slab
+nothing is approximated; the only approximation is how finely a continuously
+varying profile is sliced, and that is an argument the caller controls.
+
+slabs
+^^^^^
+
+.. automodule:: slabs
+   :members:
+   :undoc-members:
+
+earth
+^^^^^
+
+.. automodule:: earth
+   :members:
+   :undoc-members:
+
 Optional compiled backend
 -------------------------
 

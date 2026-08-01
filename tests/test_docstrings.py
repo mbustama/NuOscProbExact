@@ -10,16 +10,18 @@ import doctest
 
 import pytest
 
+import earth
 import fastkernels
 import globaldefs
 import hamiltonians2nu
 import hamiltonians3nu
 import oscprob2nu
 import oscprob3nu
+import slabs
 
 
 MODULES = [globaldefs, oscprob2nu, oscprob3nu, hamiltonians2nu,
-           hamiltonians3nu, fastkernels]
+           hamiltonians3nu, fastkernels, slabs, earth]
 
 
 @pytest.mark.parametrize('module', MODULES, ids=[m.__name__ for m in MODULES])
