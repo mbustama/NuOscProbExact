@@ -9,4 +9,11 @@ sphinx-copybutton
 sphinxcontrib-bibtex
 numpydoc
 myst-parser
+# Executes the example blocks in quickstart.rst and recipes.rst at build
+# time, so the numbers and figures on those pages are produced by the code
+# being documented rather than pasted beside it.
+jupyter-sphinx
+ipykernel
+matplotlib
+scipy
 numpy

@@ -50,8 +50,10 @@ NuOscProbExact: Exact Neutrino Oscillation Probabilities
 .. important::
    **Important links:**
 
+   * :doc:`What it can compute, with code <recipes>`
    * `GitHub repository <https://github.com/mbustama/NuOscProbExact>`_
    * `The paper <https://arxiv.org/abs/1904.12391>`_ (arXiv:1904.12391)
+   * `The notebooks <https://github.com/mbustama/NuOscProbExact/tree/main/notebooks>`_
    * :doc:`changelog`
 
 **NuOscProbExact** computes exact two-flavor and three-flavor neutrino
@@ -93,10 +95,18 @@ independent computation:
 When is NuOscProbExact a good fit?
 -----------------------------------
 
-#. **Your Hamiltonian is time-independent.**  The method assumes it, and in
-   exchange gives a closed form rather than a numerical integration.  For a
-   Hamiltonian that varies along the trajectory, propagate slab by slab or use
-   a method built for it.
+#. **Your Hamiltonian is constant, or piecewise constant.**  The method
+   assumes a Hamiltonian that does not change, and in exchange gives a closed
+   form rather than a numerical integration.  A trajectory made of pieces is
+   handled by :mod:`slabs`, which solves each piece exactly and multiplies the
+   operators, and :mod:`earth` builds those pieces from the Preliminary
+   Reference Earth Model.
+
+   A profile that varies *smoothly* over an oscillation length is the case to
+   avoid: it can be slabbed, but the step size is then set by the oscillation
+   rather than by the density, which for the Sun means of order
+   :math:`10^4` slabs per resonance crossing.  Use a Magnus-type method
+   there.
 
 #. **You want an arbitrary Hamiltonian, not a fixed scenario.**  The core
    routines take any Hermitian :math:`2\times2` or :math:`3\times3` matrix.
@@ -108,6 +118,22 @@ When is NuOscProbExact a good fit?
 #. **You need the evolution operator, not only the probabilities.**
    :func:`oscprob3nu.evolution_operator_3nu` returns :math:`U_3(L)` itself, so
    it can be composed across segments or used to propagate a density matrix.
+
+#. **You are scanning, not evaluating one point.**  Every core routine takes a
+   stack of Hamiltonians, an array of baselines, or both broadcast against
+   each other, and returns the whole scan in one call.
+
+What it is not
+--------------
+
+* **Not a solver for continuously varying Hamiltonians.**  See the first point
+  above, and :doc:`recipes` for where the boundary lies in practice.
+* **Not a four-flavor code.**  The SU(2) and SU(3) expansions are specific to
+  two and three flavors; a sterile fourth is outside what they cover.
+* **Not a flux, cross-section or detector code.**  It computes oscillation
+  probabilities and stops there.
+* **Not a fitting framework.**  There is no likelihood machinery; the
+  probabilities are meant to be handed to whatever does that.
 
 Performance
 -----------
@@ -201,6 +227,7 @@ See :doc:`installation` and :doc:`quickstart` for the longer version.
 
    installation
    quickstart
+   recipes
    methodology
    functions
    references

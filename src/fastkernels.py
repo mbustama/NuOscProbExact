@@ -58,9 +58,6 @@ Routine listings
 
     * probabilities_2nu_kernel - Two-flavor probabilities for a stack
     * probabilities_3nu_kernel - Three-flavor probabilities for a stack
-
-Created: 2026/07/31
-Last modified: 2026/07/31
 """
 
 from __future__ import print_function

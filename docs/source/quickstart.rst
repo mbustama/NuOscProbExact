@@ -41,7 +41,7 @@ An arbitrary Hamiltonian
 
 The shortest possible use: hand the code a Hermitian matrix and a baseline.
 
-.. code-block:: python
+.. jupyter-execute::
 
    import oscprob3nu
 
@@ -54,6 +54,8 @@ The shortest possible use: hand the code a Hermitian matrix and a baseline.
    Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = \
        oscprob3nu.probabilities_3nu(hamiltonian, 1.0)
 
+   print('Pee = %.5f, Pem = %.5f, Pet = %.5f' % (Pee, Pem, Pet))
+
 The probabilities are ordered with the initial flavor varying slowest, so
 ``Pem`` is :math:`P(\nu_e \to \nu_\mu)`.
 
@@ -63,7 +65,7 @@ contributes only an overall phase that cancels in the probabilities.
 Oscillations in vacuum
 ----------------------
 
-.. code-block:: python
+.. jupyter-execute::
 
    import numpy as np
    import oscprob3nu
@@ -81,13 +83,9 @@ Oscillations in vacuum
    Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = \
        oscprob3nu.probabilities_3nu(h_vacuum, baseline*CONV_KM_TO_INV_EV)
 
-which gives
-
-.. code-block:: text
-
-   Pee = 0.92768, Pem = 0.01432, Pet = 0.05800
-   Pme = 0.04023, Pmm = 0.37887, Pmt = 0.58090
-   Pte = 0.03210, Ptm = 0.60680, Ptt = 0.36110
+   print('Pee = %.5f, Pem = %.5f, Pet = %.5f' % (Pee, Pem, Pet))
+   print('Pme = %.5f, Pmm = %.5f, Pmt = %.5f' % (Pme, Pmm, Pmt))
+   print('Pte = %.5f, Ptm = %.5f, Ptt = %.5f' % (Pte, Ptm, Ptt))
 
 ``hamiltonian_3nu_vacuum_energy_independent`` deliberately leaves out the
 factor :math:`1/E`, so that the energy-independent part can be computed once
@@ -99,7 +97,7 @@ Matter, NSI, and LIV
 The remaining sample Hamiltonians all take that same energy-independent
 vacuum term and add to it:
 
-.. code-block:: python
+.. jupyter-execute::
 
    # Matter of constant density
    h_matter = hamiltonians3nu.hamiltonian_3nu_matter(
@@ -123,18 +121,21 @@ Two flavors
 
 :mod:`oscprob2nu` mirrors :mod:`oscprob3nu` throughout:
 
-.. code-block:: python
+.. jupyter-execute::
 
    import oscprob2nu
    import hamiltonians2nu
 
-   h_vacuum_energy_indep = \
+   # `sth` is sin(theta), not the angle itself
+   h2_vacuum_energy_indep = \
        hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(
            S23_NO_BF, D31_NO_BF)
-   h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
+   h2_vacuum = np.multiply(1./energy, h2_vacuum_energy_indep)
 
    Pee, Pem, Pme, Pmm = \
-       oscprob2nu.probabilities_2nu(h_vacuum, baseline*CONV_KM_TO_INV_EV)
+       oscprob2nu.probabilities_2nu(h2_vacuum, baseline*CONV_KM_TO_INV_EV)
+
+   print('Pee = %.5f, Pem = %.5f' % (Pee, Pem))
 
 The evolution operator
 ----------------------
@@ -142,18 +143,22 @@ The evolution operator
 If you need the evolution operator itself --- to compose it across segments,
 or to propagate a density matrix --- ask for it directly:
 
-.. code-block:: python
+.. jupyter-execute::
 
    U3 = oscprob3nu.evolution_operator_3nu(h_vacuum,
                                           baseline*CONV_KM_TO_INV_EV)
 
+   print('|U3[0][0]| = %.6f' % abs(U3[0][0]))
+
 and the expansion coefficients, if you want those:
 
-.. code-block:: python
+.. jupyter-execute::
 
    h_coeffs = oscprob3nu.hamiltonian_3nu_coefficients(h_vacuum)
    u_coeffs = oscprob3nu.evolution_operator_3nu_u_coefficients(
        h_vacuum, baseline*CONV_KM_TO_INV_EV)
+
+   print('h has %d coefficients' % len(h_coeffs))
 
 Because :math:`H` is time-independent, the evolution operator obeys the group
 property :math:`U(L_1+L_2) = U(L_2) U(L_1)`, which is what makes composing
@@ -171,12 +176,13 @@ Python loop, and it is the recommended way to produce a curve or a grid.
 
 Versus baseline --- one Hamiltonian, many baselines:
 
-.. code-block:: python
+.. jupyter-execute::
 
    baselines = np.linspace(1.0, 1.3e4, 2000)*CONV_KM_TO_INV_EV
    prob = oscprob3nu.probabilities_3nu(h_vacuum, baselines)
-   prob.shape        # (2000, 9)
-   Pem = prob[:, 1]  # same ordering as the scalar return
+
+   Pem = prob[:, 1]           # same ordering as the scalar return
+   print('shape:', prob.shape)
 
 The characteristic equation depends only on the Hamiltonian, so it is
 solved once for the whole scan rather than once per baseline.
@@ -185,20 +191,24 @@ Versus energy --- many Hamiltonians, one baseline.  Since
 :math:`H \propto 1/E`, build the stack by dividing the
 energy-independent term by an array of energies:
 
-.. code-block:: python
+.. jupyter-execute::
 
    energies = np.logspace(-1, 1, 2000)*1.e9                  # [eV]
    h_stack = h_vacuum_energy_indep/energies[:, None, None]
    prob = oscprob3nu.probabilities_3nu(h_stack, baseline*CONV_KM_TO_INV_EV)
 
+   print('shape:', prob.shape)
+
 The sample Hamiltonians do this for you: pass an array of energies and
 they return one Hamiltonian per energy, in exactly that shape.
 
-.. code-block:: python
+.. jupyter-execute::
 
    h_stack = hamiltonians3nu.hamiltonian_3nu_matter(
        h_vacuum_energy_indep, energies, VCC_EARTH_CRUST)
    prob = oscprob3nu.probabilities_3nu(h_stack, baseline*CONV_KM_TO_INV_EV)
+
+   print('shape:', prob.shape)
 
 so a whole scan in matter, with NSI, or with LIV is two calls and no
 Python loop.  The matter potential may be an array too, for a scan
@@ -207,11 +217,12 @@ across a density profile alongside the energy.
 An oscillogram is the outer combination of the two: give the
 Hamiltonians and the baselines separate axes and let them broadcast.
 
-.. code-block:: python
+.. jupyter-execute::
 
    prob = oscprob3nu.probabilities_3nu(h_stack[:, None, :, :],
-                                       baselines[None, :])
-   prob.shape        # (len(energies), len(baselines), 9)
+                                       baselines[:200][None, :])
+
+   print('shape:', prob.shape)   # (energies, baselines, 9)
 
 A single Hamiltonian and a scalar baseline still return a plain tuple,
 exactly as before, so existing code is unaffected.

@@ -46,9 +46,6 @@ References
 
 .. [1] Mauricio Bustamante, "Exact neutrino oscillation probabilities
    with arbitrary time-independent Hamiltonians", arXiv:1904.12391.
-
-Created: 2019/04/20 19:07
-Last modified: 2026/07/31
 """
 
 from __future__ import print_function

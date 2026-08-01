@@ -1,0 +1,287 @@
+Numerical recipes
+=================
+
+What **NuOscProbExact** can compute, with the code that computes it.
+
+Each recipe below is a few lines and a figure.  The figures are the ones the
+notebooks produce, so the code shown here and the notebook linked beside it
+are the same calculation --- there is no third version to drift out of step.
+Where a recipe is short enough to be worth running on the spot, it is executed
+when this page is built and its output is what you see.
+
+.. contents::
+   :local:
+   :depth: 1
+
+
+One probability
+---------------
+
+The shortest useful thing the library does.  Give it a Hermitian matrix and a
+baseline in reciprocal units, and it returns the exact probabilities.
+
+.. jupyter-execute::
+
+    import numpy as np
+
+    import globaldefs as gd
+    import hamiltonians3nu
+    import oscprob3nu
+
+    KM = gd.CONV_KM_TO_INV_EV
+    GEV = 1.0e9
+
+    h_vacuum = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(
+        gd.S12_NO_BF, gd.S23_NO_BF, gd.S13_NO_BF, gd.DCP_NO_BF,
+        gd.D21_NO_BF, gd.D31_NO_BF)
+
+    prob = oscprob3nu.probabilities_3nu(
+        np.asarray(h_vacuum)/(1.0*GEV), 1300.0*KM)
+
+    print('P_ee   = %.6f' % prob[0])
+    print('P_emu  = %.6f' % prob[1])
+    print('P_etau = %.6f' % prob[2])
+
+The nine probabilities come back with the initial flavor varying slowest.
+Full walk-through: `notebook 01 <https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/01_basics.ipynb>`_.
+
+
+A scan, without a loop
+----------------------
+
+Pass an array and the whole scan is one call.  This is the single most useful
+thing to know about using the library well.
+
+.. jupyter-execute::
+
+    energies = np.logspace(-1.0, 1.5, 500)*GEV
+    stack = np.asarray(h_vacuum)/energies[:, None, None]
+
+    probabilities = oscprob3nu.probabilities_3nu(stack, 1300.0*KM)
+
+    print('shape returned:', probabilities.shape)
+    print('P_mue at the first three energies:',
+          np.round(probabilities[:3, 3], 6))
+
+Note the shape: a batched call returns ``(..., 9)``, with the flavor index
+**last**, so ``probabilities[:, 3]`` is :math:`P_{\mu e}` along the scan.  A
+scalar call returns a tuple of nine instead.
+
+.. figure:: ../../img/gallery/gallery_vacuum.png
+   :width: 90%
+   :alt: Three-flavor vacuum oscillation probabilities against energy
+
+   Vacuum oscillations at a 1300 km baseline.
+   Code: `notebook 02 <https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/02_vacuum_oscillations.ipynb>`_.
+
+
+Matter, and new physics
+-----------------------
+
+Matter, non-standard interactions and Lorentz-invariance violation are not
+special cases in the code.  Each is a different Hermitian matrix handed to the
+same routine.
+
+.. jupyter-execute::
+
+    h_matter = hamiltonians3nu.hamiltonian_3nu_matter(
+        h_vacuum, energies, gd.VCC_EARTH_CRUST)
+    h_nsi = hamiltonians3nu.hamiltonian_3nu_nsi(
+        h_vacuum, energies, gd.VCC_EARTH_CRUST, gd.EPS_3)
+
+    p_matter = oscprob3nu.probabilities_3nu(h_matter, 1300.0*KM)
+    p_nsi = oscprob3nu.probabilities_3nu(h_nsi, 1300.0*KM)
+
+    print('largest difference NSI vs standard matter: %.4f'
+          % np.max(np.abs(p_nsi[:, 3] - p_matter[:, 3])))
+
+.. figure:: ../../img/gallery/gallery_matter.png
+   :width: 90%
+   :alt: Matter effects on the appearance probability
+
+   The MSW resonance in constant-density matter.
+   Code: `notebook 03 <https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/03_matter_nsi_liv.ipynb>`_.
+
+
+An oscillogram
+--------------
+
+A two-dimensional map of energy against baseline, in one call.  Index the two
+arguments so they broadcast against each other and the grid falls out.
+
+.. code-block:: python
+
+    n_e, n_l = 240, 240
+    energies = np.logspace(-1.0, 1.5, n_e)*GEV
+    baselines = np.linspace(50.0, 12000.0, n_l)*KM
+
+    h_stack = hamiltonians3nu.hamiltonian_3nu_matter(
+        h_vacuum, energies, gd.VCC_EARTH_CRUST)
+
+    # (n_e, 1, 3, 3) against (1, n_l) -> an (n_e, n_l) grid
+    grid = oscprob3nu.probabilities_3nu(h_stack[:, None, :, :],
+                                        baselines[None, :])[:, :, 3]
+
+.. figure:: ../../img/gallery/gallery_oscillogram.png
+   :width: 90%
+   :alt: Oscillogram of the appearance probability
+
+   57 600 probabilities, one call, no Python loop.
+   Code: `notebook 04 <https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/04_oscillogram.ipynb>`_.
+
+
+CP violation
+------------
+
+Plotting the neutrino appearance probability against the antineutrino one, as
+:math:`\delta_{CP}` runs through :math:`2\pi`, traces an ellipse.  Matter
+pushes it off the diagonal, which is what makes the measurement hard.
+
+Antineutrinos need **both** changes: conjugate the vacuum Hamiltonian *and*
+reverse the sign of the potential.
+
+.. jupyter-execute::
+
+    h_nu = hamiltonians3nu.hamiltonian_3nu_matter(
+        h_vacuum, 1.0*GEV, gd.VCC_EARTH_CRUST)
+    h_nubar = hamiltonians3nu.hamiltonian_3nu_matter(
+        np.conj(h_vacuum), 1.0*GEV, -gd.VCC_EARTH_CRUST)
+
+    print('P(numu -> nue)       = %.6f'
+          % oscprob3nu.probabilities_3nu(h_nu, 1300.0*KM)[3])
+    print('P(numubar -> nuebar) = %.6f'
+          % oscprob3nu.probabilities_3nu(h_nubar, 1300.0*KM)[3])
+
+.. figure:: ../../img/gallery/gallery_biprobability.png
+   :width: 70%
+   :alt: Bi-probability ellipses in matter
+
+   Bi-probability ellipses in matter.
+   Code: `notebook 05 <https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/05_biprobability.ipynb>`_,
+   and `notebook 13 <https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/13_antineutrinos.ipynb>`_
+   for antineutrinos in full.
+
+
+Through the Earth
+-----------------
+
+The Earth's density is not constant, so the expansions do not apply to a whole
+trajectory.  They apply to any piece of it over which the density is taken
+constant, which is what :mod:`earth` builds from the Preliminary Reference
+Earth Model.
+
+.. jupyter-execute::
+
+    import earth
+
+    print('chord at costhz = -1 : %.0f km'
+          % earth.distance_traveled_inside_earth(-1.0))
+    print('density at the centre: %.4f g/cm^3' % earth.density_prem(0.0))
+
+    probabilities = earth.probabilities_3nu_earth(
+        h_vacuum, 8.0*GEV, -0.8, n_slabs_per_segment=6)
+    print('P_mumu at 8 GeV, costhz = -0.8: %.6f' % probabilities[4])
+
+.. figure:: ../../img/gallery/gallery_prem.png
+   :width: 90%
+   :alt: The PREM density profile
+
+   The Preliminary Reference Earth Model.
+   Code: `notebook 06 <https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/06_earth_and_prem.ipynb>`_.
+
+.. figure:: ../../img/gallery/gallery_earth.png
+   :width: 90%
+   :alt: Muon-neutrino survival through the Earth
+
+   An Earth oscillogram, in energy and zenith angle.
+   Code: `notebook 07 <https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/07_earth_probabilities.ipynb>`_.
+
+
+Between two places on the Earth
+-------------------------------
+
+The chord between two named sites, and the probability along it.
+
+.. jupyter-execute::
+
+    for source, detector in (('cern', 'gran_sasso'),
+                             ('fermilab', 'homestake'),
+                             ('tokai', 'kamioka')):
+        lat1, lon1 = earth.coordinates_of_named_location(source)
+        lat2, lon2 = earth.coordinates_of_named_location(detector)
+        chord = earth.chord_length_inside_earth(lat1, lon1, lat2, lon2)
+        print('%-22s %8.1f km' % (source + ' to ' + detector, chord))
+
+Those are the baselines the experiments quote: CNGS is 730 km, T2K 295 km.
+
+
+An arbitrary matter profile
+---------------------------
+
+:mod:`slabs` takes any sequence of widths and Hamiltonians, so a profile can be
+built by hand.  Castle-wall profiles are the interesting case: the arrangement
+of the matter can change the answer even when the mean density does not.
+
+The effect is *resonant*, not generic --- at most energies the two agree
+closely, and near a particular one they do not.
+
+.. jupyter-execute::
+
+    import slabs
+
+    widths_km = np.full(24, 250.0)
+    castle = np.where(np.arange(24) % 2 == 0, 2.0, 8.0)
+    uniform = np.full(24, castle.mean())
+
+    def appearance(densities, energy):
+        h = hamiltonians3nu.hamiltonian_3nu_matter(
+            h_vacuum, energy, earth.matter_potential(densities))
+        return slabs.probabilities_3nu_slabs(h, widths_km*KM)[3]
+
+    print('mean density, both cases: %.1f g/cm^3' % castle.mean())
+    for energy_gev in (0.44, 3.0):
+        print('E = %4.2f GeV : castle %.4f   uniform %.4f' %
+              (energy_gev,
+               appearance(castle, energy_gev*GEV),
+               appearance(uniform, energy_gev*GEV)))
+
+At 3 GeV the two are indistinguishable; at 0.44 GeV the castle wall gives
+nearly three times the appearance probability of a uniform slab of the same
+mean density.
+
+.. figure:: ../../img/gallery/gallery_profiles.png
+   :width: 90%
+   :alt: Probabilities through four profiles of equal mean density
+
+   Four profiles, one mean density.
+   Code: `notebook 08 <https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/08_unusual_density_profiles.ipynb>`_.
+
+
+Mass ordering and the octant
+----------------------------
+
+``globaldefs`` carries the NuFit best fit for both orderings, so comparing them
+needs no numbers typed in.
+
+.. jupyter-execute::
+
+    print('normal   : Dm31 = %+.4e eV^2' % gd.D31_NO_BF)
+    print('inverted : Dm31 = %+.4e eV^2' % gd.D31_IO_BF)
+
+.. figure:: ../../img/gallery/gallery_ordering.png
+   :width: 90%
+   :alt: Normal against inverted ordering through the Earth
+
+   Matter through the Earth separates the two orderings.
+   Code: `notebook 12 <https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/12_ordering_and_octant.ipynb>`_.
+
+
+Where to go next
+----------------
+
+* :doc:`quickstart` --- the shortest path to a first probability.
+* :doc:`methodology` --- what the SU(2) and SU(3) expansions actually do, and
+  the sign conventions that matter once a matter potential is added.
+* :doc:`functions` --- the full API reference, generated from the docstrings.
+* The `notebooks <https://github.com/mbustama/NuOscProbExact/tree/main/notebooks>`_
+  --- fifteen of them, carrying their figures inline.

@@ -140,6 +140,7 @@ File tree
    │       ├── index.rst                # Landing page
    │       ├── installation.rst         # Requirements, installation, file tree
    │       ├── quickstart.rst           # Shortest path to a probability
+   │       ├── recipes.rst              # Numerical recipes, with pre-generated figures
    │       ├── methodology.rst          # The SU(2) and SU(3) expansions
    │       ├── functions.rst            # API reference, from the docstrings
    │       ├── references.rst           # Bibliography
@@ -149,7 +150,16 @@ File tree
    │           └── nuoscprobexact_logo.png
    ├── img/                             # Pre-computed figures shown in README.md
    │   ├── prob_3nu_vacuum_vs_baseline_ee_em_et.png
-   │   └── prob_3nu_vacuum_vs_energy_ee_em_et.png
+   │   ├── prob_3nu_vacuum_vs_energy_ee_em_et.png
+   │   └── gallery/                     # Figures lifted from the notebooks, shown in README.md
+   │       ├── gallery_biprobability.png
+   │       ├── gallery_earth.png
+   │       ├── gallery_matter.png
+   │       ├── gallery_ordering.png
+   │       ├── gallery_oscillogram.png
+   │       ├── gallery_prem.png
+   │       ├── gallery_profiles.png
+   │       └── gallery_vacuum.png
    ├── notebooks/                       # Worked examples, with their figures stored inline
    │   ├── 01_basics.ipynb              # Units, one probability, and broadcasting
    │   ├── 02_vacuum_oscillations.ipynb # Against baseline and against energy
@@ -165,7 +175,8 @@ File tree
    │   ├── 12_ordering_and_octant.ipynb # Normal vs inverted, and the 23 octant
    │   ├── 13_antineutrinos.ipynb       # Conjugate and flip, and two ways to slip
    │   ├── 14_solar_and_adiabatic_msw.ipynb  # The MSW resonance, and the cost wall
-   │   └── 15_numerical_edge_cases.ipynb  # Degeneracies, and what does not go NaN
+   │   ├── 15_numerical_edge_cases.ipynb  # Degeneracies, and what does not go NaN
+   │   └── make_notebooks.py            # Generates and executes all of the above
    ├── src/                             # The library
    │   ├── oscprob2nu.py                # Two-flavor probabilities, SU(2) expansion
    │   ├── oscprob3nu.py                # Three-flavor probabilities, SU(3) expansion
