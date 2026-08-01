@@ -27,7 +27,18 @@ dependencies = ["numpy"]
 [project.optional-dependencies]
 fast = ["numba"]
 test = ["pytest", "scipy", "coverage", "pytest-cov"]
-docs = ["sphinx", "numpydoc", "myst-parser"]
+# Everything `cd docs && make html` needs, which is more than Sphinx itself:
+# conf.py loads nine extensions and the theme, and jupyter-sphinx executes the
+# narrative blocks in quickstart.rst and recipes.rst at build time, so the
+# kernel and what those blocks import have to be here too.  This list must
+# stay in step with docs/requirements.txt, which is what both documentation
+# jobs actually install; the extra existing but being short of the theme,
+# sphinx-copybutton, sphinxcontrib-bibtex and jupyter-sphinx meant that
+# `pip install -e '.[docs]'` produced an environment that could not build the
+# documentation, and nothing in CI exercised it.
+docs = ["sphinx", "sphinx-rtd-theme", "sphinx-copybutton",
+        "sphinxcontrib-bibtex", "numpydoc", "myst-parser",
+        "jupyter-sphinx", "ipykernel", "matplotlib", "scipy"]
 # Everything needed to *execute* the notebooks in notebooks/, which is what
 # the notebooks job in .github/workflows/lint.yml does.  Deliberately
 # self-contained: installing this extra alone must be enough, which is why
