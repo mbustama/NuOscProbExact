@@ -5,6 +5,153 @@ All notable changes to **NuOscProbExact** are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.10.0] - 2026-08-02
+
+**A compiled kernel for four neutrinos.**  `fastkernels` covered two and
+three flavors; `oscprob4nu` was pure NumPy whether or not Numba was
+installed.  It is now the third member of the family, and it is the one that
+gains the most — 18x to 19x on large stacks, against 15x at three flavors.
+
+A minor rather than a patch release, matching 1.6.0 and 1.9.0: it adds
+public API, `fastkernels.probabilities_4nu_kernel`.  No existing module
+changes behaviour, and nothing changes at all without Numba installed.
+
+### Added
+
+- **`fastkernels.probabilities_4nu_kernel`**, and the compiled machinery
+  behind it: `_one_4nu`, which transcribes the whole four-flavor chain for a
+  single element — traceless part, the three invariants from traces of
+  powers, the quartic by Euler's reduction, the Newton refinement of the
+  roots against the matrix, the divided differences of the exponential over
+  them, and the Newton-form reconstruction of `U_4` — plus serial and
+  parallel runners over a stack.
+
+  Two decisions in it are worth recording.
+
+  - **The kernel refines the roots, and `POLISH_ROOTS` is threaded through
+    as an argument** rather than read from module state, which an `@njit`
+    function cannot do at call time without recompiling.  `_run` grew an
+    `extra` tuple for it, which two and three flavors leave empty.  A test
+    pins both settings, so a kernel that ignored the flag would fail
+    whichever way it was set.
+  - **`chi(psi) = det(psi·1 − H~)` is evaluated by Gaussian elimination with
+    partial pivoting**, written out for a 4×4 in a caller-supplied scratch
+    buffer — the same factorization LAPACK performs for `numpy.linalg.det`
+    on the NumPy path, with no allocation and no call.  It beats
+    `numpy.linalg.det` under Numba by 3.5x.
+
+    A Laplace expansion in the six 2×2 minors of the first two rows was
+    written first, is **5.9x cheaper still**, and was rejected.  The
+    determinant is evaluated *at a root*, where it is meant to vanish: on a
+    stiff 3+1 spectrum the true value sits seventeen orders of magnitude
+    below the products being summed, so an expansion that cancels them only
+    at the end has nothing left, while elimination cancels while the entries
+    are still full precision.  Measured against `mpmath` at sixty digits, on
+    the clustered roots where `chi'` is 6e-35, the expansion was a thousand
+    times the less accurate, refining those roots to 4.4e-15 relative
+    against 5.5e-16; on a spectrum whose cluster is 1e-3 wide the gap is
+    54x.  `POLISH_ROOTS` tabulates 1.1e-16, and a backend quietly delivering
+    forty times that whenever an optional dependency is installed would make
+    that table false.
+
+    **What the measurement did not show** is any of this reaching the
+    probabilities, and no test here distinguishes the two.  Below `psi·L ~ 1`
+    both sit on the one-ulp floor; above it the reconstruction cancels by
+    ~1e6 and swamps them, and which scores better is then noise — on the
+    stiff spectrum at 1300 km the *rejected* expansion won, 3.1e-11 against
+    1.5e-10.  The case for elimination is fidelity to the roots the NumPy
+    path computes, not a demonstrated gain in the numbers handed back.  It
+    costs about 40% of the kernel's serial runtime.
+
+- **`fastkernels.MIN_BATCH[4] = 1`.**  Measured the way the other two
+  thresholds were — alternating the paths through
+  `oscprob4nu.probabilities_4nu`, best of nine rounds each.  The kernel
+  leads by 15x at a single element, falls to 5x just below
+  `PARALLEL_THRESHOLD` where it is still single-threaded, and settles at 18x
+  once the threads are in use.  It is never behind, so the threshold is one.
+
+  Note that `worthwhile` already fell back to `MIN_BATCH.get(n, 1)`, so four
+  flavors returned `True` at every size before the entry existed.  Adding
+  the dispatch without a measured threshold would have enabled the kernel
+  everywhere by accident rather than by measurement; the entry is explicit
+  so that it is on the record.
+
+- **25 tests**, in `tests/test_fastkernels.py` and one parameterization in
+  `tests/test_oscprob4nu.py`.  The `backend` fixture moved to `conftest.py`,
+  since the four-flavor module's own suite now needs it too: with a kernel
+  installed, every batched assertion there was otherwise being made about
+  whichever backend happened to be present.
+
+- **A unit test for `_chi_4nu`**, against `numpy.linalg.det` directly,
+  including a matrix whose leading entry vanishes at the evaluation point
+  and so requires the pivoting.  Mutation testing found that disabling the
+  pivoting left the whole suite green, which follows from the determinant's
+  accuracy not surviving into the probabilities: no end-to-end test can see
+  it, so it is checked where it is observable.
+
+- **A guard on the new figures**, in `tests/test_documented_figures.py`.
+  The four-flavor speedups are stated in `fastkernels` and again in
+  `methodology.rst`, and the one-sentence span in `README.md` and
+  `quickstart.rst` has to bracket them — which is the shape of every drift
+  that module already exists to catch.
+
+### Changed
+
+- **`tests/test_oscprob4nu.py::test_batched_agrees_with_scalar` asks for
+  round-off rather than exactness.**  Its bar was `1e-15`, which held only
+  while both sides ran the same NumPy code; the batched call is now the
+  compiled kernel and the one-by-one calls stay on the NumPy path, and two
+  implementations of the same expansion agree to a few ulp — 4.2e-15 on
+  probabilities of order one.  It runs on both backends now, which makes it
+  the element-by-element comparison of the two.
+
+- **Notebook 09's four-flavor section** no longer says there is no compiled
+  kernel for four flavors, and measures the ratio twice: 9.3x on the NumPy
+  path, 4.9x with both compiled.  The narrowing is not the algebra getting
+  cheaper but the fixed cost of driving it as forty whole-array passes,
+  which the kernel does not pay.
+
+### Known limits
+
+- **A stiff 3+1 spectrum makes the two paths differ by ~1e-10**, and this is
+  a property of the expansion rather than of either path.  The Newton-form
+  reconstruction of `U_4` cancels by ~1e6 there — its four terms reach
+  9.7e5 and sum to a matrix of modulus one — so a last-bit difference
+  anywhere in that sum arrives at 1e-10.  The amplification predicts 2.3e-10
+  and the paths differ by 2.4e-10.  Both stay inside the 1e-9 that
+  `POLISH_ROOTS` documents; the equivalence test asserts that, and says why
+  it cannot assert round-off.
+
+- **`_polish_roots` is unsafe when two latent roots very nearly coincide,
+  on both paths and on `main` before this release.**  Found by mutation
+  testing this kernel, not caused by it.  The Newton step divides by
+  `chi'(psi_m) = prod_l!=m (psi_m - psi_l)`, guarded only by
+  `derivative != 0.0`, which is a knife-edge test: a pair separated by one
+  ulp gives a derivative of ~1e-16 and a step that throws the root across
+  the spectrum.  On synthetic spectra with pair separations drawn between
+  1e-16 and 1e-6 relative, the NumPy path's `_latent_roots` returns roots
+  wrong by more than 1e-6 relative for ~10% of them, on `main` unchanged.
+
+  The kernel inherits this faithfully — handed the kernel's roots, the
+  NumPy `_polish_roots` returns bit-identically wrong values — but it
+  changes *which* inputs trigger it, because the resolvent root that
+  vanishes for a degenerate pair is computed to a different last bit and
+  `sqrt` near zero amplifies that into the pair's whole separation.
+
+  Not reached by any physical configuration tested: a 400 000-point scan
+  through the sterile matter resonance at twelve times crust density holds
+  a smallest relative eigenvalue gap of 7.7e-4, and both paths stay unitary
+  to 1.6e-13 across it.  A real fix belongs in `_polish_roots` and is its
+  own change.
+
+- **A single four-flavor probability still costs ~262 µs**, against 13.5 µs
+  at three, because `oscprob4nu` has no scalar closed form and a scalar call
+  runs the array machinery on a stack of one.  The kernel does not change
+  this: the dispatch excludes scalar calls, which have to keep returning a
+  tuple of sixteen.  `oscprob4nu.SMALL_BATCH` is documented as sending short
+  stacks through "the scalar path" and is in fact read by nothing.  Left
+  alone deliberately, as its own decision.
+
 ## [1.9.0] - 2026-08-01
 
 **Four-neutrino oscillations.**  The Ohlsson–Snellman method is carried to
