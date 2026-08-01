@@ -5,6 +5,28 @@ All notable changes to **NuOscProbExact** are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.8.3] - 2026-08-01
+
+### Changed
+
+- Installation instructions in `README.md` and `docs/source/installation.rst`
+  now lead with `pip install nuoscprobexact` and are split three ways: from
+  PyPI, from a clone of GitHub, and without installing anything at all.
+
+  Cloning was previously the only route described, which made the ordinary
+  case --- somebody who wants to use the library rather than work on it ---
+  read the longest set of instructions.  The clone is still documented, and
+  is still what you want for the notebooks, the worked examples from the
+  paper, the regression suite, or an unreleased version.
+
+  The third route is kept because it is genuinely supported: the two core
+  modules need only `numpy` and `cmath`, so copying one into a project of
+  your own works, and is what the paper assumes.
+
+  **`pip install nuoscprobexact` does not work until the first release is
+  published.**  The instructions describe the intended state; publishing is
+  what makes them true.
+
 ## [1.8.2] - 2026-08-01
 
 A pass over the README and the documentation, so that both say what the
