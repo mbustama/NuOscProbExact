@@ -38,10 +38,17 @@ jobs:
           python-version: "3.12"
 
       - name: Install documentation dependencies
-        # The package itself is not installed.  docs/source/conf.py puts ../../src on
-        # sys.path directly, which is how autodoc imports the six modules under their bare
-        # names -- the same way user code does -- so there is nothing here for pip to build.
         run: pip install -r docs/requirements.txt
+
+      - name: Install the package
+        # Needed because jupyter-sphinx executes the `.. jupyter-execute::`
+        # blocks in a real kernel, which is a separate process: the
+        # `sys.path.insert` in docs/source/conf.py applies to Sphinx itself and
+        # never reaches the kernel, so the modules have to be importable properly.
+        run: pip install -e .
+
+      - name: Register the Jupyter kernel used by jupyter-sphinx
+        run: python -m ipykernel install --user --name python3 --display-name "Python 3"
 
       - name: Build HTML documentation
         # Deliberately without -W, unlike the docs job in lint.yml.  That job is the gate and

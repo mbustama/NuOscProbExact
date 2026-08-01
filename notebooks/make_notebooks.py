@@ -1595,6 +1595,45 @@ books['15_numerical_edge_cases.ipynb'] = notebook(
            'that it is neither.'),
     ])
 
+# Figures lifted out of the executed notebooks for the README gallery and the
+# documentation's recipes page.  Extracting them rather than drawing them
+# again is what keeps the three in step: there is one piece of code behind
+# each picture, and it is the one a reader can go and run.
+#
+#     (notebook, index of the figure within it) -> file name
+GALLERY = {
+    ('02_vacuum_oscillations.ipynb', 1): 'gallery_vacuum.png',
+    ('03_matter_nsi_liv.ipynb', 0): 'gallery_matter.png',
+    ('04_oscillogram.ipynb', 0): 'gallery_oscillogram.png',
+    ('05_biprobability.ipynb', 1): 'gallery_biprobability.png',
+    ('06_earth_and_prem.ipynb', 0): 'gallery_prem.png',
+    ('07_earth_probabilities.ipynb', 1): 'gallery_earth.png',
+    ('08_unusual_density_profiles.ipynb', 1): 'gallery_profiles.png',
+    ('12_ordering_and_octant.ipynb', 2): 'gallery_ordering.png',
+}
+
+GALLERY_DIR = pathlib.Path('img') / 'gallery'
+
+
+def extract_gallery():
+    """Writes the gallery figures out of the executed notebooks."""
+    import base64
+
+    GALLERY_DIR.mkdir(parents=True, exist_ok=True)
+    written = 0
+    for (notebook, index), filename in sorted(GALLERY.items()):
+        nb = nbf.read(OUT / notebook, as_version=4)
+        images = [output['data']['image/png']
+                  for cell in nb.cells
+                  for output in cell.get('outputs', [])
+                  if 'image/png' in output.get('data', {})]
+        if index >= len(images):
+            raise SystemExit('%s has no figure %d' % (notebook, index))
+        (GALLERY_DIR / filename).write_bytes(base64.b64decode(images[index]))
+        written += 1
+    print('  wrote %d gallery figures to %s' % (written, GALLERY_DIR))
+
+
 def build():
     """Writes every notebook, executes it, and checks it kept its outputs."""
     from nbclient import NotebookClient
@@ -1635,6 +1674,8 @@ def build():
 
     print('  all %d notebooks executed and carry stored outputs'
           % len(books))
+
+    extract_gallery()
 
 
 if __name__ == '__main__':

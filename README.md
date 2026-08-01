@@ -15,17 +15,30 @@ Code to compute exact two- and three-neutrino oscillation probabilities using SU
 
 > **Note:** The oscillation probabilities are computed exactly, with no approximation beyond floating-point round-off.  A regression test suite lives in `tests/` and can be run with `pytest`.
 
+## What you can compute
+
+Every figure below is produced by a notebook in [`notebooks/`](notebooks/), and the link under each one goes to the code that drew it.  The documentation collects the same material, with runnable snippets, on its [numerical recipes](https://mbustama.github.io/NuOscProbExact/recipes.html) page.
+
+| | |
+|:--:|:--:|
+| <img src="img/gallery/gallery_vacuum.png" width="380"/><br/>**Oscillation probabilities** against baseline or energy, for two or three flavors.<br/>[notebook 02](notebooks/02_vacuum_oscillations.ipynb) | <img src="img/gallery/gallery_matter.png" width="380"/><br/>**Matter, NSI and Lorentz-invariance violation** — each just a different Hermitian matrix.<br/>[notebook 03](notebooks/03_matter_nsi_liv.ipynb) |
+| <img src="img/gallery/gallery_oscillogram.png" width="380"/><br/>**Oscillograms** over energy and baseline: 57 600 probabilities in a single call.<br/>[notebook 04](notebooks/04_oscillogram.ipynb) | <img src="img/gallery/gallery_biprobability.png" width="380"/><br/>**CP violation**, as bi-probability ellipses in vacuum and in matter.<br/>[notebook 05](notebooks/05_biprobability.ipynb) |
+| <img src="img/gallery/gallery_prem.png" width="380"/><br/>**The Earth's density**, from the Preliminary Reference Earth Model.<br/>[notebook 06](notebooks/06_earth_and_prem.ipynb) | <img src="img/gallery/gallery_earth.png" width="380"/><br/>**Neutrinos through the Earth**, in energy and zenith angle, or between two named sites.<br/>[notebook 07](notebooks/07_earth_probabilities.ipynb) |
+| <img src="img/gallery/gallery_profiles.png" width="380"/><br/>**Arbitrary matter profiles** — castle walls and worse, exactly.<br/>[notebook 08](notebooks/08_unusual_density_profiles.ipynb) | <img src="img/gallery/gallery_ordering.png" width="380"/><br/>**Mass ordering and the θ₂₃ octant**, separated by matter through the Earth.<br/>[notebook 12](notebooks/12_ordering_and_octant.ipynb) |
+
 ## Contents
 
-1. [What is NuOscProbExact?](#what-is-nuoscprobexact)
+1. [What you can compute](#what-you-can-compute)
 
-2. [Requirements](#requirements)
+2. [What is NuOscProbExact?](#what-is-nuoscprobexact)
 
-3. [Installation](#installation)
+3. [Requirements](#requirements)
 
-4. [Performance](#performance)
+4. [Installation](#installation)
 
-5. [Usage and examples](#usage-and-examples)
+5. [Performance](#performance)
+
+6. [Usage and examples](#usage-and-examples)
    1. [Basics](#basics)
    2. [Trivial example](#trivial-example)
    3. [Oscillations in vacuum: fixed energy and baseline](#oscillations-in-vacuum-fixed-energy-and-baseline)
@@ -36,9 +49,11 @@ Code to compute exact two- and three-neutrino oscillation probabilities using SU
    8. [Three-neutrino oscillations in a Lorentz invariance-violating (LIV) background](#three-neutrino-oscillations-in-a-lorentz-invariance-violating-liv-background)
    9. [Arbitrary Hamiltonians](#arbitrary-hamiltonians)
 
-6. [Documentation and help](#documentation-and-help)
+7. [Notebooks](#notebooks)
 
-7. [Citing](#citing)
+8. [Documentation and help](#documentation-and-help)
+
+9. [Citing](#citing)
 
 
 ## What is NuOscProbExact?
@@ -46,6 +61,22 @@ Code to compute exact two- and three-neutrino oscillation probabilities using SU
 **NuOscProbExact** is a Python implementation of the method developed by [Ohlsson & Snellman](https://arxiv.org/abs/hep-ph/9910546) to compute exact two-flavor and three-flavor neutrino oscillation probabilities for arbitrary time-independent Hamiltonians.  The method was revisited and the code presented in the paper *NuOscProbExact: a general-purpose code to compute exact two-flavor and three-flavor neutrino oscillation probabilities* ([arXiv:1904.12391](http://arxiv.org/abs/1904.12391)), by Mauricio Bustamante.
 
 The method relies on expansions of the Hamiltonian and time-evolution operators in terms of SU(2) and SU(3) matrices in order to obtain concise, analytical, and exact expressions for the probabilities, that are also easy to implement and evaluate.  For details of the method, see the paper above.
+
+### What it does
+
+* **Exact probabilities for any Hermitian 2×2 or 3×3 Hamiltonian.**  There is no approximation beyond floating-point round-off.  Oscillations in vacuum, in matter, with non-standard interactions, in a Lorentz invariance-violating background and with sterile-like perturbations are not special cases in the code — each is a different matrix handed to the same routine.
+* **The evolution operator itself**, not only the probabilities, so it can be composed across segments or used to propagate a density matrix.
+* **Whole scans in one call.**  Every core routine accepts a stack of Hamiltonians, an array of baselines, or both broadcast against each other, which is tens of times faster than the equivalent Python loop and gives identical results.
+* **Piecewise-constant matter.**  `slabs` propagates across a sequence of adjacent slabs of arbitrary width and density, solving each exactly and multiplying the operators.
+* **The Earth.**  `earth` builds those slabs from the Preliminary Reference Earth Model, and computes probabilities along a given zenith angle or between two of fifteen predefined locations.
+* **An optional compiled backend.**  With `numba` installed, large batched calls run on compiled kernels; without it the NumPy path is used and the answers are the same to round-off.
+
+### What it does not do
+
+* **Hamiltonians that vary continuously along the trajectory.**  The method assumes a Hamiltonian that does not change, and in exchange gives a closed form rather than a numerical integration.  A smoothly varying profile has to be approximated by slabs, and that is only practical while the profile varies slowly compared with the oscillation length.  It works well for the Earth; it is the wrong tool for the Sun, where the step size would be set by the oscillation rather than by the density, needing of order 10<sup>4</sup> slabs per crossing.  [Notebook 14](notebooks/14_solar_and_adiabatic_msw.ipynb) works that case through and shows where the wall is; for smoothly varying profiles use a Magnus-type method such as [Magnus](https://github.com/mbustama/Magnus).
+* **More than three flavors.**  The SU(2) and SU(3) expansions are specific to two and three flavors.  A fourth, sterile flavor is outside what the closed forms cover.
+* **Neutrino production, cross sections, fluxes or detector response.**  This computes oscillation probabilities and nothing downstream of them.
+* **Fitting or statistics.**  There is no likelihood machinery here; the probabilities are meant to be handed to whatever does that.
 
 **NuOscProbExact** was developed by Mauricio Bustamante.  If you use it in your work, please follow the directions on [Citing](#citing).
 
@@ -57,6 +88,8 @@ The method relies on expansions of the Hamiltonian and time-evolution operators 
 * **Bare minimum requirements:** The two core modules (`oscprob2nu.py` and `oscprob3nu.py`) require only `numpy` and `cmath`.  These are the bare minimum requirements.
 
 * **To use the bundled sample Hamiltonians:** The modules containing example Hamiltonians (`hamiltonians2nu.py` and `hamiltonians3nu.py`) require only `numpy`, `cmath`, and `copy`
+
+* **To propagate through layered matter or the Earth:** `slabs.py` and `earth.py` require only `numpy`, and build on the core modules
 
 * **To run the notebooks:** The worked examples in `notebooks/` require `matplotlib` and Jupyter, via `pip install "nuoscprobexact[notebooks]"`
 
@@ -107,6 +140,7 @@ Instructions:
    │       ├── index.rst                # Landing page
    │       ├── installation.rst         # Requirements, installation, file tree
    │       ├── quickstart.rst           # Shortest path to a probability
+   │       ├── recipes.rst              # Numerical recipes, with pre-generated figures
    │       ├── methodology.rst          # The SU(2) and SU(3) expansions
    │       ├── functions.rst            # API reference, from the docstrings
    │       ├── references.rst           # Bibliography
@@ -116,7 +150,16 @@ Instructions:
    │           └── nuoscprobexact_logo.png
    ├── img/                             # Pre-computed figures shown in README.md
    │   ├── prob_3nu_vacuum_vs_baseline_ee_em_et.png
-   │   └── prob_3nu_vacuum_vs_energy_ee_em_et.png
+   │   ├── prob_3nu_vacuum_vs_energy_ee_em_et.png
+   │   └── gallery/                     # Figures lifted from the notebooks, shown in README.md
+   │       ├── gallery_biprobability.png
+   │       ├── gallery_earth.png
+   │       ├── gallery_matter.png
+   │       ├── gallery_ordering.png
+   │       ├── gallery_oscillogram.png
+   │       ├── gallery_prem.png
+   │       ├── gallery_profiles.png
+   │       └── gallery_vacuum.png
    ├── notebooks/                       # Worked examples, with their figures stored inline
    │   ├── 01_basics.ipynb              # Units, one probability, and broadcasting
    │   ├── 02_vacuum_oscillations.ipynb # Against baseline and against energy
