@@ -109,7 +109,7 @@ An oscillogram
 A two-dimensional map of energy against baseline, in one call.  Index the two
 arguments so they broadcast against each other and the grid falls out.
 
-.. code-block:: python
+.. jupyter-execute::
 
     n_e, n_l = 240, 240
     energies = np.logspace(-1.0, 1.5, n_e)*GEV
@@ -121,6 +121,9 @@ arguments so they broadcast against each other and the grid falls out.
     # (n_e, 1, 3, 3) against (1, n_l) -> an (n_e, n_l) grid
     grid = oscprob3nu.probabilities_3nu(h_stack[:, None, :, :],
                                         baselines[None, :])[:, :, 3]
+
+    print('grid shape:', grid.shape, '--', grid.size, 'probabilities')
+    print('P_mue runs from %.4f to %.4f' % (grid.min(), grid.max()))
 
 .. figure:: ../../img/gallery/gallery_oscillogram.png
    :width: 90%
@@ -201,6 +204,8 @@ Between two places on the Earth
 -------------------------------
 
 The chord between two named sites, and the probability along it.
+:func:`earth.probabilities_3nu_between_locations` does the lookup, the
+geometry and the PREM slabbing in one call.
 
 .. jupyter-execute::
 
@@ -210,9 +215,16 @@ The chord between two named sites, and the probability along it.
         lat1, lon1 = earth.coordinates_of_named_location(source)
         lat2, lon2 = earth.coordinates_of_named_location(detector)
         chord = earth.chord_length_inside_earth(lat1, lon1, lat2, lon2)
-        print('%-22s %8.1f km' % (source + ' to ' + detector, chord))
+        p_mue = earth.probabilities_3nu_between_locations(
+            h_vacuum, 1.0*GEV, source, detector, n_slabs_per_segment=6)[3]
+        print('%-22s %8.1f km   P_mue = %.6f'
+              % (source + ' to ' + detector, chord, p_mue))
 
 Those are the baselines the experiments quote: CNGS is 730 km, T2K 295 km.
+Fermilab to Homestake comes out at 1285 km against DUNE's quoted 1300, the
+difference being that DUNE quotes the distance to the detector hall rather
+than the surface chord.
+Code: `notebook 07 <https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/07_earth_probabilities.ipynb>`_.
 
 
 An arbitrary matter profile
@@ -261,12 +273,53 @@ Mass ordering and the octant
 ----------------------------
 
 ``globaldefs`` carries the NuFit best fit for both orderings, so comparing them
-needs no numbers typed in.
+needs no numbers typed in.  Matter is what separates them: the potential enters
+with a definite sign, so it enhances the resonance for one ordering and
+suppresses it for the other.
 
 .. jupyter-execute::
 
+    def h_vacuum_3nu(ordering='NO', s23=None):
+        """Energy-independent vacuum Hamiltonian, for either ordering."""
+        if ordering == 'NO':
+            pars = (gd.S12_NO_BF, gd.S23_NO_BF, gd.S13_NO_BF,
+                    gd.DCP_NO_BF, gd.D21_NO_BF, gd.D31_NO_BF)
+        else:
+            pars = (gd.S12_IO_BF, gd.S23_IO_BF, gd.S13_IO_BF,
+                    gd.DCP_IO_BF, gd.D21_IO_BF, gd.D31_IO_BF)
+        s12, s23_bf, s13, dcp, d21, d31 = pars
+        return hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(
+            s12, s23_bf if s23 is None else s23, s13, dcp, d21, d31)
+
+
+    def p_matter(h, energy):
+        """The nine probabilities in crust matter, at 1300 km."""
+        return oscprob3nu.probabilities_3nu(
+            hamiltonians3nu.hamiltonian_3nu_matter(
+                h, energy, gd.VCC_EARTH_CRUST), 1300.0*KM)
+
     print('normal   : Dm31 = %+.4e eV^2' % gd.D31_NO_BF)
     print('inverted : Dm31 = %+.4e eV^2' % gd.D31_IO_BF)
+
+    for ordering in ('NO', 'IO'):
+        print('  %s : P_mue at 2.5 GeV = %.4f'
+              % (ordering, p_matter(h_vacuum_3nu(ordering), 2.5*GEV)[3]))
+
+The octant of :math:`\theta_{23}` is the other open question, and it needs the
+appearance channel rather than the disappearance one:
+
+.. jupyter-execute::
+
+    for s23_squared in (0.45, 0.55):
+        p = p_matter(h_vacuum_3nu('NO', s23=np.sqrt(s23_squared)), 5.0*GEV)
+        print('sin^2(theta23) = %.2f : P_mumu = %.4f   P_mue = %.4f'
+              % (s23_squared, p[4], p[3]))
+
+Disappearance depends on :math:`\theta_{23}` mainly through
+:math:`\sin^2 2\theta_{23}`, which is symmetric about maximal mixing, so the
+two values either side of it are nearly indistinguishable there --- the octant
+degeneracy.  Appearance carries :math:`\sin^2\theta_{23}` instead and tells
+them apart.
 
 .. figure:: ../../img/gallery/gallery_ordering.png
    :width: 90%
