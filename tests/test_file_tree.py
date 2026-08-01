@@ -169,6 +169,12 @@ TREE = [
     ('tests/test_earth.py', 'PREM, geometry, and Earth probabilities'),
     ('tests/test_documented_figures.py',
      'Keeps the quoted performance figures agreeing'),
+    ('tests/test_nusquids_comparison.py',
+     'Against nuSQuIDS, an independent external code'),
+    ('tests/nusquids_reference.py',
+     'Regenerates the frozen nuSQuIDS reference data'),
+    ('tests/nusquids_reference.json',
+     'Those reference values, with their provenance'),
     ('tests/test_file_tree.py', 'Keeps this tree in step with the repository'),
 
 ]

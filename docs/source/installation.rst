@@ -251,4 +251,7 @@ File tree
        ├── test_slabs.py                # Slab composition, against expm
        ├── test_earth.py                # PREM, geometry, and Earth probabilities
        ├── test_documented_figures.py   # Keeps the quoted performance figures agreeing
+       ├── test_nusquids_comparison.py  # Against nuSQuIDS, an independent external code
+       ├── nusquids_reference.py        # Regenerates the frozen nuSQuIDS reference data
+       ├── nusquids_reference.json      # Those reference values, with their provenance
        └── test_file_tree.py            # Keeps this tree in step with the repository
