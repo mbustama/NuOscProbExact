@@ -83,19 +83,19 @@ The method relies on expansions of the Hamiltonian and time-evolution operators 
 
 ## Requirements
 
-**NuOscProbExact** is fully written in Python 3.  It uses standard modules that are available, sometimes by default, as part of most Python installations, either stand-alone or via Anaconda:
+**NuOscProbExact** is fully written in Python 3.  It uses standard modules that are available, sometimes by default, as part of most Python installations, either stand-alone or via Anaconda.  Where a row names an extra, that is the one to install; the rest need nothing beyond `numpy`.  The commands are under [Installation](#installation) below, and are not repeated here.
 
-* **Bare minimum requirements:** The two core modules (`oscprob2nu.py` and `oscprob3nu.py`) require only `numpy` and `cmath`.  These are the bare minimum requirements.
+| To do this | You need | Extra |
+|---|---|---|
+| Compute probabilities (`oscprob2nu.py`, `oscprob3nu.py`) | `numpy`, `cmath` | — |
+| Use the bundled sample Hamiltonians (`hamiltonians2nu.py`, `hamiltonians3nu.py`) | `numpy`, `cmath`, `copy` | — |
+| Propagate through layered matter or the Earth (`slabs.py`, `earth.py`) | `numpy` | — |
+| Go faster on large scans *(optional)* | `numba` | `fast` |
+| Run the notebooks (`notebooks/`) | `matplotlib`, Jupyter | `notebooks` |
+| Run the regression suite (`tests/`) | `pytest`, `scipy` | `test` |
+| Build the documentation | Sphinx and friends | `docs` |
 
-* **To use the bundled sample Hamiltonians:** The modules containing example Hamiltonians (`hamiltonians2nu.py` and `hamiltonians3nu.py`) require only `numpy`, `cmath`, and `copy`
-
-* **To propagate through layered matter or the Earth:** `slabs.py` and `earth.py` require only `numpy`, and build on the core modules
-
-* **To run the notebooks:** The worked examples in `notebooks/` require `matplotlib` and Jupyter, via `pip install "nuoscprobexact[notebooks]"`
-
-* **To run the regression tests:** The test suite in `tests/` requires `pytest` and `scipy`, the latter only to cross-check the evolution operator against an independent matrix exponential
-
-* **To go faster on large scans (optional):** Installing `numba`, via `pip install "nuoscprobexact[fast]"`, lets the batched paths run on compiled kernels instead of NumPy — worth roughly 1.5x to 15x depending on the size of the scan and the number of flavors. It is entirely optional: without it the NumPy path is used, and the results are identical to round-off
+Only `numpy` is ever required.  `scipy` is used by the test suite alone, to cross-check the evolution operator against an independent matrix exponential; the library itself never imports it.  `numba` is entirely optional — it is worth roughly 1.5x to 15x on large scans, depending on their size and the number of flavors, and without it the NumPy path is used and the results are identical to round-off.
 
 
 ## Installation
@@ -247,6 +247,7 @@ NuOscProbExact/
     ├── test_physical_scales.py      # Both backends at the scales actually used
     ├── test_slabs.py                # Slab composition, against expm
     ├── test_earth.py                # PREM, geometry, and Earth probabilities
+    ├── test_documented_figures.py   # Keeps the quoted performance figures agreeing
     └── test_file_tree.py            # Keeps this tree in step with the repository
 ```
 
@@ -289,7 +290,7 @@ import oscprob3nu
 
 ## Performance
 
-The probabilities are computed from a closed form, so a single one is quick — about **16 µs** for three flavors and **2 µs** for two.  Most real use, though, is a *scan*: a curve versus baseline or energy, or an oscillogram over both.  Two things make those much faster, and neither changes the answers.
+The probabilities are computed from a closed form, so a single one is quick — about **8 µs** for three flavors and **1 µs** for two.  Most real use, though, is a *scan*: a curve versus baseline or energy, or an oscillogram over both.  Two things make those much faster, and neither changes the answers.
 
 ### 1. Pass arrays instead of looping
 
@@ -339,7 +340,7 @@ Two costs, so the trade is visible: importing Numba takes about 140 ms against 6
 ### What you do not have to think about
 
 * **Short stacks.** Below about ten elements the array machinery costs more than it saves, so those are evaluated one at a time automatically.
-* **The scalar path.** It is deliberately left uncompiled: 16 µs is not worth a compilation pause on a first call.
+* **The scalar path.** It is deliberately left uncompiled: 8 µs is not worth a compilation pause on a first call.
 * **Turning Numba off.** `fastkernels.USE_NUMBA = False` forces the NumPy path, which is how the test suite checks that the two agree.
 
 One thing that *is* worth doing by hand: build the energy-independent part of the vacuum Hamiltonian once, outside any scan, since it does not depend on the energy.  The bundled examples all do this.

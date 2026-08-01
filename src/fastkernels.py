@@ -52,7 +52,7 @@ Costs, so that the trade is visible
 
 Both are why this is an optional extra rather than a dependency, and why
 the scalar path is deliberately left alone: a single probability takes
-about 16 microseconds, which is not worth a compilation pause.
+about 8 microseconds, which is not worth a compilation pause.
 
 Turning it off
 --------------
@@ -64,13 +64,12 @@ what the test suite does.
 Routine listings
 ----------------
 
+    * available - Whether the compiled kernels can be used at all
+    * worthwhile - Whether a stack is large enough to be worth compiling
     * probabilities_2nu_kernel - Two-flavor probabilities for a stack
     * probabilities_3nu_kernel - Three-flavor probabilities for a stack
 """
 
-from __future__ import print_function
-
-__version__ = "1.6"
 __author__ = "Mauricio Bustamante"
 __email__ = "mbustamante@gmail.com"
 

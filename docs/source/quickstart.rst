@@ -258,7 +258,7 @@ path --- to compare the two, say --- set
    fastkernels.USE_NUMBA = False
 
 The scalar path is deliberately left uncompiled: a single probability
-takes about sixteen microseconds, which is not worth a compilation
+takes about eight microseconds, which is not worth a compilation
 pause.  Short *stacks* are also evaluated one element at a time, since
 below about ten elements the array machinery costs more than it saves.
 

@@ -68,15 +68,14 @@ jobs:
           # Matches pages.yml, so what is checked here is what gets deployed.
           python-version: "3.12"
 
-      - name: Install documentation dependencies
+      - name: Install documentation dependencies and the package
+        # docs/requirements.txt is `-e .[docs]`, so this installs the package
+        # editable along with the documentation dependencies.  The editable
+        # install is required, not merely convenient: jupyter-sphinx executes
+        # the `.. jupyter-execute::` blocks in a real kernel, which is a
+        # separate process, and the `sys.path.insert` in docs/source/conf.py
+        # applies to Sphinx itself and never reaches that kernel.
         run: pip install -r docs/requirements.txt
-
-      - name: Install the package
-        # Needed because jupyter-sphinx executes the `.. jupyter-execute::`
-        # blocks in a real kernel, which is a separate process: the
-        # `sys.path.insert` in docs/source/conf.py applies to Sphinx itself and
-        # never reaches the kernel, so the modules have to be importable properly.
-        run: pip install -e .
 
       - name: Register the Jupyter kernel used by jupyter-sphinx
         run: python -m ipykernel install --user --name python3 --display-name "Python 3"

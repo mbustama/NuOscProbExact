@@ -244,4 +244,5 @@ File tree
        ├── test_physical_scales.py      # Both backends at the scales actually used
        ├── test_slabs.py                # Slab composition, against expm
        ├── test_earth.py                # PREM, geometry, and Earth probabilities
+       ├── test_documented_figures.py   # Keeps the quoted performance figures agreeing
        └── test_file_tree.py            # Keeps this tree in step with the repository

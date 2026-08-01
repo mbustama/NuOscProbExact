@@ -138,14 +138,14 @@ What it is not
 Performance
 -----------
 
-A single probability takes about 16 microseconds for three flavors and 2
+A single probability takes about 8 microseconds for three flavors and 1
 for two.  Scans --- a curve versus baseline or energy, an oscillogram over
 both --- are what the code mostly does, and two things make those much
 faster without changing any answer.
 
 **Pass arrays instead of looping.**  Every core routine takes a stack of
 Hamiltonians, an array of baselines, or both, and evaluates them in one
-call.  That is worth roughly 25 to 60 times the equivalent Python loop, and
+call.  That is worth roughly 20 to 90 times the equivalent Python loop, and
 needs no extra dependency: the expensive part of the expansion, the
 characteristic equation whose roots give the oscillation phases, depends on
 the Hamiltonian alone, so a scan over baselines solves it once instead of
