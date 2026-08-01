@@ -23,7 +23,7 @@ sys.path.insert(0, os.path.abspath('../../src'))
 project = 'NuOscProbExact'
 copyright = '2019-2026, Mauricio Bustamante'
 author = 'Mauricio Bustamante'
-release = '1.8.1'
+release = '1.8.2'
 version = '1.8'
 
 # -- General configuration ---------------------------------------------------
@@ -37,6 +37,7 @@ extensions = [
     'sphinx_copybutton',        # Copy-to-clipboard button on code blocks
     'sphinxcontrib.bibtex',     # References page (refs.bib)
     'myst_parser',              # Lets changelog.rst .. include:: CHANGELOG.md
+    'jupyter_sphinx',           # Runs the narrative examples at build time
 ]
 
 # numpydoc would otherwise try to document the members of every class it

@@ -5,6 +5,54 @@ All notable changes to **NuOscProbExact** are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.8.2] - 2026-08-01
+
+A pass over the README and the documentation, so that both say what the
+library does now rather than what it did in 2019.
+
+### Added
+
+- A **What you can compute** gallery at the top of `README.md`: eight figures,
+  each linking to the notebook that drew it.  The figures are extracted from
+  the executed notebooks by `notebooks/make_notebooks.py`, so there is one
+  piece of code behind each picture rather than a second copy that can drift.
+
+- `docs/source/recipes.rst`, a numerical-recipes page collecting the same
+  material with runnable snippets.  Eight of its examples are executed when the
+  documentation is built, so the numbers on the page are produced by the code
+  being documented.
+
+- A statement of scope in both `README.md` and the documentation landing page —
+  what the library does, and what it does not.  The second list is the one that
+  was missing: no continuously varying Hamiltonians, no fourth flavor, no
+  fluxes or cross sections, no fitting.
+
+- `notebooks/make_notebooks.py`, the generator that produces and executes the
+  fifteen notebooks and extracts the gallery figures.  It was scaffolding
+  outside the repository until now.
+
+### Changed
+
+- The narrative documentation pages execute their examples at build time
+  through `jupyter-sphinx`, rather than quoting output written by hand beside
+  them.  `quickstart.rst` had one such block; its numbers were correct, and are
+  now generated.
+
+  Docstrings keep their `>>>` examples deliberately.  Those are run as doctests
+  by the regression suite on every supported Python, and they are what `help()`
+  shows in a terminal; converting them would have moved the check to a single
+  interpreter and made the interactive reading worse.
+
+- The scope description in `README.md` and `index.rst` now covers `slabs`,
+  `earth`, PREM and the named locations, none of which existed when that text
+  was written.
+
+### Removed
+
+- `Created:` and `Last modified:` lines from every module docstring.  They are
+  version control's job, they had already drifted, and Sphinx rendered them
+  into the API reference, where each appeared eight times.
+
 ## [1.8.1] - 2026-08-01
 
 Seven worked notebooks, a logo, and `fig/` out of version control.  No change
