@@ -13,16 +13,18 @@ import typing
 
 import pytest
 
+import earth
 import fastkernels
 import globaldefs
 import hamiltonians2nu
 import hamiltonians3nu
 import oscprob2nu
 import oscprob3nu
+import slabs
 
 
 MODULES = [oscprob2nu, oscprob3nu, hamiltonians2nu, hamiltonians3nu,
-           fastkernels]
+           fastkernels, slabs, earth]
 
 
 def routines(module, private=False):

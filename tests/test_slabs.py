@@ -1,0 +1,189 @@
+# -*- coding: utf-8 -*-
+r"""Tests of propagation across a sequence of adjacent slabs.
+
+The claim these have to check is not that the slab machinery runs, but
+that composing slabs is the same operation as propagating once.  Two
+independent handles on that: splitting a single constant Hamiltonian
+into many identical slabs must reproduce the one-slab answer exactly,
+and a sequence of genuinely different slabs must reproduce the product
+of matrix exponentials computed by ``scipy.linalg.expm``.
+"""
+
+import numpy as np
+import pytest
+from scipy.linalg import expm
+
+import oscprob2nu
+import oscprob3nu
+import slabs
+
+from conftest import ATOL, traceless
+
+
+def random_hermitian(rng, n):
+    r"""Returns a random ``n``-by-``n`` complex Hermitian matrix."""
+    a = rng.normal(size=(n, n)) + 1.0j*rng.normal(size=(n, n))
+    return (a + a.conj().T)/2.0
+
+
+@pytest.mark.parametrize('n_flavors, evolution, slab_evolution',
+                         [(2, oscprob2nu.evolution_operator_2nu,
+                           slabs.evolution_operator_2nu_slabs),
+                          (3, oscprob3nu.evolution_operator_3nu,
+                           slabs.evolution_operator_3nu_slabs)])
+@pytest.mark.parametrize('n_slabs', [1, 2, 7, 40])
+def test_splitting_one_slab_reproduces_it(n_flavors, evolution,
+                                          slab_evolution, n_slabs):
+    r"""Cutting a constant Hamiltonian into pieces changes nothing.
+
+    This is the property that makes slab propagation exact rather than
+    approximate: with the same Hamiltonian throughout, the number of
+    cuts is arbitrary and the answer cannot depend on it.
+    """
+    rng = np.random.default_rng(20260801 + n_slabs)
+    h = random_hermitian(rng, n_flavors)
+    total = 1.7
+
+    stack = np.repeat(h[None, ...], n_slabs, axis=0)
+    widths = np.full(n_slabs, total/n_slabs)
+
+    assert np.allclose(np.asarray(slab_evolution(stack, widths)),
+                       np.asarray(evolution(h, total)), atol=ATOL)
+
+
+@pytest.mark.parametrize('n_flavors, slab_evolution',
+                         [(2, slabs.evolution_operator_2nu_slabs),
+                          (3, slabs.evolution_operator_3nu_slabs)])
+def test_agrees_with_a_product_of_matrix_exponentials(n_flavors,
+                                                      slab_evolution):
+    r"""Different slabs compose as ``expm`` says they do.
+
+    The independent computation, and the one that pins the *order* of
+    the product: reversing it changes the answer whenever the slab
+    Hamiltonians do not commute, which random ones do not.
+
+    Each factor uses the *traceless* part of its Hamiltonian, as the
+    single-slab tests do, because the expansions return
+    :math:`e^{-i H_0 L}` and drop the phase carried by the trace.
+    """
+    rng = np.random.default_rng(4242)
+    n_slabs = 6
+    stack = np.array([random_hermitian(rng, n_flavors)
+                      for _ in range(n_slabs)])
+    widths = rng.uniform(0.2, 1.5, size=n_slabs)
+
+    expected = np.eye(n_flavors, dtype=complex)
+    for h, w in zip(stack, widths):
+        expected = expm(-1.0j*traceless(h)*w) @ expected
+
+    assert np.allclose(np.asarray(slab_evolution(stack, widths)), expected,
+                       atol=ATOL)
+
+
+@pytest.mark.parametrize('n_flavors, slab_evolution',
+                         [(2, slabs.evolution_operator_2nu_slabs),
+                          (3, slabs.evolution_operator_3nu_slabs)])
+def test_the_order_of_the_slabs_matters(n_flavors, slab_evolution):
+    r"""Reversing non-commuting slabs changes the result.
+
+    Guards against an implementation that happens to pass the tests
+    above by composing in the wrong order and being saved by symmetry.
+    """
+    rng = np.random.default_rng(99)
+    stack = np.array([random_hermitian(rng, n_flavors) for _ in range(3)])
+    widths = np.array([0.4, 0.9, 1.3])
+
+    forward = np.asarray(slab_evolution(stack, widths))
+    backward = np.asarray(slab_evolution(stack[::-1], widths[::-1]))
+
+    assert not np.allclose(forward, backward, atol=1.e-6)
+
+
+@pytest.mark.parametrize('n_flavors, slab_evolution',
+                         [(2, slabs.evolution_operator_2nu_slabs),
+                          (3, slabs.evolution_operator_3nu_slabs)])
+def test_the_evolution_operator_is_unitary(n_flavors, slab_evolution):
+    r"""A product of unitary operators is unitary."""
+    rng = np.random.default_rng(7)
+    stack = np.array([random_hermitian(rng, n_flavors) for _ in range(5)])
+    widths = rng.uniform(0.1, 2.0, size=5)
+
+    u = np.asarray(slab_evolution(stack, widths))
+
+    assert np.allclose(u.conj().T @ u, np.eye(n_flavors), atol=ATOL)
+
+
+@pytest.mark.parametrize('probabilities, n_flavors, n_prob',
+                         [(slabs.probabilities_2nu_slabs, 2, 4),
+                          (slabs.probabilities_3nu_slabs, 3, 9)])
+def test_probabilities_are_normalized(probabilities, n_flavors, n_prob):
+    r"""Each initial flavor's probabilities sum to one."""
+    rng = np.random.default_rng(11)
+    stack = np.array([random_hermitian(rng, n_flavors) for _ in range(4)])
+    widths = rng.uniform(0.1, 1.0, size=4)
+
+    prob = np.array(probabilities(stack, widths))
+
+    assert len(prob) == n_prob
+    assert np.all(prob >= 0.0)
+    # The initial flavor varies slowest, so each block of n_flavors is one
+    # initial flavor's worth of transition probabilities.
+    for start in range(0, n_prob, n_flavors):
+        assert prob[start:start+n_flavors].sum() == pytest.approx(1.0,
+                                                                  abs=ATOL)
+
+
+@pytest.mark.parametrize('probabilities, evolution, n_flavors',
+                         [(slabs.probabilities_2nu_slabs,
+                           oscprob2nu.probabilities_2nu, 2),
+                          (slabs.probabilities_3nu_slabs,
+                           oscprob3nu.probabilities_3nu, 3)])
+def test_probabilities_match_the_single_slab_routine(probabilities,
+                                                     evolution, n_flavors):
+    r"""One slab is the ordinary, non-slab computation."""
+    rng = np.random.default_rng(3)
+    h = random_hermitian(rng, n_flavors)
+
+    assert np.allclose(np.array(probabilities(h[None, ...], [2.3])),
+                       np.array(evolution(h, 2.3)), atol=ATOL)
+
+
+@pytest.mark.parametrize('slab_evolution, n_flavors',
+                         [(slabs.evolution_operator_2nu_slabs, 2),
+                          (slabs.evolution_operator_3nu_slabs, 3)])
+def test_a_zero_width_slab_is_the_identity(slab_evolution, n_flavors):
+    r"""A slab of no width contributes nothing, rather than failing."""
+    rng = np.random.default_rng(5)
+    h = random_hermitian(rng, n_flavors)
+    stack = np.array([h, random_hermitian(rng, n_flavors)])
+
+    with_zero = np.asarray(slab_evolution(stack, [1.1, 0.0]))
+    without = np.asarray(slab_evolution(h[None, ...], [1.1]))
+
+    assert np.allclose(with_zero, without, atol=ATOL)
+
+
+@pytest.mark.parametrize('slab_evolution, n_flavors',
+                         [(slabs.evolution_operator_2nu_slabs, 2),
+                          (slabs.evolution_operator_3nu_slabs, 3)])
+def test_malformed_slab_sequences_raise(slab_evolution, n_flavors):
+    r"""Every guard in `slabs._check_slabs` fires on its own case."""
+    good = np.zeros((3, n_flavors, n_flavors), dtype=complex)
+
+    with pytest.raises(ValueError, match='one width per slab'):
+        slab_evolution(good, [1.0, 2.0])
+
+    with pytest.raises(ValueError, match='at least one slab'):
+        slab_evolution(np.zeros((0, n_flavors, n_flavors)), [])
+
+    with pytest.raises(ValueError, match='cannot be negative'):
+        slab_evolution(good, [1.0, -1.0, 1.0])
+
+    with pytest.raises(ValueError, match='must have shape'):
+        slab_evolution(np.zeros((3, 4, 4)), [1.0, 1.0, 1.0])
+
+    with pytest.raises(ValueError, match='must have shape'):
+        slab_evolution(np.zeros((n_flavors, n_flavors)), [1.0])
+
+    with pytest.raises(ValueError, match='one-dimensional'):
+        slab_evolution(good, [[1.0], [1.0], [1.0]])

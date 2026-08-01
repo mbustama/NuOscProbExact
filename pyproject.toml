@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nuoscprobexact"
-version = "1.7.0"
+version = "1.8.0"
 description = "Exact two-flavor and three-flavor neutrino oscillation probabilities for arbitrary time-independent Hamiltonians"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -42,7 +42,8 @@ Paper = "https://arxiv.org/abs/1904.12391"
 [tool.setuptools]
 package-dir = {"" = "src"}
 py-modules = ["oscprob2nu", "oscprob3nu", "hamiltonians2nu",
-              "hamiltonians3nu", "globaldefs", "fastkernels"]
+              "hamiltonians3nu", "globaldefs", "fastkernels",
+              "slabs", "earth"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -94,11 +95,13 @@ ignore = [
 # linter would put the repository and the paper out of step.  Everything else
 # in them is still checked.
 "test/*" = ["F403", "F405"]
+
+# Every setting coverage needs lives here rather than on the command line, so
 # that a local `pytest --cov` measures, reports, and gates exactly as CI does.
 # A threshold passed as a flag in a workflow is a threshold that only CI knows
 # about, and the two drift the first time one of them is edited.
 [tool.coverage.run]
-# There is no import package: pyproject declares six flat `py-modules` under
+# There is no import package: pyproject declares eight flat `py-modules` under
 # `package-dir = {"" = "src"}`, so an editable install puts `oscprob3nu` and
 # friends on the path under their bare names.  Coverage measures imported
 # source files, and those files live directly in `src/` --- `src/<package>`,
@@ -140,9 +143,9 @@ exclude_also = [
 # A floor, not a target, and one that only ever moves up.  Measured, rather
 # than guessed, in all three configurations the suite supports:
 #
-#     Numba installed and used            100%   (0 of 655 statements missed)
+#     Numba installed and used            100%    (0 of 829 statements missed)
 #     Numba installed, USE_NUMBA = False  100%
-#     Numba not importable                 97%
+#     Numba not importable                 97.75%
 #
 # The third is lower for a reason that is not a coverage regression: with
 # Numba absent the `if HAVE_NUMBA:` block never executes, so `_run` and both
