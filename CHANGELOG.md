@@ -72,18 +72,25 @@ The one thing users will notice is the supported Python range.
   That the public surface has been stable for seven years is worth being able
   to see at a glance.
 
-- 33 `.. versionchanged::` directives across 23 of those functions, recording
-  what changed and when.  Only changes a caller can observe are listed — a
-  changed signature, a newly accepted input type, a changed return type, or a
-  changed returned value.  Most are 1.1.0, where the audit corrected results;
-  the rest are the batched interface in 1.2.0 and the batched Hamiltonian
-  builders in 1.3.0.
+- 57 `.. versionchanged::` directives across 25 of those functions, recording
+  what changed and when, for every release that changed how a function behaves
+  or how fast it runs.
 
-  1.4.0, 1.5.0 and 1.6.0 are deliberately absent.  They rewrote most of these
-  functions, but their entries above record that the results are byte-for-byte
-  identical, and a directive announcing a change a caller cannot detect would
-  make the ones that matter harder to find.  The performance history is in
-  this changelog, which is where it belongs.
+  33 of them are changes a caller can observe: a changed signature, a newly
+  accepted input type, a changed return type, or a changed returned value.
+  Most are 1.1.0, where the audit corrected results; the rest are the batched
+  interface in 1.2.0 and the batched Hamiltonian builders in 1.3.0.
+
+  The other 24 are the performance releases — 1.4.0, 1.5.0 and 1.6.0 — which
+  rewrote much of the library without moving a single number.  Each says so:
+  the 1.4.0 directives note that all 42 figures are byte-for-byte those of
+  1.3.0, and the 1.5.0 ones that the probabilities agree with 1.4.0 to 1.6e-13.
+
+  Speedups are given as ratios, not absolute timings.  The 1.4.0 and 1.5.0
+  tables in this file were measured in separate sessions and do not chain —
+  1.4.0 ends at 14.5 µs where 1.5.0 begins at 40.4 µs — so a pair of absolute
+  figures in a docstring would invite a comparison that is not valid.  The
+  ratio is what each release actually established.
 
 ### Changed
 
