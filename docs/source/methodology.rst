@@ -511,6 +511,10 @@ and spreads the elements over the available cores.  Against the NumPy path:
 
    * - Stack
      - Speedup
+   * - 200 000 energies, four flavors
+     - ~19x
+   * - 20 000 energies, four flavors
+     - ~18x
    * - 200 000 energies, three flavors
      - ~15x
    * - 20 000 energies, three flavors
@@ -522,6 +526,14 @@ and spreads the elements over the available cores.  Against the NumPy path:
    * - 2 000 baselines, two flavors
      - NumPy is quicker
 
+Four flavors gains the most, and the reason is worth stating, because it is
+not that the kernel is cleverer there.  That expansion needs a quartic, a
+Newton refinement of its four roots against the matrix, and a Newton-form
+reconstruction; as whole-array operations that is some forty passes rather
+than fifteen, one of them a batched :math:`4\times4` determinant.  Done one
+element at a time none of it leaves the registers, so the path carrying the
+most fixed cost is the one with the most to shed.
+
 The two-flavor rows are the honest caveat: that path reduces to a square root
 and a sine per element, which NumPy already does about as well as compiled
 code can, and the kernel additionally has to materialise the Hamiltonian
@@ -531,8 +543,9 @@ stack --- for a scan over baselines, the same matrix repeated, which costs
 So the backend is not used unconditionally.  :func:`fastkernels.worthwhile`
 declines it below the per-flavor thresholds in
 :data:`fastkernels.MIN_BATCH`, which were found by alternating the two paths
-and taking the best of nine rounds each: for three flavors the kernel wins at
-every size, for two it wins from about fifty thousand elements.  A backend
+and taking the best of nine rounds each: for three and four flavors the
+kernel wins at every size, for two it wins from about fifty thousand
+elements.  A backend
 that is sometimes slower than the path it replaces is worse than no backend,
 and a test asserts the thresholds are honoured.
 

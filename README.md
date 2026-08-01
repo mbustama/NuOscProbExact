@@ -117,7 +117,7 @@ Use [**Magnus**](https://github.com/mbustama/Magnus) instead when **the Hamilton
 | Run the regression suite (`tests/`) | `pytest`, `scipy` | `test` |
 | Build the documentation | Sphinx and friends | `docs` |
 
-Only `numpy` is ever required.  `scipy` is used by the test suite alone, to cross-check the evolution operator against an independent matrix exponential; the library itself never imports it.  `numba` is entirely optional — it is worth roughly 1.5x to 15x on large scans, depending on their size and the number of flavors, and without it the NumPy path is used and the results are identical to round-off.
+Only `numpy` is ever required.  `scipy` is used by the test suite alone, to cross-check the evolution operator against an independent matrix exponential; the library itself never imports it.  `numba` is entirely optional — it is worth roughly 1.5x to 20x on large scans, depending on their size and the number of flavors, and without it the NumPy path is used and the results are identical to round-off.
 
 
 ## Installation
