@@ -95,14 +95,14 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-# The worked examples in test/ open with `from globaldefs import *`, which is
-# what makes them read the way they do in the paper: the constants appear in
+# The worked examples in examples/ open with `from globaldefs import *`, which
+# is what makes them read the way they do in the paper: the constants appear in
 # the expressions under the names the equations give them, with no module
 # prefix.  These files are documentation that happens to execute, they are
 # published alongside arXiv:1904.12391, and changing their imports to satisfy a
 # linter would put the repository and the paper out of step.  Everything else
 # in them is still checked.
-"test/*" = ["F403", "F405"]
+"examples/*" = ["F403", "F405"]
 # The notebooks share one setup cell, which imports the whole library so that
 # every notebook starts from the same place and a reader can lift the cell
 # wholesale.  That leaves some imports unused in any given notebook --- the

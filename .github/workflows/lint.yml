@@ -43,7 +43,7 @@ jobs:
         # Blocking on purpose: a new finding should fail the build rather than be reported
         # into a green checkmark.  The codebase is clean against this selection as of the
         # commit that introduced it, so anything this reports is new.
-        run: ruff check src/ tests/ test/ docs/ notebooks/
+        run: ruff check src/ tests/ examples/ docs/ notebooks/
 
       - name: Run Ruff Formatter (Check Only)
         # Informational, and expected to stay that way.  The codebase predates ruff format
@@ -152,14 +152,14 @@ jobs:
           PY
 
       - name: Run the worked examples
-        # The nine scripts in test/ are the examples the paper refers to and the
+        # The nine scripts in examples/ are the ones the paper walks through and the
         # ones README.md walks through line by line.  Nothing executed them, so
         # they could rot silently -- and had: two were referenced under names
         # that no longer existed.  They are cheap to run and they print
         # probabilities, so running them is the cheapest possible check that the
         # library still does what the paper says.
         run: |
-          cd test
+          cd examples
           for example in example_*.py; do
             echo "--- $example"
             python "$example" > /dev/null || exit 1

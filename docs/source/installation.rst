@@ -125,8 +125,15 @@ Then run one of the worked examples:
 
 .. code-block:: shell
 
-   cd test
+   cd examples
    python example_3nu_vacuum.py
+
+.. note::
+
+   This directory was called ``test/`` in version 1.0.0 of the code, and is
+   named that way in version 2 of `the paper
+   <https://arxiv.org/abs/1904.12391>`_.  It was renamed to ``examples/`` to
+   stop it being confused with ``tests/``, which holds the regression suite.
 
 Building the documentation
 --------------------------
@@ -156,6 +163,16 @@ File tree
    ├── LICENSE                          # MIT license
    ├── README.md                        # The file that you are reading
    ├── pyproject.toml                   # Packaging metadata and pytest configuration
+   ├── examples/                        # Runnable scripts, the ones the README walks through
+   │   ├── example_2nu_trivial.py       # Two-flavor, arbitrary Hamiltonian
+   │   ├── example_2nu_vacuum.py        # Two-flavor, oscillations in vacuum
+   │   ├── example_2nu_vacuum_coeffs.py # Two-flavor, expansion coefficients
+   │   ├── example_3nu_trivial.py       # Three-flavor, arbitrary Hamiltonian
+   │   ├── example_3nu_vacuum.py        # Three-flavor, oscillations in vacuum
+   │   ├── example_3nu_vacuum_coeffs.py # Three-flavor, expansion coefficients
+   │   ├── example_3nu_matter.py        # Three-flavor, oscillations in matter
+   │   ├── example_3nu_nsi.py           # Three-flavor, matter with NSI
+   │   └── example_3nu_liv.py           # Three-flavor, LIV background
    ├── docs/                            # Sphinx documentation
    │   ├── Makefile                     # `make html` on Linux and macOS
    │   ├── make.bat                     # `make html` on Windows
@@ -211,16 +228,6 @@ File tree
    │   ├── fastkernels.py               # Optional Numba kernels, with a NumPy fallback
    │   ├── slabs.py                     # Propagation across adjacent slabs
    │   └── earth.py                     # PREM, chord geometry, and Earth crossings
-   ├── test/                            # The worked examples from the paper
-   │   ├── example_2nu_trivial.py       # Two-flavor, arbitrary Hamiltonian
-   │   ├── example_2nu_vacuum.py        # Two-flavor, oscillations in vacuum
-   │   ├── example_2nu_vacuum_coeffs.py # Two-flavor, expansion coefficients
-   │   ├── example_3nu_trivial.py       # Three-flavor, arbitrary Hamiltonian
-   │   ├── example_3nu_vacuum.py        # Three-flavor, oscillations in vacuum
-   │   ├── example_3nu_vacuum_coeffs.py # Three-flavor, expansion coefficients
-   │   ├── example_3nu_matter.py        # Three-flavor, oscillations in matter
-   │   ├── example_3nu_nsi.py           # Three-flavor, matter with NSI
-   │   └── example_3nu_liv.py           # Three-flavor, LIV background
    └── tests/                           # Regression suite, run with pytest
        ├── conftest.py                  # Shared fixtures and path setup
        ├── test_su3_algebra.py          # d tensor, star product, SU(3) invariants
