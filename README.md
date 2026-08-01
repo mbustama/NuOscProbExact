@@ -132,7 +132,8 @@ Instructions:
    │   ├── 12_ordering_and_octant.ipynb # Normal vs inverted, and the 23 octant
    │   ├── 13_antineutrinos.ipynb       # Conjugate and flip, and two ways to slip
    │   ├── 14_solar_and_adiabatic_msw.ipynb  # The MSW resonance, and the cost wall
-   │   └── 15_numerical_edge_cases.ipynb  # Degeneracies, and what does not go NaN
+   │   ├── 15_numerical_edge_cases.ipynb  # Degeneracies, and what does not go NaN
+   │   └── make_notebooks.py            # Generates and executes all of the above
    ├── src/                             # The library
    │   ├── oscprob2nu.py                # Two-flavor probabilities, SU(2) expansion
    │   ├── oscprob3nu.py                # Three-flavor probabilities, SU(3) expansion

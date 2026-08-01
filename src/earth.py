@@ -62,9 +62,6 @@ Routine listings
     * probabilities_3nu_earth - Three-flavor probabilities across the Earth
     * probabilities_2nu_between_locations - Between two named sites
     * probabilities_3nu_between_locations - Between two named sites
-
-Created: 2026/08/01
-Last modified: 2026/08/01
 """
 
 from __future__ import print_function

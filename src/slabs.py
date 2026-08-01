@@ -48,9 +48,6 @@ Routine listings
     * evolution_operator_3nu_slabs - Three-flavor evolution operator
     * probabilities_2nu_slabs - Two-flavor probabilities
     * probabilities_3nu_slabs - Three-flavor probabilities
-
-Created: 2026/08/01
-Last modified: 2026/08/01
 """
 
 from __future__ import print_function
