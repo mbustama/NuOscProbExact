@@ -20,8 +20,8 @@ want to do:
      - ``numpy``
    * - Use the bundled sample Hamiltonians
      - ``numpy``
-   * - Generate the figures (``run_testsuite.py``, ``test/``)
-     - ``numpy``, ``matplotlib``
+   * - Run the notebooks (``notebooks/``)
+     - ``numpy``, ``matplotlib``, Jupyter
    * - Run the regression suite (``tests/``)
      - ``numpy``, ``pytest``, ``scipy``
    * - Speed up large scans (optional)
@@ -103,14 +103,6 @@ Then run one of the worked examples:
    cd test
    python example_3nu_vacuum.py
 
-and, if you have ``matplotlib``, the figure suite:
-
-.. code-block:: shell
-
-   python run_testsuite.py
-
-which writes 42 figures to ``fig/``.
-
 Building the documentation
 --------------------------
 
@@ -139,7 +131,6 @@ File tree
    ├── LICENSE                          # MIT license
    ├── README.md                        # The file that you are reading
    ├── pyproject.toml                   # Packaging metadata and pytest configuration
-   ├── run_testsuite.py                 # Generates the full suite of test figures
    ├── docs/                            # Sphinx documentation
    │   ├── Makefile                     # `make html` on Linux and macOS
    │   ├── make.bat                     # `make html` on Windows
@@ -153,11 +144,28 @@ File tree
    │       ├── functions.rst            # API reference, from the docstrings
    │       ├── references.rst           # Bibliography
    │       ├── refs.bib                 # BibTeX entries for the bibliography
-   │       └── changelog.rst            # Includes the root CHANGELOG.md
-   ├── fig/                             # Figures written by run_testsuite.py (initially empty)
+   │       ├── changelog.rst            # Includes the root CHANGELOG.md
+   │       └── _static/
+   │           └── nuoscprobexact_logo.png
    ├── img/                             # Pre-computed figures shown in README.md
    │   ├── prob_3nu_vacuum_vs_baseline_ee_em_et.png
    │   └── prob_3nu_vacuum_vs_energy_ee_em_et.png
+   ├── notebooks/                       # Worked examples, with their figures stored inline
+   │   ├── 01_basics.ipynb              # Units, one probability, and broadcasting
+   │   ├── 02_vacuum_oscillations.ipynb # Against baseline and against energy
+   │   ├── 03_matter_nsi_liv.ipynb      # Constant-density matter, NSI, and LIV
+   │   ├── 04_oscillogram.ipynb         # Energy-baseline maps in one call
+   │   ├── 05_biprobability.ipynb       # CP ellipses, in vacuum and in matter
+   │   ├── 06_earth_and_prem.ipynb      # PREM, chord geometry, and slabs
+   │   ├── 07_earth_probabilities.ipynb # Through the Earth, and between sites
+   │   ├── 08_unusual_density_profiles.ipynb  # Castle-wall and other hand-built profiles
+   │   ├── 09_performance.ipynb         # Looping vs broadcasting, and the backend
+   │   ├── 10_paper_figures.ipynb       # The two figures from arXiv:1904.12391
+   │   ├── 11_exact_vs_approximations.ipynb  # Where the textbook formulas break down
+   │   ├── 12_ordering_and_octant.ipynb # Normal vs inverted, and the 23 octant
+   │   ├── 13_antineutrinos.ipynb       # Conjugate and flip, and two ways to slip
+   │   ├── 14_solar_and_adiabatic_msw.ipynb  # The MSW resonance, and the cost wall
+   │   └── 15_numerical_edge_cases.ipynb  # Degeneracies, and what does not go NaN
    ├── src/                             # The library
    │   ├── oscprob2nu.py                # Two-flavor probabilities, SU(2) expansion
    │   ├── oscprob3nu.py                # Three-flavor probabilities, SU(3) expansion
@@ -167,7 +175,7 @@ File tree
    │   ├── fastkernels.py               # Optional Numba kernels, with a NumPy fallback
    │   ├── slabs.py                     # Propagation across adjacent slabs
    │   └── earth.py                     # PREM, chord geometry, and Earth crossings
-   ├── test/                            # Worked examples and figure generators
+   ├── test/                            # The worked examples from the paper
    │   ├── example_2nu_trivial.py       # Two-flavor, arbitrary Hamiltonian
    │   ├── example_2nu_vacuum.py        # Two-flavor, oscillations in vacuum
    │   ├── example_2nu_vacuum_coeffs.py # Two-flavor, expansion coefficients
@@ -176,11 +184,7 @@ File tree
    │   ├── example_3nu_vacuum_coeffs.py # Three-flavor, expansion coefficients
    │   ├── example_3nu_matter.py        # Three-flavor, oscillations in matter
    │   ├── example_3nu_nsi.py           # Three-flavor, matter with NSI
-   │   ├── example_3nu_liv.py           # Three-flavor, LIV background
-   │   ├── oscprob2nu_plot.py           # Two-flavor probability figures
-   │   ├── oscprob3nu_plot.py           # Three-flavor probability figures
-   │   ├── oscprob2nu_plotpaper.py      # The two-flavor figure from the paper
-   │   └── oscprob3nu_plotpaper.py      # The three-flavor figure from the paper
+   │   └── example_3nu_liv.py           # Three-flavor, LIV background
    └── tests/                           # Regression suite, run with pytest
        ├── conftest.py                  # Shared fixtures and path setup
        ├── test_su3_algebra.py          # d tensor, star product, SU(3) invariants

@@ -5,6 +5,69 @@ All notable changes to **NuOscProbExact** are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.8.1] - 2026-08-01
+
+Seven worked notebooks, a logo, and `fig/` out of version control.  No change
+to the library.
+
+### Added
+
+- `notebooks/`, fifteen Jupyter notebooks numbered in reading order: the
+  basics, vacuum oscillations, matter and NSI and LIV, oscillograms,
+  bi-probability plots, the Earth and PREM, probabilities through the Earth,
+  unusual matter profiles, performance, the paper's own figures, exact versus
+  the textbook approximations, mass ordering and the octant, antineutrinos,
+  solar neutrinos, and numerical edge cases.  They carry their figures inline, so they render
+  on GitHub without being run.
+
+  Two of them go beyond what the old figure suite covered.  The unusual-profile
+  notebook builds castle-wall, serrated and shuffled profiles by hand and holds
+  their mean density fixed, so that any difference in the probabilities is due
+  to the arrangement of the matter alone — including the parametric enhancement
+  that a periodic profile produces.  The performance notebook measures, on the
+  machine that runs it, the cost of looping against broadcasting and of the
+  NumPy path against the compiled kernel.
+
+  The solar notebook is as much a warning as a demonstration.  It validates
+  the slab machinery against the analytic adiabatic MSW result — averaged over
+  a narrow energy band, the two agree to 0.0009 — and then shows why the
+  approach is impractical there anyway: a single averaged point costs 800 000
+  slab evaluations, and a realistic calculation multiplies that by the
+  production region, the spectrum and a third flavor.  It points at the
+  Magnus package for profiles that vary smoothly over an oscillation length.
+
+- A `notebooks` extra — Jupyter, matplotlib and scipy — and a `notebooks` job
+  in `lint.yml` that executes every
+  one of them.  A notebook is documentation that claims to work, and stored
+  outputs make that claim persuasive without making it true — they were
+  correct whenever the notebook was last run, which may predate the change
+  that broke it.  The job also refuses a notebook stripped of its outputs,
+  which would execute cleanly while showing a reader nothing.
+
+- The project logo, wired in as `html_logo`, at the top of the documentation
+  sidebar.
+
+### Removed
+
+- `run_testsuite.py` and the four plotting modules it drove
+  (`test/oscprob2nu_plot.py`, `test/oscprob3nu_plot.py`, and the two
+  `*_plotpaper.py`).  The notebooks cover the same figures and show them
+  without anyone having to run anything or go looking in a directory
+  afterwards, and the plotting modules had no other caller.  The worked
+  examples in `test/`, which the paper refers to, are untouched.
+
+  Two code blocks in `README.md` went with them.  Both called a module named
+  `oscprob3nu_tests`, which has not existed under that name for years, so they
+  had been broken well before this release; they now point at the notebook that
+  draws the same curve.
+
+- `fig/`, which is no longer tracked or written.  It held one committed
+  `.gitignore` whose only job was to keep an empty directory alive.
+
+- The `plots` extra, which existed for the plotting modules and had nothing
+  left to install for.  `matplotlib` is still available through the new
+  `notebooks` extra.
+
 ## [1.8.0] - 2026-08-01
 
 Piecewise-constant matter.  The exact expansions assume a Hamiltonian that

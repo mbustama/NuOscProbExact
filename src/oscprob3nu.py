@@ -194,7 +194,7 @@ def tensor_d(i: int, j: int, k: int) -> float:
     .. versionadded:: 1.0.0
 
     .. versionchanged:: 1.1.0
-       Validates its indices and raises :exc:`ValueError` on one outside
+       Validates its indices and raises :exc:`IndexError` on one outside
        0-7. The dispatch previously fell off the end of an ``elif``
        chain and returned ``None``, so the failure surfaced far from its
        cause.

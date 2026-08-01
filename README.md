@@ -58,7 +58,7 @@ The method relies on expansions of the Hamiltonian and time-evolution operators 
 
 * **To use the bundled sample Hamiltonians:** The modules containing example Hamiltonians (`hamiltonians2nu.py` and `hamiltonians3nu.py`) require only `numpy`, `cmath`, and `copy`
 
-* **To generate the test plots:** The plotting modules (`oscprob2nu_plot.py`, `oscprob3nu_plot.py`, `oscprob2nu_plotpaper.py`, `oscprob3nu_plotpaper.py`, and `run_testsuite.py`) additionally require `matplotlib`
+* **To run the notebooks:** The worked examples in `notebooks/` require `matplotlib` and Jupyter, via `pip install "nuoscprobexact[notebooks]"`
 
 * **To run the regression tests:** The test suite in `tests/` requires `pytest` and `scipy`, the latter only to cross-check the evolution operator against an independent matrix exponential
 
@@ -98,7 +98,6 @@ Instructions:
    ├── LICENSE                          # MIT license
    ├── README.md                        # The file that you are reading
    ├── pyproject.toml                   # Packaging metadata and pytest configuration
-   ├── run_testsuite.py                 # Generates the full suite of test figures
    ├── docs/                            # Sphinx documentation
    │   ├── Makefile                     # `make html` on Linux and macOS
    │   ├── make.bat                     # `make html` on Windows
@@ -112,11 +111,28 @@ Instructions:
    │       ├── functions.rst            # API reference, from the docstrings
    │       ├── references.rst           # Bibliography
    │       ├── refs.bib                 # BibTeX entries for the bibliography
-   │       └── changelog.rst            # Includes the root CHANGELOG.md
-   ├── fig/                             # Figures written by run_testsuite.py (initially empty)
+   │       ├── changelog.rst            # Includes the root CHANGELOG.md
+   │       └── _static/
+   │           └── nuoscprobexact_logo.png
    ├── img/                             # Pre-computed figures shown in README.md
    │   ├── prob_3nu_vacuum_vs_baseline_ee_em_et.png
    │   └── prob_3nu_vacuum_vs_energy_ee_em_et.png
+   ├── notebooks/                       # Worked examples, with their figures stored inline
+   │   ├── 01_basics.ipynb              # Units, one probability, and broadcasting
+   │   ├── 02_vacuum_oscillations.ipynb # Against baseline and against energy
+   │   ├── 03_matter_nsi_liv.ipynb      # Constant-density matter, NSI, and LIV
+   │   ├── 04_oscillogram.ipynb         # Energy-baseline maps in one call
+   │   ├── 05_biprobability.ipynb       # CP ellipses, in vacuum and in matter
+   │   ├── 06_earth_and_prem.ipynb      # PREM, chord geometry, and slabs
+   │   ├── 07_earth_probabilities.ipynb # Through the Earth, and between sites
+   │   ├── 08_unusual_density_profiles.ipynb  # Castle-wall and other hand-built profiles
+   │   ├── 09_performance.ipynb         # Looping vs broadcasting, and the backend
+   │   ├── 10_paper_figures.ipynb       # The two figures from arXiv:1904.12391
+   │   ├── 11_exact_vs_approximations.ipynb  # Where the textbook formulas break down
+   │   ├── 12_ordering_and_octant.ipynb # Normal vs inverted, and the 23 octant
+   │   ├── 13_antineutrinos.ipynb       # Conjugate and flip, and two ways to slip
+   │   ├── 14_solar_and_adiabatic_msw.ipynb  # The MSW resonance, and the cost wall
+   │   └── 15_numerical_edge_cases.ipynb  # Degeneracies, and what does not go NaN
    ├── src/                             # The library
    │   ├── oscprob2nu.py                # Two-flavor probabilities, SU(2) expansion
    │   ├── oscprob3nu.py                # Three-flavor probabilities, SU(3) expansion
@@ -126,7 +142,7 @@ Instructions:
    │   ├── fastkernels.py               # Optional Numba kernels, with a NumPy fallback
    │   ├── slabs.py                     # Propagation across adjacent slabs
    │   └── earth.py                     # PREM, chord geometry, and Earth crossings
-   ├── test/                            # Worked examples and figure generators
+   ├── test/                            # The worked examples from the paper
    │   ├── example_2nu_trivial.py       # Two-flavor, arbitrary Hamiltonian
    │   ├── example_2nu_vacuum.py        # Two-flavor, oscillations in vacuum
    │   ├── example_2nu_vacuum_coeffs.py # Two-flavor, expansion coefficients
@@ -135,11 +151,7 @@ Instructions:
    │   ├── example_3nu_vacuum_coeffs.py # Three-flavor, expansion coefficients
    │   ├── example_3nu_matter.py        # Three-flavor, oscillations in matter
    │   ├── example_3nu_nsi.py           # Three-flavor, matter with NSI
-   │   ├── example_3nu_liv.py           # Three-flavor, LIV background
-   │   ├── oscprob2nu_plot.py           # Two-flavor probability figures
-   │   ├── oscprob3nu_plot.py           # Three-flavor probability figures
-   │   ├── oscprob2nu_plotpaper.py      # The two-flavor figure from the paper
-   │   └── oscprob3nu_plotpaper.py      # The three-flavor figure from the paper
+   │   └── example_3nu_liv.py           # Three-flavor, LIV background
    └── tests/                           # Regression suite, run with pytest
        ├── conftest.py                  # Shared fixtures and path setup
        ├── test_su3_algebra.py          # d tensor, star product, SU(3) invariants
@@ -181,17 +193,13 @@ Instructions:
    ```
    These check the SU(2) and SU(3) machinery against independent computations --- unitarity of the evolution operator, agreement with `scipy.linalg.expm`, agreement with the standard oscillation formulas, and the sign conventions of the sample Hamiltonians --- and run every example embedded in the docstrings.
 
-6. (Optional) Run the plotting test suite
+6. (Optional) Open the notebooks
    ```shell
    cd /home/MyProjects/NuOscProbExact
-   python run_testsuite.py
+   pip install -e ".[notebooks]"
+   jupyter lab notebooks/
    ```
-   Doing this will do the following:
-   * Generate plots of the two-neutrino and three-neutrino probabilities *vs.* distance and *vs.* energy, for different oscillation scenarios; and
-   * Generate the plots of two-neutrino and three-neutrino probabilities *vs.* energy that are included in the paper.
-
-   The plots are stored in the `fig/` directory.  The code `run_testsuite.py` calls routines defined in `oscprob2nu_plot.py`, `oscprob3nu_plot.py`, `oscprob2nu_plotpaper.py`, and `oscprob3nu_plotpaper.py`, located in the `NuOscProbExact/test/` directory.  Inspecting these files may help you in coding your own project.
-
+   Nine worked notebooks, numbered in reading order, covering the probabilities against baseline and against energy, matter and new physics, oscillograms, bi-probability plots, the Earth, arbitrary matter profiles, and performance.  They carry their figures inline, so they can also just be read on GitHub.
 
 ## Performance
 
@@ -621,31 +629,11 @@ ax.set_ylim([0.0, 1.0])
 plt.show()
 ````
 
-Alternatively, you can automatically produce plots of probability *vs.* baseline using the following function from the `oscprob3nu_tests` module:
-```python
-import oscprob3nu_tests
-
-case = 'vacuum'
-oscprob3nu_tests.plot_probability_3nu_vs_baseline(
-                case, energy=1.e-2,
-                log10_l_min=0.0, log10_l_max=3.0, log10_l_npts=1000,
-                plot_prob_ee=True, plot_prob_em=True, plot_prob_et=True,
-                plot_prob_me=False, plot_prob_mm=False, plot_prob_mt=False,
-                plot_prob_te=False, plot_prob_tm=False, plot_prob_tt=False,
-                output_filename='prob_3nu_vacuum_vs_baseline_ee_em_et', output_format='png',
-                legend_loc='center left', legend_ncol=1, path_save='../fig/')
-```
-The function `plot_probability_3nu_vs_baseline` assumes that `energy` is in GeV and the (log10) of the baselines `log10_l_min` and `log_l_max` are in km.  The function call above produces the following plot:
+The same curve, and the equivalents for oscillations in matter, with non-standard interactions, and in a Lorentz invariance-violating background, are drawn in [notebook 02](notebooks/02_vacuum_oscillations.ipynb) and [notebook 03](notebooks/03_matter_nsi_liv.ipynb), which store their figures inline:
 
 <img align="middle" class="center" src="https://github.com/mbustama/NuOscProbExact/blob/main/img/prob_3nu_vacuum_vs_baseline_ee_em_et.png" width="400"/>
 
-The parameter `case` can take any of the following values:
-* `vacuum`: for oscillations in vacuum, assuming the default values of mixing parameters from the `globaldefs` module
-* `matter`: for oscillations in constant matter, assuming the density of the Earth's crust as set in `globaldefs`
-* `nsi`: for oscillations in matter with non-standard interactions, with the NSI strengh parameters fixed to the default values in `globaldefs`
-* `liv`: for oscillations in a CPT-odd Lorentz invariance-violating (LIV) background, with the LIV parameters fixed to the default values in `globaldefs`
-
-For more information about these cases, see the paper [arXiv:1904.12391](http://arxiv.org/abs/1904.12391).  For more information about how to use `plot_probability_3nu_vs_baseline`, see the documentation of the function in the `oscprob3nu_tests` module.
+The default mixing parameters used throughout come from the `globaldefs` module, which carries the NuFit best fit for both mass orderings.  For more on the scenarios themselves, see the paper [arXiv:1904.12391](http://arxiv.org/abs/1904.12391).
 
 
 ### Three-neutrino oscillations in vacuum: fixed baseline, varying energy
@@ -707,25 +695,77 @@ ax.set_ylim([0.0, 1.0])
 plt.show()
 ````
 
-Alternatively, you can automatically produce plots of probability using the following function from the `oscprob3nu_tests` module:
-```python
-import oscprob3nu_tests
-
-case = 'vacuum'
-oscprob3nu_tests.plot_probability_3nu_vs_energy(
-                case, baseline=1.e3,
-                log10_energy_min=-1.0, log10_energy_max=1.0, log10_energy_npts=200,
-                plot_prob_ee=True, plot_prob_em=True, plot_prob_et=True,
-                plot_prob_me=False, plot_prob_mm=False, plot_prob_mt=False,
-                plot_prob_te=False, plot_prob_tm=False, plot_prob_tt=False,
-                output_filename='prob_3nu_vacuum_vs_energy_ee_em_et', output_format='png',
-                legend_loc='center right', legend_ncol=1, path_save='../fig/')
-```
-The function `plot_probability_3nu_vs_energy` assumes that `baseline` is in km and the (log10) of the energies `log10_energy_min` and `log10_energy_max` are in GeV.  The function call above produces the following plot:
+The same curve is drawn in [notebook 02](notebooks/02_vacuum_oscillations.ipynb), which stores its figures inline:
 
 <img align="middle" class="center" src="https://github.com/mbustama/NuOscProbExact/blob/main/img/prob_3nu_vacuum_vs_energy_ee_em_et.png" width="400"/>
 
-The parameter `case` can take any of the same values as listed [above](#oscillations-in-vacuum-fixed-energy-varying-baseline).
+For more on the oscillation scenarios themselves, see the paper [arXiv:1904.12391](http://arxiv.org/abs/1904.12391).
+
+
+### Three-neutrino oscillations in vacuum: fixed baseline, varying energy
+
+Now we fix the baseline at, say, 1300 km, and vary the energy between 100 MeV and 10 GeV.
+
+```python
+import numpy as np
+
+import oscprob3nu
+import hamiltonians3nu
+from globaldefs import *
+
+baseline = 1.3e3                       # Baseline [km]
+baseline = baseline*CONV_KM_TO_INV_EV  # [eV^{-1}]
+
+# Neutrino energies
+log10_energy_min = -1.0 # [GeV]
+log10_energy_max = 1.0  # [GeV]
+log10_energy_npts = 200
+log10_energy = np.linspace( log10_energy_min,
+                            log10_energy_max,
+                            log10_energy_npts)
+energy = [10.**x for x in log10_energy] # [GeV]
+
+h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent( \
+                                                                                S12_NO_BF, S23_NO_BF,
+                                                                                S13_NO_BF, DCP_NO_BF,
+                                                                                D21_NO_BF, D31_NO_BF)
+
+# Each element of prob: [Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt]
+prob = [oscprob3nu.probabilities_3nu(np.multiply(1./x/1.e9, h_vacuum_energy_indep), baseline) \
+        for x in energy]
+prob_ee = [x[0] for x in prob]  # Pee
+prob_em = [x[1] for x in prob]  # Pem
+prob_et = [x[2] for x in prob]  # Pet
+```
+
+To plot the data:
+```python
+from pylab import *
+from matplotlib import *
+import matplotlib as mpl
+
+fig = plt.figure(figsize=[9,9])
+ax = fig.add_subplot(1,1,1)
+
+ax.plot(energy, prob_ee, label=r'$P_{\nu_e \to \nu_e}$', color='C0', zorder=1)
+ax.plot(energy, prob_em, label=r'$P_{\nu_e \to \nu_\mu}$', color='C1', zorder=1)
+ax.plot(energy, prob_et, label=r'$P_{\nu_e \to \nu_\tau}$', color='C2', zorder=1)
+
+ax.set_xlabel(r'Neutrino energy $E$ [GeV]', fontsize=25)
+ax.set_ylabel(r'Three-neutrino probability', fontsize=25)
+ax.legend(loc='center right', frameon=False)
+ax.set_xlim([10.**log10_energy_min, 10.**log10_energy_max])
+ax.set_xscale('log')
+ax.set_ylim([0.0, 1.0])
+
+plt.show()
+````
+
+The same curve is drawn in [notebook 02](notebooks/02_vacuum_oscillations.ipynb):
+
+
+<img align="middle" class="center" src="https://github.com/mbustama/NuOscProbExact/blob/main/img/prob_3nu_vacuum_vs_energy_ee_em_et.png" width="400"/>
+
 
 
 ### Three-neutrino oscillations in matter
@@ -881,6 +921,31 @@ Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( h_my
 
 ```
 Though we do not show it here, `hamiltonian_mymodel` could also depend on `energy`.  The code for two-neutrino oscillations is analogous, but `hamiltonian_mymodel` should return a 2x2 matrix instead.
+
+
+## Notebooks
+
+Fifteen worked notebooks live in [`notebooks/`](notebooks/), numbered in reading order.  They carry their figures inline, so they render on GitHub without being run:
+
+| Notebook | What it covers |
+|---|---|
+| [01 Basics](notebooks/01_basics.ipynb) | Units, one probability, and why to pass arrays rather than loop |
+| [02 Vacuum oscillations](notebooks/02_vacuum_oscillations.ipynb) | Against baseline and against energy, checked against the textbook formula |
+| [03 Matter, NSI, LIV](notebooks/03_matter_nsi_liv.ipynb) | Constant-density matter and two kinds of new physics |
+| [04 Oscillograms](notebooks/04_oscillogram.ipynb) | A 240x240 energy-baseline map in a single call |
+| [05 Bi-probability](notebooks/05_biprobability.ipynb) | CP ellipses, in vacuum and in matter |
+| [06 The Earth and PREM](notebooks/06_earth_and_prem.ipynb) | The density profile, chord geometry, slabs, and their convergence |
+| [07 Through the Earth](notebooks/07_earth_probabilities.ipynb) | Zenith-angle scans, an Earth oscillogram, and real baselines |
+| [08 Unusual density profiles](notebooks/08_unusual_density_profiles.ipynb) | Castle-wall and serrated profiles, and parametric enhancement |
+| [09 Performance](notebooks/09_performance.ipynb) | Looping versus broadcasting, and the compiled backend, measured live |
+| [10 The paper's figures](notebooks/10_paper_figures.ipynb) | The two figures from [arXiv:1904.12391](https://arxiv.org/abs/1904.12391) |
+| [11 Exact vs approximations](notebooks/11_exact_vs_approximations.ipynb) | Where the familiar formulas agree, and where they do not |
+| [12 Ordering and octant](notebooks/12_ordering_and_octant.ipynb) | Normal against inverted, and the θ₂₃ octant degeneracy |
+| [13 Antineutrinos](notebooks/13_antineutrinos.ipynb) | Conjugate *and* flip the potential — and two ways to get it wrong |
+| [14 Solar and the MSW resonance](notebooks/14_solar_and_adiabatic_msw.ipynb) | The adiabatic resonance, validated — and why slabs are the wrong tool for it |
+| [15 Numerical edge cases](notebooks/15_numerical_edge_cases.ipynb) | Degenerate spectra, and what returns a number instead of NaN |
+
+Run them with `pip install -e ".[notebooks]"` and `jupyter lab notebooks/`.  Every one of them is executed by CI, so an example that stops working fails the build.
 
 
 ## Documentation and help
