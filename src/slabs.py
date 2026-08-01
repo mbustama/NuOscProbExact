@@ -50,7 +50,6 @@ Routine listings
     * probabilities_3nu_slabs - Three-flavor probabilities
 """
 
-__version__ = "1.8"
 __author__ = "Mauricio Bustamante"
 __email__ = "mbustamante@gmail.com"
 

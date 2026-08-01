@@ -64,7 +64,6 @@ Routine listings
     * probabilities_3nu_between_locations - Between two named sites
 """
 
-__version__ = "1.8"
 __author__ = "Mauricio Bustamante"
 __email__ = "mbustamante@gmail.com"
 

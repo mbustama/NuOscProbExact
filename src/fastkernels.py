@@ -70,7 +70,6 @@ Routine listings
     * probabilities_3nu_kernel - Three-flavor probabilities for a stack
 """
 
-__version__ = "1.6"
 __author__ = "Mauricio Bustamante"
 __email__ = "mbustamante@gmail.com"
 

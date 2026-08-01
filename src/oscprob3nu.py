@@ -56,7 +56,6 @@ References
    with arbitrary time-independent Hamiltonians", arXiv:1904.12391.
 """
 
-__version__ = "1.1"
 __author__ = "Mauricio Bustamante"
 __email__ = "mbustamante@gmail.com"
 
