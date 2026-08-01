@@ -42,13 +42,18 @@ Nothing in the existing modules changed behaviour.
   (`probabilities_2nu_between_locations`,
   `probabilities_3nu_between_locations`).
 
-  The chord is cut at every PREM shell boundary it crosses before being
-  subdivided, because the density is discontinuous there and no amount of
-  subdivision recovers a discontinuity that straddles a slab.  Each segment
-  is then divided into `n_slabs_per_layer` equal pieces with the density
-  taken at the midpoint, which converges at second order --- measured, not
-  assumed: past 32 sub-slabs per layer each doubling cuts the error by about
-  four.
+  Two things decide where the slabs are cut.  *Between* shells the density
+  jumps, so the chord is first split at every PREM boundary crossing — no
+  amount of subdivision recovers a discontinuity that straddles a slab.
+  That gives a set of chord segments, which are not the same as shells: a
+  chord enters and leaves each shell it reaches, so a diametric chord has 19
+  segments across 10 shells.  *Within* a shell the density varies smoothly,
+  by as much as 21% over a single 2200 km mantle segment, so each segment is
+  divided further into `n_slabs_per_segment` equal sub-slabs with the density
+  taken at the midpoint.
+
+  Midpoint sampling converges at second order — measured, not assumed: past
+  32 sub-slabs per segment each doubling cuts the error by about four.
 
   The 15 predefined locations are the same set as the sibling Magnus
   package, so a trajectory named in one can be reproduced in the other.

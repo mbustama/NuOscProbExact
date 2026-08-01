@@ -13,14 +13,29 @@ The density comes from the Preliminary Reference Earth Model (PREM)
 :cite:`Dziewonski:1981xy`, a piecewise-polynomial fit to seismological
 data, given as :math:`\rho(x)` with :math:`x = r/R_\oplus`.
 
-Where the slabs are cut matters.  The chord is first split at every
-crossing of a PREM shell boundary, since the density is discontinuous
-there and no amount of subdivision inside a slab will recover a
-discontinuity that straddles it; each resulting segment is then divided
-into equal sub-slabs, with the density evaluated at the midpoint of
-each.  The result converges to the continuous answer as the number of
-sub-slabs grows, and `probabilities_3nu_earth` takes that number as an
-argument so a caller can check the convergence rather than trust it.
+Where the slabs are cut matters, and two different things are going on.
+
+Between shells the density *jumps*, so the chord is first split at every
+crossing of a PREM shell boundary: no amount of subdivision recovers a
+discontinuity that straddles a slab.  This gives a set of **chord
+segments**.  Note a segment is not a shell --- a chord enters and leaves
+each shell it reaches, so a diametric chord has 19 segments across 10
+shells.
+
+Within a shell the density *varies smoothly*, since PREM gives it as a
+polynomial in :math:`x = r/R_\oplus` rather than a constant, and a
+segment can be long: crossing the mantle, the density changes by 21%
+over a single 2200 km segment.  Each segment is therefore divided
+further into ``n_slabs_per_segment`` equal sub-slabs, with the density
+taken at the midpoint of each.
+
+Midpoint sampling is second-order accurate, so the result converges to
+the continuous answer as the sub-slabs are refined; the routines take
+that number as an argument so a caller can watch it converge rather than
+trust it.  Sampling at the midpoint rather than an end also matters for
+the segment that straddles the closest approach: it enters and exits at
+the same radius, so its two ends have identical density while the
+interior differs from them by 2.5%.
 
 Units follow the rest of the library: energies in eV, baselines in
 eV\ :sup:`-1`, potentials in eV.  The exceptions are the geometry
@@ -577,12 +592,12 @@ def costhz_between_points_on_surface(
 
 def earth_slabs(
     costhz: Union[int, float],
-    n_slabs_per_layer: Optional[int] = 8
+    n_slabs_per_segment: Optional[int] = 8
 ) -> Tuple[np.ndarray, np.ndarray]:
     r"""Returns the slab widths and densities along a chord.
 
     Cuts the chord at every PREM shell boundary it crosses, divides each
-    resulting segment into ``n_slabs_per_layer`` equal sub-slabs, and
+    resulting segment into ``n_slabs_per_segment`` equal sub-slabs, and
     evaluates the density at the midpoint of each.  The boundary cuts
     are what make the discretisation converge quickly: they keep every
     slab inside a single shell, where the density is smooth.
@@ -594,8 +609,10 @@ def earth_slabs(
     costhz : int or float
         Cosine of the zenith angle of the neutrino direction.  Must be
         negative, so that the neutrino crosses the Earth at all.
-    n_slabs_per_layer : int, optional
-        Number of equal sub-slabs per PREM segment.  Default: 8.
+    n_slabs_per_segment : int, optional
+        Number of equal sub-slabs per chord segment.  A segment runs
+        between consecutive PREM boundary crossings; a chord crosses most
+        shells twice, so there are more segments than shells.  Default: 8.
 
     Returns
     -------
@@ -607,11 +624,11 @@ def earth_slabs(
     ------
     ValueError
         If ``costhz >= 0``, so that there is no path through the Earth,
-        or if ``n_slabs_per_layer`` is not positive.
+        or if ``n_slabs_per_segment`` is not positive.
 
     Examples
     --------
-    >>> widths, densities = earth_slabs(-1.0, n_slabs_per_layer=2)
+    >>> widths, densities = earth_slabs(-1.0, n_slabs_per_segment=2)
     >>> print(len(widths), '%.1f' % sum(widths))
     38 12742.0
     """
@@ -619,8 +636,8 @@ def earth_slabs(
         raise ValueError(
             'earth_slabs: costhz must be negative for the neutrino to cross '
             'the Earth; got %s' % costhz)
-    if n_slabs_per_layer < 1:
-        raise ValueError('earth_slabs: n_slabs_per_layer must be at least 1')
+    if n_slabs_per_segment < 1:
+        raise ValueError('earth_slabs: n_slabs_per_segment must be at least 1')
 
     d = distance_traveled_inside_earth(costhz)
     edges = np.concatenate(([0.0], prem_layer_edges_along_chord(costhz), [d]))
@@ -635,7 +652,7 @@ def earth_slabs(
         # which would otherwise produce a zero-width slab.
         if end <= start:                          # pragma: no cover
             continue
-        sub = np.linspace(start, end, n_slabs_per_layer+1)
+        sub = np.linspace(start, end, n_slabs_per_segment+1)
         widths.append(np.diff(sub))
         midpoints.append((sub[:-1]+sub[1:])/2.0)
 
@@ -651,7 +668,7 @@ def _earth_hamiltonians(
     h_vacuum_energy_independent: Union[list, np.ndarray],
     energy: Union[int, float],
     costhz: Union[int, float],
-    n_slabs_per_layer: int,
+    n_slabs_per_segment: int,
     electron_fraction: float,
     n_flavors: int
 ) -> Tuple[np.ndarray, np.ndarray]:
@@ -665,8 +682,10 @@ def _earth_hamiltonians(
         Neutrino energy, in units of eV.
     costhz : int or float
         Cosine of the zenith angle.
-    n_slabs_per_layer : int
-        Number of equal sub-slabs per PREM segment.
+    n_slabs_per_segment : int
+        Number of equal sub-slabs per chord segment.  A segment runs
+        between consecutive PREM boundary crossings; a chord crosses most
+        shells twice, so there are more segments than shells.
     electron_fraction : float
         Electrons per nucleon.
     n_flavors : int
@@ -678,7 +697,7 @@ def _earth_hamiltonians(
         The Hamiltonians, of shape ``(n, n_flavors, n_flavors)``, and
         the slab widths in units of eV\ :sup:`-1`.
     """
-    widths_km, densities = earth_slabs(costhz, n_slabs_per_layer)
+    widths_km, densities = earth_slabs(costhz, n_slabs_per_segment)
     potentials = matter_potential(densities, electron_fraction)
 
     # The Hamiltonian builders take an array of potentials and return one
@@ -697,7 +716,7 @@ def probabilities_2nu_earth(
     h_vacuum_energy_independent: Union[list, np.ndarray],
     energy: Union[int, float],
     costhz: Union[int, float],
-    n_slabs_per_layer: Optional[int] = 8,
+    n_slabs_per_segment: Optional[int] = 8,
     electron_fraction: Optional[float] = gd.ELECTRON_FRACTION_EARTH_CRUST
 ) -> Tuple[float, float, float, float]:
     r"""Returns the two-flavor probabilities across the Earth.
@@ -717,8 +736,10 @@ def probabilities_2nu_earth(
     costhz : int or float
         Cosine of the zenith angle of the neutrino direction.  Must be
         negative.
-    n_slabs_per_layer : int, optional
-        Number of equal sub-slabs per PREM segment.  Default: 8.
+    n_slabs_per_segment : int, optional
+        Number of equal sub-slabs per chord segment.  A segment runs
+        between consecutive PREM boundary crossings; a chord crosses most
+        shells twice, so there are more segments than shells.  Default: 8.
     electron_fraction : float, optional
         Electrons per nucleon.  Default:
         `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`.
@@ -732,10 +753,10 @@ def probabilities_2nu_earth(
     Raises
     ------
     ValueError
-        If ``costhz >= 0`` or ``n_slabs_per_layer`` is not positive.
+        If ``costhz >= 0`` or ``n_slabs_per_segment`` is not positive.
     """
     h, widths = _earth_hamiltonians(h_vacuum_energy_independent, energy,
-                                    costhz, n_slabs_per_layer,
+                                    costhz, n_slabs_per_segment,
                                     electron_fraction, 2)
 
     return slabs.probabilities_2nu_slabs(h, widths)
@@ -745,14 +766,14 @@ def probabilities_3nu_earth(
     h_vacuum_energy_independent: Union[list, np.ndarray],
     energy: Union[int, float],
     costhz: Union[int, float],
-    n_slabs_per_layer: Optional[int] = 8,
+    n_slabs_per_segment: Optional[int] = 8,
     electron_fraction: Optional[float] = gd.ELECTRON_FRACTION_EARTH_CRUST
 ) -> Tuple[float, float, float, float, float, float, float, float, float]:
     r"""Returns the three-flavor probabilities across the Earth.
 
     Builds the PREM slabs along the chord for the given direction and
     propagates through them exactly, slab by slab.  Raising
-    ``n_slabs_per_layer`` and watching the result settle is the way to
+    ``n_slabs_per_segment`` and watching the result settle is the way to
     confirm the discretisation is fine enough for the energy in
     question; the number needed grows as the oscillation length falls.
 
@@ -768,8 +789,10 @@ def probabilities_3nu_earth(
     costhz : int or float
         Cosine of the zenith angle of the neutrino direction.  Must be
         negative.
-    n_slabs_per_layer : int, optional
-        Number of equal sub-slabs per PREM segment.  Default: 8.
+    n_slabs_per_segment : int, optional
+        Number of equal sub-slabs per chord segment.  A segment runs
+        between consecutive PREM boundary crossings; a chord crosses most
+        shells twice, so there are more segments than shells.  Default: 8.
     electron_fraction : float, optional
         Electrons per nucleon.  Default:
         `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`.
@@ -782,10 +805,10 @@ def probabilities_3nu_earth(
     Raises
     ------
     ValueError
-        If ``costhz >= 0`` or ``n_slabs_per_layer`` is not positive.
+        If ``costhz >= 0`` or ``n_slabs_per_segment`` is not positive.
     """
     h, widths = _earth_hamiltonians(h_vacuum_energy_independent, energy,
-                                    costhz, n_slabs_per_layer,
+                                    costhz, n_slabs_per_segment,
                                     electron_fraction, 3)
 
     return slabs.probabilities_3nu_slabs(h, widths)
@@ -796,7 +819,7 @@ def probabilities_2nu_between_locations(
     energy: Union[int, float],
     loc_name_1: str,
     loc_name_2: str,
-    n_slabs_per_layer: Optional[int] = 8,
+    n_slabs_per_segment: Optional[int] = 8,
     electron_fraction: Optional[float] = gd.ELECTRON_FRACTION_EARTH_CRUST
 ) -> Tuple[float, float, float, float]:
     r"""Returns the two-flavor probabilities between two named locations.
@@ -817,8 +840,10 @@ def probabilities_2nu_between_locations(
         Name of the source location, e.g. ``'fermilab'``.
     loc_name_2 : str
         Name of the detector location, e.g. ``'homestake'``.
-    n_slabs_per_layer : int, optional
-        Number of equal sub-slabs per PREM segment.  Default: 8.
+    n_slabs_per_segment : int, optional
+        Number of equal sub-slabs per chord segment.  A segment runs
+        between consecutive PREM boundary crossings; a chord crosses most
+        shells twice, so there are more segments than shells.  Default: 8.
     electron_fraction : float, optional
         Electrons per nucleon.  Default:
         `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`.
@@ -838,7 +863,7 @@ def probabilities_2nu_between_locations(
     costhz = _costhz_of_named_pair(loc_name_1, loc_name_2)
 
     return probabilities_2nu_earth(h_vacuum_energy_independent, energy,
-                                   costhz, n_slabs_per_layer,
+                                   costhz, n_slabs_per_segment,
                                    electron_fraction)
 
 
@@ -847,7 +872,7 @@ def probabilities_3nu_between_locations(
     energy: Union[int, float],
     loc_name_1: str,
     loc_name_2: str,
-    n_slabs_per_layer: Optional[int] = 8,
+    n_slabs_per_segment: Optional[int] = 8,
     electron_fraction: Optional[float] = gd.ELECTRON_FRACTION_EARTH_CRUST
 ) -> Tuple[float, float, float, float, float, float, float, float, float]:
     r"""Returns the three-flavor probabilities between two named locations.
@@ -868,8 +893,10 @@ def probabilities_3nu_between_locations(
         Name of the source location, e.g. ``'cern'``.
     loc_name_2 : str
         Name of the detector location, e.g. ``'gran_sasso'``.
-    n_slabs_per_layer : int, optional
-        Number of equal sub-slabs per PREM segment.  Default: 8.
+    n_slabs_per_segment : int, optional
+        Number of equal sub-slabs per chord segment.  A segment runs
+        between consecutive PREM boundary crossings; a chord crosses most
+        shells twice, so there are more segments than shells.  Default: 8.
     electron_fraction : float, optional
         Electrons per nucleon.  Default:
         `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`.
@@ -888,7 +915,7 @@ def probabilities_3nu_between_locations(
     costhz = _costhz_of_named_pair(loc_name_1, loc_name_2)
 
     return probabilities_3nu_earth(h_vacuum_energy_independent, energy,
-                                   costhz, n_slabs_per_layer,
+                                   costhz, n_slabs_per_segment,
                                    electron_fraction)
 
 

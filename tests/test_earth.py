@@ -223,7 +223,7 @@ def test_a_shallow_chord_crosses_fewer_shells():
 def test_earth_slabs_tile_the_chord():
     r"""The slabs cover the whole chord, exactly once."""
     costhz = -0.75
-    widths, densities = earth.earth_slabs(costhz, n_slabs_per_layer=4)
+    widths, densities = earth.earth_slabs(costhz, n_slabs_per_segment=4)
 
     assert widths.shape == densities.shape
     assert np.all(widths > 0.0)
@@ -234,8 +234,8 @@ def test_earth_slabs_tile_the_chord():
 
 def test_earth_slabs_refine_with_more_sub_slabs():
     r"""More sub-slabs means more slabs, still tiling the same chord."""
-    coarse, _ = earth.earth_slabs(-0.9, n_slabs_per_layer=2)
-    fine, _ = earth.earth_slabs(-0.9, n_slabs_per_layer=16)
+    coarse, _ = earth.earth_slabs(-0.9, n_slabs_per_segment=2)
+    fine, _ = earth.earth_slabs(-0.9, n_slabs_per_segment=16)
 
     assert len(fine) == 8*len(coarse)
     assert fine.sum() == pytest.approx(coarse.sum(), rel=1.e-12)
@@ -246,7 +246,7 @@ def test_earth_slabs_rejects_upward_directions():
     with pytest.raises(ValueError, match='must be negative'):
         earth.earth_slabs(0.0)
     with pytest.raises(ValueError, match='at least 1'):
-        earth.earth_slabs(-1.0, n_slabs_per_layer=0)
+        earth.earth_slabs(-1.0, n_slabs_per_segment=0)
 
 
 def test_costhz_between_two_locations():
@@ -272,7 +272,7 @@ def test_a_location_to_itself_has_no_chord():
 def test_earth_probabilities_are_normalized():
     r"""Each initial flavor's probabilities sum to one."""
     prob = np.array(earth.probabilities_3nu_earth(
-        h_vacuum_3nu(), 1.e9, -0.8, n_slabs_per_layer=4))
+        h_vacuum_3nu(), 1.e9, -0.8, n_slabs_per_segment=4))
 
     assert len(prob) == 9
     assert np.all(prob >= 0.0)
@@ -280,7 +280,7 @@ def test_earth_probabilities_are_normalized():
         assert prob[start:start+3].sum() == pytest.approx(1.0, abs=ATOL)
 
     prob2 = np.array(earth.probabilities_2nu_earth(
-        h_vacuum_2nu(), 1.e9, -0.8, n_slabs_per_layer=4))
+        h_vacuum_2nu(), 1.e9, -0.8, n_slabs_per_segment=4))
     assert len(prob2) == 4
     assert prob2[0]+prob2[1] == pytest.approx(1.0, abs=ATOL)
 
@@ -302,7 +302,7 @@ def test_earth_probabilities_converge_with_refinement():
     """
     args = (h_vacuum_3nu(), 1.e9, -0.8)
     p = {n: np.array(earth.probabilities_3nu_earth(*args,
-                                                   n_slabs_per_layer=n))
+                                                   n_slabs_per_segment=n))
          for n in (32, 64, 128, 256)}
 
     d64 = np.max(np.abs(p[64]-p[32]))
@@ -329,7 +329,7 @@ def test_a_uniform_earth_reproduces_the_constant_density_result():
     energy = 1.e9
     density = 5.0
 
-    widths_km, _ = earth.earth_slabs(costhz, n_slabs_per_layer=3)
+    widths_km, _ = earth.earth_slabs(costhz, n_slabs_per_segment=3)
     vcc = earth.matter_potential(density)
 
     h_uniform = hamiltonians3nu.hamiltonian_3nu_matter(
@@ -353,16 +353,16 @@ def test_between_locations_matches_the_explicit_chord():
 
     h_vac = h_vacuum_3nu()
     via_names = np.array(earth.probabilities_3nu_between_locations(
-        h_vac, 1.e9, 'cern', 'kamioka', n_slabs_per_layer=3))
+        h_vac, 1.e9, 'cern', 'kamioka', n_slabs_per_segment=3))
     via_costhz = np.array(earth.probabilities_3nu_earth(
-        h_vac, 1.e9, costhz, n_slabs_per_layer=3))
+        h_vac, 1.e9, costhz, n_slabs_per_segment=3))
 
     assert np.allclose(via_names, via_costhz, atol=ATOL)
 
     h_vac2 = h_vacuum_2nu()
     assert np.allclose(
         np.array(earth.probabilities_2nu_between_locations(
-            h_vac2, 1.e9, 'cern', 'kamioka', n_slabs_per_layer=3)),
+            h_vac2, 1.e9, 'cern', 'kamioka', n_slabs_per_segment=3)),
         np.array(earth.probabilities_2nu_earth(
-            h_vac2, 1.e9, costhz, n_slabs_per_layer=3)),
+            h_vac2, 1.e9, costhz, n_slabs_per_segment=3)),
         atol=ATOL)
