@@ -222,8 +222,10 @@ File tree
    ├── src/                             # The library
    │   ├── oscprob2nu.py                # Two-flavor probabilities, SU(2) expansion
    │   ├── oscprob3nu.py                # Three-flavor probabilities, SU(3) expansion
+   │   ├── oscprob4nu.py                # Four-flavor probabilities, SU(4) expansion
    │   ├── hamiltonians2nu.py           # Example two-flavor Hamiltonians
    │   ├── hamiltonians3nu.py           # Example three-flavor Hamiltonians
+   │   ├── hamiltonians4nu.py           # Example four-flavor (3+1) Hamiltonians
    │   ├── globaldefs.py                # Physical constants and unit conversions
    │   ├── fastkernels.py               # Optional Numba kernels, with a NumPy fallback
    │   ├── slabs.py                     # Propagation across adjacent slabs
@@ -231,6 +233,7 @@ File tree
    └── tests/                           # Regression suite, run with pytest
        ├── conftest.py                  # Shared fixtures and path setup
        ├── test_su3_algebra.py          # d tensor, star product, SU(3) invariants
+       ├── test_oscprob4nu.py           # SU(4) algebra, quartic roots, 3+1 physics
        ├── test_evolution_operator.py   # U against an independent matrix exponential
        ├── test_probabilities.py        # Normalization, positivity, P = |U|^2
        ├── test_hamiltonians.py         # Sample Hamiltonians and sign conventions

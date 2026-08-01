@@ -60,9 +60,9 @@ Paper = "https://arxiv.org/abs/1904.12391"
 # sys.path.append('../src') keeps working unchanged.
 [tool.setuptools]
 package-dir = {"" = "src"}
-py-modules = ["oscprob2nu", "oscprob3nu", "hamiltonians2nu",
-              "hamiltonians3nu", "globaldefs", "fastkernels",
-              "slabs", "earth"]
+py-modules = ["oscprob2nu", "oscprob3nu", "oscprob4nu",
+              "hamiltonians2nu", "hamiltonians3nu", "hamiltonians4nu",
+              "globaldefs", "fastkernels", "slabs", "earth"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -154,6 +154,39 @@ Equal to :math:`\sqrt{2} G_F n_e`.  It is positive for neutrinos; use
 its negative for antineutrinos.  Units: [eV].
 """
 
+NEUTRON_FRACTION_EARTH_CRUST = 1.0 - ELECTRON_FRACTION_EARTH_CRUST
+r"""float: Neutrons per nucleon in the Earth's crust.
+
+The crust is close to isoscalar, so with an electron fraction of one
+half there is about one neutron per electron.  Units: [adimensional].
+"""
+
+NUM_DENSITY_N_EARTH_CRUST = NUM_DENSITY_E_EARTH_CRUST \
+                            * NEUTRON_FRACTION_EARTH_CRUST \
+                            / ELECTRON_FRACTION_EARTH_CRUST
+r"""float: Neutron number density in the Earth's crust.
+
+Units: [eV\ :sup:`3`].
+"""
+
+VNC_EARTH_CRUST = -GF*NUM_DENSITY_N_EARTH_CRUST/np.sqrt(2.0)
+r"""float: Neutral-current matter potential in the Earth's crust.
+
+Equal to :math:`-G_F n_n/\sqrt{2}`, and **negative** for neutrinos.  It
+is felt equally by all three active flavors, so at three flavors it is
+proportional to the identity and drops out of the probabilities
+entirely --- which is why :mod:`hamiltonians3nu` never needs it.
+
+It matters as soon as a sterile state is present, because the sterile
+state does not feel it: subtracting it from all four states, which costs
+only a global phase, leaves :math:`-V_{NC}` on the sterile entry.  See
+:func:`hamiltonians4nu.hamiltonian_4nu_matter`.
+
+.. versionadded:: 1.9.0
+
+Units: [eV].
+"""
+
 
 ###############################################################################
 # Lepton mixing parameters, normal ordering

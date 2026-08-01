@@ -18,13 +18,15 @@ import fastkernels
 import globaldefs
 import hamiltonians2nu
 import hamiltonians3nu
+import hamiltonians4nu
 import oscprob2nu
 import oscprob3nu
+import oscprob4nu
 import slabs
 
 
-MODULES = [oscprob2nu, oscprob3nu, hamiltonians2nu, hamiltonians3nu,
-           fastkernels, slabs, earth]
+MODULES = [oscprob2nu, oscprob3nu, oscprob4nu, hamiltonians2nu,
+           hamiltonians3nu, hamiltonians4nu, fastkernels, slabs, earth]
 
 
 def routines(module, private=False):
