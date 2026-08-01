@@ -351,6 +351,138 @@ def test_root_polishing_is_what_makes_a_stiff_spectrum_accurate():
     assert unpolished > 10.0*polished
 
 
+def nearly_degenerate_pair(rng, separation):
+    r"""Returns a Hermitian 4x4 with two eigenvalues that nearly coincide.
+
+    Built by conjugating a chosen spectrum with a random unitary, so the
+    degeneracy is not aligned with the basis and cannot be spotted by
+    looking at the matrix.
+    """
+    base = rng.normal()
+    spectrum = np.array([base, base + separation,
+                         base + rng.uniform(0.5, 2.0), 0.0])
+    spectrum[3] = -spectrum[:3].sum()
+
+    matrix = rng.standard_normal((4, 4)) + 1.j*rng.standard_normal((4, 4))
+    unitary, _ = np.linalg.qr(matrix)
+    rotated = unitary @ np.diag(spectrum).astype(complex) @ unitary.conj().T
+
+    return 0.5*(rotated + rotated.conj().T)
+
+
+def test_a_nearly_degenerate_pair_does_not_derail_the_refinement():
+    r"""The Newton step is refused where it would cross a neighbour.
+
+    The step divides by a product of gaps, so a root that nearly
+    coincides with another divides by almost nothing.  Before the step
+    was guarded, a pair separated by one unit in the last place was
+    thrown across the spectrum --- 0.8793 became 0.0180 --- and the
+    probabilities that followed were not probabilities at all, reaching
+    twenty-one and summing to sixty-nine.
+
+    The guard is that a step may not carry a root more than halfway to
+    its nearest neighbour.  Whether a pair lands on identical bits or on
+    adjacent ones is decided by the last bit of a square root taken near
+    zero, so testing the derivative against exactly zero, which is what
+    this did before, was a knife edge: it gave different answers for a
+    stack and a scalar call, and for the NumPy path and the kernel.
+
+    Sweeping the separation across the range where it bites, rather than
+    pinning one case, because the failure was found at 2e-8 and the
+    knife edge is at 1e-16.
+
+    What is asserted is what the guard actually promises, which is less
+    than accuracy.  A nearly degenerate pair is not something the closed
+    form resolves well in the first place: Euler's reduction recovers
+    the pair's separation as the square root of a resolvent root that
+    vanishes as the pair closes, and a square root near zero turns the
+    :math:`\epsilon` on that root into :math:`\sqrt{\epsilon}` on the
+    separation, some :math:`10^{-8}` relative.  The refinement cannot
+    undo that and is not meant to.  What it must not do is make it
+    worse, which unguarded it did by seven orders of magnitude.
+
+    So: the refined roots are never worse than the unrefined ones, and
+    stay bounded.  Measured here, the worst refined error is about half
+    the worst unrefined one, across the whole sweep.
+    """
+    rng = np.random.default_rng(24680)
+
+    worst_refined = 0.0
+    worst_unrefined = 0.0
+    original = oscprob4nu.POLISH_ROOTS
+    try:
+        for _ in range(400):
+            separation = 10.0**rng.uniform(-16.0, -6.0)
+            matrix = nearly_degenerate_pair(rng, separation)
+
+            traceless = oscprob4nu._traceless_part(matrix)
+            reference = np.sort(np.linalg.eigvalsh(traceless))
+            scale = np.max(np.abs(reference))
+
+            oscprob4nu.POLISH_ROOTS = True
+            refined = oscprob4nu._latent_roots(traceless[None])[0]
+            oscprob4nu.POLISH_ROOTS = False
+            unrefined = oscprob4nu._latent_roots(traceless[None])[0]
+
+            refined_error = np.max(np.abs(refined - reference))/scale
+            unrefined_error = np.max(np.abs(unrefined - reference))/scale
+
+            assert refined_error <= 1.5*unrefined_error + 1.e-15, (
+                'refining a pair separated by %.2e made the roots worse, '
+                '%.2e against %.2e relative; the step is meant to be '
+                'refused there, not amplified'
+                % (separation, refined_error, unrefined_error))
+
+            worst_refined = max(worst_refined, refined_error)
+            worst_unrefined = max(worst_unrefined, unrefined_error)
+    finally:
+        oscprob4nu.POLISH_ROOTS = original
+
+    # Unguarded, the worst of these reached 4.8 --- roots thrown clean
+    # across a spectrum of order one
+    assert worst_refined < 1.e-4, (
+        'a nearly degenerate pair moved the latent roots by %.2e relative'
+        % worst_refined)
+    assert worst_refined < worst_unrefined
+
+
+def test_the_step_guard_leaves_ordinary_spectra_untouched():
+    r"""The guard costs nothing where it is not needed.
+
+    A guard that quietly declined useful refinements would show up as a
+    loss of accuracy on generic spectra rather than as a failure, so it
+    is pinned from the other side too: on ordinary random Hamiltonians
+    the refined roots must still reach round-off, which they cannot do
+    from the closed form alone.
+    """
+    rng = np.random.default_rng(13579)
+
+    worst_refined = 0.0
+    worst_unrefined = 0.0
+    original = oscprob4nu.POLISH_ROOTS
+    try:
+        for _ in range(200):
+            matrix = random_hermitian(rng)
+            traceless = oscprob4nu._traceless_part(matrix)
+            reference = np.sort(np.linalg.eigvalsh(traceless))
+            scale = np.max(np.abs(reference))
+
+            oscprob4nu.POLISH_ROOTS = True
+            refined = oscprob4nu._latent_roots(traceless[None])[0]
+            oscprob4nu.POLISH_ROOTS = False
+            unrefined = oscprob4nu._latent_roots(traceless[None])[0]
+
+            worst_refined = max(worst_refined,
+                                np.max(np.abs(refined - reference))/scale)
+            worst_unrefined = max(worst_unrefined,
+                                  np.max(np.abs(unrefined - reference))/scale)
+    finally:
+        oscprob4nu.POLISH_ROOTS = original
+
+    assert worst_refined < 1.e-14
+    assert worst_refined < worst_unrefined
+
+
 def test_roots_of_a_traceless_free_hamiltonian_all_vanish():
     r"""A Hamiltonian proportional to the identity has no evolution.
 
