@@ -160,6 +160,8 @@ TREE = [
      'Both backends at the scales actually used'),
     ('tests/test_slabs.py', 'Slab composition, against expm'),
     ('tests/test_earth.py', 'PREM, geometry, and Earth probabilities'),
+    ('tests/test_documented_figures.py',
+     'Keeps the quoted performance figures agreeing'),
     ('tests/test_file_tree.py', 'Keeps this tree in step with the repository'),
 
 ]
