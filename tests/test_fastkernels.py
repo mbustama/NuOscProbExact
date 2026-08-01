@@ -443,6 +443,54 @@ def test_small_batch_matches_large_batch(backend, rng):
 
 
 @needs_numba
+def test_chi_4nu_matches_numpy_and_pivots_when_it_must():
+    r"""The kernel's determinant is its own unit, and tested as one.
+
+    It has to be.  The determinant feeds the Newton refinement, and the
+    refinement's accuracy does not survive into the probabilities --- the
+    reconstruction's own conditioning swamps it --- so no end-to-end test
+    can tell a good determinant from a poor one.  Mutation testing
+    confirmed that: disabling the partial pivoting entirely left the
+    whole suite green.  Checking it here, against
+    :func:`numpy.linalg.det`, is what makes the choice of algorithm
+    defended by a test rather than only by a docstring.
+
+    The second half is the case that pivoting exists for.  Evaluating
+    ``chi`` at ``psi`` equal to a diagonal entry makes the leading entry
+    of ``psi*1 - H~`` exactly zero, and elimination without pivoting
+    divides by it.
+    """
+    rng = np.random.default_rng(31415)
+    scratch = np.empty((4, 4), dtype=np.complex128)
+
+    for _ in range(200):
+        traceless = random_hermitian(rng, 4)
+        traceless -= np.trace(traceless).real/4.0*np.eye(4)
+        traceless = np.ascontiguousarray(traceless)
+        psi = float(rng.uniform(-2.0, 2.0))
+
+        ours = fastkernels._chi_4nu(traceless, psi, scratch)
+        reference = np.linalg.det(psi*np.eye(4) - traceless).real
+        assert np.isclose(ours, reference, rtol=1.0e-10, atol=1.0e-14)
+
+    # A leading entry that vanishes at the evaluation point
+    singular = np.array([[0.5, 1.0, 0.0, 0.0],
+                         [1.0, -0.5, 0.0, 0.0],
+                         [0.0, 0.0, 0.25, 0.75],
+                         [0.0, 0.0, 0.75, -0.25]], dtype=complex)
+    assert np.isclose(np.trace(singular).real, 0.0)
+
+    ours = fastkernels._chi_4nu(singular, 0.5, scratch)
+    reference = np.linalg.det(0.5*np.eye(4) - singular).real
+
+    assert np.isfinite(ours)
+    assert not np.isclose(reference, 0.0), (
+        'the pivoting case must have a non-vanishing determinant, or a '
+        'routine that gave up and returned zero would pass')
+    assert np.isclose(ours, reference, rtol=1.0e-12)
+
+
+@needs_numba
 def test_kernels_are_cached_on_disk():
     r"""The kernels are declared with cache=True.
 
