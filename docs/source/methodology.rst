@@ -318,6 +318,46 @@ closed form to parity with a batched ``eigh`` rather than ahead of it.  That
 is the honest summary: four flavors costs more per point than three.
 :data:`oscprob4nu.POLISH_ROOTS` records the trade and can switch it off.
 
+Why the refinement is not applied selectively
+"""""""""""""""""""""""""""""""""""""""""""""
+
+The obvious saving is to refine only the elements that need it, the way
+:data:`oscprob3nu.SMALL_BATCH` and :data:`fastkernels.MIN_BATCH` dispatch on
+a measured threshold.  It was measured, and it does not work.  The result is
+recorded here so that it is not rediscovered.
+
+Two criteria were tried, on 6300 Hamiltonians spanning clustered, doubly
+paired and generic spectra, against ``eigvalsh``.  A criterion is *safe* at a
+given cut only if every element below the cut is more accurate than the
+target; the question is how many elements a safe cut can skip.
+
+* **The gap-based amplification** :math:`\max_m
+  |\psi|^3_{\max}/|\chi'(\psi_m)|`, which is what perturbation theory
+  suggests, since the root sensitivity goes as :math:`1/\chi'`.  It predicts
+  the error well for a single cluster and badly for two degenerate *pairs*,
+  a family it does not model: those reach :math:`1.7\times10^{-10}` at an
+  amplification of ten, where the criterion expects round-off.  The largest
+  safe cut is about 2.3, which is close to the smallest value the indicator
+  ever takes --- so it skips nothing.
+* **A matrix residual**, comparing :math:`\prod_m \psi_m` against
+  :math:`\det \tilde{H}`, which is :math:`\chi` evaluated at zero and costs
+  one determinant instead of four.  Being built from the matrix it cannot
+  lose information the way a gap heuristic does, but it is one scalar
+  constraint on four roots, and errors cancel in the product: there are
+  samples with a residual of :math:`10^{-17}` and a root error of
+  :math:`5\times10^{-5}`.  It also skips nothing safely.
+
+The second failure points at the general reason.  A criterion complete enough
+to certify all four roots has to evaluate :math:`\chi` at all four roots ---
+and that *is* the refinement.  The check and the fix are the same
+computation, so there is nothing to save by doing the check first.
+
+Note also who would benefit.  The four-flavor module exists mainly for 3+1,
+and a 3+1 scan is stiff at every point, so even a working criterion would
+skip nothing on the workload that motivates the module, while adding its own
+cost.  Unconditional refinement is therefore not a compromise: it is what the
+measurement supports.
+
 Finally, this is specific to four flavors rather than a general caveat.  The
 same measurement on :mod:`oscprob3nu` gives :math:`10^{-14}`, because there
 :math:`\Delta m^2_{31}/\Delta m^2_{21}` is 34 rather than 13500.

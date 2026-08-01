@@ -192,6 +192,18 @@ A second Newton step changes nothing --- one already reaches the floor
 brings the four-flavor closed form to parity with a batched ``eigh``
 rather than ahead of it.
 
+The step is applied unconditionally rather than only where a spectrum
+looks stiff, and that is a measured decision rather than a lazy one.
+Two skip criteria were tried on 6300 Hamiltonians: the gap-based
+amplification that perturbation theory suggests, which misjudges doubly
+paired spectra by four orders of magnitude, and a matrix residual
+comparing :math:`\prod_m \psi_m` with :math:`\det \tilde{H}`, which is
+one constraint on four roots and misses errors that cancel in the
+product.  Neither can safely skip any elements at all.  The reason is
+structural: a criterion complete enough to certify four roots must
+evaluate :math:`\chi` at four roots, which is this refinement --- the
+check and the fix are the same computation.  See the methodology page.
+
 Set to ``False`` to skip it, which is useful only for reproducing the
 unrefined figures or for spectra known to be well separated.
 """
