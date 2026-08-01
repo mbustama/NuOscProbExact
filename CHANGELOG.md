@@ -5,6 +5,37 @@ All notable changes to **NuOscProbExact** are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.8.1] - 2026-08-01
+
+Seven worked notebooks, a logo, and `fig/` out of version control.  No change
+to the library.
+
+### Added
+
+- `notebooks/`, seven Jupyter notebooks numbered in reading order: the basics,
+  vacuum oscillations, matter and NSI and LIV, oscillograms, bi-probability
+  plots, the Earth and PREM, and probabilities through the Earth.  They carry
+  their figures inline, so they render on GitHub without being run, and they
+  cover the plots `run_testsuite.py` writes plus the 1.8.0 Earth machinery.
+
+- A `notebooks` extra, and a `notebooks` job in `lint.yml` that executes every
+  one of them.  A notebook is documentation that claims to work, and stored
+  outputs make that claim persuasive without making it true — they were
+  correct whenever the notebook was last run, which may predate the change
+  that broke it.  The job also refuses a notebook stripped of its outputs,
+  which would execute cleanly while showing a reader nothing.
+
+- The project logo, wired in as `html_logo`, at the top of the documentation
+  sidebar.
+
+### Changed
+
+- `fig/` is no longer tracked.  It held one committed `.gitignore` whose only
+  job was to keep an empty directory alive; the notebooks carry their figures
+  inline now, so there is nothing to keep.  `run_testsuite.py` creates the
+  directory itself, since a fresh clone no longer has it and `savefig` would
+  otherwise fail on the first plot.
+
 ## [1.8.0] - 2026-08-01
 
 Piecewise-constant matter.  The exact expansions assume a Hamiltonian that
