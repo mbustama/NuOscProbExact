@@ -64,6 +64,8 @@ what the test suite does.
 Routine listings
 ----------------
 
+    * available - Whether the compiled kernels can be used at all
+    * worthwhile - Whether a stack is large enough to be worth compiling
     * probabilities_2nu_kernel - Two-flavor probabilities for a stack
     * probabilities_3nu_kernel - Three-flavor probabilities for a stack
 """
