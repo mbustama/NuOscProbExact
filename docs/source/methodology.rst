@@ -168,8 +168,8 @@ The :math:`d` tensor is constant and is tabulated once at import time as a
 dense :math:`8\times8\times8` array; the star product and the two invariants
 are contractions against that table.
 
-A single three-flavor probability evaluation takes about sixteen
-microseconds, and a two-flavor one about two.  For scans, pass arrays rather
+A single three-flavor probability evaluation takes about eight
+microseconds, and a two-flavor one about one.  For scans, pass arrays rather
 than looping: the routines
 accept a stack of Hamiltonians, a stack of baselines, or both, and evaluate
 the stack in one pass.  Measured against the equivalent Python loop, on 2000
@@ -269,7 +269,7 @@ that is sometimes slower than the path it replaces is worse than no backend,
 and a test asserts the thresholds are honoured.
 
 The scalar path is deliberately left uncompiled.  One probability takes
-about sixteen microseconds; compiling it would save most of that, at the cost of
+about eight microseconds; compiling it would save most of that, at the cost of
 a multi-second pause on a user's first call.
 
 Degenerate spectra on the batched path

@@ -289,7 +289,7 @@ import oscprob3nu
 
 ## Performance
 
-The probabilities are computed from a closed form, so a single one is quick — about **16 µs** for three flavors and **2 µs** for two.  Most real use, though, is a *scan*: a curve versus baseline or energy, or an oscillogram over both.  Two things make those much faster, and neither changes the answers.
+The probabilities are computed from a closed form, so a single one is quick — about **8 µs** for three flavors and **1 µs** for two.  Most real use, though, is a *scan*: a curve versus baseline or energy, or an oscillogram over both.  Two things make those much faster, and neither changes the answers.
 
 ### 1. Pass arrays instead of looping
 
@@ -339,7 +339,7 @@ Two costs, so the trade is visible: importing Numba takes about 140 ms against 6
 ### What you do not have to think about
 
 * **Short stacks.** Below about ten elements the array machinery costs more than it saves, so those are evaluated one at a time automatically.
-* **The scalar path.** It is deliberately left uncompiled: 16 µs is not worth a compilation pause on a first call.
+* **The scalar path.** It is deliberately left uncompiled: 8 µs is not worth a compilation pause on a first call.
 * **Turning Numba off.** `fastkernels.USE_NUMBA = False` forces the NumPy path, which is how the test suite checks that the two agree.
 
 One thing that *is* worth doing by hand: build the energy-independent part of the vacuum Hamiltonian once, outside any scan, since it does not depend on the energy.  The bundled examples all do this.

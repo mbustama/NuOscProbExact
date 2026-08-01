@@ -52,7 +52,7 @@ Costs, so that the trade is visible
 
 Both are why this is an optional extra rather than a dependency, and why
 the scalar path is deliberately left alone: a single probability takes
-about 16 microseconds, which is not worth a compilation pause.
+about 8 microseconds, which is not worth a compilation pause.
 
 Turning it off
 --------------

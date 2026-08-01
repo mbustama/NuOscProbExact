@@ -138,7 +138,7 @@ What it is not
 Performance
 -----------
 
-A single probability takes about 16 microseconds for three flavors and 2
+A single probability takes about 8 microseconds for three flavors and 1
 for two.  Scans --- a curve versus baseline or energy, an oscillogram over
 both --- are what the code mostly does, and two things make those much
 faster without changing any answer.
