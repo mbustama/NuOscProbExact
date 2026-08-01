@@ -243,8 +243,9 @@ books['01_basics.ipynb'] = notebook(
            'The single most useful thing to know about performance here: the '
            'routines broadcast. A stack of Hamiltonians, an array of '
            'baselines, or both, are evaluated in one pass — tens of times '
-           'faster than the equivalent Python loop, and the results are '
-           'identical.'),
+           'faster than the equivalent Python loop, and the results agree to '
+           'round-off. Notebook 09 measures both the speedup and the '
+           'agreement.'),
         code('baselines = np.linspace(1.0, 3000.0, 5)*KM\n'
              'prob_scan = oscprob3nu.probabilities_3nu(H, baselines)\n\n'
              'print("shape:", np.shape(prob_scan))\n'
@@ -1065,8 +1066,11 @@ books['09_performance.ipynb'] = notebook(
              't_loop*1e3))\n'
              'print("one batched call   : %8.2f ms" % (t_batch*1e3))\n'
              'print("speedup            : %8.1fx" % (t_loop/t_batch))'),
-        md('The two agree exactly — this is the same arithmetic, organised '
-           'differently:'),
+        md('The two agree to round-off — the same arithmetic, organised '
+           'differently. Not *bit for bit*: the batched path sums and '
+           'multiplies in a different order, and floating-point addition is '
+           'not associative, so the last digit or two can differ. The '
+           'number below is the honest measure of that.'),
         code('print("max |batched - looped| = %.2e"\n'
              '      % np.max(np.abs(np.array(batched()) - '
              'np.array(looped()))))'),
@@ -1220,7 +1224,7 @@ books['09_performance.ipynb'] = notebook(
            'measures both figures against an independent reference.'),
         md('## What to take away\n\n'
            '1. Replace loops with array arguments. This is the large win, it '
-           'needs no extra dependency, and the results are identical.\n'
+           'needs no extra dependency, and the results agree to round-off.\n'
            '2. If the scans are large and three-flavor, `pip install '
            '"nuoscprobexact[fast]"` on top of that.\n'
            '3. Do not bother for a handful of points: the library already '
@@ -1532,10 +1536,31 @@ books['12_ordering_and_octant.ipynb'] = notebook(
              'axes[0].legend()\n'
              'fig.tight_layout()\n'
              'plt.show()'),
-        md('Disappearance can hardly tell the two apart; appearance can, '
-           'because it carries a factor of $\\sin^2\\theta_{23}$ rather than '
-           '$\\sin^2 2\\theta_{23}$. That asymmetry is why resolving the '
-           'octant needs the appearance channel.'),
+        md('The reason is in the two combinations of $\\theta_{23}$ that the '
+           'channels carry, and it is worth doing the arithmetic rather '
+           'than asserting it:'),
+        code('for x in (0.45, 0.55):\n'
+             '    print("sin^2(th23) = %.2f  ->  sin^2(2 th23) = %.4f"\n'
+             '          % (x, 4.0*x*(1.0-x)))'),
+        md('$\\sin^2 2\\theta_{23}$ is the *same* for both — that is the '
+           'degeneracy — while $\\sin^2\\theta_{23}$ differs by about 20%. '
+           'Disappearance is governed by the first at leading order and '
+           'appearance by the second, so the leading term cancels in one '
+           'channel and not the other.\n\n'
+           'What that does *not* mean is that the disappearance curves lie '
+           'on top of each other. Over the range plotted above the largest '
+           'separation is about 0.017 in $P_{\\mu\\mu}$ and 0.013 in '
+           '$P_{\\mu e}$ — comparable in absolute terms. The difference is '
+           '*where* they sit: the disappearance gap is concentrated near '
+           'the oscillation minimum, where $P_{\\mu\\mu}$ has fallen to a '
+           'few per cent and there are correspondingly few events, whereas '
+           'the appearance gap is a steady fraction of a signal that is '
+           'small everywhere.\n\n'
+           'So the honest statement is not that disappearance cannot see '
+           'the octant, but that its sensitivity comes from subleading '
+           'terms in the least favourable place, while appearance carries '
+           'it at leading order. That is why the appearance channel drives '
+           'the measurement.'),
     ])
 
 # ---------------------------------------------------------- 13 antineutrinos
@@ -1747,8 +1772,10 @@ books['14_solar_and_adiabatic_msw.ipynb'] = notebook(
              'for n in (100, 300, 1000, 3000, 10000, 30000):\n'
              '    print("%7d slabs -> P_ee = %.6f" % (n, '
              'probabilities_sun(n, E)[0]))'),
-        md('It converges, at around ten thousand slabs — exactly the estimate '
-           'above. So far so good.\n\n'
+        md('It converges at around ten thousand slabs, against an estimate of '
+           'twenty thousand — the right order, which is all a '
+           'back-of-the-envelope count of oscillation lengths can be '
+           'expected to give. So far so good.\n\n'
            'And then the trap.'),
         md('## The converged number is meaningless on its own\n\n'
            'That $P_{ee}$ is the survival probability for one energy, at one '
