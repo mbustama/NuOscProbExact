@@ -333,7 +333,7 @@ Where to go next
 ----------------
 
 * :doc:`quickstart` --- the shortest path to a first probability.
-* :doc:`methodology` --- what the SU(2) and SU(3) expansions actually do, and
+* :doc:`methodology` --- what the SU(2), SU(3) and SU(4) expansions actually do, and
   the sign conventions that matter once a matter potential is added.
 * :doc:`functions` --- the full API reference, generated from the docstrings.
 * The `notebooks <https://github.com/mbustama/NuOscProbExact/tree/main/notebooks>`_

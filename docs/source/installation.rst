@@ -111,7 +111,7 @@ Numba backend, which stand down when ``numba`` is not installed --- the
 default.  Install the ``fast`` extra and the whole suite runs.  It is a few
 hundred tests and takes a few seconds.
 
-The suite checks the SU(2) and SU(3) machinery against independent
+The suite checks the SU(2), SU(3) and SU(4) machinery against independent
 computations: unitarity of the evolution operator, agreement with
 ``scipy.linalg.expm``, agreement with the standard oscillation formulas, the
 ``d`` tensor and star product of the SU(3) algebra, and the sign conventions
@@ -183,7 +183,7 @@ File tree
    │       ├── installation.rst         # Requirements, installation, file tree
    │       ├── quickstart.rst           # Shortest path to a probability
    │       ├── recipes.rst              # Numerical recipes, with pre-generated figures
-   │       ├── methodology.rst          # The SU(2) and SU(3) expansions
+   │       ├── methodology.rst          # The SU(2), SU(3) and SU(4) expansions
    │       ├── functions.rst            # API reference, from the docstrings
    │       ├── references.rst           # Bibliography
    │       ├── refs.bib                 # BibTeX entries for the bibliography
@@ -201,6 +201,8 @@ File tree
    │       ├── gallery_oscillogram.png
    │       ├── gallery_prem.png
    │       ├── gallery_profiles.png
+   │       ├── gallery_sterile.png
+   │       ├── gallery_sterile_earth.png
    │       └── gallery_vacuum.png
    ├── notebooks/                       # Worked examples, with their figures stored inline
    │   ├── 01_basics.ipynb              # Units, one probability, and broadcasting
@@ -218,12 +220,15 @@ File tree
    │   ├── 13_antineutrinos.ipynb       # Conjugate and flip, and two ways to slip
    │   ├── 14_solar_and_adiabatic_msw.ipynb  # The MSW resonance, and the cost wall
    │   ├── 15_numerical_edge_cases.ipynb  # Degeneracies, and what does not go NaN
+   │   ├── 16_four_neutrinos.ipynb      # A 3+1 sterile state, through the SU(4) expansion
    │   └── make_notebooks.py            # Generates and executes all of the above
    ├── src/                             # The library
    │   ├── oscprob2nu.py                # Two-flavor probabilities, SU(2) expansion
    │   ├── oscprob3nu.py                # Three-flavor probabilities, SU(3) expansion
+   │   ├── oscprob4nu.py                # Four-flavor probabilities, SU(4) expansion
    │   ├── hamiltonians2nu.py           # Example two-flavor Hamiltonians
    │   ├── hamiltonians3nu.py           # Example three-flavor Hamiltonians
+   │   ├── hamiltonians4nu.py           # Example four-flavor (3+1) Hamiltonians
    │   ├── globaldefs.py                # Physical constants and unit conversions
    │   ├── fastkernels.py               # Optional Numba kernels, with a NumPy fallback
    │   ├── slabs.py                     # Propagation across adjacent slabs
@@ -231,6 +236,7 @@ File tree
    └── tests/                           # Regression suite, run with pytest
        ├── conftest.py                  # Shared fixtures and path setup
        ├── test_su3_algebra.py          # d tensor, star product, SU(3) invariants
+       ├── test_oscprob4nu.py           # SU(4) algebra, quartic roots, 3+1 physics
        ├── test_evolution_operator.py   # U against an independent matrix exponential
        ├── test_probabilities.py        # Normalization, positivity, P = |U|^2
        ├── test_hamiltonians.py         # Sample Hamiltonians and sign conventions

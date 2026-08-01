@@ -9,11 +9,11 @@ blocks on every supported Python.
 Core modules
 ------------
 
-The two core modules are self-contained: they need only ``numpy``, and they
-accept *any* Hermitian Hamiltonian.  Copying either one into your own project
-is a supported way to use **NuOscProbExact**.
+The three core modules are self-contained: they need only ``numpy``, and they
+accept *any* Hermitian Hamiltonian.  Copying one into your own project is a
+supported way to use **NuOscProbExact**.
 
-Both are unit-agnostic: they require only that the Hamiltonian and the
+All three are unit-agnostic: they require only that the Hamiltonian and the
 baseline be given in reciprocal units, so that :math:`H L` is dimensionless.
 
 oscprob2nu
@@ -27,6 +27,17 @@ oscprob3nu
 ^^^^^^^^^^
 
 .. automodule:: oscprob3nu
+   :members:
+   :undoc-members:
+
+oscprob4nu
+^^^^^^^^^^
+
+The :math:`n = 4` member, and the last one that exists in closed form; see
+:ref:`why-four-is-the-end`.  Its accuracy on stiff 3+1 spectra deserves a
+look before use: :ref:`stiff-spectra`.
+
+.. automodule:: oscprob4nu
    :members:
    :undoc-members:
 
@@ -53,6 +64,13 @@ hamiltonians3nu
 ^^^^^^^^^^^^^^^
 
 .. automodule:: hamiltonians3nu
+   :members:
+   :undoc-members:
+
+hamiltonians4nu
+^^^^^^^^^^^^^^^
+
+.. automodule:: hamiltonians4nu
    :members:
    :undoc-members:
 

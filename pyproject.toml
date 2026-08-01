@@ -4,13 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nuoscprobexact"
-version = "1.8.6"
-description = "Exact two-flavor and three-flavor neutrino oscillation probabilities for arbitrary time-independent Hamiltonians"
+version = "1.9.0"
+description = "Exact two-, three- and four-flavor neutrino oscillation probabilities for arbitrary time-independent Hamiltonians"
 readme = "README.md"
 requires-python = ">=3.9"
 license = {file = "LICENSE"}
 authors = [{name = "Mauricio Bustamante", email = "mbustamante@gmail.com"}]
-keywords = ["neutrino", "oscillations", "physics", "SU(2)", "SU(3)"]
+keywords = ["neutrino", "oscillations", "physics", "sterile neutrinos",
+            "SU(2)", "SU(3)", "SU(4)"]
 classifiers = [
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
@@ -60,9 +61,9 @@ Paper = "https://arxiv.org/abs/1904.12391"
 # sys.path.append('../src') keeps working unchanged.
 [tool.setuptools]
 package-dir = {"" = "src"}
-py-modules = ["oscprob2nu", "oscprob3nu", "hamiltonians2nu",
-              "hamiltonians3nu", "globaldefs", "fastkernels",
-              "slabs", "earth"]
+py-modules = ["oscprob2nu", "oscprob3nu", "oscprob4nu",
+              "hamiltonians2nu", "hamiltonians3nu", "hamiltonians4nu",
+              "globaldefs", "fastkernels", "slabs", "earth"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -127,7 +128,7 @@ ignore = [
 # A threshold passed as a flag in a workflow is a threshold that only CI knows
 # about, and the two drift the first time one of them is edited.
 [tool.coverage.run]
-# There is no import package: pyproject declares eight flat `py-modules` under
+# There is no import package: pyproject declares ten flat `py-modules` under
 # `package-dir = {"" = "src"}`, so an editable install puts `oscprob3nu` and
 # friends on the path under their bare names.  Coverage measures imported
 # source files, and those files live directly in `src/` --- `src/<package>`,

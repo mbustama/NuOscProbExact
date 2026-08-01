@@ -5,6 +5,155 @@ All notable changes to **NuOscProbExact** are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.9.0] - 2026-08-01
+
+**Four-neutrino oscillations.**  The Ohlsson–Snellman method is carried to
+`n = 4` through the SU(4) algebra, which brings 3+1 sterile scenarios into
+scope — and which is the last `n` where the method exists in closed form at
+all.
+
+A minor rather than a patch release, matching 1.8.0, which added `slabs` and
+`earth`: this adds public API rather than correcting anything.  No existing
+module changes behaviour.
+
+### Added
+
+- **`oscprob4nu`**, the four-flavor expansion.  Everything structural carries
+  over from three flavors — expand in the fifteen generalized Gell-Mann
+  matrices, factor out the global phase, interpolate the exponential over the
+  latent roots, read the probabilities off `|U|²`.  Three ingredients are new:
+
+  - **A third invariant.**  SU(4) has rank three, so the traceless part
+    carries `I2`, `I3` and `I4`, and the cubic characteristic equation becomes
+    a quartic.  All three come from traces of powers, which avoids ever
+    building the SU(4) `d` tensor — a 15×15×15 table nothing else would need.
+  - **A quartic that still solves in closed form.**  Euler's reduction gives a
+    resolvent cubic whose roots are real and non-negative because the
+    Hamiltonian is Hermitian, so the same trigonometric construction that
+    `oscprob3nu.psi_roots` uses solves it.  The SU(3) machinery is literally
+    nested inside the SU(4) solution.
+  - **A longer star-product tower.**  The three-flavor identity
+    `(h*h)*h = |h|² h/3` is a Cayley–Hamilton accident of `n = 3` and is false
+    at `n = 4` — 37% off on a random Hamiltonian — so `((h*h)*h)_a` enters the
+    `u_a` as independent data.  A test asserts it stays false, since if it
+    ever held the extra term would be dead weight.
+
+- **`hamiltonians4nu`**, sample 3+1 Hamiltonians: the 4×4 mixing matrix with
+  three extra angles, the energy-independent vacuum term, matter, and matter
+  with NSI.  As at three flavors these are examples, not limitations.
+
+- **`globaldefs.VNC_EARTH_CRUST`.**  The neutral-current potential is
+  flavor-universal across the active states, so at three flavors it is
+  proportional to the identity and drops out entirely — which is why it has
+  never been needed.  With a sterile state it does not drop out: removing it
+  from all four costs only a global phase and leaves `-V_NC` on the sterile
+  entry, positive and half of `V_CC` in the crust.  Getting that entry wrong is
+  the four-flavor analogue of the antineutrino sign trap — invisible in vacuum,
+  and it moves the resonance — so a test pins its sign and size.
+
+- **Notebook 16**, working a 3+1 scenario through: the sixteen probabilities,
+  the sterile entry in the matter potential, a short-baseline energy scan, the
+  sterile matter resonance through the Earth, the three new algebraic
+  ingredients evaluated live, the accuracy comparison, and the decoupling
+  check against `oscprob3nu`.  Two gallery figures come from it.
+
+- **`tests/test_oscprob4nu.py`**, 30 tests.  The strongest is the last kind:
+  switching the three sterile angles off must reproduce `oscprob3nu` exactly,
+  which it does to 7e-12 in vacuum and in matter — an independent module,
+  written years earlier against a different algebra, computing the same
+  numbers.
+
+### Changed
+
+- **The documentation no longer says the library is limited to two and three
+  flavors.**  There were more than a dozen such claims, including a bullet in
+  "What it is not" reading *"Not a four-flavor code … a sterile fourth is
+  outside what they cover"*.  The paper's title is left exactly as published
+  in all four places it appears; the extension is described as an extension.
+
+- **When to use Magnus is now stated up front**, in both `README.md` and the
+  documentation landing page, as a table rather than a remark buried in "What
+  it does not do".  The rule is one line — reach for Magnus when the
+  Hamiltonian varies appreciably over an oscillation length — and the table
+  gives five cases with the reason for each, including the one neither tool
+  handles, which is open-system evolution needing Lindblad.
+
+- **`methodology.rst` gains a four-flavor section**, including *why the method
+  stops at four*: the eigenvalues come from solving the characteristic
+  polynomial in radicals, and Abel–Ruffini says degree five has no such
+  solution, `S₅` not being soluble where `S₂`, `S₃` and `S₄` are.  A theorem,
+  not a gap.  The philosophy survives even where the closed form does not —
+  numerically computed eigenvalues feed the same machinery at any `n`; it
+  simply stops being a closed form, which is this library's reason to exist.
+
+### Notes on accuracy
+
+Worth reading before using four flavors in anger, and worth keeping in
+proportion: **none of what follows is near a measurable effect**, since
+probabilities meet data at the per-cent level.
+
+A generic four-flavor Hamiltonian agrees with `scipy.linalg.expm` to 3.7e-14.
+A *stiff* 3+1 spectrum — an eV-scale `Δm²₄₁`, so eigenvalues spanning four
+orders of magnitude with three clustered — is different: forming `I2`, `I3`
+and `I4` in double precision compresses the 4×4 matrix into three numbers and
+loses what separates the cluster.  Perturbing the three invariants at the
+1e-16 level moves the roots by 6e-11 relative, which is ordinary
+ill-conditioning of polynomial roots against their coefficients, so no better
+root-finder helps.  Deflating the quartic to a cubic first was tried, and
+does not.
+
+The roots are therefore refined against the *matrix*, by one Newton step on
+`χ(ψ) = det(ψ𝟙 - H̃)`.  Measured against `mpmath` at fifty decimal digits:
+
+| Strategy for the roots | Relative error | Cost, 200k points |
+|---|---|---|
+| Closed form alone | 8.3e-11 | 0.17 s |
+| **Closed form + one Newton step** | **1.1e-16** | 0.41 s |
+| `numpy.linalg.eigvalsh` | 7.4e-16 | 0.17 s |
+| Closed form in `numpy.longdouble` | 4.5e-11 | 0.43 s |
+
+The Newton step is about seven times *more accurate than LAPACK*, since
+`eigvalsh` reduces by similarity transforms each carrying a backward error of
+order `ε‖H‖`.  Extended precision was rejected for buying under a digit, for
+being slower, and for silently being `float64` on Apple Silicon and Windows.
+`eigvalsh` was rejected for being less accurate and for meaning the module
+would take its eigenvalues from LAPACK, which is the one thing this library
+exists not to do.
+
+In probabilities that is 5e-7 unrefined against 1e-9 refined.  The reasons to
+want the smaller number are the exactness claim, error accumulating when
+`slabs` and `earth` compose operators across many layers, and a regression
+suite with no room for a bug to hide in.  It costs about 40% of the runtime,
+bringing the four-flavor closed form to parity with a batched `eigh` rather
+than ahead of it.  `oscprob4nu.POLISH_ROOTS` records the trade and switches
+it off.
+
+**Applying the refinement selectively was measured and rejected.**  Skipping
+it where the spectrum is not stiff — the way `SMALL_BATCH` and `MIN_BATCH`
+dispatch on a threshold — would recover that 40%.  Two criteria were tried on
+6300 Hamiltonians: the gap-based amplification perturbation theory suggests,
+which misjudges doubly degenerate pairs by four orders of magnitude, and a
+matrix residual comparing `prod(ψ_m)` with `det(H̃)`, which is one constraint
+on four roots and misses errors that cancel in the product.  Neither can
+safely skip a single element.  The reason is structural: a criterion complete
+enough to certify four roots must evaluate `χ` at four roots, which *is* the
+refinement — the check and the fix are the same computation.  And since a 3+1
+scan is stiff at every point, even a working criterion would skip nothing on
+the workload that motivates the module.
+
+### Fixed
+
+- **Degenerate spectra at four flavors.**  The first implementation
+  reconstructed `U₄` by solving a Vandermonde system for the Cayley–Hamilton
+  coefficients, which is singular the moment two latent roots coincide — not
+  an exotic case, but one that includes a Hamiltonian proportional to the
+  identity, a zero Hamiltonian, and any triply degenerate spectrum, all of
+  which raised `LinAlgError`.  It is replaced by Newton interpolation with
+  divided differences, where a repeated node is a derivative and for the
+  exponential that derivative is known exactly.  No special branch, no
+  tolerance-dependent switch between formulas, and six degenerate spectra now
+  agree with `expm` to 1e-12.
+
 ## [1.8.6] - 2026-08-01
 
 A pre-publication audit, before the first upload to PyPI.  Nothing here

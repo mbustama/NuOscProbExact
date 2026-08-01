@@ -56,14 +56,20 @@ NuOscProbExact: Exact Neutrino Oscillation Probabilities
    * `The notebooks <https://github.com/mbustama/NuOscProbExact/tree/main/notebooks>`_
    * :doc:`changelog`
 
-**NuOscProbExact** computes exact two-flavor and three-flavor neutrino
+**NuOscProbExact** computes exact two-, three- and four-flavor neutrino
 oscillation probabilities for arbitrary time-independent Hamiltonians.  It is
 a Python implementation of the method of Ohlsson and Snellman
 :cite:`Ohlsson:1999xb`, revisited in :cite:`Bustamante:2019ggq`.
 
 The method expands the Hamiltonian and the time-evolution operator in the
-bases of SU(2) and SU(3) matrices, which yields concise, analytical, and
-**exact** closed-form expressions for the probabilities.
+bases of SU(2), SU(3) and SU(4) matrices, which yields concise, analytical,
+and **exact** closed-form expressions for the probabilities.
+
+Four flavors brings 3+1 sterile scenarios into scope as *closed* four-state
+systems, rather than as a leak out of the three-flavor block.  It is also
+where the method ends: :ref:`why-four-is-the-end` explains why there is no
+five-flavor counterpart, and why that is a fact about algebra rather than a
+gap in the code.
 
 .. _what-exact-means:
 
@@ -71,9 +77,9 @@ What "exact" means here
 ------------------------
 
 There is no approximation beyond floating-point round-off.  The evolution
-operator produced by the SU(2) and SU(3) expansions is the matrix exponential
-:math:`e^{-i H_0 L}`, and the test suite checks that it is, against an
-independent computation:
+operator produced by the SU(2), SU(3) and SU(4) expansions is the matrix
+exponential :math:`e^{-i H_0 L}`, and the test suite checks that it is,
+against an independent computation:
 
 .. list-table::
    :header-rows: 1
@@ -85,12 +91,26 @@ independent computation:
      - 8e-15
    * - :math:`U_2` vs ``scipy.linalg.expm``, 200 random Hermitian Hamiltonians
      - 1.3e-15
+   * - :math:`U_4` vs ``scipy.linalg.expm``, 2000 random Hermitian Hamiltonians
+     - 3.7e-14
    * - Unitarity, :math:`U^\dagger U - \mathbb{1}`
      - 5e-15
    * - Hard-coded :math:`d_{ijk}` vs :math:`\frac{1}{4}\mathrm{Tr}(\{\lambda_i,\lambda_j\}\lambda_k)`, all 512 entries
      - 2e-16
    * - Exact result vs the standard vacuum oscillation formula
      - 4e-19
+   * - Four flavors with the sterile angles off, vs :mod:`oscprob3nu`
+     - 7e-12
+
+One line of context for the four-flavor row.  A *stiff* spectrum --- a 3+1
+scenario with an eV-scale :math:`\Delta m^2_{41}` --- reaches about
+:math:`10^{-9}` rather than :math:`10^{-14}`, limited by what double
+precision retains when the SU(4) invariants are formed rather than by the
+expansion itself.  Both figures are far below anything an experiment can
+resolve, so this is a statement about the *exactness claim* and about error
+accumulating over composed slabs, not about whether the probabilities are
+good enough to use.  :ref:`stiff-spectra` gives the mechanism, what the code
+does about it, and what the alternatives measured.
 
 When is NuOscProbExact a good fit?
 -----------------------------------
@@ -109,11 +129,12 @@ When is NuOscProbExact a good fit?
    there.
 
 #. **You want an arbitrary Hamiltonian, not a fixed scenario.**  The core
-   routines take any Hermitian :math:`2\times2` or :math:`3\times3` matrix.
-   Non-standard interactions, Lorentz-invariance violation, sterile-like
-   perturbations and matter effects are all just entries in that matrix; the
-   bundled Hamiltonians in :mod:`hamiltonians2nu` and :mod:`hamiltonians3nu`
-   are examples, not limitations.
+   routines take any Hermitian :math:`2\times2`, :math:`3\times3` or
+   :math:`4\times4` matrix.  Non-standard interactions, Lorentz-invariance
+   violation, sterile states and matter effects are all just entries in that
+   matrix; the bundled Hamiltonians in :mod:`hamiltonians2nu`,
+   :mod:`hamiltonians3nu` and :mod:`hamiltonians4nu` are examples, not
+   limitations.
 
 #. **You need the evolution operator, not only the probabilities.**
    :func:`oscprob3nu.evolution_operator_3nu` returns :math:`U_3(L)` itself, so
@@ -126,14 +147,59 @@ When is NuOscProbExact a good fit?
 What it is not
 --------------
 
-* **Not a solver for continuously varying Hamiltonians.**  See the first point
-  above, and :doc:`recipes` for where the boundary lies in practice.
-* **Not a four-flavor code.**  The SU(2) and SU(3) expansions are specific to
-  two and three flavors; a sterile fourth is outside what they cover.
+* **Not a solver for continuously varying Hamiltonians.**  See
+  :ref:`use-magnus-instead` just below, which says plainly when to reach for
+  a different tool.
+* **Not a five-flavor code.**  The expansions run to SU(4) and stop there,
+  because the closed form does: see :ref:`why-four-is-the-end`.  Four flavors
+  covers 3+1, which is the case people actually ask for.
 * **Not a flux, cross-section or detector code.**  It computes oscillation
   probabilities and stops there.
 * **Not a fitting framework.**  There is no likelihood machinery; the
   probabilities are meant to be handed to whatever does that.
+
+.. _use-magnus-instead:
+
+When to use Magnus instead
+--------------------------
+
+**NuOscProbExact** assumes the Hamiltonian is constant, or piecewise
+constant.  Everything it is good at follows from that, and so does the one
+case where it is the wrong tool.
+
+Reach for `Magnus <https://github.com/mbustama/Magnus>`_ instead when **the
+Hamiltonian varies continuously and appreciably over an oscillation length**.
+A smoothly varying profile can always be approximated by slabs, but the step
+size is then set by the oscillation rather than by the density, and the slab
+count grows until the calculation is neither exact nor quick.  Concretely:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 46 27 27
+
+   * - Situation
+     - Use this
+     - Because
+   * - Constant density
+     - **NuOscProbExact**
+     - One closed form, no integration
+   * - Piecewise constant, tens of layers --- the Earth through PREM
+     - **NuOscProbExact** (:mod:`slabs`, :mod:`earth`)
+     - Each layer solved exactly, operators multiplied
+   * - Smoothly varying, slow against the oscillation
+     - Either
+     - Slabbing converges quickly
+   * - Smoothly varying, fast against the oscillation --- the Sun, adiabatic MSW
+     - **Magnus**
+     - Slabbing needs :math:`\sim 10^4` steps per resonance crossing
+   * - Genuinely open systems: decay, decoherence
+     - Neither
+     - Needs a Lindblad solver, not a unitary one
+
+`Notebook 14
+<https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/14_solar_and_adiabatic_msw.ipynb>`_
+works the solar case through and shows exactly where the wall is, rather than
+asserting it.
 
 Performance
 -----------
