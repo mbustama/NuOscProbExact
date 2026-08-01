@@ -149,8 +149,13 @@ books['01_basics.ipynb'] = notebook(
              '    gd.S12_NO_BF, gd.S23_NO_BF, gd.S13_NO_BF, gd.DCP_NO_BF))\n'
              'M2 = np.diag([0.0, gd.D21_NO_BF, gd.D31_NO_BF]).astype(complex)\n\n'
              'by_hand = U @ M2 @ U.conj().T / 2.0\n'
-             'print("\\nU M^2 U^dag / 2  vs  H_VAC_3NU : %.2e"\n'
-             '      % np.max(np.abs(by_hand - np.asarray(H_VAC_3NU))))'),
+             'reference = np.asarray(H_VAC_3NU)\n'
+             'print("\\nU M^2 U^dag / 2  vs  H_VAC_3NU")\n'
+             'print("  absolute : %.2e eV^2"\n'
+             '      % np.max(np.abs(by_hand - reference)))\n'
+             'print("  relative : %.2e"\n'
+             '      % (np.max(np.abs(by_hand - reference))\n'
+             '         / np.max(np.abs(reference))))'),
         md('## One three-flavor probability\n\n'
            'A 1 GeV neutrino travelling 1300 km in vacuum — roughly the DUNE '
            'baseline. The nine probabilities come back with the *initial* '
@@ -160,10 +165,11 @@ books['01_basics.ipynb'] = notebook(
              '# The vacuum Hamiltonian at this energy\n'
              'H = np.asarray(H_VAC_3NU)/energy\n\n'
              'prob = oscprob3nu.probabilities_3nu(H, baseline)\n\n'
-             'labels = ["ee", "emu", "etau", "mue", "mumu", "mutau",\n'
-             '          "taue", "taumu", "tautau"]\n'
-             'for name, value in zip(labels, prob):\n'
-             '    print("P_%-7s = %.6f" % (name, value))'),
+             'flavors = ["e", "mu", "tau"]\n'
+             'for k, value in enumerate(prob):\n'
+             '    a, b = divmod(k, 3)\n'
+             '    print("P_%-7s = %.6f"\n'
+             '          % (flavors[a]+flavors[b], value))'),
         md('### Reading the nine numbers\n\n'
            'The convention, used everywhere in this library and in every '
            'notebook after this one:\n\n'
@@ -172,8 +178,7 @@ books['01_basics.ipynb'] = notebook(
            'so the **initial** flavor varies slowest. Later notebooks index '
            'the result directly — `p[:, 3]` for $P_{\\mu e}$, `p[:, 4]` for '
            '$P_{\\mu\\mu}$ — and this is the map they are using:'),
-        code('flavors = ["e", "mu", "tau"]\n'
-             'print("index   from      to        symbol")\n'
+        code('print("index   from      to        symbol")\n'
              'for k in range(9):\n'
              '    a, b = divmod(k, 3)\n'
              '    print("  %d     nu_%-4s -> nu_%-5s  P_%s%s"\n'
@@ -185,16 +190,6 @@ books['01_basics.ipynb'] = notebook(
              'for start, flavor in zip((0, 3, 6), ("e", "mu", "tau")):\n'
              '    print("sum over final flavors, from nu_%-4s = %.15f"\n'
              '          % (flavor, prob[start:start+3].sum()))'),
-        md('## Two flavors\n\n'
-           'The same interface, with four probabilities instead of nine.'),
-        code('# The builders take sin(theta), not theta itself.\n'
-             's12 = np.sqrt(0.310)\n'
-             'H2_vac = hamiltonians2nu.hamiltonian_2nu_vacuum_energy_'
-             'independent(\n'
-             '    s12, gd.D21_NO_BF)\n\n'
-             'Pee, Pem, Pme, Pmm = oscprob2nu.probabilities_2nu(\n'
-             '    np.asarray(H2_vac)/energy, baseline)\n'
-             'print("Pee = %.6f   Pem = %.6f" % (Pee, Pem))'),
         md('## The trace does not matter\n\n'
            'Adding a multiple of the identity to $H$ shifts every eigenvalue '
            'by the same amount, so it contributes an overall phase that '
@@ -218,6 +213,16 @@ books['01_basics.ipynb'] = notebook(
            'than anything about the method — but if your Hamiltonian carries '
            'a huge flavor-universal term, subtract it yourself before '
            'passing it in.'),
+        md('## Two flavors\n\n'
+           'The same interface, with four probabilities instead of nine.'),
+        code('# The builders take sin(theta), not theta itself.\n'
+             's12 = np.sqrt(0.310)\n'
+             'H2_vac = hamiltonians2nu.hamiltonian_2nu_vacuum_energy_'
+             'independent(\n'
+             '    s12, gd.D21_NO_BF)\n\n'
+             'Pee, Pem, Pme, Pmm = oscprob2nu.probabilities_2nu(\n'
+             '    np.asarray(H2_vac)/energy, baseline)\n'
+             'print("Pee = %.6f   Pem = %.6f" % (Pee, Pem))'),
         md('## Any Hermitian matrix\n\n'
            'Nothing above is special. The core routines take an arbitrary '
            'Hermitian matrix, which is what makes the library useful for '
@@ -554,6 +559,24 @@ books['05_biprobability.ipynb'] = notebook(
              'ax.legend()\n'
              'ax.set_aspect("equal", adjustable="datalim")\n'
              'plt.show()'),
+        md('## Where on the ellipse\n\n'
+           'Marking a few values of $\\delta_{CP}$ shows which part of the '
+           'curve corresponds to which phase.'),
+        code('p, pbar, dcp = biprobability(1.0, 1300.0, gd.VCC_EARTH_CRUST)\n\n'
+             'fig, ax = plt.subplots(figsize=(5.4, 5.2))\n'
+             'ax.plot(p, pbar, color="0.4")\n'
+             'for target, label in ((0.0, r"$\\delta_{CP} = 0$"),\n'
+             '                      (np.pi/2, r"$\\pi/2$"),\n'
+             '                      (np.pi, r"$\\pi$"),\n'
+             '                      (3*np.pi/2, r"$3\\pi/2$")):\n'
+             '    k = int(np.argmin(np.abs(dcp-target)))\n'
+             '    ax.plot(p[k], pbar[k], "o")\n'
+             '    ax.annotate(label, (p[k], pbar[k]),\n'
+             '                textcoords="offset points", xytext=(8, 4))\n'
+             'ax.set_xlabel(r"$P(\\nu_\\mu \\to \\nu_e)$")\n'
+             'ax.set_ylabel(r"$P(\\bar\\nu_\\mu \\to \\bar\\nu_e)$")\n'
+             'ax.set_title("E = 1 GeV, L = 1300 km, matter")\n'
+             'plt.show()'),
         md('## What sets the size of the effect\n\n'
            'The ellipse is a picture; the number behind it is the '
            '**Jarlskog invariant**, the one parametrisation-independent '
@@ -605,24 +628,6 @@ books['05_biprobability.ipynb'] = notebook(
            'because it carries a factor of $s_{13}$ — the CP-violating '
            'effect is suppressed by the smallest mixing angle, which is a '
            'large part of why the measurement is hard.'),
-        md('## Where on the ellipse\n\n'
-           'Marking a few values of $\\delta_{CP}$ shows which part of the '
-           'curve corresponds to which phase.'),
-        code('p, pbar, dcp = biprobability(1.0, 1300.0, gd.VCC_EARTH_CRUST)\n\n'
-             'fig, ax = plt.subplots(figsize=(5.4, 5.2))\n'
-             'ax.plot(p, pbar, color="0.4")\n'
-             'for target, label in ((0.0, r"$\\delta_{CP} = 0$"),\n'
-             '                      (np.pi/2, r"$\\pi/2$"),\n'
-             '                      (np.pi, r"$\\pi$"),\n'
-             '                      (3*np.pi/2, r"$3\\pi/2$")):\n'
-             '    k = int(np.argmin(np.abs(dcp-target)))\n'
-             '    ax.plot(p[k], pbar[k], "o")\n'
-             '    ax.annotate(label, (p[k], pbar[k]),\n'
-             '                textcoords="offset points", xytext=(8, 4))\n'
-             'ax.set_xlabel(r"$P(\\nu_\\mu \\to \\nu_e)$")\n'
-             'ax.set_ylabel(r"$P(\\bar\\nu_\\mu \\to \\bar\\nu_e)$")\n'
-             'ax.set_title("E = 1 GeV, L = 1300 km, matter")\n'
-             'plt.show()'),
     ])
 
 # ---------------------------------------------------------- 06 Earth / PREM
@@ -1219,7 +1224,11 @@ books['09_performance.ipynb'] = notebook(
            '2. If the scans are large and three-flavor, `pip install '
            '"nuoscprobexact[fast]"` on top of that.\n'
            '3. Do not bother for a handful of points: the library already '
-           'takes the quicker path there on its own.'),
+           'takes the quicker path there on its own.\n'
+           '4. At four flavors, expect about ten times the per-element '
+           'cost of three and no compiled kernel — and leave '
+           '`POLISH_ROOTS` alone unless you have measured that you can '
+           'afford not to.'),
     ])
 
 # ------------------------------------------------------- 10 the paper figures
@@ -2044,37 +2053,6 @@ books['16_four_neutrinos.ipynb'] = notebook(
            'energy and zenith angle where muon antineutrinos are strongly '
            'depleted into the sterile state. Its position depends on '
            '$\\Delta m^2_{41}$, which is what makes it a search channel.'),
-        md('## What is actually new at four flavors\n\n'
-           'Three things, and each follows from SU(4) having rank three '
-           'where SU(3) has rank two.'),
-        code('I2, I3, I4 = oscprob4nu.su4_invariants(H)\n'
-             'print("three invariants, not two:")\n'
-             'print("  I2 = %+.6e" % I2)\n'
-             'print("  I3 = %+.6e" % I3)\n'
-             'print("  I4 = %+.6e" % I4)\n\n'
-             'psi = oscprob4nu.psi_roots_4nu(I2, I3, I4)\n'
-             'print("\\nthe characteristic equation is a quartic; its roots:")\n'
-             'print(" ", np.array(psi))\n'
-             'print("  vs numpy.linalg.eigvalsh:")\n'
-             'H_traceless = H - np.trace(H).real/4.0*np.eye(4)\n'
-             'print(" ", np.sort(np.linalg.eigvalsh(H_traceless)))'),
-        md('And the star-product tower grows a rung. At three flavors '
-           '$(h \\star h) \\star h = \\frac{1}{3}|h|^2 h$, which is what lets '
-           '`oscprob3nu` stop after two terms. That identity is a '
-           'Cayley–Hamilton accident of $n = 3$ and is simply **false** at '
-           '$n = 4$:'),
-        code('lam = oscprob4nu.LAMBDA_SU4\n'
-             'rng = np.random.default_rng(7)\n'
-             'h = rng.standard_normal(15)\n'
-             'Ht = np.einsum("a,aij->ij", h, lam)\n'
-             'i2, _, _ = oscprob4nu.su4_invariants(Ht)\n'
-             'tower = (0.5*np.einsum("aij,ji->a", lam, Ht @ Ht @ Ht).real\n'
-             '         - 0.5*i2*h)\n'
-             'deviation = (np.max(np.abs(tower - i2*h/3.0))\n'
-             '             / np.max(np.abs(tower)))\n'
-             'print("relative deviation from the SU(3) identity: %.0f%%"\n'
-             '      % (100*deviation))\n'
-             'print("-> ((h*h)*h)_a is independent data at n = 4")'),
         md('## Sterile states and new interactions together\n\n'
            '3+1 does not have to be the only new physics in the problem. '
            '`hamiltonians4nu.hamiltonian_4nu_nsi` adds non-standard '
@@ -2121,6 +2099,37 @@ books['16_four_neutrinos.ipynb'] = notebook(
            'reshape the active block, and the active and sterile states '
            'are mixed. Nothing in this calculation is a special case: it '
            'is still one Hermitian matrix handed to the same routine.'),
+        md('## What is actually new at four flavors\n\n'
+           'Three things, and each follows from SU(4) having rank three '
+           'where SU(3) has rank two.'),
+        code('I2, I3, I4 = oscprob4nu.su4_invariants(H)\n'
+             'print("three invariants, not two:")\n'
+             'print("  I2 = %+.6e" % I2)\n'
+             'print("  I3 = %+.6e" % I3)\n'
+             'print("  I4 = %+.6e" % I4)\n\n'
+             'psi = oscprob4nu.psi_roots_4nu(I2, I3, I4)\n'
+             'print("\\nthe characteristic equation is a quartic; its roots:")\n'
+             'print(" ", np.array(psi))\n'
+             'print("  vs numpy.linalg.eigvalsh:")\n'
+             'H_traceless = H - np.trace(H).real/4.0*np.eye(4)\n'
+             'print(" ", np.sort(np.linalg.eigvalsh(H_traceless)))'),
+        md('And the star-product tower grows a rung. At three flavors '
+           '$(h \\star h) \\star h = \\frac{1}{3}|h|^2 h$, which is what lets '
+           '`oscprob3nu` stop after two terms. That identity is a '
+           'Cayley–Hamilton accident of $n = 3$ and is simply **false** at '
+           '$n = 4$:'),
+        code('lam = oscprob4nu.LAMBDA_SU4\n'
+             'rng = np.random.default_rng(7)\n'
+             'h = rng.standard_normal(15)\n'
+             'Ht = np.einsum("a,aij->ij", h, lam)\n'
+             'i2, _, _ = oscprob4nu.su4_invariants(Ht)\n'
+             'tower = (0.5*np.einsum("aij,ji->a", lam, Ht @ Ht @ Ht).real\n'
+             '         - 0.5*i2*h)\n'
+             'deviation = (np.max(np.abs(tower - i2*h/3.0))\n'
+             '             / np.max(np.abs(tower)))\n'
+             'print("relative deviation from the SU(3) identity: %.0f%%"\n'
+             '      % (100*deviation))\n'
+             'print("-> ((h*h)*h)_a is independent data at n = 4")'),
         md('## Accuracy, honestly\n\n'
            'Before the numbers: **none of this is near a measurable '
            'effect.** Oscillation probabilities meet data at the per-cent '
@@ -2741,11 +2750,10 @@ books['18_evolution_operator.ipynb'] = notebook(
            'matrix and commute. The moment the segments differ — which is '
            'what varying matter means — the order matters, and the next '
            'section shows it costing you a visibly different answer.'),
-        md('With a *different* Hamiltonian in each segment — which is what '
-           'varying matter means — the same multiplication is what '
-           '`slabs.evolution_operator_3nu_slabs` does for you, in order.'),
-        code('import slabs\n\n'
-             'import earth\n\n'
+        md('`slabs.evolution_operator_3nu_slabs` does that multiplication '
+           'for you, in order, given one Hamiltonian per slab:'),
+        code('import earth\n'
+             'import slabs\n\n'
              '# Deliberately asymmetric: the order is then observable\n'
              'widths = np.array([300.0, 600.0, 500.0])*KM\n'
              'densities = np.array([2.6, 4.5, 9.0])          # g/cm^3\n\n'
@@ -2789,9 +2797,10 @@ books['18_evolution_operator.ipynb'] = notebook(
              'print("<h>        = %.6e   (= Tr(H~^3)/2)" % h3)'),
         md('The oscillation frequencies are the roots of the characteristic '
            'equation, which for SU(3) is a cubic and has a closed '
-           'trigonometric solution. These are the eigenvalues of the '
-           'traceless Hamiltonian — the quantities every oscillation phase '
-           'is built from:'),
+           'trigonometric solution. Up to a sign they are the eigenvalues '
+           'of the traceless Hamiltonian — the quantities every oscillation '
+           'phase is built from. The paper writes the characteristic '
+           'equation for $-\\tilde H$, so $\\psi_m = -\\lambda_m$:'),
         code('psi = np.sort(np.array(oscprob3nu.psi_roots(h2, h3)))\n\n'
              '# The roots are those of the characteristic equation of -H~,\n'
              '# so they are minus the eigenvalues of H~ itself.\n'
@@ -2803,7 +2812,14 @@ books['18_evolution_operator.ipynb'] = notebook(
              'precision=4))\n'
              'print("max difference      : %.2e"\n'
              '      % np.max(np.abs(psi - reference)))'),
-        md('And the coefficients of the operator, which rebuild it exactly:'),
+        md('And the coefficients of the operator, which rebuild it '
+           'exactly. The Gell-Mann matrices are written out by hand '
+           'below, and the reason is worth knowing if you go looking for '
+           'them: `oscprob4nu` exposes `generators_su4()` because at four '
+           'flavors every quantity it needs is a trace against the '
+           'generators, whereas `oscprob3nu` contracts the $d$ tensor '
+           'instead — see `oscprob3nu.tensor_d` — and so never builds the '
+           'matrices. There is no `generators_su3()` to import.'),
         code('u = oscprob3nu.evolution_operator_3nu_u_coefficients(\n'
              '    H, baseline)\n'
              'print("u_0 and u_1..u_8 : %d complex coefficients" % len(u))\n\n'
@@ -2822,6 +2838,42 @@ books['18_evolution_operator.ipynb'] = notebook(
              '                              np.array(u[1:]), lam))\n'
              'print("max |rebuilt - U| = %.2e"\n'
              '      % np.max(np.abs(U_rebuilt - U)))'),
+        md('Seeing them vary is more instructive than one value of each. '
+           'The $h_k$ are fixed by the Hamiltonian and do not move with '
+           'distance; the $u_k$ carry the whole $L$ dependence, '
+           'oscillating at the three frequencies $\\psi_m$ set by the '
+           'latent roots. Every probability in every other notebook is '
+           'built from these:'),
+        code('L_km = np.linspace(0.0, 6000.0, 800)\n'
+             'u_of_L = np.array([\n'
+             '    oscprob3nu.evolution_operator_3nu_u_coefficients(\n'
+             '        H, l*KM) for l in L_km])\n\n'
+             'fig, axes = plt.subplots(2, 1, figsize=(7.2, 5.6),\n'
+             '                         sharex=True)\n'
+             'axes[0].plot(L_km, u_of_L[:, 0].real, label=r"$u_0$")\n'
+             'for k in (1, 2, 3):\n'
+             '    axes[0].plot(L_km, u_of_L[:, k].real, lw=1.0,\n'
+             '                 label=r"$u_%d$" % k)\n'
+             'axes[0].set_ylabel("coefficient (real part)")\n'
+             'axes[0].set_title("The SU(3) coefficients of $U_3(L)$")\n'
+             '# Headroom so the legend clears the u_0 peak\n'
+             'axes[0].set_ylim(-0.75, 1.55)\n'
+             'axes[0].legend(ncol=4, fontsize=9, loc="upper center")\n\n'
+             '# Rebuilt probabilities, for comparison\n'
+             'p_scan = oscprob3nu.probabilities_3nu(H, L_km*KM)\n'
+             'axes[1].plot(L_km, p_scan[:, 0], label=r"$P_{ee}$")\n'
+             'axes[1].plot(L_km, p_scan[:, 1], label=r"$P_{e\\mu}$")\n'
+             'axes[1].set_xlim(L_km[0], L_km[-1])\n'
+             'axes[1].set_ylim(0.0, 1.0)\n'
+             'axes[1].set_xlabel("Baseline [km]")\n'
+             'axes[1].set_ylabel("probability")\n'
+             'axes[1].legend(ncol=2)\n'
+             'fig.tight_layout()\n'
+             'plt.show()'),
+        md('The lower panel is what the other notebooks plot; the upper '
+           'panel is what it is made of. $u_0$ is the coefficient of the '
+           'identity, so it stays near one where little has happened, and '
+           'the $u_k$ grow as flavor content moves between states.'),
         md('## The same shape at two and four flavors\n\n'
            'Nothing above is specific to three. Each module carries the same '
            'four entry points — coefficients, invariants, roots, operator — '
