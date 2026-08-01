@@ -13,7 +13,7 @@
 # NuOscProbExact
 Code to compute exact two-, three- and four-neutrino oscillation probabilities using SU(2), SU(3) and SU(4) expansions
 
-> **Note:** The oscillation probabilities are computed exactly, with no approximation beyond floating-point round-off.  A regression test suite lives in `tests/` and can be run with `pytest`.
+> **Note:** The oscillation probabilities are computed exactly, with no approximation beyond floating-point round-off.  A regression test suite lives in `tests/` and can be run with `pytest`, and the results are cross-checked against [nuSQuIDS](https://github.com/arguelles/nuSQuIDS), an independent external code — see [notebook 17](notebooks/17_cross_checks.ipynb).
 
 ## What you can compute
 
@@ -69,7 +69,7 @@ The method relies on expansions of the Hamiltonian and time-evolution operators 
 
 ### What it does
 
-* **Exact probabilities for any Hermitian 2×2, 3×3 or 4×4 Hamiltonian.**  There is no approximation beyond floating-point round-off.  Oscillations in vacuum, in matter, with non-standard interactions, in a Lorentz invariance-violating background and with sterile states are not special cases in the code — each is a different matrix handed to the same routine.
+* **Exact probabilities for any Hermitian 2×2, 3×3 or 4×4 Hamiltonian.**  There is no approximation beyond floating-point round-off, and the probabilities agree with the independently written [nuSQuIDS](https://github.com/arguelles/nuSQuIDS) to round-off once conventions are matched ([notebook 17](notebooks/17_cross_checks.ipynb)).  Oscillations in vacuum, in matter, with non-standard interactions, in a Lorentz invariance-violating background and with sterile states are not special cases in the code — each is a different matrix handed to the same routine.
 * **Four flavors, for 3+1 sterile scenarios.**  `oscprob4nu` carries the same closed-form treatment to SU(4), which is the last place it reaches: at five flavors the eigenvalues stop being expressible in radicals, and that is a theorem rather than a missing feature.  A 3+1 system is closed and unitary over all four states, so it sits squarely inside the method's assumptions rather than "leaking" out of a three-flavor block.
 * **The evolution operator itself**, not only the probabilities, so it can be composed across segments or used to propagate a density matrix.
 * **Whole scans in one call.**  Every core routine accepts a stack of Hamiltonians, an array of baselines, or both broadcast against each other, which is tens of times faster than the equivalent Python loop and gives identical results.

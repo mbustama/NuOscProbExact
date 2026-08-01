@@ -101,6 +101,13 @@ against an independent computation:
      - 4e-19
    * - Four flavors with the sterile angles off, vs :mod:`oscprob3nu`
      - 7e-12
+   * - Three flavors vs `nuSQuIDS <https://github.com/arguelles/nuSQuIDS>`_,
+       an independent external code
+     - 2e-15
+   * - Four flavors vs nuSQuIDS
+     - 4e-16 to 3e-10
+   * - Matter spectrum vs the Zaglauer-Schwarzer closed form
+     - 7e-16
 
 One line of context for the four-flavor row.  A *stiff* spectrum --- a 3+1
 scenario with an eV-scale :math:`\Delta m^2_{41}` --- reaches about
@@ -111,6 +118,17 @@ resolve, so this is a statement about the *exactness claim* and about error
 accumulating over composed slabs, not about whether the probabilities are
 good enough to use.  :ref:`stiff-spectra` gives the mechanism, what the code
 does about it, and what the alternatives measured.
+
+The last three rows are the ones an internal suite cannot supply.  Everything
+above them compares this library against itself or against a formula
+transcribed from the same papers, so a convention that were wrong
+*consistently* --- a mixing-matrix ordering, a sign, a unit --- would pass all
+of it.  The external checks would not, and they cover the antineutrino rule
+and the mass ordering explicitly.  `Notebook 17
+<https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/17_cross_checks.ipynb>`_
+works through both, including the two conventions that have to be matched
+first and the one residual that turns out to be ours rather than a
+disagreement.
 
 When is NuOscProbExact a good fit?
 -----------------------------------

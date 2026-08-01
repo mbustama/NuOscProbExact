@@ -18,10 +18,12 @@ expansions themselves.
 
 The reference values are frozen into ``nusquids_reference.json`` rather
 than computed here.  nuSQuIDS ships manylinux wheels and would install
-in CI, but a comparison that runs in CI is a dependency on somebody
-else's release cadence, and this repository has already written down why
+in CI, but a comparison that runs in CI ties this suite to an
+external project's release cadence, and this repository has already written down why
 it declines those --- see the ruff rule pinning in ``pyproject.toml``.
-``nusquids_reference.py``, beside the data, regenerates it deliberately.
+``nusquids_reference.py``, beside the data, regenerates it deliberately,
+and ``notebooks/17_cross_checks.ipynb`` walks through what is compared
+with what, and why the conventions below have to be matched first.
 
 Two conventions are matched before comparing, and matching them is the
 point rather than a fudge.  Both are differences in definition:
@@ -34,9 +36,10 @@ point rather than a fudge.  Both are differences in definition:
   :math:`\rho N_A Y_e` in nuSQuIDS --- 0.82% apart, the mass defect.
 
 Unmatched, the two codes appear to disagree at 1e-4.  Matched, they
-agree to between 1e-11 and 1e-15, which is the real answer and the
-reason both offsets are pinned by tests below rather than left as
-folklore.
+agree to between 3e-10 and 4e-16 --- the loosest being the four-flavor
+antineutrino case, whose residual is attributed below --- which is the
+real answer, and the reason both offsets are pinned by tests here rather
+than left as folklore.
 """
 
 import json

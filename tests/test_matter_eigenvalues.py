@@ -2,7 +2,7 @@
 r"""Checks the matter Hamiltonian against an independent analytic spectrum.
 
 The frozen nuSQuIDS comparison in ``test_nusquids_comparison.py`` tests
-the conventions against an outside code, but only at the seven
+the conventions against an outside code, but only at the eleven
 configurations that were frozen.  This tests the same thing at *any*
 configuration, live, with no external dependency, by using a published
 closed form for the eigenvalues.
@@ -29,6 +29,9 @@ The coefficients here are written from the mixing angles directly,
 
 rather than read out of :func:`hamiltonians3nu.pmns_mixing_matrix`, so
 that a mistake in our mixing matrix cannot cancel against itself.
+
+``notebooks/17_cross_checks.ipynb`` shows this check running across two
+and a half decades of energy, including through the MSW resonance.
 
 Note what this does *not* reach: the Zaglauer-Schwarzer eigenvalues are
 independent of :math:`\theta_{23}` and :math:`\delta_{CP}`, which is a

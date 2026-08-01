@@ -362,6 +362,18 @@ Finally, this is specific to four flavors rather than a general caveat.  The
 same measurement on :mod:`oscprob3nu` gives :math:`10^{-14}`, because there
 :math:`\Delta m^2_{31}/\Delta m^2_{21}` is 34 rather than 13500.
 
+That figure has since been reached independently.  Compared against
+`nuSQuIDS <https://github.com/arguelles/nuSQuIDS>`_, which integrates the
+density matrix numerically and shares nothing with this expansion, the
+four-flavor probabilities agree to :math:`4\times10^{-16}` where the spectrum
+is benign and :math:`3\times10^{-10}` where it is stiffest --- the latter
+being this limit, arrived at from outside rather than asserted from within.
+`Notebook 17
+<https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/17_cross_checks.ipynb>`_
+attributes that residual: against ``scipy.linalg.expm`` on the same
+Hamiltonian our error is the same size, so it is ours and not a
+disagreement.
+
 Degenerate spectra at four flavors
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
