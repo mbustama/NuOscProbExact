@@ -220,6 +220,63 @@ fixes six docstrings that stated the opposite of the code.
   Citing: the name is already in the BibTeX entry directly below, and no
   citation format carries an e-mail address.
 
+- **A two-pass audit of every documentation file and the README**, run
+  before publishing, checking each claim against the code rather than against
+  the neighbouring prose.  Twenty-three findings, of which these are the ones
+  a reader would have acted on:
+
+  - `README.md` warned, in a call-out box, that a non-Hermitian matrix
+    "will output nonsensical results".  It has raised `ValueError` since
+    `CHECK_HERMITICITY` landed earlier in this release — the box described
+    exactly the behaviour this release removed, and contradicted the
+    Performance section sixty lines below it.
+  - `installation.rst` omitted `oscprob4nu` and `hamiltonians4nu` from the
+    modules `pip install` puts on the path, and both Requirements tables
+    omitted four flavors entirely.  This is the same omission recorded as
+    fixed above: it was fixed in `README.md` and left in the sibling
+    document that tells the same reader the same thing.
+  - The link to **Magnus** 404s, from both `index.rst` and `README.md`,
+    because that repository is private.  The recommendation stays; the
+    hyperlink goes until it resolves.  Found by `sphinx linkcheck`, which
+    is worth a place in the release checklist: 29 external URLs, one real
+    failure.
+  - `README.md` annotated its own benchmark row "~93x" where the two
+    timings on that line give 99, which is also what `methodology.rst`
+    quotes for the same scan.
+  - `fastkernels` and `methodology.rst` published different tables under
+    the same heading: ~9x against ~13x for one row, ~1.5x against ~1.4x for
+    another, and a different fifth scan in each.  The module is where they
+    are measured, so the page now quotes it.
+  - `recipes.rst` said the castle-wall profile gives "nearly three times"
+    the appearance probability of a uniform one; the block above it prints
+    0.0104 against 0.0028, which is 3.7.
+
+  Two guards are widened as a result, because in each case the drift
+  happened underneath a test that covered part of the same table: the
+  kernel-speedup check ran on the two four-flavor rows and now runs on all
+  six, and the README's inline ratios, which nothing checked at all, are now
+  derived from the timings beside them.  Both new checks were confirmed to
+  fail on the values they replace.
+
+- **The API reference documented the inert copy of `SMALL_BATCH`.**
+  `automodule` honours `__all__`, and only `oscprob4nu` exported it — the
+  one flavor count where nothing reads it.  The two that govern dispatch on
+  every call, in `oscprob2nu` and `oscprob3nu`, appeared nowhere and were
+  cross-referenced twice from `methodology.rst` as targets that did not
+  exist.  Exporting them also takes Sphinx in nitpicky mode from 23
+  unresolved references to **zero**; the remainder were `numpy.sqrt` and
+  `numpy.arccos` given as `:func:`, which NumPy's inventory does not
+  register as functions because they are ufuncs.  The ordinary build under
+  `-W` is silent about every one of these.
+
+- **The README gained a License section** — the landing page had one and it
+  did not — a pointer to the Zenodo DOI as the way to cite the software
+  rather than the paper, which covers only two and three flavors, and a
+  table of contents that lists its sections in the order they appear.  Three
+  `refs.bib` entries that were rendered but never cited — PREM, NuFit 4.0
+  and the LMA-D analysis — are now cited where the prose already relies on
+  them.
+
 - **Smaller corrections**: "the two core modules" in three documents where
   there are three; "every routine above accepts a stack" where the
   coefficient routines raise `TypeError`; "returns probabilities" of routines
