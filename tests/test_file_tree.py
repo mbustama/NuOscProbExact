@@ -89,6 +89,8 @@ TREE = [
     ('docs/source/changelog.rst', 'Includes the root CHANGELOG.md'),
     ('docs/source/_static/', None),
     ('docs/source/_static/nuoscprobexact_logo.png', None),
+    ('docs/source/_static/slabs_composition.svg',
+     'How slabs compose, drawn for quickstart.rst'),
     ('img/', 'Figures from earlier versions of README.md'),
     ('img/prob_3nu_vacuum_vs_baseline_ee_em_et.png', None),
     ('img/prob_3nu_vacuum_vs_energy_ee_em_et.png', None),

@@ -236,6 +236,19 @@ fixes six docstrings that stated the opposite of the code.
   and `methodology.rst`, where the measured cost of the check and the two
   attempts to reduce it are now recorded.
 
+- **A diagram of how slabs compose**, in the quickstart section above,
+  drawn as SVG rather than generated: four slabs of differing width and
+  density, the Hamiltonian and exactly-solved `U_k` each one contributes,
+  and two dashed ties that cross to show the ordering — the slab crossed
+  first is the rightmost factor in the product.  That reversal is the part
+  of the API most easily got wrong, and it is the one thing prose states
+  and a picture shows.  Hand-written SVG keeps the labels as real text,
+  adds no plotting code to a page whose point is the shortest path to a
+  probability, and costs the build nothing.  It carries a `title` and
+  `desc` for screen readers and an explicit white background, so that
+  opening the file on its own in a dark-mode viewer does not leave the
+  slate text invisible.
+
 - **`slabs` reached the quickstart too.**  The page named it once, in a
   clause inside the four-flavor section, so a reader could finish it without
   learning that the library handles piecewise-constant matter at all — the

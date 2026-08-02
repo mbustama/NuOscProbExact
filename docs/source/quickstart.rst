@@ -226,6 +226,16 @@ operators together, so the only approximation anywhere is the caller's ---
 how finely to cut a profile that really varies continuously.  Within a slab
 there is none.
 
+.. figure:: _static/slabs_composition.svg
+   :width: 100%
+   :alt: Four slabs of differing width and density, each contributing an
+         evolution operator, multiplied into one operator for the whole
+         trajectory
+
+   Each slab carries its own density, and so its own Hamiltonian and its own
+   exactly-solved :math:`U_k`.  The dashed ties are the point of the
+   ordering: the slab crossed *first* is the *rightmost* factor.
+
 Give it one Hamiltonian per slab and one width per slab:
 
 .. jupyter-execute::

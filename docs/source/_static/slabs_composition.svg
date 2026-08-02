@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 362" width="760" height="362"
+     role="img" aria-labelledby="slabs-title slabs-desc"
+     font-family="Lato, 'Helvetica Neue', Helvetica, Arial, sans-serif">
+  <title id="slabs-title">Composing evolution operators across slabs of constant density</title>
+  <desc id="slabs-desc">A neutrino travels left to right through four adjacent slabs of
+  differing width and density. Each slab k has its own Hamiltonian H_k, built from its
+  density, and contributes an evolution operator U_k(L_k) for its own width L_k. The total
+  operator is the product U_4(L_4) U_3(L_3) U_2(L_2) U_1(L_1): the slab crossed first is the
+  rightmost factor, because the operators act to the left on the initial state.</desc>
+
+  <defs>
+    <marker id="nu-arrow" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#334155"/>
+    </marker>
+    <marker id="tie-arrow" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <!-- An explicit background: the figure is also opened on its own, where a
+       viewer in dark mode would otherwise leave the slate text invisible. -->
+  <rect x="0" y="0" width="760" height="362" fill="#ffffff"/>
+
+  <!-- the trajectory, entering and leaving -->
+  <line x1="18" y1="117" x2="84" y2="117" stroke="#334155" stroke-width="2"
+        marker-end="url(#nu-arrow)"/>
+  <line x1="662" y1="117" x2="742" y2="117" stroke="#334155" stroke-width="2"
+        marker-end="url(#nu-arrow)"/>
+  <text x="30" y="105" font-size="15" font-style="italic" fill="#334155">&#957;</text>
+
+  <!-- the slabs: width is the width crossed, shade is the density -->
+  <rect x="90"  y="72" width="110" height="90" fill="#e8f1fd" stroke="#8fb5e3" stroke-width="1.5"/>
+  <rect x="200" y="72" width="230" height="90" fill="#1d4ed8" stroke="#1739a8" stroke-width="1.5"/>
+  <rect x="430" y="72" width="90"  height="90" fill="#60a5fa" stroke="#3b82f6" stroke-width="1.5"/>
+  <rect x="520" y="72" width="140" height="90" fill="#c7ddf9" stroke="#8fb5e3" stroke-width="1.5"/>
+
+  <!-- density inside each slab -->
+  <text x="145" y="123" font-size="15" text-anchor="middle" font-style="italic" fill="#1b3a5c">&#961;<tspan font-size="11" dy="4">1</tspan></text>
+  <text x="315" y="123" font-size="15" text-anchor="middle" font-style="italic" fill="#ffffff">&#961;<tspan font-size="11" dy="4">2</tspan></text>
+  <text x="475" y="123" font-size="15" text-anchor="middle" font-style="italic" fill="#0f2744">&#961;<tspan font-size="11" dy="4">3</tspan></text>
+  <text x="590" y="123" font-size="15" text-anchor="middle" font-style="italic" fill="#1b3a5c">&#961;<tspan font-size="11" dy="4">4</tspan></text>
+
+  <!-- one Hamiltonian per slab, above -->
+  <text x="145" y="58" font-size="15" text-anchor="middle" font-style="italic" fill="#334155">H<tspan font-size="11" dy="4">1</tspan></text>
+  <text x="315" y="58" font-size="15" text-anchor="middle" font-style="italic" fill="#334155">H<tspan font-size="11" dy="4">2</tspan></text>
+  <text x="475" y="58" font-size="15" text-anchor="middle" font-style="italic" fill="#334155">H<tspan font-size="11" dy="4">3</tspan></text>
+  <text x="590" y="58" font-size="15" text-anchor="middle" font-style="italic" fill="#334155">H<tspan font-size="11" dy="4">4</tspan></text>
+
+  <!-- the width crossed in each -->
+  <g stroke="#64748b" stroke-width="1">
+    <path d="M94 176 v12 M94 182 h102 M196 176 v12"/>
+    <path d="M204 176 v12 M204 182 h222 M426 176 v12"/>
+    <path d="M434 176 v12 M434 182 h82 M516 176 v12"/>
+    <path d="M524 176 v12 M524 182 h132 M656 176 v12"/>
+  </g>
+  <text x="145" y="204" font-size="14" text-anchor="middle" font-style="italic" fill="#475569">L<tspan font-size="11" dy="4">1</tspan></text>
+  <text x="315" y="204" font-size="14" text-anchor="middle" font-style="italic" fill="#475569">L<tspan font-size="11" dy="4">2</tspan></text>
+  <text x="475" y="204" font-size="14" text-anchor="middle" font-style="italic" fill="#475569">L<tspan font-size="11" dy="4">3</tspan></text>
+  <text x="590" y="204" font-size="14" text-anchor="middle" font-style="italic" fill="#475569">L<tspan font-size="11" dy="4">4</tspan></text>
+
+  <!-- each slab solved exactly, on its own -->
+  <text x="145" y="240" font-size="15" text-anchor="middle" font-style="italic" fill="#1d4ed8">U<tspan font-size="11" dy="4">1</tspan><tspan font-size="15" dy="-4">(</tspan>L<tspan font-size="11" dy="4">1</tspan><tspan font-size="15" dy="-4">)</tspan></text>
+  <text x="315" y="240" font-size="15" text-anchor="middle" font-style="italic" fill="#1d4ed8">U<tspan font-size="11" dy="4">2</tspan><tspan font-size="15" dy="-4">(</tspan>L<tspan font-size="11" dy="4">2</tspan><tspan font-size="15" dy="-4">)</tspan></text>
+  <text x="475" y="240" font-size="15" text-anchor="middle" font-style="italic" fill="#1d4ed8">U<tspan font-size="11" dy="4">3</tspan><tspan font-size="15" dy="-4">(</tspan>L<tspan font-size="11" dy="4">3</tspan><tspan font-size="15" dy="-4">)</tspan></text>
+  <text x="590" y="240" font-size="15" text-anchor="middle" font-style="italic" fill="#1d4ed8">U<tspan font-size="11" dy="4">4</tspan><tspan font-size="15" dy="-4">(</tspan>L<tspan font-size="11" dy="4">4</tspan><tspan font-size="15" dy="-4">)</tspan></text>
+
+  <!-- The two ties cross, which is the whole point: the slab met first is
+       applied first, and so ends up rightmost in the product. -->
+  <path d="M145 250 C 175 302 410 332 506 324" fill="none" stroke="#94a3b8"
+        stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#tie-arrow)"/>
+  <path d="M590 250 C 570 276 344 288 290 324" fill="none" stroke="#94a3b8"
+        stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#tie-arrow)"/>
+
+  <!-- the product, first slab crossed rightmost -->
+  <text x="214" y="345" font-size="17" text-anchor="middle" font-style="italic" fill="#0f172a">U</text>
+  <text x="238" y="345" font-size="17" text-anchor="middle" fill="#0f172a">=</text>
+  <text x="290" y="345" font-size="17" text-anchor="middle" font-style="italic" fill="#1d4ed8">U<tspan font-size="12" dy="4">4</tspan><tspan font-size="17" dy="-4">(</tspan>L<tspan font-size="12" dy="4">4</tspan><tspan font-size="17" dy="-4">)</tspan></text>
+  <text x="362" y="345" font-size="17" text-anchor="middle" font-style="italic" fill="#1d4ed8">U<tspan font-size="12" dy="4">3</tspan><tspan font-size="17" dy="-4">(</tspan>L<tspan font-size="12" dy="4">3</tspan><tspan font-size="17" dy="-4">)</tspan></text>
+  <text x="434" y="345" font-size="17" text-anchor="middle" font-style="italic" fill="#1d4ed8">U<tspan font-size="12" dy="4">2</tspan><tspan font-size="17" dy="-4">(</tspan>L<tspan font-size="12" dy="4">2</tspan><tspan font-size="17" dy="-4">)</tspan></text>
+  <text x="506" y="345" font-size="17" text-anchor="middle" font-style="italic" fill="#1d4ed8">U<tspan font-size="12" dy="4">1</tspan><tspan font-size="17" dy="-4">(</tspan>L<tspan font-size="12" dy="4">1</tspan><tspan font-size="17" dy="-4">)</tspan></text>
+
+</svg>

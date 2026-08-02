@@ -194,7 +194,8 @@ File tree
    │       ├── refs.bib                 # BibTeX entries for the bibliography
    │       ├── changelog.rst            # Includes the root CHANGELOG.md
    │       └── _static/
-   │           └── nuoscprobexact_logo.png
+   │           ├── nuoscprobexact_logo.png
+   │           └── slabs_composition.svg  # How slabs compose, drawn for quickstart.rst
    ├── img/                             # Figures from earlier versions of README.md
    │   ├── prob_3nu_vacuum_vs_baseline_ee_em_et.png
    │   ├── prob_3nu_vacuum_vs_energy_ee_em_et.png
