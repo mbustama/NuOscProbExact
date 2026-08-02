@@ -152,6 +152,47 @@ fixes six docstrings that stated the opposite of the code.
   nowhere but its own docstring, where `USE_NUMBA` has been in the quickstart
   since 1.6.0.
 
+- **A core module copied out on its own works again.**  `README.md` and
+  `installation.rst` both call copying `src/oscprob3nu.py` into your own
+  project "a supported way to use **NuOscProbExact**".  It stopped being one
+  in 1.6.0, when the optional compiled backend arrived and was imported
+  unconditionally: a lone copy raised `ImportError: No module named
+  'fastkernels'`.  Six releases, unnoticed, because any check run from inside
+  the repository finds `src/` on the path and imports the real module.  The
+  import is now guarded, an absent backend answered the same way switching it
+  off is, and a test copies each of the three modules out into a subprocess
+  with the repository stripped from `sys.path`.
+
+- **The accuracy table on the landing page** claimed "200 random Hermitian
+  Hamiltonians" where the fixture provides 100, "2000" where the test does
+  400, `4e-19` for an agreement that cannot be smaller than one ulp of a
+  probability (measured: 7e-16 and 1e-14), and `7e-12` where the measurement
+  is 3e-14 — that last appears to be the test's *assertion threshold*
+  recorded as if it were the result.
+
+- **Two documents gave different speedups for the same four scans.**
+  `methodology.rst` said ~30x, ~25x, ~40x, ~70x; the timings tabulated in
+  `index.rst` and `README.md` give 21x, 23x, 37x, 99x.  The ratios are now
+  derived from those timings and guarded together.
+
+- **The SU(3) star-product identity described as "37% off" at n=4** — one
+  draw quoted as characteristic.  Over two hundred random Hamiltonians the
+  deviation has a median of 56% and a range of 30% to 230%.
+
+- **Four flavors reached the documentation.**  `quickstart.rst` had a "Two
+  flavors" section mirroring three and nothing for four; `recipes.rst`, which
+  the landing page links as "What it can compute, with code", mentioned it
+  once in passing.  Both now carry executed examples, including the sterile
+  matter entry and a PREM crossing.  `CHECK_HERMITICITY` reached `index.rst`
+  and `methodology.rst`, where the measured cost of the check and the two
+  attempts to reduce it are now recorded.
+
+- **Smaller corrections**: "the two core modules" in three documents where
+  there are three; "every routine above accepts a stack" where the
+  coefficient routines raise `TypeError`; "returns probabilities" of routines
+  that return an operator; the short-stack shortcut described as universal
+  when four flavors has none.
+
 ### Known limits
 
 - **The electron number density uses the free-nucleon mean mass**,

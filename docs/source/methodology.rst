@@ -164,8 +164,9 @@ The SU(3) machinery is literally nested inside the SU(4) solution.
 
 **A longer star-product tower.**  The three-flavor identity
 :math:`(h \star h) \star h = \tfrac13 |h|^2 h` is a Cayley-Hamilton accident
-of :math:`n = 3` and is *false* at :math:`n = 4` --- about 37% off on a
-random Hamiltonian --- so the third rung enters as independent data:
+of :math:`n = 3` and is *false* at :math:`n = 4` --- over two hundred random
+Hamiltonians the two sides differ by a median of 56%, and by between 30% and
+230% --- so the third rung enters as independent data:
 
 .. math::
    u_0 = \frac14 \sum_m e^{-i\psi_m L} , \qquad
@@ -451,17 +452,24 @@ points:
      - Speedup
      - Also comparable to
    * - Versus baseline (one :math:`H`, many :math:`L`)
-     - ~30x
+     - ~21x
      - one ``eigh`` plus phases
    * - Versus energy (many :math:`H`, one :math:`L`)
-     - ~25x
+     - ~23x
      - batched ``numpy.linalg.eigh``
    * - Oscillogram, 100 x 100
-     - ~40x
+     - ~37x
      -
    * - Two flavors, versus baseline
-     - ~70x
+     - ~99x
      -
+
+These are the ratios of the same four measurements tabulated on the
+:doc:`landing page <index>` and in ``README.md``, which state them as
+absolute timings; the numbers here are those timings divided.  They used to
+be quoted independently and had drifted apart --- 30x against 21x, and 70x
+against 99x --- which is why they are now derived from one set of figures
+and guarded together by ``tests/test_documented_figures.py``.
 
 These ratios have *narrowed* across successive releases even as both sides got
 quicker: the scalar path has itself sped up several-fold, so the loop being
@@ -552,6 +560,49 @@ and a test asserts the thresholds are honoured.
 The scalar path is deliberately left uncompiled.  One probability takes
 about eight microseconds; compiling it would save most of that, at the cost of
 a multi-second pause on a user's first call.
+
+Checking the input, and what it costs
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The expansion assumes a Hermitian Hamiltonian, and one that is not Hermitian
+does not fail loudly: the probabilities it returns still sum to one, so the
+check a caller would actually apply cannot tell that the answer is
+meaningless.  Every entry point therefore verifies it, and the tolerance is
+relative to the largest entry, so a matrix assembled in floating point passes
+--- everything the sample-Hamiltonian modules build is Hermitian to about
+:math:`2 \times 10^{-17}` relative, against a tolerance of :math:`10^{-12}`.
+
+The cost is stated rather than buried, because it is larger than it looks.
+Validating a stack is a pass over it, which is the same order of work as
+evaluating it, and the compiled kernel has made evaluating it fast; on a
+large stack the check therefore dominates.  Interleaved, best of fifteen
+rounds each:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 30 30
+
+   * - Stack
+     - Two flavors
+     - Four flavors
+   * - 2 000 points
+     - 1.5x
+     - 1.3x
+   * - 200 000 points
+     - 5.7x
+     - 3.2x
+
+Three flavors sits between them, at 1.8x and 3.9x.  Two ways of making it
+cheaper were measured.  Comparing real and imaginary parts separately, rather
+than forming :math:`H - H^\dagger`, avoids a temporary the size of the stack
+and a square root per element, and is what the code does.  Replacing
+``np.abs(...).max()`` with reductions that allocate nothing was the obvious
+next step and came out 1.4x *slower*, because those views are strided over
+the complex array while ``np.abs`` reads it contiguously.
+
+It defaults to on regardless, because a library that silently returns
+meaningless numbers costs its user more than the check does.
+:data:`oscprob3nu.CHECK_HERMITICITY` turns it off, per module.
 
 Degenerate spectra on the batched path
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

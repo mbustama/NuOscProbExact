@@ -1,14 +1,15 @@
 Quickstart
 ==========
 
-Every routine in **NuOscProbExact** takes a Hamiltonian as a plain nested
-list or NumPy array and a baseline, and returns probabilities.  There is no
-object to construct and no state to configure.
+The routines that compute probabilities take a Hamiltonian, as a plain
+nested list or a NumPy array, and a baseline; the ones that return the
+evolution operator take the same two.  There is no object to construct and
+no state to configure.
 
 Units
 -----
 
-The two core modules are unit-agnostic: they require only that the
+The three core modules are unit-agnostic: they require only that the
 Hamiltonian and the baseline be given in reciprocal units, so that the
 product :math:`H L` is dimensionless.
 
@@ -59,8 +60,12 @@ The shortest possible use: hand the code a Hermitian matrix and a baseline.
 The probabilities are ordered with the initial flavor varying slowest, so
 ``Pem`` is :math:`P(\nu_e \to \nu_\mu)`.
 
-The Hamiltonian must be Hermitian.  Its trace is discarded, since it
-contributes only an overall phase that cancels in the probabilities.
+The Hamiltonian must be Hermitian, and is checked: one that is not raises
+``ValueError`` rather than returning numbers, because the numbers it would
+return still sum to one and so would betray nothing.  See
+:data:`oscprob3nu.CHECK_HERMITICITY` for the cost of that check and how to
+decline it.  The trace is discarded, since it contributes only an overall
+phase that cancels in the probabilities.
 
 Oscillations in vacuum
 ----------------------
@@ -137,6 +142,54 @@ Two flavors
 
    print('Pee = %.5f, Pem = %.5f' % (Pee, Pem))
 
+Four flavors
+------------
+
+:mod:`oscprob4nu` mirrors the other two in turn, with a :math:`4\times4`
+Hamiltonian and sixteen probabilities.  With the fourth state read as
+sterile, the flavor order is
+:math:`(\nu_e, \nu_\mu, \nu_\tau, \nu_s)`:
+
+.. jupyter-execute::
+
+   import oscprob4nu
+   import hamiltonians4nu
+
+   # Three extra mixing angles and one extra splitting, here
+   # Dm41^2 = 1 eV^2.  As everywhere, the angles are given as sines.
+   h4_vacuum_energy_indep = \
+       hamiltonians4nu.hamiltonian_4nu_vacuum_energy_independent(
+           S12_NO_BF, S23_NO_BF, S13_NO_BF,
+           np.sqrt(0.10), np.sqrt(0.10), 0.0,
+           DCP_NO_BF, D21_NO_BF, D31_NO_BF, 1.0)
+   h4_vacuum = np.multiply(1./energy, h4_vacuum_energy_indep)
+
+   prob = oscprob4nu.probabilities_4nu(h4_vacuum,
+                                       baseline*CONV_KM_TO_INV_EV)
+
+   print('%d probabilities' % len(prob))
+   print('Pee = %.5f, Pes = %.5f' % (prob[0], prob[3]))
+   print('they sum to %.5f' % sum(prob[0:4]))
+
+A sterile state does not feel the neutral-current potential, so that
+potential no longer cancels between the flavors: in matter it leaves
+:math:`-V_{NC}` on the sterile entry, which is what places the sterile
+matter resonance.  :func:`hamiltonians4nu.hamiltonian_4nu_matter` takes
+both potentials for that reason.
+
+.. jupyter-execute::
+
+   h4_matter = hamiltonians4nu.hamiltonian_4nu_matter(
+       h4_vacuum_energy_indep, energy, VCC_EARTH_CRUST, VNC_EARTH_CRUST)
+
+   print('sterile entry: %+.4e eV' % h4_matter[3][3].real)
+
+Layered matter and the Earth work at four flavors too ---
+:func:`slabs.probabilities_4nu_slabs` and
+:func:`earth.probabilities_4nu_earth` --- which is what a 3+1 scenario
+needs to be propagated through PREM rather than through a single average
+density.
+
 The evolution operator
 ----------------------
 
@@ -169,8 +222,11 @@ across segments of constant density legitimate.
 Scanning: pass arrays
 ---------------------
 
-Every routine above accepts a *stack* of Hamiltonians, a *stack* of
-baselines, or both, and evaluates the whole stack at once.  This is
+``probabilities_3nu`` and ``evolution_operator_3nu`` --- and their two- and
+four-flavor counterparts --- accept a *stack* of Hamiltonians, a *stack* of
+baselines, or both, and evaluate the whole stack at once.  The routines that
+return expansion coefficients are scalar-only; they are diagnostics rather
+than the path a scan takes.  This is
 between one and two orders of magnitude faster than the same calls in a
 Python loop, and it is the recommended way to produce a curve or a grid.
 
@@ -276,8 +332,10 @@ path --- to compare the two, say --- set
 
 The scalar path is deliberately left uncompiled: a single probability
 takes about eight microseconds, which is not worth a compilation
-pause.  Short *stacks* are also evaluated one element at a time, since
-below about ten elements the array machinery costs more than it saves.
+pause.  At two and three flavors short *stacks* are also evaluated one
+element at a time, since below about ten elements the array machinery costs
+more than it saves; four flavors has no such shortcut, because it has no
+separate scalar closed form to fall back to.
 
 More examples
 -------------

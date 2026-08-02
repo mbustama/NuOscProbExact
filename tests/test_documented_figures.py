@@ -213,6 +213,25 @@ def test_the_quoted_speedup_span_covers_the_four_flavor_rows():
                                  SPEEDUP_SPAN, top))
 
 
+def test_the_methodology_speedups_are_the_landing_page_ratios():
+    r"""One set of measurements, quoted two ways, kept consistent.
+
+    ``index.rst`` and ``README.md`` give the four scans as absolute
+    timings; ``methodology.rst`` gives the same four as ratios.  They
+    were written independently and had drifted --- 30x where the timings
+    give 21x, and 70x where they give 99x --- so the ratios are now
+    derived here from the timings rather than trusted.
+    """
+    text = read_flowed(METHODOLOGY_RST)
+
+    for scan, loop, arrays, _ in BENCHMARKS:
+        ratio = round(float(loop)/float(arrays))
+        assert '~%dx' % ratio in text, (
+            'methodology.rst should quote ~%dx for the "%s" row, which is '
+            'what the %s ms and %s ms in the benchmark table give'
+            % (ratio, scan, loop, arrays))
+
+
 def test_two_flavor_row_is_marked_as_not_using_the_backend():
     r"""The blank cell is explained, not left as an apparent omission."""
     for path in (README, INDEX_RST):

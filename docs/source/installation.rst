@@ -84,9 +84,13 @@ reinstalling.  The extras work the same way, for example
 Without installing anything
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The two core modules are self-contained --- they need only ``numpy`` and
-``cmath`` --- so copying ``src/oscprob2nu.py`` or ``src/oscprob3nu.py`` into
-your own project is a supported way to use **NuOscProbExact**.  Adding
+The three core modules are self-contained --- they need only ``numpy`` and
+the standard library --- so copying ``src/oscprob2nu.py``,
+``src/oscprob3nu.py`` or ``src/oscprob4nu.py`` into your own project is a
+supported way to use **NuOscProbExact**.  Each imports :mod:`fastkernels`
+if it is there and does without it if it is not, so a lone copy works and
+simply runs the NumPy path; a test copies each of the three out and
+exercises it that way.  Adding
 ``src/`` to the path works too, and is what the bundled examples do:
 
 .. code-block:: python

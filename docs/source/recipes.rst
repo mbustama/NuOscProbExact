@@ -329,6 +329,62 @@ them apart.
    Code: `notebook 12 <https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/12_ordering_and_octant.ipynb>`_.
 
 
+A sterile neutrino
+------------------
+
+Four flavors is the same call with a bigger matrix.  A 3+1 scenario is a
+*closed* four-state system, not a leak out of the three-flavor block, which
+is what brings it inside an exact method at all.
+
+.. jupyter-execute::
+
+   import numpy as np
+
+   import globaldefs as gd
+   import hamiltonians4nu
+   import oscprob4nu
+
+   h4 = hamiltonians4nu.hamiltonian_4nu_vacuum_energy_independent(
+       gd.S12_NO_BF, gd.S23_NO_BF, gd.S13_NO_BF,
+       np.sqrt(0.10), np.sqrt(0.10), 0.0,
+       gd.DCP_NO_BF, gd.D21_NO_BF, gd.D31_NO_BF, 1.0)
+
+   prob = oscprob4nu.probabilities_4nu(np.asarray(h4)/1.0e9,
+                                       1300.0*gd.CONV_KM_TO_INV_EV)
+
+   print('%d probabilities, initial flavor slowest' % len(prob))
+   print('P(nu_mu -> nu_mu) = %.5f' % prob[5])
+   print('P(nu_mu -> nu_s)  = %.5f' % prob[7])
+
+In matter the sterile state changes the problem qualitatively.  It feels
+neither potential, so the neutral-current term --- which is proportional to
+the identity across the three active flavors, and therefore invisible at two
+and three flavors --- no longer cancels.  Removing it from all four states
+costs only a global phase and leaves :math:`-V_{NC}` on the sterile entry,
+and that entry is what places the sterile matter resonance.
+
+.. jupyter-execute::
+
+   h4_matter = hamiltonians4nu.hamiltonian_4nu_matter(
+       h4, 1.0e9, gd.VCC_EARTH_CRUST, gd.VNC_EARTH_CRUST)
+
+   print('nu_e entry : %+.4e eV' % h4_matter[0][0].real)
+   print('sterile    : %+.4e eV' % h4_matter[3][3].real)
+
+Through the Earth, the same PREM machinery applies:
+:func:`earth.probabilities_4nu_earth` cuts the chord at every shell
+boundary and builds both potentials per slab.
+
+.. jupyter-execute::
+
+   import earth
+
+   prob = earth.probabilities_4nu_earth(h4, 1.0e10, -0.8)
+   print('P(nu_mu -> nu_mu) through the Earth = %.5f' % prob[5])
+
+Full walk-through: `notebook 16
+<https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/16_four_neutrinos.ipynb>`_.
+
 Where to go next
 ----------------
 

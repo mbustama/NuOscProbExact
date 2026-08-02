@@ -132,7 +132,36 @@ import math
 
 import numpy as np
 
-import fastkernels
+try:
+    import fastkernels
+except ImportError:                                       # pragma: no cover
+    # Copying this file on its own into another project is a supported way
+    # to use **NuOscProbExact**, and is documented as such --- but it stopped
+    # working in 1.6.0, when the optional compiled backend was added and
+    # imported unconditionally.  A lone copy raised ImportError on the first
+    # line that mattered, which is a poor return for a promise the
+    # documentation makes twice.
+    #
+    # The backend is optional by design, so its absence is answered the same
+    # way its being switched off is: `worthwhile` says no, and the NumPy path
+    # runs.  Nothing else in this module touches it.
+    class _NoFastKernels:
+        r"""Stands in for :mod:`fastkernels` when it is not importable."""
+
+        HAVE_NUMBA = False
+        USE_NUMBA = False
+
+        @staticmethod
+        def available():
+            r"""Returns False: there is no compiled backend here."""
+            return False
+
+        @staticmethod
+        def worthwhile(n_flavors, size):
+            r"""Returns False: no stack is worth a backend that is absent."""
+            return False
+
+    fastkernels = _NoFastKernels()
 
 
 SMALL_BATCH = 10
