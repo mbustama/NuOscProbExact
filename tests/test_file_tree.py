@@ -55,7 +55,9 @@ TREE = [
     ('.gitignore', 'Build, cache, and generated-output artefacts'),
     ('CHANGELOG.md', 'Notable changes, rendered as a docs page'),
     ('LICENSE', 'MIT license'),
-    ('README.md', 'The file that you are reading'),
+    # Not "the file that you are reading": this tree is rendered into
+    # `installation.rst` as well, where that was untrue.
+    ('README.md', 'Project overview and worked examples'),
     ('pyproject.toml', 'Packaging metadata and pytest configuration'),
     ('examples/', 'Runnable scripts, one per scenario, linked from README.md'),
     ('examples/example_2nu_trivial.py', 'Two-flavor, arbitrary Hamiltonian'),

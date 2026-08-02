@@ -170,8 +170,10 @@ def test_quoted_speedup_span_matches_the_table():
     ratios = [float(loop)/float(arrays) for _, loop, arrays, _ in BENCHMARKS]
     low, high = min(ratios), max(ratios)
 
-    # The prose rounds outward to the nearest ten, which is the honest way
-    # to quote a span whose ends are 21 and 99.
+    # The prose rounds each end down to the nearest ten, so the span reads
+    # "20 to 90" where the table gives 21 and 99.  That understates the top
+    # end rather than overstating it, which is the safe direction for a
+    # figure a reader might quote back.
     assert 20 <= low <= 30, 'lowest speedup in the table is %.0fx' % low
     assert 90 <= high <= 100, 'highest speedup in the table is %.0fx' % high
 

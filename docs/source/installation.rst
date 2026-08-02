@@ -24,7 +24,7 @@ want to do:
    * - Run the notebooks (``notebooks/``)
      - ``numpy``, ``matplotlib``, Jupyter
    * - Run the regression suite (``tests/``)
-     - ``numpy``, ``pytest``, ``scipy``
+     - ``numpy``, ``pytest``, ``scipy``, ``coverage``
    * - Speed up large scans (optional)
      - ``numba``
    * - Build this documentation
@@ -58,7 +58,7 @@ The optional extras add what each task needs, and can be combined:
 
    pip install "nuoscprobexact[fast]"       # numba, for the compiled kernels
    pip install "nuoscprobexact[notebooks]"  # Jupyter, matplotlib and scipy
-   pip install "nuoscprobexact[test]"       # pytest and scipy
+   pip install "nuoscprobexact[test]"       # pytest, scipy and coverage
    pip install "nuoscprobexact[docs]"       # Sphinx and friends
 
 This puts ``oscprob2nu``, ``oscprob3nu``, ``oscprob4nu``, ``hamiltonians2nu``,
@@ -113,7 +113,7 @@ Run the regression suite:
 Every test should either pass or be skipped, and skips are expected rather
 than a sign of trouble: the only tests that skip are those for the optional
 Numba backend, which stand down when ``numba`` is not installed --- the
-default.  Install the ``fast`` extra and the whole suite runs.  It is a few
+default.  Install the ``fast`` extra and the whole suite runs.  It is several
 hundred tests and takes a few seconds.
 
 The suite checks the SU(2), SU(3) and SU(4) machinery against independent
@@ -166,7 +166,7 @@ File tree
    ├── .gitignore                       # Build, cache, and generated-output artefacts
    ├── CHANGELOG.md                     # Notable changes, rendered as a docs page
    ├── LICENSE                          # MIT license
-   ├── README.md                        # The file that you are reading
+   ├── README.md                        # Project overview and worked examples
    ├── pyproject.toml                   # Packaging metadata and pytest configuration
    ├── examples/                        # Runnable scripts, one per scenario, linked from README.md
    │   ├── example_2nu_trivial.py       # Two-flavor, arbitrary Hamiltonian

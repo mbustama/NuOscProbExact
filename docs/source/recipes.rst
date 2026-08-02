@@ -171,7 +171,7 @@ Through the Earth
 The Earth's density is not constant, so the expansions do not apply to a whole
 trajectory.  They apply to any piece of it over which the density is taken
 constant, which is what :mod:`earth` builds from the Preliminary Reference
-Earth Model.
+Earth Model :cite:`Dziewonski:1981xy`.
 
 .. jupyter-execute::
 
