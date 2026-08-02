@@ -189,7 +189,8 @@ TREE = [
      'Those reference values, with their provenance'),
     ('tests/test_file_tree.py', 'Keeps this tree in step with the repository'),
     ('tools/', 'Scripts that are not part of the package'),
-    ('tools/make_demo_video.py', 'Renders the CP-phase sweep animation'),
+    ('tools/demo_scenes.py', 'The four scenes of the demonstration reel'),
+    ('tools/make_demo_video.py', 'Renders one scene, or the whole reel'),
 
 ]
 

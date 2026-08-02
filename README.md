@@ -286,7 +286,8 @@ NuOscProbExact/
 │   ├── nusquids_reference.json      # Those reference values, with their provenance
 │   └── test_file_tree.py            # Keeps this tree in step with the repository
 └── tools/                           # Scripts that are not part of the package
-    └── make_demo_video.py           # Renders the CP-phase sweep animation
+    ├── demo_scenes.py               # The four scenes of the demonstration reel
+    └── make_demo_video.py           # Renders one scene, or the whole reel
 ```
 
 ### Without installing anything
