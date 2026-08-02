@@ -60,6 +60,69 @@ fixes six docstrings that stated the opposite of the code.
 
 ### Fixed
 
+- **`CHECK_HERMITICITY` made a single probability nine times dearer, and
+  nothing measured it.**  The check was written for stacks, as a dozen
+  whole-array reductions, and that is the right shape at two hundred
+  thousand elements and pure overhead at one: 59 µs to validate a single
+  3x3, against 0.63 µs per element on a stack of two thousand.  A scalar
+  three-flavor probability went from 8 µs to 143 µs — and
+  `probabilities_3nu` paid it **twice**, being the only one of the three
+  that reached its answer through the public `evolution_operator_3nu`,
+  which validates the same matrix again.
+
+  Two consequences, neither visible from the test suite, which checks that
+  the documented figures agree with *each other* and never against the
+  code.  The 8 µs quoted in five places became wrong by a factor of nine.
+  And `SMALL_BATCH`, which exists to send short stacks down the cheaper
+  scalar path, inverted: at its own threshold of ten the scalar path was
+  **17.7x slower** than batching, so the optimisation had become a
+  pessimisation at every size.
+
+  `_check_hermitian` now takes a separate path for a single matrix,
+  comparing the entries as Python complex numbers, and `probabilities_3nu`
+  assembles the operator through a private helper rather than through the
+  public routine.  Measured after: a scalar three-flavor probability costs
+  17.5 µs against 143, a two-flavor one 4.3 against 34, and the check
+  itself 3.6 µs against 59.  The check now costs 1.35x on the scalar path
+  rather than 9.4x, in line with the 1.3x–1.8x it costs on a stack.
+
+  The thresholds were then re-measured, interleaved, best of seven, since
+  the numbers they were set from predate the check: the crossover is
+  thirteen elements at three flavors and twelve at two, so `SMALL_BATCH`
+  goes from 10 to 12 and from 6 to 11.  Note these govern the NumPy path
+  only — with the compiled backend installed, `fastkernels.MIN_BATCH` is
+  one at three and four flavors, so the kernel takes every stack before
+  `SMALL_BATCH` is consulted.
+
+  A later pass caught what that re-measurement broke around it.
+  `oscprob4nu.SMALL_BATCH` was documented as matching the three-flavor
+  threshold, which stopped being true the moment the three-flavor one
+  moved; its docstring also described a scalar path that four flavors does
+  not have, the quickstart having said so for two releases.  Nothing reads
+  that constant, and it now says as much.  `methodology.rst` explained the
+  two thresholds as differing because two flavors amortises its overhead
+  sooner — an explanation for a gap of four elements that survived the gap
+  becoming one, and one that contradicts the `oscprob2nu` docstring beside
+  it: they are close *despite* the difference in work per element, because
+  what is amortised is the array machinery's fixed cost.  And
+  `_check_hermitian`'s own docstring described only the stack strategy,
+  never the single-matrix branch that is now half of it.
+
+- **A nan could pass the scalar Hermiticity check.**  The first version of
+  the fast path above built its scale with `max`, which keeps its running
+  value when the comparison is against a nan — every comparison with one
+  being false — so a nan never reached `isfinite`, and a Hamiltonian the
+  batched path refuses came back with probabilities instead.  The two paths
+  disagreeing about what is valid is worse than the cost the fast path was
+  written to remove.
+
+  The whole suite passed.  The existing guard makes its matrix non-finite
+  *and* non-Hermitian, so it is refused on the second ground and cannot
+  tell whether the first works; and it never exercised the batched path.
+  Both gaps are now covered by a test that is Hermitian apart from being
+  non-finite and runs each path separately, confirmed to fail without the
+  guard.  Non-finite entries are now caught per entry, before `max`.
+
 - **Six docstring claims that the code contradicts.**  `pmns_mixing_matrix`
   and `mixing_matrix_2nu` each said 1.1.0 made them return a
   `numpy.ndarray` "rather than a nested list"; both return a nested list, and
@@ -151,6 +214,151 @@ fixes six docstrings that stated the opposite of the code.
   a user-facing switch worth 3.2x to 5.7x on a large scan was described
   nowhere but its own docstring, where `USE_NUMBA` has been in the quickstart
   since 1.6.0.
+
+- **A core module copied out on its own works again.**  `README.md` and
+  `installation.rst` both call copying `src/oscprob3nu.py` into your own
+  project "a supported way to use **NuOscProbExact**".  It stopped being one
+  in 1.6.0, when the optional compiled backend arrived and was imported
+  unconditionally: a lone copy raised `ImportError: No module named
+  'fastkernels'`.  Six releases, unnoticed, because any check run from inside
+  the repository finds `src/` on the path and imports the real module.  The
+  import is now guarded, an absent backend answered the same way switching it
+  off is, and a test copies each of the three modules out into a subprocess
+  with the repository stripped from `sys.path`.
+
+- **The accuracy table on the landing page** claimed "200 random Hermitian
+  Hamiltonians" where the fixture provides 100, "2000" where the test does
+  400, `4e-19` for an agreement that cannot be smaller than one ulp of a
+  probability (measured: 7e-16 and 1e-14), and `7e-12` where the measurement
+  is 3e-14 — that last appears to be the test's *assertion threshold*
+  recorded as if it were the result.
+
+- **Two documents gave different speedups for the same four scans.**
+  `methodology.rst` said ~30x, ~25x, ~40x, ~70x; the timings tabulated in
+  `index.rst` and `README.md` give 21x, 23x, 37x, 99x.  The ratios are now
+  derived from those timings and guarded together.
+
+- **The SU(3) star-product identity described as "37% off" at n=4** — one
+  draw quoted as characteristic.  Over two hundred random Hamiltonians the
+  deviation has a median of 56% and a range of 30% to 230%.
+
+- **Four flavors reached the documentation.**  `quickstart.rst` had a "Two
+  flavors" section mirroring three and nothing for four; `recipes.rst`, which
+  the landing page links as "What it can compute, with code", mentioned it
+  once in passing.  Both now carry executed examples, including the sterile
+  matter entry and a PREM crossing.  `CHECK_HERMITICITY` reached `index.rst`
+  and `methodology.rst`, where the measured cost of the check and the two
+  attempts to reduce it are now recorded.
+
+- **A diagram of how slabs compose**, in the quickstart section above,
+  drawn as SVG rather than generated: a neutrino entering as `nu_alpha` and
+  leaving as `nu_beta`, four slabs of differing width and density, the
+  Hamiltonian and exactly-solved `U_k` each one contributes,
+  and two dashed ties that cross to show the ordering — the slab crossed
+  first is the rightmost factor in the product.  That reversal is the part
+  of the API most easily got wrong, and it is the one thing prose states
+  and a picture shows.  Hand-written SVG keeps the labels as real text,
+  adds no plotting code to a page whose point is the shortest path to a
+  probability, and costs the build nothing.  It carries a `title` and
+  `desc` for screen readers and an explicit white background, so that
+  opening the file on its own in a dark-mode viewer does not leave the
+  slate text invisible.
+
+- **`slabs` reached the quickstart too.**  The page named it once, in a
+  clause inside the four-flavor section, so a reader could finish it without
+  learning that the library handles piecewise-constant matter at all — the
+  answer to "what about the Earth?", which is the first question the
+  constant-density example provokes.  A section now follows the evolution
+  operator, where the group property `U(L_1+L_2) = U(L_2) U(L_1)` was already
+  stated and then left unused, and shows a three-layer profile and a uniform
+  one cut into four slabs, which returns the same probability to 6e-16.
+  `recipes.rst` was deliberately left alone: its "An arbitrary matter
+  profile" already *is* that recipe, down to the castle wall that changes the
+  answer at 0.44 GeV while the mean density does not, and a second entry
+  would only duplicate it.
+
+- **The documentation's inert code is now run by a test.**  Snippets shown as
+  `jupyter-execute` are executed by the documentation build and cannot rot
+  silently; snippets shown as `code-block` are rendered and never run.  The
+  landing page's *Getting started* example — the first code a reader sees —
+  was one of the latter.  So were the two switch snippets in
+  `quickstart.rst`, where a renamed attribute would render perfectly and do
+  nothing, which is the worst way for a documented escape hatch to fail.
+
+- **The documentation now says who wrote it.**  `grep Bustamante docs/source`
+  returned exactly one hit, the `author` field inside the BibTeX entry on the
+  references page — so the docs site, the one artifact a reader reaches
+  without seeing `README.md` or `pyproject.toml`, credited its author only
+  incidentally and gave no way to reach him.  `index.rst` gains an **Author**
+  section next to Citing and License, mirroring the line `README.md` has
+  carried all along, with the address already declared in `pyproject.toml`
+  and in every module's `__email__`, and a pointer to GitHub issues as the
+  route that leaves a public record.  It is deliberately *not* folded into
+  Citing: the name is already in the BibTeX entry directly below, and no
+  citation format carries an e-mail address.
+
+- **A two-pass audit of every documentation file and the README**, run
+  before publishing, checking each claim against the code rather than against
+  the neighbouring prose.  Twenty-three findings, of which these are the ones
+  a reader would have acted on:
+
+  - `README.md` warned, in a call-out box, that a non-Hermitian matrix
+    "will output nonsensical results".  It has raised `ValueError` since
+    `CHECK_HERMITICITY` landed earlier in this release — the box described
+    exactly the behaviour this release removed, and contradicted the
+    Performance section sixty lines below it.
+  - `installation.rst` omitted `oscprob4nu` and `hamiltonians4nu` from the
+    modules `pip install` puts on the path, and both Requirements tables
+    omitted four flavors entirely.  This is the same omission recorded as
+    fixed above: it was fixed in `README.md` and left in the sibling
+    document that tells the same reader the same thing.
+  - The link to **Magnus** 404s, from both `index.rst` and `README.md`,
+    because that repository is private.  The recommendation stays; the
+    hyperlink goes until it resolves.  Found by `sphinx linkcheck`, which
+    is worth a place in the release checklist: 29 external URLs, one real
+    failure.
+  - `README.md` annotated its own benchmark row "~93x" where the two
+    timings on that line give 99, which is also what `methodology.rst`
+    quotes for the same scan.
+  - `fastkernels` and `methodology.rst` published different tables under
+    the same heading: ~9x against ~13x for one row, ~1.5x against ~1.4x for
+    another, and a different fifth scan in each.  The module is where they
+    are measured, so the page now quotes it.
+  - `recipes.rst` said the castle-wall profile gives "nearly three times"
+    the appearance probability of a uniform one; the block above it prints
+    0.0104 against 0.0028, which is 3.7.
+
+  Two guards are widened as a result, because in each case the drift
+  happened underneath a test that covered part of the same table: the
+  kernel-speedup check ran on the two four-flavor rows and now runs on all
+  six, and the README's inline ratios, which nothing checked at all, are now
+  derived from the timings beside them.  Both new checks were confirmed to
+  fail on the values they replace.
+
+- **The API reference documented the inert copy of `SMALL_BATCH`.**
+  `automodule` honours `__all__`, and only `oscprob4nu` exported it — the
+  one flavor count where nothing reads it.  The two that govern dispatch on
+  every call, in `oscprob2nu` and `oscprob3nu`, appeared nowhere and were
+  cross-referenced twice from `methodology.rst` as targets that did not
+  exist.  Exporting them also takes Sphinx in nitpicky mode from 23
+  unresolved references to **zero**; the remainder were `numpy.sqrt` and
+  `numpy.arccos` given as `:func:`, which NumPy's inventory does not
+  register as functions because they are ufuncs.  The ordinary build under
+  `-W` is silent about every one of these.
+
+- **The README gained a License section** — the landing page had one and it
+  did not — a pointer to the Zenodo DOI as the way to cite the software
+  rather than the paper, which covers only two and three flavors, and a
+  table of contents that lists its sections in the order they appear.  Three
+  `refs.bib` entries that were rendered but never cited — PREM, NuFit 4.0
+  and the LMA-D analysis — are now cited where the prose already relies on
+  them.
+
+- **Smaller corrections**: "the two core modules" in three documents where
+  there are three; "every routine above accepts a stack" where the
+  coefficient routines raise `TypeError`; "returns probabilities" of routines
+  that return an operator; the short-stack shortcut described as universal
+  when four flavors has none.
 
 ### Known limits
 

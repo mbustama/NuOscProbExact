@@ -8,6 +8,7 @@ through round-off.  Neither may produce NaN or a non-unitary operator.
 """
 
 import importlib
+import pathlib
 
 import numpy as np
 import pytest
@@ -331,6 +332,36 @@ def test_a_non_finite_entry_cannot_disable_the_check(n_flavors, bad):
         call([[complex(z) for z in row] for row in h_matrix], 1.0)
 
 
+@pytest.mark.parametrize('n_flavors', [2, 3, 4])
+@pytest.mark.parametrize('bad', [np.inf, -np.inf, np.nan])
+def test_a_non_finite_entry_is_refused_on_both_paths(n_flavors, bad):
+    r"""Non-finite alone is enough, and the two paths must agree.
+
+    The test above makes its matrix non-finite *and* non-Hermitian, so it
+    is refused either way and cannot tell which ground did it.  This one
+    is Hermitian apart from being non-finite, so only the non-finite
+    branch can refuse it --- and it checks the scalar and the batched
+    path separately, because they do not share an implementation.
+
+    Both of those gaps were real.  The scalar path added in 1.11.0 built
+    its scale with `max`, which keeps its running value when compared
+    against a nan, so a nan never reached `isfinite` and a Hamiltonian
+    the batched path refuses came back with probabilities instead.  The
+    whole suite passed.
+    """
+    module = importlib.import_module('oscprob%dnu' % n_flavors)
+    call = getattr(module, 'probabilities_%dnu' % n_flavors)
+
+    h_matrix = np.eye(n_flavors, dtype=complex)
+    h_matrix[0, 0] = bad
+
+    with pytest.raises(ValueError, match='non-finite'):
+        call([[complex(z) for z in row] for row in h_matrix], 1.0)
+
+    with pytest.raises(ValueError, match='non-finite'):
+        call(np.stack([h_matrix]*4), 1.0)
+
+
 HELPER_COPIES = [
     ('_check_hermitian',
      ['oscprob2nu', 'oscprob3nu', 'oscprob4nu']),
@@ -410,3 +441,74 @@ def test_the_degeneracy_tolerance_is_not_free_to_widen():
     # general form must be the one taken; pin the tolerance itself, since
     # that is what decides it
     assert oscprob3nu.DEGENERACY_TOL <= 1.0e-10
+
+
+# --------------------------------------------------------------------------
+# The documented "copy one file into your project" route
+# --------------------------------------------------------------------------
+
+@pytest.mark.parametrize('module_name', ['oscprob2nu', 'oscprob3nu',
+                                          'oscprob4nu'])
+def test_a_core_module_works_copied_out_on_its_own(module_name, tmp_path):
+    r"""One file, copied out, with nothing else from this repository.
+
+    ``README.md`` and ``installation.rst`` both call this a supported way
+    to use the library.  It stopped being one in 1.6.0, when the optional
+    compiled backend arrived and was imported unconditionally: a lone
+    copy raised ``ImportError: No module named 'fastkernels'``.  It went
+    unnoticed for six releases because any check run from inside the
+    repository finds ``src/`` on the path and imports the real module.
+
+    So this runs in a subprocess with the repository stripped from
+    ``sys.path``, which is the only way to reproduce a user's situation
+    from within the project.
+    """
+    import shutil
+    import subprocess
+    import sys
+    import textwrap
+
+    source = pathlib.Path(__file__).resolve().parents[1]/'src'/(
+        module_name + '.py')
+    shutil.copy(source, tmp_path/(module_name + '.py'))
+
+    n_flavors = int(module_name[len('oscprob')])
+    script = textwrap.dedent('''
+        import sys
+        sys.path = [p for p in sys.path
+                    if 'NuOscProbExact' not in p and p not in ('', '.')]
+        sys.path.insert(0, %r)
+
+        import numpy as np
+        import %s as module
+
+        n = %d
+        call = getattr(module, 'probabilities_%%dnu' %% n)
+
+        # The backend is absent, so `worthwhile` must decline it rather
+        # than raise, and the NumPy path must carry both a scalar call and
+        # a stack large enough to have reached the kernel.
+        assert module.fastkernels.worthwhile(n, 10**9) is False
+
+        h = np.diag(np.arange(1.0, n+1.0)).astype(complex)
+        h[0, 1] = 0.3 + 0.2j
+        h[1, 0] = 0.3 - 0.2j
+
+        scalar = call([[complex(z) for z in row] for row in h], 1.5)
+        assert len(scalar) == n*n
+        assert abs(sum(scalar[0:n]) - 1.0) < 1.0e-12
+
+        stack = call(np.stack([h]*500), np.full(500, 1.5))
+        assert stack.shape == (500, n*n)
+        assert abs(stack[0].reshape(n, n).sum(axis=1)[0] - 1.0) < 1.0e-12
+
+        print('ok')
+    ''') % (str(tmp_path), module_name, n_flavors)
+
+    result = subprocess.run([sys.executable, '-c', script],
+                            capture_output=True, text=True)
+
+    assert result.returncode == 0, (
+        '%s does not work copied out on its own:\n%s'
+        % (module_name, result.stderr[-1500:]))
+    assert result.stdout.strip().endswith('ok')

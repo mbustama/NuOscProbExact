@@ -73,10 +73,6 @@ extensions = [
 # meets; the library exposes only module-level routines and constants.
 numpydoc_show_class_members = False
 
-# The docstrings are numpydoc, not Google style.
-napoleon_google_docstring = False
-napoleon_numpy_docstring = True
-
 bibtex_bibfiles = ['refs.bib']
 
 intersphinx_mapping = {

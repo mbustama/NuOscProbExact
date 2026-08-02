@@ -132,19 +132,52 @@ import math
 
 import numpy as np
 
-import fastkernels
+try:
+    import fastkernels
+except ImportError:                                       # pragma: no cover
+    # Copying this file on its own into another project is a supported way
+    # to use **NuOscProbExact**, and is documented as such --- but it stopped
+    # working in 1.6.0, when the optional compiled backend was added and
+    # imported unconditionally.  A lone copy raised ImportError on the first
+    # line that mattered, which is a poor return for a promise the
+    # documentation makes twice.
+    #
+    # The backend is optional by design, so its absence is answered the same
+    # way its being switched off is: `worthwhile` says no, and the NumPy path
+    # runs.  Nothing else in this module touches it.
+    class _NoFastKernels:
+        r"""Stands in for :mod:`fastkernels` when it is not importable."""
+
+        HAVE_NUMBA = False
+        USE_NUMBA = False
+
+        @staticmethod
+        def available():
+            r"""Returns False: there is no compiled backend here."""
+            return False
+
+        @staticmethod
+        def worthwhile(n_flavors, size):
+            r"""Returns False: no stack is worth a backend that is absent."""
+            return False
+
+    fastkernels = _NoFastKernels()
 
 
 SMALL_BATCH = 10
 r"""int: Module-level constant.
 
-Stacks with at most this many elements are evaluated one at a time
-through the scalar path.  A batched call carries a fixed cost --- here a
-batched :math:`4\times4` determinant and linear solve --- which for a
-short stack exceeds what the scalar path spends on the whole job.  The
-threshold matches :data:`oscprob3nu.SMALL_BATCH`; the four-flavor
-expansion does strictly more work per element, so a threshold measured
-for three flavors is a safe one here.
+Nothing reads this.  At two and three flavors the constant of the same
+name selects between a scalar path and a batched one; four flavors has
+no separate scalar closed form to select, so every stack goes through
+the array path whatever its length, and there is no short-stack case for
+a threshold to name.  It is exported and documented as being what it is,
+rather than quietly kept.
+
+It also no longer matches :data:`oscprob3nu.SMALL_BATCH`, which it once
+did and was documented as doing: that one was re-measured when the
+scalar path was given a cheap Hermiticity check, and this one, governing
+nothing, was not.
 """
 
 POLISH_ROOTS = True
@@ -254,7 +287,10 @@ Stack            2 flavors   4 flavors
 
 Three flavors sits between them, at 1.8x and 3.9x.  So a scan that the
 compiled backend was installed to speed up can spend most of its time
-here instead.  For production scans whose Hamiltonians come from a
+here instead.  On a *single* matrix the check costs about 1.35x, and it
+takes its own branch to manage that: the reductions above are all fixed
+cost at one element, so without the branch one probability spent nine
+tenths of its time here.  For production scans whose Hamiltonians come from a
 construction already known to be Hermitian --- everything
 :mod:`hamiltonians4nu` builds is Hermitian to round-off, as the table
 below records --- set this to ``False``.
@@ -293,6 +329,11 @@ def _check_hermitian(h_matrix: np.ndarray, caller: str) -> None:
     factor of three on a large stack, where this check would otherwise
     cost several times the evaluation it guards.
 
+    That describes the stack.  A single matrix takes its own branch and
+    compares its entries as Python complex numbers, because the
+    reductions above are all fixed cost at one element and would
+    otherwise dominate a scalar probability.
+
     Parameters
     ----------
     h_matrix : numpy.ndarray
@@ -313,6 +354,63 @@ def _check_hermitian(h_matrix: np.ndarray, caller: str) -> None:
     if h_matrix.size == 0:
         return
 
+    non_finite = (
+        '%s: the Hamiltonian has a non-finite entry, so it is neither '
+        'Hermitian nor usable.  Set %s.CHECK_HERMITICITY = False to '
+        'skip this check.')
+
+    complaint = (
+        '%s: the Hamiltonian is not Hermitian%s.  The expansion assumes '
+        'Hermiticity, and without it the probabilities returned are '
+        'meaningless even though they still sum to one.  Set '
+        'oscprob4nu.CHECK_HERMITICITY = False to skip this check.')
+
+
+    # A single matrix takes its own path, because everything below is
+    # fixed cost at this size.  The reductions run about sixty
+    # microseconds on one matrix against half a microsecond per element
+    # on a stack of two thousand, and a scalar probability costs eight
+    # microseconds in total --- so when this check arrived in 1.11.0 it
+    # became nine tenths of the work, and made short stacks slower than
+    # the batched path they exist to avoid.  Comparing the entries as
+    # Python complex numbers is one conversion and a few scalar
+    # operations, and reaches the same verdict.
+    if h_matrix.ndim == 2:
+        entries = h_matrix.tolist()
+
+        # Tested per entry rather than by letting a non-finite value
+        # reach `scale`: `max` keeps its running value when the
+        # comparison is with a nan, since every comparison against one is
+        # false, so a nan would never arrive and `isfinite` would pass.
+        # The array path has no such hole, `np.max` propagating nan --- so
+        # the first draft of this branch returned probabilities for a
+        # Hamiltonian the batched path refuses, which is the divergence
+        # this check exists to prevent.
+        scale = 0.0
+        for row in entries:
+            for entry in row:
+                real, imaginary = abs(entry.real), abs(entry.imag)
+                if not (math.isfinite(real) and math.isfinite(imaginary)):
+                    raise ValueError(non_finite % (caller, 'oscprob4nu'))
+                scale = max(scale, real, imaginary)
+
+        tolerance = (_HERMITICITY_TOL*scale if scale > 0.0
+                     else _HERMITICITY_TOL)
+
+        for i in range(4):
+            if abs(entries[i][i].imag) > tolerance:
+                raise ValueError(complaint % (
+                    caller, ' --- the diagonal entry (%d, %d) has a non-zero '
+                    'imaginary part' % (i, i)))
+            for j in range(i+1, 4):
+                upper, lower = entries[i][j], entries[j][i]
+                if (abs(upper.real - lower.real) > tolerance
+                        or abs(upper.imag + lower.imag) > tolerance):
+                    raise ValueError(complaint % (
+                        caller, ' --- entry (%d, %d) is not the complex '
+                        'conjugate of entry (%d, %d)' % (i, j, j, i)))
+        return
+
     real, imaginary = h_matrix.real, h_matrix.imag
 
     # `np.abs(...).max()` allocates a float array the size of the stack,
@@ -329,18 +427,9 @@ def _check_hermitian(h_matrix: np.ndarray, caller: str) -> None:
     # so a Hamiltonian that is both non-finite *and* non-Hermitian would
     # pass a check whose whole purpose is to refuse the second.
     if not np.isfinite(scale):
-        raise ValueError(
-            '%s: the Hamiltonian has a non-finite entry, so it is neither '
-            'Hermitian nor usable.  Set %s.CHECK_HERMITICITY = False to '
-            'skip this check.' % (caller, 'oscprob4nu'))
+        raise ValueError(non_finite % (caller, 'oscprob4nu'))
 
     tolerance = _HERMITICITY_TOL*scale if scale > 0.0 else _HERMITICITY_TOL
-
-    complaint = (
-        '%s: the Hamiltonian is not Hermitian%s.  The expansion assumes '
-        'Hermiticity, and without it the probabilities returned are '
-        'meaningless even though they still sum to one.  Set '
-        'oscprob4nu.CHECK_HERMITICITY = False to skip this check.')
 
     for i in range(4):
         if np.any(np.abs(imaginary[..., i, i]) > tolerance):

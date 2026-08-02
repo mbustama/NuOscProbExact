@@ -32,16 +32,17 @@ Every figure below is produced by a notebook in [`notebooks/`](notebooks/), and 
 1. [What you can compute](#what-you-can-compute)
 
 2. [What is NuOscProbExact?](#what-is-nuoscprobexact)
+   1. [What it does](#what-it-does)
+   2. [What it does not do](#what-it-does-not-do)
+   3. [When to use Magnus instead](#when-to-use-magnus-instead)
 
 3. [Requirements](#requirements)
 
 4. [Installation](#installation)
 
-5. [When to use Magnus instead](#when-to-use-magnus-instead)
+5. [Performance](#performance)
 
-6. [Performance](#performance)
-
-7. [Usage and examples](#usage-and-examples)
+6. [Usage and examples](#usage-and-examples)
    1. [Basics](#basics)
    2. [A first probability](#a-first-probability)
    3. [Whole scans in one call](#whole-scans-in-one-call)
@@ -49,16 +50,18 @@ Every figure below is produced by a notebook in [`notebooks/`](notebooks/), and 
    5. [Arbitrary Hamiltonians](#arbitrary-hamiltonians)
    6. [Where the rest is](#where-the-rest-is)
 
-8. [Notebooks](#notebooks)
+7. [Notebooks](#notebooks)
 
-9. [Documentation and help](#documentation-and-help)
+8. [Documentation and help](#documentation-and-help)
 
-10. [Citing](#citing)
+9. [Citing](#citing)
+
+10. [License](#license)
 
 
 ## What is NuOscProbExact?
 
-**NuOscProbExact** is a Python implementation of the method developed by [Ohlsson & Snellman](https://arxiv.org/abs/hep-ph/9910546) to compute exact neutrino oscillation probabilities for arbitrary time-independent Hamiltonians.  The method was revisited and the code presented in the paper *NuOscProbExact: a general-purpose code to compute exact two-flavor and three-flavor neutrino oscillation probabilities* ([arXiv:1904.12391](http://arxiv.org/abs/1904.12391)), by Mauricio Bustamante.
+**NuOscProbExact** is a Python implementation of the method developed by [Ohlsson & Snellman](https://arxiv.org/abs/hep-ph/9910546) to compute exact neutrino oscillation probabilities for arbitrary time-independent Hamiltonians.  The method was revisited and the code presented in the paper *NuOscProbExact: a general-purpose code to compute exact two-flavor and three-flavor neutrino oscillation probabilities* ([arXiv:1904.12391](https://arxiv.org/abs/1904.12391)), by Mauricio Bustamante.
 
 The paper covers two and three flavors; the code has since been extended to **four**, through the SU(4) algebra, which brings 3+1 sterile scenarios into scope.  Four is where the closed form ends — see [why](https://mbustama.github.io/NuOscProbExact/methodology.html#why-the-method-stops-at-four).
 
@@ -85,7 +88,7 @@ The method relies on expansions of the Hamiltonian and time-evolution operators 
 
 **NuOscProbExact** assumes the Hamiltonian is constant, or piecewise constant.  Everything it is good at follows from that — and so does the one case where it is the wrong tool.
 
-Use [**Magnus**](https://github.com/mbustama/Magnus) instead when **the Hamiltonian varies continuously and appreciably over an oscillation length**.  A smoothly varying profile can always be approximated by slabs, but then the step size is set by the oscillation rather than by the density, and the slab count grows until the calculation is neither exact nor quick.
+Use **Magnus** instead when **the Hamiltonian varies continuously and appreciably over an oscillation length**.  A smoothly varying profile can always be approximated by slabs, but then the step size is set by the oscillation rather than by the density, and the slab count grows until the calculation is neither exact nor quick.
 
 | Situation | Use | Because |
 |---|---|---|
@@ -106,12 +109,12 @@ Use [**Magnus**](https://github.com/mbustama/Magnus) instead when **the Hamilton
 
 | To do this | You need | Extra |
 |---|---|---|
-| Compute probabilities (`oscprob2nu.py`, `oscprob3nu.py`) | `numpy`, `cmath` | — |
-| Use the bundled sample Hamiltonians (`hamiltonians2nu.py`, `hamiltonians3nu.py`) | `numpy`, `cmath`, `copy` | — |
+| Compute probabilities (`oscprob2nu.py`, `oscprob3nu.py`, `oscprob4nu.py`) | `numpy`, `cmath` | — |
+| Use the bundled sample Hamiltonians (`hamiltonians2nu.py`, `hamiltonians3nu.py`, `hamiltonians4nu.py`) | `numpy`, `cmath`, `copy` | — |
 | Propagate through layered matter or the Earth (`slabs.py`, `earth.py`) | `numpy` | — |
 | Go faster on large scans *(optional)* | `numba` | `fast` |
 | Run the notebooks (`notebooks/`) | `matplotlib`, Jupyter | `notebooks` |
-| Run the regression suite (`tests/`) | `pytest`, `scipy` | `test` |
+| Run the regression suite (`tests/`) | `pytest`, `scipy`, `coverage`, `pytest-cov` | `test` |
 | Build the documentation | Sphinx and friends | `docs` |
 
 Only `numpy` is ever required.  `scipy` is used by the test suite alone, to cross-check the evolution operator against an independent matrix exponential; the library itself never imports it.  `numba` is entirely optional — it is worth roughly 1.5x to 20x on large scans, depending on their size and the number of flavors, and without it the NumPy path is used and the results are identical to round-off.
@@ -136,7 +139,7 @@ The optional extras add what each task needs, and can be combined:
 ```shell
 pip install "nuoscprobexact[fast]"       # numba, for the compiled batched kernels
 pip install "nuoscprobexact[notebooks]"  # Jupyter, matplotlib and scipy, for notebooks/
-pip install "nuoscprobexact[test]"       # pytest and scipy, to run the regression suite
+pip install "nuoscprobexact[test]"       # pytest, scipy and coverage, to run the suite
 pip install "nuoscprobexact[docs]"       # Sphinx and friends, to build the documentation
 ```
 
@@ -183,7 +186,7 @@ NuOscProbExact/
 ├── .gitignore                       # Build, cache, and generated-output artefacts
 ├── CHANGELOG.md                     # Notable changes, rendered as a docs page
 ├── LICENSE                          # MIT license
-├── README.md                        # The file that you are reading
+├── README.md                        # Project overview and worked examples
 ├── pyproject.toml                   # Packaging metadata and pytest configuration
 ├── examples/                        # Runnable scripts, one per scenario, linked from README.md
 │   ├── example_2nu_trivial.py       # Two-flavor, arbitrary Hamiltonian
@@ -211,7 +214,8 @@ NuOscProbExact/
 │       ├── refs.bib                 # BibTeX entries for the bibliography
 │       ├── changelog.rst            # Includes the root CHANGELOG.md
 │       └── _static/
-│           └── nuoscprobexact_logo.png
+│           ├── nuoscprobexact_logo.png
+│           └── slabs_composition.svg  # How slabs compose, drawn for quickstart.rst
 ├── img/                             # Figures from earlier versions of README.md
 │   ├── prob_3nu_vacuum_vs_baseline_ee_em_et.png
 │   ├── prob_3nu_vacuum_vs_energy_ee_em_et.png
@@ -285,7 +289,7 @@ NuOscProbExact/
 
 ### Without installing anything
 
-The two core modules are self-contained --- they need only `numpy` and `cmath` --- so copying `src/oscprob2nu.py` or `src/oscprob3nu.py` into your own project is a supported way to use **NuOscProbExact**.  Adding `src/` to the path works too, and is what the bundled examples do:
+The three core modules are self-contained --- they need only `numpy` and the standard library --- so copying `src/oscprob2nu.py`, `src/oscprob3nu.py` or `src/oscprob4nu.py` into your own project is a supported way to use **NuOscProbExact**.  Each imports `fastkernels` if it is available and does without it if it is not, so a lone copy works and simply runs the NumPy path; a test copies each of the three out and exercises it that way.  Adding `src/` to the path works too, and is what the bundled examples do:
 
 ```python
 import sys
@@ -307,14 +311,14 @@ import oscprob3nu
 
 **Run the regression tests.**
    ```shell
-   cd /home/MyProjects/NuOscProbExact
+   cd /path/to/NuOscProbExact
    pytest
    ```
    These check the SU(2), SU(3) and SU(4) machinery against independent computations --- unitarity of the evolution operator, agreement with `scipy.linalg.expm`, agreement with the standard oscillation formulas, and the sign conventions of the sample Hamiltonians --- and run every example embedded in the docstrings.
 
 **Open the notebooks.**
    ```shell
-   cd /home/MyProjects/NuOscProbExact
+   cd /path/to/NuOscProbExact
    pip install -e ".[notebooks]"
    jupyter lab notebooks/
    ```
@@ -361,7 +365,7 @@ Measured on 2000-point scans, against the equivalent Python loop:
 | Three-flavor, vs. baseline | 38 ms | 1.8 ms (~21×) | 0.31 ms (**~120×**) |
 | Three-flavor, vs. energy | 34 ms | 1.5 ms (~23×) | 0.20 ms (**~170×**) |
 | Three-flavor oscillogram, 100×100 | 197 ms | 5.3 ms (~37×) | 0.85 ms (**~230×**) |
-| Two-flavor, vs. baseline | 6.9 ms | 0.07 ms (~93×) | *not used — see below* |
+| Two-flavor, vs. baseline | 6.9 ms | 0.07 ms (~99×) | *not used — see below* |
 
 Best of seven runs, interleaved, on one machine.  These are indicative, not precise: repeated runs vary by tens of per cent, so treat them as orders of magnitude.  [Notebook 09](notebooks/09_performance.ipynb) measures the same comparison on whatever machine runs it, which is the number to trust.
 
@@ -373,7 +377,7 @@ Two costs, so the trade is visible: importing Numba takes about 140 ms against 6
 
 ### What you do not have to think about
 
-* **Short stacks.** Below about ten elements the array machinery costs more than it saves, so those are evaluated one at a time automatically.
+* **Short stacks.** Below thirteen elements at three flavors, and twelve at two, the array machinery costs more than it saves, so those are evaluated one at a time automatically.
 * **The scalar path.** It is deliberately left uncompiled: 8 µs is not worth a compilation pause on a first call.
 * **Turning Numba off.** `fastkernels.USE_NUMBA = False` forces the NumPy path, which is how the test suite checks that the two agree.
 
@@ -406,7 +410,7 @@ In every case the initial flavor varies slowest, so `P[n*alpha + beta]` is P(nu_
 
 The evolution operator itself is available too, as `evolution_operator_Nnu(h, L)`, if you want to compose it across segments or propagate a density matrix rather than read off probabilities.
 
-> **Important:** If you feed the code a non-Hermitian matrix, it will output nonsensical results.
+> **Important:** The Hamiltonian must be Hermitian, and every entry point checks that it is: one that is not raises `ValueError` rather than returning numbers.  The check is there because the numbers it would otherwise return still sum to one, so nothing downstream would reveal the mistake.  [Performance](#performance) gives what the check costs and how to decline it where your Hamiltonians are Hermitian by construction.
 
 > **About the units:** These modules assume no units for any of the model parameters, so you need to pass values with consistent ones --- all that is required is that `H*L` be dimensionless.  The module `globaldefs` provides physical constants and conversion factors, including `CONV_KM_TO_INV_EV`, which converts a baseline in km to eV^{-1}.
 
@@ -601,7 +605,7 @@ Run them with `pip install -e ".[notebooks]"` and `jupyter lab notebooks/`.  Eve
 
 ## Documentation and help
 
-All of the modules provided in **NuOscProbExact** have been documented using Python docstrings, written in [numpydoc](https://numpydoc.readthedocs.io/) format so that they can be rendered directly by [Sphinx](https://www.sphinx-doc.org/) with the `sphinx.ext.napoleon` and `numpydoc` extensions.  They are human-readable by opening the source `.py` files.  Alternatively, they can be printed from within an interactive Python session.
+All of the modules provided in **NuOscProbExact** have been documented using Python docstrings, written in [numpydoc](https://numpydoc.readthedocs.io/) format so that they can be rendered directly by [Sphinx](https://www.sphinx-doc.org/) with the `numpydoc` extension.  They are human-readable by opening the source `.py` files.  Alternatively, they can be printed from within an interactive Python session.
 
 Every `Examples` block in the docstrings is executed when the documentation is built, so the results shown on the [API page](https://mbustama.github.io/NuOscProbExact/functions.html) are produced by the code rather than pasted beside it, and cannot drift.  The regression suite runs the same blocks on every supported Python (`tests/test_docstrings.py`), which the documentation build --- one job, one interpreter --- would not catch.
 
@@ -633,9 +637,9 @@ This will print to screen a description of what the function does (in the exampl
 
 ## Citing
 
-If you use **NuOscProbExact** in your work, we ask you that you please cite the following paper: Mauricio Bustamante, *NuOscProbExact: a general-purpose code to compute exact two-flavor and three-flavor neutrino oscillation probabilities* ([arXiv:1904.12391](http://arxiv.org/abs/1904.12391)).
+If you use **NuOscProbExact** in your work, we ask you that you please cite the following paper: Mauricio Bustamante, *NuOscProbExact: a general-purpose code to compute exact two-flavor and three-flavor neutrino oscillation probabilities* ([arXiv:1904.12391](https://arxiv.org/abs/1904.12391)).
 
-If you are citing **NuOscProbExact** in a document that will be uploaded to the arXiv, please consider using the LaTeX or BibTeX entries provided by INSPIRE ([link here](http://inspirehep.net/record/1731803/export/hx)):
+If you are citing **NuOscProbExact** in a document that will be uploaded to the arXiv, please consider using the LaTeX or BibTeX entries provided by INSPIRE ([link here](https://inspirehep.net/literature/1731803)):
 ```
 @article{Bustamante:2019ggq,
       author         = "Bustamante, Mauricio",
@@ -650,7 +654,10 @@ If you are citing **NuOscProbExact** in a document that will be uploaded to the 
 }
 ```
 
+The paper covers two and three flavors, which is what it was written about.  To cite *the software* — a particular version of it, including the four-flavor extension that came after the paper — use the Zenodo DOI badge at the top of this file, which resolves to the most recently archived release.  Zenodo mints a DOI per GitHub Release, so citing a specific version means citing the DOI archived for it.
 
 
+## License
 
+**NuOscProbExact** is released under the [MIT License](https://opensource.org/licenses/MIT).  The full text ships with the source, as [`LICENSE`](LICENSE) in the repository root.
 

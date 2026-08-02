@@ -108,8 +108,11 @@ Constants
 ---------
 
 Physical constants, unit-conversion factors, and the NuFit 4.0 best-fit
-oscillation parameters for both mass orderings.  The core modules do not need
-any of these.
+oscillation parameters :cite:`Esteban:2018azc` for both mass orderings.  The
+core modules do not need any of these.  The sample non-standard-interaction
+strengths are deliberately large, so that the worked examples show a visible
+effect; the combination matter oscillations are sensitive to puts them in the
+LMA-D region :cite:`Coloma:2019mbs` rather than anywhere near a fit.
 
 globaldefs
 ^^^^^^^^^^

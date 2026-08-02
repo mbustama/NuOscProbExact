@@ -87,7 +87,7 @@ def _cos_from_sin(sth: Union[int, float], name: str, caller: str) -> float:
     turns a value outside that range into whatever the square root does
     with a negative argument, which differed between the flavor counts:
     :mod:`math` raised ``math domain error``, naming neither the
-    parameter nor the value, while :func:`numpy.sqrt` returned ``nan``
+    parameter nor the value, while :obj:`numpy.sqrt` returned ``nan``
     and let it propagate silently into the probabilities.
 
     Parameters

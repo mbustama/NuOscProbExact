@@ -16,14 +16,15 @@ want to do:
 
    * - To do this
      - You need
-   * - Compute probabilities (:mod:`oscprob2nu`, :mod:`oscprob3nu`)
+   * - Compute probabilities (:mod:`oscprob2nu`, :mod:`oscprob3nu`,
+       :mod:`oscprob4nu`)
      - ``numpy``
    * - Use the bundled sample Hamiltonians
      - ``numpy``
    * - Run the notebooks (``notebooks/``)
      - ``numpy``, ``matplotlib``, Jupyter
    * - Run the regression suite (``tests/``)
-     - ``numpy``, ``pytest``, ``scipy``
+     - ``numpy``, ``pytest``, ``scipy``, ``coverage``
    * - Speed up large scans (optional)
      - ``numba``
    * - Build this documentation
@@ -57,13 +58,13 @@ The optional extras add what each task needs, and can be combined:
 
    pip install "nuoscprobexact[fast]"       # numba, for the compiled kernels
    pip install "nuoscprobexact[notebooks]"  # Jupyter, matplotlib and scipy
-   pip install "nuoscprobexact[test]"       # pytest and scipy
+   pip install "nuoscprobexact[test]"       # pytest, scipy and coverage
    pip install "nuoscprobexact[docs]"       # Sphinx and friends
 
-This puts ``oscprob2nu``, ``oscprob3nu``, ``hamiltonians2nu``,
-``hamiltonians3nu``, ``globaldefs``, ``fastkernels``, ``slabs`` and ``earth``
-on your Python path under exactly those names --- the same names the paper and
-the worked examples use.
+This puts ``oscprob2nu``, ``oscprob3nu``, ``oscprob4nu``, ``hamiltonians2nu``,
+``hamiltonians3nu``, ``hamiltonians4nu``, ``globaldefs``, ``fastkernels``,
+``slabs`` and ``earth`` on your Python path under exactly those names --- the
+same names the paper and the worked examples use.
 
 From GitHub
 ^^^^^^^^^^^
@@ -84,9 +85,13 @@ reinstalling.  The extras work the same way, for example
 Without installing anything
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The two core modules are self-contained --- they need only ``numpy`` and
-``cmath`` --- so copying ``src/oscprob2nu.py`` or ``src/oscprob3nu.py`` into
-your own project is a supported way to use **NuOscProbExact**.  Adding
+The three core modules are self-contained --- they need only ``numpy`` and
+the standard library --- so copying ``src/oscprob2nu.py``,
+``src/oscprob3nu.py`` or ``src/oscprob4nu.py`` into your own project is a
+supported way to use **NuOscProbExact**.  Each imports :mod:`fastkernels`
+if it is there and does without it if it is not, so a lone copy works and
+simply runs the NumPy path; a test copies each of the three out and
+exercises it that way.  Adding
 ``src/`` to the path works too, and is what the bundled examples do:
 
 .. code-block:: python
@@ -108,7 +113,7 @@ Run the regression suite:
 Every test should either pass or be skipped, and skips are expected rather
 than a sign of trouble: the only tests that skip are those for the optional
 Numba backend, which stand down when ``numba`` is not installed --- the
-default.  Install the ``fast`` extra and the whole suite runs.  It is a few
+default.  Install the ``fast`` extra and the whole suite runs.  It is several
 hundred tests and takes a few seconds.
 
 The suite checks the SU(2), SU(3) and SU(4) machinery against independent
@@ -161,7 +166,7 @@ File tree
    ├── .gitignore                       # Build, cache, and generated-output artefacts
    ├── CHANGELOG.md                     # Notable changes, rendered as a docs page
    ├── LICENSE                          # MIT license
-   ├── README.md                        # The file that you are reading
+   ├── README.md                        # Project overview and worked examples
    ├── pyproject.toml                   # Packaging metadata and pytest configuration
    ├── examples/                        # Runnable scripts, one per scenario, linked from README.md
    │   ├── example_2nu_trivial.py       # Two-flavor, arbitrary Hamiltonian
@@ -189,7 +194,8 @@ File tree
    │       ├── refs.bib                 # BibTeX entries for the bibliography
    │       ├── changelog.rst            # Includes the root CHANGELOG.md
    │       └── _static/
-   │           └── nuoscprobexact_logo.png
+   │           ├── nuoscprobexact_logo.png
+   │           └── slabs_composition.svg  # How slabs compose, drawn for quickstart.rst
    ├── img/                             # Figures from earlier versions of README.md
    │   ├── prob_3nu_vacuum_vs_baseline_ee_em_et.png
    │   ├── prob_3nu_vacuum_vs_energy_ee_em_et.png

@@ -87,20 +87,20 @@ against an independent computation:
 
    * - Property
      - Measured agreement
-   * - :math:`U_3` vs ``scipy.linalg.expm``, 200 random Hermitian Hamiltonians
+   * - :math:`U_3` vs ``scipy.linalg.expm``, 100 random Hermitian Hamiltonians
      - 8e-15
-   * - :math:`U_2` vs ``scipy.linalg.expm``, 200 random Hermitian Hamiltonians
-     - 1.3e-15
-   * - :math:`U_4` vs ``scipy.linalg.expm``, 2000 random Hermitian Hamiltonians
-     - 3.7e-14
+   * - :math:`U_2` vs ``scipy.linalg.expm``, 100 random Hermitian Hamiltonians
+     - 1.6e-15
+   * - :math:`U_4` vs ``scipy.linalg.expm``, 400 random Hermitian Hamiltonians
+     - 2.9e-14
    * - Unitarity, :math:`U^\dagger U - \mathbb{1}`
      - 5e-15
    * - Hard-coded :math:`d_{ijk}` vs :math:`\frac{1}{4}\mathrm{Tr}(\{\lambda_i,\lambda_j\}\lambda_k)`, all 512 entries
      - 2e-16
    * - Exact result vs the standard vacuum oscillation formula
-     - 4e-19
+     - 7e-16 (two flavors), 1e-14 (three)
    * - Four flavors with the sterile angles off, vs :mod:`oscprob3nu`
-     - 7e-12
+     - 3e-14, in vacuum and in matter alike
    * - Three flavors vs `nuSQuIDS <https://github.com/arguelles/nuSQuIDS>`_,
        an independent external code
      - 2e-15
@@ -108,6 +108,12 @@ against an independent computation:
      - 4e-16 to 3e-10
    * - Matter spectrum vs the Zaglauer-Schwarzer closed form
      - 7e-16
+
+Each figure is the worst case the corresponding test actually reaches, on
+the conditions that test uses --- not the tolerance it asserts against,
+which is looser.  ``tests/test_documented_figures.py`` guards the
+performance numbers on this page; these accuracy ones are reproduced by
+running the suite.
 
 One line of context for the four-flavor row.  A *stiff* spectrum --- a 3+1
 scenario with an eV-scale :math:`\Delta m^2_{41}` --- reaches about
@@ -185,8 +191,8 @@ When to use Magnus instead
 constant.  Everything it is good at follows from that, and so does the one
 case where it is the wrong tool.
 
-Reach for `Magnus <https://github.com/mbustama/Magnus>`_ instead when **the
-Hamiltonian varies continuously and appreciably over an oscillation length**.
+Reach for **Magnus** instead when **the Hamiltonian varies continuously and
+appreciably over an oscillation length**.
 A smoothly varying profile can always be approximated by slabs, but the step
 size is then set by the oscillation rather than by the density, and the slab
 count grows until the calculation is neither exact nor quick.  Concretely:
@@ -279,6 +285,16 @@ NumPy already does about as well as compiled code can.  Below fifty thousand
 elements the NumPy path is kept; above it the kernel leads by about 1.3 to
 1.8 times.  The library chooses without being asked.
 
+**One cost runs the other way.**  Every entry point verifies that the
+Hamiltonian is Hermitian, because one that is not returns probabilities that
+still sum to one and so betrays nothing.  Validating a stack is a pass over
+it --- the same order of work as evaluating it, and the compiled kernel has
+made evaluating it fast --- so it costs 1.3 to 1.8 times on a 2000-point scan
+and 3.2 to 5.7 times on a 200 000-point one.  It is on by default anyway;
+where the Hamiltonians come from a construction already trusted, set
+:data:`oscprob3nu.CHECK_HERMITICITY` to ``False``, and likewise on the other
+two modules.
+
 :doc:`methodology` explains where the time goes, and what was tried and
 rejected.
 
@@ -325,6 +341,14 @@ See :doc:`installation` and :doc:`quickstart` for the longer version.
    functions
    references
    changelog
+
+Author
+------
+
+**NuOscProbExact** was written by Mauricio Bustamante
+(mbustamante@gmail.com).  Bug reports and questions are best raised as
+`GitHub issues <https://github.com/mbustama/NuOscProbExact/issues>`_, which
+leave a public record others can find.
 
 Citing
 ------
