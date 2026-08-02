@@ -258,7 +258,7 @@ closely, and near a particular one they do not.
                appearance(uniform, energy_gev*GEV)))
 
 At 3 GeV the two are indistinguishable; at 0.44 GeV the castle wall gives
-nearly three times the appearance probability of a uniform slab of the same
+nearly four times the appearance probability of a uniform slab of the same
 mean density.
 
 .. figure:: ../../img/gallery/gallery_profiles.png

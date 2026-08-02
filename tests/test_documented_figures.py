@@ -68,11 +68,23 @@ BENCHMARKS = [
 ]
 
 
-# The four-flavor kernel's speedups, stated in `fastkernels`' own module
-# docstring and again in the methodology page's table.  Held as the "~19x"
-# spelling both documents use.
-SPEEDUP_4NU = [('200 000 energies, four flavors', '19'),
-               ('20 000 energies, four flavors', '18')]
+# The compiled kernel's speedups against the NumPy path, stated in
+# `fastkernels`' own module docstring and again in the methodology page's
+# table.  Held as the "~19x" spelling both documents use.
+#
+# This used to hold the two four-flavor rows alone, and the other four
+# drifted apart underneath it: the audit before 1.11.0 was released found
+# "20 000 energies, three flavors" quoted as ~9x in the module and ~13x on
+# the page, and the two-flavor row as ~1.5x against ~1.4x, while the fifth
+# row was a different scan entirely in each.  A guard that covers part of a
+# table is an invitation to the rest of it.  `fastkernels` is the source
+# these are measured in, so it is the one the page is checked against.
+SPEEDUP_KERNEL = [('200 000 energies, four flavors', '19'),
+                  ('20 000 energies, four flavors', '18'),
+                  ('200 000 energies, three flavors', '15'),
+                  ('20 000 energies, three flavors', '9'),
+                  ('100 x 100 oscillogram', '3.5'),
+                  ('200 000 baselines, two flavors', '1.5')]
 
 # The span quoted for the backend as a whole, in the two documents that
 # summarise it in one sentence rather than tabulating it.
@@ -171,46 +183,54 @@ def test_quoted_speedup_span_matches_the_table():
             % (os.path.relpath(path, ROOT), low, high))
 
 
-def test_four_flavor_speedups_agree_between_module_and_methodology():
-    r"""The four-flavor rows say the same thing in both places.
+def test_kernel_speedups_agree_between_module_and_methodology():
+    r"""Every row says the same thing in both places.
 
     Added with the four-flavor kernel in 1.10.0, because the figure is
     stated twice the moment it is stated at all --- which is the shape of
-    every drift this module already guards against.
+    every drift this module already guards against.  Widened from the two
+    four-flavor rows to the whole table once the other four were found to
+    have drifted apart in exactly that way.
     """
-    for stack, speedup in SPEEDUP_4NU:
+    for stack, speedup in SPEEDUP_KERNEL:
         rows = stack.split(',')[0]
         for path in (FASTKERNELS, METHODOLOGY_RST):
             text = read_flowed(path)
             assert '~%sx' % speedup in text, (
                 '%s does not quote ~%sx, the measured speedup for the "%s" '
-                'row of the four-flavor benchmark'
+                'row of the kernel benchmark'
                 % (os.path.relpath(path, ROOT), speedup, stack))
             assert rows in text, (
-                '%s quotes four-flavor speedups but no longer names the "%s" '
+                '%s quotes kernel speedups but no longer names the "%s" '
                 'stack they were measured on'
                 % (os.path.relpath(path, ROOT), stack))
 
 
-def test_the_quoted_speedup_span_covers_the_four_flavor_rows():
+def test_the_quoted_speedup_span_covers_the_tabulated_rows():
     r"""The one-sentence summary brackets the tabulated figures.
 
     The README and the quickstart compress the whole table into a single
-    range.  A four-flavor row above the top of that range is exactly the
-    kind of contradiction that has been found by hand here before.
+    range.  A row outside either end of that range is exactly the kind of
+    contradiction that has been found by hand here before.
     """
-    top = max(int(speedup) for _, speedup in SPEEDUP_4NU)
-    quoted = int(re.search(r'to (\d+)x', SPEEDUP_SPAN).group(1))
-    assert quoted >= top, (
-        'the documents quote "%s" but the four-flavor table reaches ~%dx'
-        % (SPEEDUP_SPAN, top))
+    speedups = [float(speedup) for _, speedup in SPEEDUP_KERNEL]
+    low, high = min(speedups), max(speedups)
+    quoted_low, quoted_high = (float(value) for value in
+                               re.search(r'([\d.]+)x to ([\d.]+)x',
+                                         SPEEDUP_SPAN).groups())
+    assert quoted_low <= low, (
+        'the documents quote "%s" but the table reaches down to ~%gx'
+        % (SPEEDUP_SPAN, low))
+    assert quoted_high >= high, (
+        'the documents quote "%s" but the table reaches ~%gx'
+        % (SPEEDUP_SPAN, high))
 
     for path in (README, QUICKSTART_RST):
         text = read_flowed(path)
         assert SPEEDUP_SPAN in text, (
-            '%s should quote the backend as worth "%s"; the four-flavor '
-            'rows reach ~%dx' % (os.path.relpath(path, ROOT),
-                                 SPEEDUP_SPAN, top))
+            '%s should quote the backend as worth "%s"; the tabulated '
+            'rows span ~%gx to ~%gx' % (os.path.relpath(path, ROOT),
+                                        SPEEDUP_SPAN, low, high))
 
 
 def test_the_methodology_speedups_are_the_landing_page_ratios():
@@ -230,6 +250,33 @@ def test_the_methodology_speedups_are_the_landing_page_ratios():
             'methodology.rst should quote ~%dx for the "%s" row, which is '
             'what the %s ms and %s ms in the benchmark table give'
             % (ratio, scan, loop, arrays))
+
+
+def test_the_readme_states_its_own_benchmark_ratios_correctly():
+    r"""The README divides its own table in the margin, so check it.
+
+    ``README.md`` annotates each row of the benchmark table with the
+    ratio of the two timings on that same line --- "0.07 ms (~99x)".
+    Nothing checked those, and one of them was wrong: the two-flavor row
+    read ~93x where 6.9/0.07 is 99, contradicting both the numbers beside
+    it and the ratio quoted on the methodology page.  Three of the four
+    were right, which is how it survived three passes by eye.
+    """
+    text = read_flowed(README)
+
+    for scan, loop, arrays, numba in BENCHMARKS:
+        ratio = round(float(loop)/float(arrays))
+        assert '(~%d×)' % ratio in text, (
+            'README.md should annotate the "%s" row with (~%d×), which '
+            'is what the %s ms and %s ms on that same line give'
+            % (scan, ratio, loop, arrays))
+
+        if numba is not None:
+            with_numba = round(float(loop)/float(numba), -1)
+            assert '~%d×' % with_numba in text, (
+                'README.md should annotate the "%s" row with ~%d× for '
+                'the compiled path, which is what the %s ms and %s ms on '
+                'that same line give' % (scan, with_numba, loop, numba))
 
 
 def test_two_flavor_row_is_marked_as_not_using_the_backend():

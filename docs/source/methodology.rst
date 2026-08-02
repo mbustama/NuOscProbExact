@@ -222,17 +222,22 @@ misread as a problem.
 **None of this is near any measurable effect.**  Oscillation probabilities
 are confronted with data at the per-cent level at best, and the systematic
 uncertainties of a real experiment dominate long before the fourth decimal
-place.  Even the *worst* number on this page --- the unrefined four-flavor
-result at :math:`5\times10^{-7}` --- sits four or five orders of magnitude
-below anything an experiment can resolve, and the refined one at
-:math:`10^{-9}` is far beyond any physics requirement.
+place.  Both figures in this paragraph are errors on a **probability**.  The
+table further down measures something else --- the relative error of the
+latent roots themselves --- so its numbers are smaller and are not
+comparable to these: an error in a root reaches the probability as a phase
+error :math:`\delta\psi\,L`, amplified by the baseline.  Even the worst
+probability here --- the unrefined four-flavor result at
+:math:`5\times10^{-7}` --- sits four or five orders of magnitude below
+anything an experiment can resolve, and the refined one at :math:`10^{-9}`
+is far beyond any physics requirement.
 
 So why care?  Three reasons, none of them about a single probability:
 
 * **The claim.**  This library says it computes probabilities exactly, with
-  no approximation beyond round-off.  A figure of :math:`5\times10^{-7}` is
-  still round-off-limited in a sense, but it is not the same claim, and the
-  difference should be stated rather than glossed.
+  no approximation beyond round-off.  A probability wrong by
+  :math:`5\times10^{-7}` is still round-off-limited in a sense, but it is not
+  the same claim, and the difference should be stated rather than glossed.
 * **Composition.**  :mod:`slabs` and :mod:`earth` multiply evolution
   operators across many layers, so a per-layer error accumulates.  What is
   invisible in one probability need not stay invisible across a hundred.
@@ -526,13 +531,11 @@ and spreads the elements over the available cores.  Against the NumPy path:
    * - 200 000 energies, three flavors
      - ~15x
    * - 20 000 energies, three flavors
-     - ~13x
-   * - 2 000 energies, three flavors
-     - ~3x
+     - ~9x
+   * - 100 x 100 oscillogram
+     - ~3.5x
    * - 200 000 baselines, two flavors
-     - ~1.4x
-   * - 2 000 baselines, two flavors
-     - NumPy is quicker
+     - ~1.5x
 
 Four flavors gains the most, and the reason is worth stating, because it is
 not that the kernel is cleverer there.  That expansion needs a quartic, a
@@ -542,7 +545,7 @@ than fifteen, one of them a batched :math:`4\times4` determinant.  Done one
 element at a time none of it leaves the registers, so the path carrying the
 most fixed cost is the one with the most to shed.
 
-The two-flavor rows are the honest caveat: that path reduces to a square root
+The two-flavor row is the honest caveat: that path reduces to a square root
 and a sine per element, which NumPy already does about as well as compiled
 code can, and the kernel additionally has to materialise the Hamiltonian
 stack --- for a scan over baselines, the same matrix repeated, which costs

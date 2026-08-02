@@ -361,7 +361,7 @@ Measured on 2000-point scans, against the equivalent Python loop:
 | Three-flavor, vs. baseline | 38 ms | 1.8 ms (~21×) | 0.31 ms (**~120×**) |
 | Three-flavor, vs. energy | 34 ms | 1.5 ms (~23×) | 0.20 ms (**~170×**) |
 | Three-flavor oscillogram, 100×100 | 197 ms | 5.3 ms (~37×) | 0.85 ms (**~230×**) |
-| Two-flavor, vs. baseline | 6.9 ms | 0.07 ms (~93×) | *not used — see below* |
+| Two-flavor, vs. baseline | 6.9 ms | 0.07 ms (~99×) | *not used — see below* |
 
 Best of seven runs, interleaved, on one machine.  These are indicative, not precise: repeated runs vary by tens of per cent, so treat them as orders of magnitude.  [Notebook 09](notebooks/09_performance.ipynb) measures the same comparison on whatever machine runs it, which is the number to trust.
 
