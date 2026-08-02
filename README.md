@@ -261,30 +261,32 @@ NuOscProbExact/
 │   ├── fastkernels.py               # Optional Numba kernels, with a NumPy fallback
 │   ├── slabs.py                     # Propagation across adjacent slabs
 │   └── earth.py                     # PREM, chord geometry, and Earth crossings
-└── tests/                           # Regression suite, run with pytest
-    ├── conftest.py                  # Shared fixtures and path setup
-    ├── test_su3_algebra.py          # d tensor, star product, SU(3) invariants
-    ├── test_oscprob4nu.py           # SU(4) algebra, quartic roots, 3+1 physics
-    ├── test_evolution_operator.py   # U against an independent matrix exponential
-    ├── test_probabilities.py        # Normalization, positivity, P = |U|^2
-    ├── test_hamiltonians.py         # Sample Hamiltonians and sign conventions
-    ├── test_reference_formulas.py   # Exact result against the standard formulas
-    ├── test_matter_eigenvalues.py   # Matter spectrum, against Zaglauer-Schwarzer
-    ├── test_edge_cases.py           # Degenerate and near-degenerate Hamiltonians
-    ├── test_docstrings.py           # Runs the examples embedded in the docstrings
-    ├── test_vectorized.py           # The batched path, against the scalar one
-    ├── test_vectorized_hamiltonians.py  # Hamiltonians built for an array of energies
-    ├── test_annotations.py          # Annotations, and their agreement with the docs
-    ├── test_fastkernels.py          # Both backends, against each other
-    ├── test_physical_scales.py      # Both backends at the scales actually used
-    ├── test_slabs.py                # Slab composition, against expm
-    ├── test_earth.py                # PREM, geometry, and Earth probabilities
-    ├── test_documented_figures.py   # Keeps the quoted performance figures agreeing
-    ├── test_version_consistency.py  # Keeps the version agreeing wherever it is implied
-    ├── test_nusquids_comparison.py  # Against nuSQuIDS, an independent external code
-    ├── nusquids_reference.py        # Regenerates the frozen nuSQuIDS reference data
-    ├── nusquids_reference.json      # Those reference values, with their provenance
-    └── test_file_tree.py            # Keeps this tree in step with the repository
+├── tests/                           # Regression suite, run with pytest
+│   ├── conftest.py                  # Shared fixtures and path setup
+│   ├── test_su3_algebra.py          # d tensor, star product, SU(3) invariants
+│   ├── test_oscprob4nu.py           # SU(4) algebra, quartic roots, 3+1 physics
+│   ├── test_evolution_operator.py   # U against an independent matrix exponential
+│   ├── test_probabilities.py        # Normalization, positivity, P = |U|^2
+│   ├── test_hamiltonians.py         # Sample Hamiltonians and sign conventions
+│   ├── test_reference_formulas.py   # Exact result against the standard formulas
+│   ├── test_matter_eigenvalues.py   # Matter spectrum, against Zaglauer-Schwarzer
+│   ├── test_edge_cases.py           # Degenerate and near-degenerate Hamiltonians
+│   ├── test_docstrings.py           # Runs the examples embedded in the docstrings
+│   ├── test_vectorized.py           # The batched path, against the scalar one
+│   ├── test_vectorized_hamiltonians.py  # Hamiltonians built for an array of energies
+│   ├── test_annotations.py          # Annotations, and their agreement with the docs
+│   ├── test_fastkernels.py          # Both backends, against each other
+│   ├── test_physical_scales.py      # Both backends at the scales actually used
+│   ├── test_slabs.py                # Slab composition, against expm
+│   ├── test_earth.py                # PREM, geometry, and Earth probabilities
+│   ├── test_documented_figures.py   # Keeps the quoted performance figures agreeing
+│   ├── test_version_consistency.py  # Keeps the version agreeing wherever it is implied
+│   ├── test_nusquids_comparison.py  # Against nuSQuIDS, an independent external code
+│   ├── nusquids_reference.py        # Regenerates the frozen nuSQuIDS reference data
+│   ├── nusquids_reference.json      # Those reference values, with their provenance
+│   └── test_file_tree.py            # Keeps this tree in step with the repository
+└── tools/                           # Scripts that are not part of the package
+    └── make_demo_video.py           # Renders the CP-phase sweep animation
 ```
 
 ### Without installing anything

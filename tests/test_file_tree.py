@@ -188,6 +188,8 @@ TREE = [
     ('tests/nusquids_reference.json',
      'Those reference values, with their provenance'),
     ('tests/test_file_tree.py', 'Keeps this tree in step with the repository'),
+    ('tools/', 'Scripts that are not part of the package'),
+    ('tools/make_demo_video.py', 'Renders the CP-phase sweep animation'),
 
 ]
 
