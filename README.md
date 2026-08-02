@@ -85,7 +85,7 @@ The method relies on expansions of the Hamiltonian and time-evolution operators 
 
 **NuOscProbExact** assumes the Hamiltonian is constant, or piecewise constant.  Everything it is good at follows from that — and so does the one case where it is the wrong tool.
 
-Use [**Magnus**](https://github.com/mbustama/Magnus) instead when **the Hamiltonian varies continuously and appreciably over an oscillation length**.  A smoothly varying profile can always be approximated by slabs, but then the step size is set by the oscillation rather than by the density, and the slab count grows until the calculation is neither exact nor quick.
+Use **Magnus** instead when **the Hamiltonian varies continuously and appreciably over an oscillation length**.  A smoothly varying profile can always be approximated by slabs, but then the step size is set by the oscillation rather than by the density, and the slab count grows until the calculation is neither exact nor quick.
 
 | Situation | Use | Because |
 |---|---|---|
@@ -106,8 +106,8 @@ Use [**Magnus**](https://github.com/mbustama/Magnus) instead when **the Hamilton
 
 | To do this | You need | Extra |
 |---|---|---|
-| Compute probabilities (`oscprob2nu.py`, `oscprob3nu.py`) | `numpy`, `cmath` | — |
-| Use the bundled sample Hamiltonians (`hamiltonians2nu.py`, `hamiltonians3nu.py`) | `numpy`, `cmath`, `copy` | — |
+| Compute probabilities (`oscprob2nu.py`, `oscprob3nu.py`, `oscprob4nu.py`) | `numpy`, `cmath` | — |
+| Use the bundled sample Hamiltonians (`hamiltonians2nu.py`, `hamiltonians3nu.py`, `hamiltonians4nu.py`) | `numpy`, `cmath`, `copy` | — |
 | Propagate through layered matter or the Earth (`slabs.py`, `earth.py`) | `numpy` | — |
 | Go faster on large scans *(optional)* | `numba` | `fast` |
 | Run the notebooks (`notebooks/`) | `matplotlib`, Jupyter | `notebooks` |
@@ -406,7 +406,7 @@ In every case the initial flavor varies slowest, so `P[n*alpha + beta]` is P(nu_
 
 The evolution operator itself is available too, as `evolution_operator_Nnu(h, L)`, if you want to compose it across segments or propagate a density matrix rather than read off probabilities.
 
-> **Important:** If you feed the code a non-Hermitian matrix, it will output nonsensical results.
+> **Important:** The Hamiltonian must be Hermitian, and every entry point checks that it is: one that is not raises `ValueError` rather than returning numbers.  The check is there because the numbers it would otherwise return still sum to one, so nothing downstream would reveal the mistake.  [Performance](#performance) gives what the check costs and how to decline it where your Hamiltonians are Hermitian by construction.
 
 > **About the units:** These modules assume no units for any of the model parameters, so you need to pass values with consistent ones --- all that is required is that `H*L` be dimensionless.  The module `globaldefs` provides physical constants and conversion factors, including `CONV_KM_TO_INV_EV`, which converts a baseline in km to eV^{-1}.
 

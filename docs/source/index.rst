@@ -191,8 +191,8 @@ When to use Magnus instead
 constant.  Everything it is good at follows from that, and so does the one
 case where it is the wrong tool.
 
-Reach for `Magnus <https://github.com/mbustama/Magnus>`_ instead when **the
-Hamiltonian varies continuously and appreciably over an oscillation length**.
+Reach for **Magnus** instead when **the Hamiltonian varies continuously and
+appreciably over an oscillation length**.
 A smoothly varying profile can always be approximated by slabs, but the step
 size is then set by the oscillation rather than by the density, and the slab
 count grows until the calculation is neither exact nor quick.  Concretely:

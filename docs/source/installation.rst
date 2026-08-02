@@ -16,7 +16,8 @@ want to do:
 
    * - To do this
      - You need
-   * - Compute probabilities (:mod:`oscprob2nu`, :mod:`oscprob3nu`)
+   * - Compute probabilities (:mod:`oscprob2nu`, :mod:`oscprob3nu`,
+       :mod:`oscprob4nu`)
      - ``numpy``
    * - Use the bundled sample Hamiltonians
      - ``numpy``
@@ -60,10 +61,10 @@ The optional extras add what each task needs, and can be combined:
    pip install "nuoscprobexact[test]"       # pytest and scipy
    pip install "nuoscprobexact[docs]"       # Sphinx and friends
 
-This puts ``oscprob2nu``, ``oscprob3nu``, ``hamiltonians2nu``,
-``hamiltonians3nu``, ``globaldefs``, ``fastkernels``, ``slabs`` and ``earth``
-on your Python path under exactly those names --- the same names the paper and
-the worked examples use.
+This puts ``oscprob2nu``, ``oscprob3nu``, ``oscprob4nu``, ``hamiltonians2nu``,
+``hamiltonians3nu``, ``hamiltonians4nu``, ``globaldefs``, ``fastkernels``,
+``slabs`` and ``earth`` on your Python path under exactly those names --- the
+same names the paper and the worked examples use.
 
 From GitHub
 ^^^^^^^^^^^
