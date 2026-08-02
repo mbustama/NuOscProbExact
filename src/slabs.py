@@ -18,8 +18,10 @@ Hamiltonian :math:`H_k` and width :math:`L_k`, the evolution operator is
 
 with the slab the neutrino meets first applied first --- rightmost,
 since the operators act to the left on the initial state.  Each
-:math:`U_k` is the exact SU(2) or SU(3) expansion of :mod:`oscprob2nu`
-or :mod:`oscprob3nu`, so the only approximation in the result is the one
+:math:`U_k` is the exact SU(2), SU(3) or SU(4) expansion of
+:mod:`oscprob2nu`,
+:mod:`oscprob3nu` or :mod:`oscprob4nu`, so the only approximation in the
+result is the one
 the caller makes in choosing how finely to slice a continuously varying
 profile.  Within each slab there is none.
 
@@ -46,15 +48,18 @@ Routine listings
 
     * evolution_operator_2nu_slabs - Two-flavor evolution operator
     * evolution_operator_3nu_slabs - Three-flavor evolution operator
+    * evolution_operator_4nu_slabs - Four-flavor evolution operator
     * probabilities_2nu_slabs - Two-flavor probabilities
     * probabilities_3nu_slabs - Three-flavor probabilities
+    * probabilities_4nu_slabs - Four-flavor probabilities
 """
 
 __author__ = "Mauricio Bustamante"
 __email__ = "mbustamante@gmail.com"
 
 __all__ = ['evolution_operator_2nu_slabs', 'evolution_operator_3nu_slabs',
-           'probabilities_2nu_slabs', 'probabilities_3nu_slabs']
+           'evolution_operator_4nu_slabs', 'probabilities_2nu_slabs',
+           'probabilities_3nu_slabs', 'probabilities_4nu_slabs']
 
 from typing import Tuple, Union
 
@@ -62,6 +67,7 @@ import numpy as np
 
 import oscprob2nu
 import oscprob3nu
+import oscprob4nu
 
 
 def _check_slabs(
@@ -79,7 +85,7 @@ def _check_slabs(
     widths : array_like
         Slab widths, of shape ``(n,)``.
     n_flavors : int
-        Number of neutrino flavors, 2 or 3.
+        Number of neutrino flavors, 2, 3, or 4.
     caller : str
         Name of the calling routine, used in error messages.
 
@@ -133,7 +139,7 @@ def _evolution_operator_slabs(
     widths : array_like
         Slab widths, of shape ``(n,)``.
     n_flavors : int
-        Number of neutrino flavors, 2 or 3.
+        Number of neutrino flavors, 2, 3, or 4.
     caller : str
         Name of the calling routine, used in error messages.
 
@@ -150,8 +156,10 @@ def _evolution_operator_slabs(
     # product is not.
     if n_flavors == 2:
         u_slabs = np.asarray(oscprob2nu.evolution_operator_2nu(h, w))
-    else:
+    elif n_flavors == 3:
         u_slabs = np.asarray(oscprob3nu.evolution_operator_3nu(h, w))
+    else:
+        u_slabs = np.asarray(oscprob4nu.evolution_operator_4nu(h, w))
 
     # U = U_n ... U_1, the first slab crossed applied first.  The operator
     # is indexed (final, initial) and acts to the left on the initial
@@ -368,3 +376,115 @@ def probabilities_3nu_slabs(
     return (abs(u[0][0])**2.0, abs(u[1][0])**2.0, abs(u[2][0])**2.0,
             abs(u[0][1])**2.0, abs(u[1][1])**2.0, abs(u[2][1])**2.0,
             abs(u[0][2])**2.0, abs(u[1][2])**2.0, abs(u[2][2])**2.0)
+
+
+def evolution_operator_4nu_slabs(
+    hamiltonian_matrices: Union[list, np.ndarray],
+    widths: Union[list, np.ndarray]
+) -> np.ndarray:
+    r"""Returns the four-flavor evolution operator across adjacent slabs.
+
+    Returns the :math:`4\times4` evolution operator
+    :math:`U_4 = U_4^{(n)}(L_n) \cdots U_4^{(1)}(L_1)` for a trajectory
+    divided into slabs, each with its own constant Hamiltonian and
+    width.  Each slab is solved exactly by the SU(4) expansion of
+    :mod:`oscprob4nu`.
+
+    This is what makes a 3+1 scenario propagable through layered matter:
+    the sterile state's matter entry is constant within a slab like
+    every other, so nothing about the composition changes at four
+    flavors.  See :func:`hamiltonians4nu.hamiltonian_4nu_matter` for the
+    entry itself, which is :math:`-V_{NC}` rather than zero.
+
+    .. versionadded:: 1.11.0
+
+    Parameters
+    ----------
+    hamiltonian_matrices : array_like
+        Hamiltonians, of shape ``(n, 4, 4)``, one per slab and ordered
+        along the trajectory, in units of eV.
+    widths : array_like
+        Slab widths, of shape ``(n,)``, in units of eV\ :sup:`-1`.  Use
+        `globaldefs.CONV_KM_TO_INV_EV` to convert from km.
+
+    Returns
+    -------
+    numpy.ndarray
+        The evolution operator, of shape ``(4, 4)``, indexed
+        ``(final, initial)``.
+
+    Raises
+    ------
+    ValueError
+        If the number of Hamiltonians and widths differ, if either is
+        empty, if the Hamiltonians are not :math:`4\times4`, or if any
+        width is negative.
+
+    Examples
+    --------
+    .. jupyter-execute::
+
+        import slabs
+
+        import numpy as np
+        H = np.array([np.diag([1.0, 0.0, -0.5, -0.5]),
+                      np.diag([0.5, 0.0, -0.25, -0.25])], dtype=complex)
+        U = slabs.evolution_operator_4nu_slabs(H, [0.2, 0.3])
+        print('%.6f' % abs(U[0][0]))
+    """
+    return _evolution_operator_slabs(hamiltonian_matrices, widths, 4,
+                                     'evolution_operator_4nu_slabs')
+
+
+def probabilities_4nu_slabs(
+    hamiltonian_matrices: Union[list, np.ndarray],
+    widths: Union[list, np.ndarray]
+) -> Tuple[float, ...]:
+    r"""Returns the four-flavor probabilities across adjacent slabs.
+
+    Returns the sixteen probabilities
+    :math:`P_{\alpha\beta} \equiv P(\nu_\alpha \to \nu_\beta) =
+    |[U_4]_{\beta\alpha}|^2`, ordered with the initial flavor varying
+    slowest, for a trajectory divided into slabs.  With the fourth state
+    read as sterile, the flavor order is
+    :math:`(\nu_e, \nu_\mu, \nu_\tau, \nu_s)`.
+
+    .. versionadded:: 1.11.0
+
+    Parameters
+    ----------
+    hamiltonian_matrices : array_like
+        Hamiltonians, of shape ``(n, 4, 4)``, one per slab and ordered
+        along the trajectory, in units of eV.
+    widths : array_like
+        Slab widths, of shape ``(n,)``, in units of eV\ :sup:`-1`.
+
+    Returns
+    -------
+    tuple of float
+        The sixteen probabilities, with the initial flavor varying
+        slowest.
+
+    Raises
+    ------
+    ValueError
+        If the slab sequence is malformed; see
+        `evolution_operator_4nu_slabs`.
+
+    Examples
+    --------
+    .. jupyter-execute::
+
+        import slabs
+
+        import numpy as np
+        H = np.array([np.diag([1.0, 0.0, -0.5, -0.5]),
+                      np.diag([0.5, 0.0, -0.25, -0.25])], dtype=complex)
+        prob = slabs.probabilities_4nu_slabs(H, [0.2, 0.3])
+        print('%.6f  %.6f' % (prob[0], prob[1]))
+    """
+    u = evolution_operator_4nu_slabs(hamiltonian_matrices, widths)
+
+    # P_ab = |U_ba|^2: the evolution operator is indexed (final, initial)
+    return tuple(abs(u[beta][alpha])**2.0
+                 for alpha in range(4) for beta in range(4))

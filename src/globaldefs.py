@@ -3,11 +3,12 @@ r"""Physical constants, unit-conversion factors, and default parameters.
 
 This module contains the values of the physical constants, the
 unit-conversion factors, and the default oscillation parameters used by
-the sample-Hamiltonian and plotting modules of **NuOscProbExact**.
+the sample-Hamiltonian modules of **NuOscProbExact**, by :mod:`earth`,
+and by the notebooks and worked examples.
 
-The core modules :mod:`oscprob2nu` and :mod:`oscprob3nu` do *not* need
-these constants: they accept an arbitrary Hermitian Hamiltonian in
-whatever units the user prefers.
+The core modules :mod:`oscprob2nu`, :mod:`oscprob3nu` and
+:mod:`oscprob4nu` do *not* need these constants: they accept an
+arbitrary Hermitian Hamiltonian in whatever units the user prefers.
 
 Unless stated otherwise, quantities are expressed in natural units, in
 which energies are in eV, mass-squared differences in eV\ :sup:`2`, and
@@ -37,6 +38,24 @@ References
 __author__ = "Mauricio Bustamante"
 __email__ = "mbustamante@gmail.com"
 
+# Every constant this module defines, and nothing else.  The worked
+# examples do `from globaldefs import *`, which without this also
+# injects `np` into their namespace -- a name they neither asked for
+# nor should shadow.  Every other module in src/ declares one.
+__all__ = ['CONV_KM_TO_INV_EV', 'CONV_CM_TO_INV_EV', 'CONV_INV_EV_TO_CM',
+           'CONV_EV_TO_G', 'CONV_G_TO_EV', 'GF', 'MASS_ELECTRON',
+           'MASS_PROTON', 'MASS_NEUTRON', 'EARTH_RADIUS',
+           'ELECTRON_FRACTION_EARTH_CRUST',
+           'DENSITY_MATTER_CRUST_G_PER_CM3', 'NUM_DENSITY_E_EARTH_CRUST',
+           'VCC_EARTH_CRUST', 'NEUTRON_FRACTION_EARTH_CRUST',
+           'NUM_DENSITY_N_EARTH_CRUST', 'VNC_EARTH_CRUST', 'S12_NO_BF',
+           'S23_NO_BF', 'S13_NO_BF', 'DCP_NO_BF', 'D21_NO_BF',
+           'D31_NO_BF', 'S12_IO_BF', 'S23_IO_BF', 'S13_IO_BF',
+           'DCP_IO_BF', 'D21_IO_BF', 'D32_IO_BF', 'D31_IO_BF', 'EPS_EE',
+           'EPS_EM', 'EPS_ET', 'EPS_MM', 'EPS_MT', 'EPS_TT', 'EPS_2',
+           'EPS_3', 'SXI12', 'SXI23', 'SXI13', 'DXICP', 'B1', 'B2', 'B3',
+           'LAMBDA']
+
 import numpy as np
 
 
@@ -62,11 +81,22 @@ r"""float: Multiplicative conversion factor from eV\ :sup:`-1` to cm.
 Units: [eV cm].
 """
 
-CONV_EV_TO_G = 1.783e-33
+CONV_EV_TO_G = 1.78266192e-33
 r"""float: Multiplicative conversion factor from eV to grams.
 
 Converts a mass expressed in eV (i.e., eV/c\ :sup:`2`) into grams.
 Units: [g eV\ :sup:`-1`].
+
+.. versionchanged:: 1.11.0
+   Given to the precision of the CODATA value, 1.78266192e-33, rather
+   than rounded to 1.783e-33.  The rounded value was off by
+   :math:`1.9 \times 10^{-4}` relative, three orders of magnitude worse
+   than every other constant in this module, which sit between
+   :math:`10^{-7}` and :math:`10^{-9}`.  It propagates through
+   `NUM_DENSITY_E_EARTH_CRUST` into `VCC_EARTH_CRUST`, and through
+   :func:`earth.matter_potential` into every Earth crossing, so the
+   matter potential moved by that much.  Far below anything measurable,
+   and still worth not carrying into a release.
 """
 
 CONV_G_TO_EV = 1./CONV_EV_TO_G
@@ -293,8 +323,16 @@ Units: [eV\ :sup:`2`].
 ###############################################################################
 # Non-standard interaction (NSI) parameters
 #
-# Total NSI strengths computed using values of the u and d quark
-# parameters compatible at 2 sigma with LMA+coherent, from [2]_
+# Total NSI strengths computed from the u and d quark parameters of [2]_.
+#
+# Read the numbers before reusing them: with EPS_EE = 0.06 and
+# EPS_MM = 1.2, the combination that matter oscillations are actually
+# sensitive to is eps_ee - eps_mm = -1.14, which is the LMA-D
+# ("dark side") solution rather than the ordinary LMA one.  That is a
+# deliberate choice of a large, visible effect for the worked examples
+# and the notebooks, not a best fit: it makes the NSI curves differ from
+# the standard ones by something a reader can see on a plot.  For a
+# realistic study, substitute the constraint region you mean to explore.
 ###############################################################################
 
 EPS_EE = 0.06

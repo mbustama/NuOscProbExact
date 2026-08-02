@@ -120,7 +120,7 @@ References
 __author__ = "Mauricio Bustamante"
 __email__ = "mbustamante@gmail.com"
 
-__all__ = ['LAMBDA_SU4', 'POLISH_ROOTS', 'SMALL_BATCH',
+__all__ = ['CHECK_HERMITICITY', 'LAMBDA_SU4', 'POLISH_ROOTS', 'SMALL_BATCH',
            'generators_su4', 'hamiltonian_4nu_coefficients',
            'su4_invariants', 'psi_roots_4nu',
            'evolution_operator_4nu_u_coefficients', 'evolution_operator_4nu',
@@ -224,6 +224,137 @@ as degenerate.  Reconstructing :math:`U_4` from the roots divides by
 their differences, which vanish at a repeated root, so a degenerate
 spectrum is handled by a separate, exact expression.
 """
+
+
+CHECK_HERMITICITY = True
+r"""bool: Module-level switch.
+
+Whether to verify that the Hamiltonian handed in is Hermitian before
+evaluating anything.  It is on by default, and the reason is that the
+failure it catches is silent: a non-Hermitian matrix does not raise, and
+does not produce obviously broken output either --- the probabilities it
+returns still sum to one, so the usual sanity check a caller would apply
+cannot tell that anything went wrong.  The expansion assumes
+Hermiticity; without it the result is meaningless rather than merely
+inaccurate.
+
+Checking is not free, and the cost is stated here rather than buried,
+because it is larger than one might expect.  Validating a stack is a
+pass over it, which is the same order of work as evaluating it --- and
+the compiled kernel has made evaluating it *fast*, so on a large stack
+the check dominates.  Measured by interleaving the two settings and
+taking the best of fifteen rounds each:
+
+===============  ==========  ==========
+Stack            2 flavors   4 flavors
+===============  ==========  ==========
+2 000 points     1.5x        1.3x
+200 000 points   5.7x        3.2x
+===============  ==========  ==========
+
+Three flavors sits between them, at 1.8x and 3.9x.  So a scan that the
+compiled backend was installed to speed up can spend most of its time
+here instead.  For production scans whose Hamiltonians come from a
+construction already known to be Hermitian --- everything
+:mod:`hamiltonians4nu` builds is Hermitian to round-off, as the table
+below records --- set this to ``False``.
+
+The default is nevertheless ``True``, because the alternative is a
+library that silently returns meaningless numbers to anyone who makes
+this mistake once, and finding out costs far more than the check does.
+
+The tolerance is relative to the largest entry of the Hamiltonian, so a
+matrix assembled in floating point passes: the ones this library builds
+are Hermitian to about :math:`2 \times 10^{-17}` relative, against a
+tolerance of :math:`10^{-12}`.
+
+.. versionadded:: 1.11.0
+"""
+
+_HERMITICITY_TOL = 1.e-12
+r"""float: Module-level constant.
+
+Relative tolerance for `CHECK_HERMITICITY`, measured against the largest
+entry of the Hamiltonian.
+"""
+
+
+def _check_hermitian(h_matrix: np.ndarray, caller: str) -> None:
+    r"""Raises unless `h_matrix` is Hermitian to `_HERMITICITY_TOL`.
+
+    Compares the 6 independent pairs and the imaginary parts of the
+    diagonal, rather than forming ``H - H^dagger``, which would allocate
+    a temporary the size of the whole stack.  Real and imaginary parts
+    are compared separately, on views rather than copies: the condition
+    is :math:`\mathrm{Re}\,H_{ij} = \mathrm{Re}\,H_{ji}` together
+    with :math:`\mathrm{Im}\,H_{ij} = -\mathrm{Im}\,H_{ji}`, which
+    needs no complex arithmetic and, unlike :func:`numpy.abs` on a
+    complex array, no square root per element.  That is worth about a
+    factor of three on a large stack, where this check would otherwise
+    cost several times the evaluation it guards.
+
+    Parameters
+    ----------
+    h_matrix : numpy.ndarray
+        Hamiltonian, or stack of them, of shape ``(..., 4, 4)``.
+    caller : str
+        Name of the calling routine, used in the error message.
+
+    Returns
+    -------
+    None
+        Nothing; the routine either returns or raises.
+
+    Raises
+    ------
+    ValueError
+        If any element of the stack is not Hermitian.
+    """
+    if h_matrix.size == 0:
+        return
+
+    real, imaginary = h_matrix.real, h_matrix.imag
+
+    # `np.abs(...).max()` allocates a float array the size of the stack,
+    # and is still the quickest way to the largest entry: replacing it with
+    # four reductions over `real` and `imaginary`, which allocate nothing,
+    # was measured 1.4x *slower* on two hundred thousand elements, because
+    # those views are strided over the complex array while `np.abs` reads
+    # it contiguously.  Tried, measured, reverted.
+    scale = max(float(np.max(np.abs(real))), float(np.max(np.abs(imaginary))))
+
+    # A non-finite entry has to be caught here rather than left to
+    # propagate.  It would otherwise make `scale` infinite or nan, hence
+    # `tolerance` infinite or nan, and every comparison below false ---
+    # so a Hamiltonian that is both non-finite *and* non-Hermitian would
+    # pass a check whose whole purpose is to refuse the second.
+    if not np.isfinite(scale):
+        raise ValueError(
+            '%s: the Hamiltonian has a non-finite entry, so it is neither '
+            'Hermitian nor usable.  Set %s.CHECK_HERMITICITY = False to '
+            'skip this check.' % (caller, 'oscprob4nu'))
+
+    tolerance = _HERMITICITY_TOL*scale if scale > 0.0 else _HERMITICITY_TOL
+
+    complaint = (
+        '%s: the Hamiltonian is not Hermitian%s.  The expansion assumes '
+        'Hermiticity, and without it the probabilities returned are '
+        'meaningless even though they still sum to one.  Set '
+        'oscprob4nu.CHECK_HERMITICITY = False to skip this check.')
+
+    for i in range(4):
+        if np.any(np.abs(imaginary[..., i, i]) > tolerance):
+            raise ValueError(complaint % (
+                caller, ' --- the diagonal entry (%d, %d) has a non-zero '
+                'imaginary part' % (i, i)))
+        for j in range(i+1, 4):
+            if (np.any(np.abs(real[..., i, j] - real[..., j, i]) > tolerance)
+                    or np.any(np.abs(imaginary[..., i, j]
+                                     + imaginary[..., j, i]) > tolerance)):
+                raise ValueError(complaint % (
+                    caller, ' --- entry (%d, %d) is not the complex '
+                    'conjugate of entry (%d, %d)' % (i, j, j, i)))
+
 
 
 def generators_su4() -> np.ndarray:
@@ -794,6 +925,10 @@ def _evolution_operator_4nu_array(
     numpy.ndarray
         The evolution operator, of shape ``(..., 4, 4)``.
     """
+    if CHECK_HERMITICITY:
+        _check_hermitian(np.asarray(hamiltonian_matrix, dtype=complex),
+                         'oscprob4nu')
+
     traceless = _traceless_part(hamiltonian_matrix)
     baseline = np.asarray(L, dtype=float)
 
@@ -842,6 +977,16 @@ def evolution_operator_4nu_u_coefficients(
 
     .. versionadded:: 1.9.0
 
+    .. versionchanged:: 1.10.1
+       Results changed for a spectrum with two nearly coincident latent
+       roots.  The Newton refinement of :data:`POLISH_ROOTS` divides by
+       a product of gaps, and was guarded only against a gap of exactly
+       zero; a pair separated by one unit in the last place passed that
+       guard and was thrown across the spectrum.  The step is now
+       refused whenever it would carry a root more than halfway to its
+       nearest neighbour.  Nothing else moved: ordinary and stiff
+       spectra are bit-for-bit what 1.10.0 gave.
+
     Parameters
     ----------
     hamiltonian_matrix : array_like
@@ -889,6 +1034,16 @@ def evolution_operator_4nu(
     cancels in the probabilities.
 
     .. versionadded:: 1.9.0
+
+    .. versionchanged:: 1.10.1
+       Results changed for a spectrum with two nearly coincident latent
+       roots.  The Newton refinement of :data:`POLISH_ROOTS` divides by
+       a product of gaps, and was guarded only against a gap of exactly
+       zero; a pair separated by one unit in the last place passed that
+       guard and was thrown across the spectrum.  The step is now
+       refused whenever it would carry a root more than halfway to its
+       nearest neighbour.  Nothing else moved: ordinary and stiff
+       spectra are bit-for-bit what 1.10.0 gave.
 
     Parameters
     ----------
@@ -943,6 +1098,16 @@ def probabilities_4nu(
     :math:`(\nu_e, \nu_\mu, \nu_\tau, \nu_s)`.
 
     .. versionadded:: 1.9.0
+
+    .. versionchanged:: 1.10.1
+       Results changed for a spectrum with two nearly coincident latent
+       roots.  The Newton refinement of :data:`POLISH_ROOTS` divides by
+       a product of gaps, and was guarded only against a gap of exactly
+       zero; a pair separated by one unit in the last place passed that
+       guard and was thrown across the spectrum.  The step is now
+       refused whenever it would carry a root more than halfway to its
+       nearest neighbour.  Nothing else moved: ordinary and stiff
+       spectra are bit-for-bit what 1.10.0 gave.
 
     Parameters
     ----------
@@ -1003,6 +1168,11 @@ def probabilities_4nu(
         size = int(np.prod(batch, dtype=np.int64))
 
         if size > 0 and fastkernels.worthwhile(4, size):
+            # The compiled kernel returns without going through
+            # `_evolution_operator_4nu_array`, so it is checked here
+            # instead --- and only here, so that no path checks twice
+            if CHECK_HERMITICITY:
+                _check_hermitian(matrix, 'probabilities_4nu')
             return fastkernels.probabilities_4nu_kernel(
                 np.broadcast_to(matrix, batch+(4, 4)),
                 np.broadcast_to(baseline, batch),

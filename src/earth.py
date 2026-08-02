@@ -52,6 +52,7 @@ Routine listings
     * coordinates_of_named_location - Coordinates of a named site
     * density_prem - PREM density at a radius
     * matter_potential - Charged-current potential from a density
+    * matter_potential_nc - Neutral-current potential, for a sterile state
     * distance_traveled_inside_earth - Chord length for a given costhz
     * earth_radial_distance_from_depth - Radius at a point on the chord
     * prem_layer_edges_along_chord - Where a chord crosses PREM shells
@@ -60,8 +61,10 @@ Routine listings
     * earth_slabs - Slab widths and densities along a chord
     * probabilities_2nu_earth - Two-flavor probabilities across the Earth
     * probabilities_3nu_earth - Three-flavor probabilities across the Earth
+    * probabilities_4nu_earth - Four-flavor probabilities across the Earth
     * probabilities_2nu_between_locations - Between two named sites
     * probabilities_3nu_between_locations - Between two named sites
+    * probabilities_4nu_between_locations - Between two named sites
 """
 
 __author__ = "Mauricio Bustamante"
@@ -69,14 +72,16 @@ __email__ = "mbustamante@gmail.com"
 
 __all__ = ['LOC_COORDS_DMS', 'PREM_BOUNDARIES',
            'dms_to_decimal', 'coordinates_of_named_location',
-           'density_prem', 'matter_potential',
+           'density_prem', 'matter_potential', 'matter_potential_nc',
            'distance_traveled_inside_earth',
            'earth_radial_distance_from_depth',
            'prem_layer_edges_along_chord', 'chord_length_inside_earth',
            'costhz_between_points_on_surface', 'earth_slabs',
            'probabilities_2nu_earth', 'probabilities_3nu_earth',
+           'probabilities_4nu_earth',
            'probabilities_2nu_between_locations',
-           'probabilities_3nu_between_locations']
+           'probabilities_3nu_between_locations',
+           'probabilities_4nu_between_locations']
 
 from typing import Optional, Tuple, Union
 
@@ -85,6 +90,7 @@ import numpy as np
 import globaldefs as gd
 import hamiltonians2nu
 import hamiltonians3nu
+import hamiltonians4nu
 import slabs
 
 
@@ -147,9 +153,15 @@ def dms_to_decimal(
     ----------
     degrees : int or float
         Degree part of the coordinate.  Carries the sign: a location at
-        5 degrees South is ``(-5, ...)``.
+        5 degrees South is ``(-5, ...)``.  For a coordinate between zero
+        and one degree South or West, where the degree part cannot carry
+        a sign, negate the minutes instead: 0 deg 30' S is
+        ``(0, -30, 0)``.
     minutes : int or float
-        Minute part of the coordinate, taken as positive.
+        Minute part of the coordinate.  Normally positive; a negative
+        value flips the sign of the whole coordinate, which is the only
+        way to express a southern or western coordinate smaller than one
+        degree.
     seconds : int or float
         Second part of the coordinate, taken as positive.
 
@@ -166,11 +178,17 @@ def dms_to_decimal(
 
         print('%.6f' % earth.dms_to_decimal(36, 25, 50.05))
     """
-    magnitude = abs(degrees) + minutes/60.0 + seconds/3600.0
+    magnitude = abs(degrees) + abs(minutes)/60.0 + seconds/3600.0
 
     # The sign lives on the degree part, so a negative latitude must not
-    # have its minutes and seconds added back the other way.
-    return -magnitude if degrees < 0 else magnitude
+    # have its minutes and seconds added back the other way.  Between
+    # zero and one degree the degree part is zero and cannot carry a
+    # sign, so the minutes are allowed to carry it instead --- without
+    # that, 0 deg 30' South is inexpressible, and silently comes back
+    # North.
+    negative = degrees < 0 or (degrees == 0 and minutes < 0)
+
+    return -magnitude if negative else magnitude
 
 
 def coordinates_of_named_location(
@@ -211,17 +229,20 @@ def coordinates_of_named_location(
     try:
         entry = LOC_COORDS_DMS[key]
     except KeyError:
+        # `from None` keeps the KeyError out of the traceback: it is an
+        # implementation detail of the lookup, and chaining it only
+        # buries the message that explains what to do.
         raise ValueError(
             'coordinates_of_named_location: %r is not a predefined '
             'location; the available names, in earth.LOC_COORDS_DMS, are: '
-            '%s' % (loc_name, ', '.join(sorted(LOC_COORDS_DMS))))
+            '%s' % (loc_name, ', '.join(sorted(LOC_COORDS_DMS)))) from None
 
     return entry['lat'], entry['lon']
 
 
 def density_prem(
     r: Union[int, float, list, np.ndarray],
-    tol: Optional[float] = 1.e-8
+    tol: float = 1.e-8
 ) -> Union[float, np.ndarray]:
     r"""Returns the matter density inside the Earth, according to PREM.
 
@@ -291,7 +312,7 @@ def density_prem(
 
 def matter_potential(
     density: Union[int, float, list, np.ndarray],
-    electron_fraction: Optional[float] = gd.ELECTRON_FRACTION_EARTH_CRUST
+    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST
 ) -> Union[float, np.ndarray]:
     r"""Returns the charged-current matter potential for a density.
 
@@ -338,12 +359,116 @@ def matter_potential(
     return float(potential) if scalar_input else potential
 
 
+def matter_potential_nc(
+    density: Union[int, float, list, np.ndarray],
+    neutron_fraction: Optional[float] = None,
+    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST
+) -> Union[float, np.ndarray]:
+    r"""Returns the neutral-current matter potential for a density.
+
+    Returns :math:`V_{NC} = -G_F n_n/\sqrt{2}`, which is **negative**
+    for neutrinos.  It is felt equally by all three active flavors, so
+    at two and three flavors it is proportional to the identity and
+    drops out of the probabilities entirely --- which is why
+    `matter_potential` alone serves them.
+
+    It does not drop out once a sterile state is present, because the
+    sterile state does not feel it.  Removing it from all four states
+    costs only a global phase and leaves :math:`-V_{NC}` on the sterile
+    entry; see :func:`hamiltonians4nu.hamiltonian_4nu_matter`.
+
+    .. versionadded:: 1.11.0
+
+    Parameters
+    ----------
+    density : int, float, list or numpy.ndarray
+        Matter density, in units of g cm\ :sup:`-3`.
+    neutron_fraction : float, optional
+        Neutrons per nucleon.  Default: ``1 - electron_fraction``, the
+        isoscalar value, since a nucleon is either a proton --- matched
+        by an electron --- or a neutron.
+    electron_fraction : float, optional
+        Electrons per nucleon, used only to derive `neutron_fraction`
+        when that is not given.  Default:
+        `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`.
+
+    Returns
+    -------
+    float or numpy.ndarray
+        The potential :math:`V_{NC}`, in units of eV.  Negative for
+        neutrinos.
+
+    Examples
+    --------
+    .. jupyter-execute::
+
+        import earth
+
+        print('%.4e' % earth.matter_potential_nc(3.0))
+    """
+    if neutron_fraction is None:
+        neutron_fraction = 1.0 - electron_fraction
+
+    scalar_input = (np.ndim(density) == 0)
+    density = np.asarray(density, dtype=float)
+
+    # Neutron number density in eV^3, by the same route as the electron
+    # one in `matter_potential`
+    num_density_n = (density*gd.CONV_G_TO_EV
+                     / ((gd.MASS_PROTON+gd.MASS_NEUTRON)/2.0)
+                     * neutron_fraction
+                     / pow(gd.CONV_CM_TO_INV_EV, 3.0))
+    potential = -gd.GF*num_density_n/np.sqrt(2.0)
+
+    return float(potential) if scalar_input else potential
+
+
+def _check_costhz(costhz: Union[int, float], caller: str) -> None:
+    r"""Raises unless `costhz` is a cosine.
+
+    Every geometry routine here funnels through
+    `distance_traveled_inside_earth`, whose chord length is
+    :math:`-2 R \cos\theta_z`.  That expression is happy to be handed a
+    number outside :math:`[-1, 1]` and returns a chord longer than the
+    Earth --- 19 113 km for ``costhz = -1.5``, against a diameter of
+    12 742 km --- which then acquires a full set of plausible-looking
+    slabs and densities.  Nothing further downstream notices, so it is
+    caught here.
+
+    Parameters
+    ----------
+    costhz : int or float
+        Cosine of the zenith angle, which must lie in :math:`[-1, 1]`.
+    caller : str
+        Name of the calling routine, used in the error message.
+
+    Returns
+    -------
+    None
+        Nothing; the routine either returns or raises.
+
+    Raises
+    ------
+    ValueError
+        If ``costhz`` lies outside :math:`[-1, 1]`, or is not a number.
+
+    .. versionadded:: 1.11.0
+    """
+    if not -1.0 <= costhz <= 1.0:
+        raise ValueError(
+            '%s: costhz is the cosine of the zenith angle and so must lie '
+            'in [-1, 1]; got %r.  A value outside that range describes no '
+            'direction, and would give a chord longer than the Earth.'
+            % (caller, costhz))
+
+
 def distance_traveled_inside_earth(costhz: Union[int, float]) -> float:
     r"""Returns the chord length through the Earth for a given direction.
 
     The neutrino is assumed to arrive at a detector on the surface, not
-    underground, so the distance is zero for any upward-going direction,
-    ``costhz >= 0``.
+    underground, so the distance is zero for any *down*-going direction,
+    ``costhz >= 0``, which reaches the detector from the sky without
+    entering the Earth at all.
 
     .. versionadded:: 1.8.0
 
@@ -358,6 +483,12 @@ def distance_traveled_inside_earth(costhz: Union[int, float]) -> float:
     float
         The chord length, in units of km.
 
+    Raises
+    ------
+    ValueError
+        If ``costhz`` lies outside :math:`[-1, 1]`, where it describes
+        no direction.
+
     Examples
     --------
     .. jupyter-execute::
@@ -367,13 +498,15 @@ def distance_traveled_inside_earth(costhz: Union[int, float]) -> float:
         print('%.1f' % earth.distance_traveled_inside_earth(-1.0))
         print('%.1f' % earth.distance_traveled_inside_earth(0.5))
     """
+    _check_costhz(costhz, 'distance_traveled_inside_earth')
+
     return 0.0 if costhz >= 0.0 else -2.0*gd.EARTH_RADIUS*costhz
 
 
 def earth_radial_distance_from_depth(
     costhz: Union[int, float],
     l: Union[int, float, list, np.ndarray],
-    tol: Optional[float] = 1.e-8
+    tol: float = 1.e-8
 ) -> Union[float, np.ndarray]:
     r"""Returns the radius at a point along a chord through the Earth.
 
@@ -436,7 +569,13 @@ def earth_radial_distance_from_depth(
     u = d - l
     r2 = (gd.EARTH_RADIUS*gd.EARTH_RADIUS + u*u
           + 2.0*gd.EARTH_RADIUS*u*costhz)
-    r = np.sqrt(np.abs(r2))
+
+    # r2 is a squared distance and cannot be negative for an `l` inside
+    # the chord, which the clamping above guarantees; round-off can still
+    # take it a few ulp below zero at the endpoints, where it vanishes.
+    # Clipping at zero absorbs that without also hiding a genuinely
+    # negative value the way `np.abs` would.
+    r = np.sqrt(np.maximum(r2, 0.0))
 
     return float(r) if scalar_input else r
 
@@ -504,7 +643,8 @@ def prem_layer_edges_along_chord(costhz: Union[int, float]) -> np.ndarray:
             if 0.0 < u < d:                       # pragma: no branch
                 crossings.append(d - u)
 
-    return np.unique(np.array(sorted(crossings)))
+    # `np.unique` sorts, so the crossings need not be sorted first
+    return np.unique(np.array(crossings))
 
 
 def chord_length_inside_earth(
@@ -610,7 +750,7 @@ def costhz_between_points_on_surface(
 
 def earth_slabs(
     costhz: Union[int, float],
-    n_slabs_per_segment: Optional[int] = 8
+    n_slabs_per_segment: int = 8
 ) -> Tuple[np.ndarray, np.ndarray]:
     r"""Returns the slab widths and densities along a chord.
 
@@ -653,6 +793,7 @@ def earth_slabs(
         widths, densities = earth.earth_slabs(-1.0, n_slabs_per_segment=2)
         print(len(widths), '%.1f' % sum(widths))
     """
+    _check_costhz(costhz, 'earth_slabs')
     if costhz >= 0.0:
         raise ValueError(
             'earth_slabs: costhz must be negative for the neutrino to cross '
@@ -710,7 +851,7 @@ def _earth_hamiltonians(
     electron_fraction : float
         Electrons per nucleon.
     n_flavors : int
-        Number of neutrino flavors, 2 or 3.
+        Number of neutrino flavors, 2, 3, or 4.
 
     Returns
     -------
@@ -726,9 +867,16 @@ def _earth_hamiltonians(
     if n_flavors == 2:
         h = hamiltonians2nu.hamiltonian_2nu_matter(
             h_vacuum_energy_independent, energy, potentials)
-    else:
+    elif n_flavors == 3:
         h = hamiltonians3nu.hamiltonian_3nu_matter(
             h_vacuum_energy_independent, energy, potentials)
+    else:
+        # A sterile state does not feel the neutral-current potential,
+        # which therefore no longer cancels and has to be built too
+        h = hamiltonians4nu.hamiltonian_4nu_matter(
+            h_vacuum_energy_independent, energy, potentials,
+            matter_potential_nc(densities,
+                                electron_fraction=electron_fraction))
 
     return h, widths_km*gd.CONV_KM_TO_INV_EV
 
@@ -737,8 +885,8 @@ def probabilities_2nu_earth(
     h_vacuum_energy_independent: Union[list, np.ndarray],
     energy: Union[int, float],
     costhz: Union[int, float],
-    n_slabs_per_segment: Optional[int] = 8,
-    electron_fraction: Optional[float] = gd.ELECTRON_FRACTION_EARTH_CRUST
+    n_slabs_per_segment: int = 8,
+    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST
 ) -> Tuple[float, float, float, float]:
     r"""Returns the two-flavor probabilities across the Earth.
 
@@ -787,8 +935,8 @@ def probabilities_3nu_earth(
     h_vacuum_energy_independent: Union[list, np.ndarray],
     energy: Union[int, float],
     costhz: Union[int, float],
-    n_slabs_per_segment: Optional[int] = 8,
-    electron_fraction: Optional[float] = gd.ELECTRON_FRACTION_EARTH_CRUST
+    n_slabs_per_segment: int = 8,
+    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST
 ) -> Tuple[float, float, float, float, float, float, float, float, float]:
     r"""Returns the three-flavor probabilities across the Earth.
 
@@ -840,8 +988,8 @@ def probabilities_2nu_between_locations(
     energy: Union[int, float],
     loc_name_1: str,
     loc_name_2: str,
-    n_slabs_per_segment: Optional[int] = 8,
-    electron_fraction: Optional[float] = gd.ELECTRON_FRACTION_EARTH_CRUST
+    n_slabs_per_segment: int = 8,
+    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST
 ) -> Tuple[float, float, float, float]:
     r"""Returns the two-flavor probabilities between two named locations.
 
@@ -893,8 +1041,8 @@ def probabilities_3nu_between_locations(
     energy: Union[int, float],
     loc_name_1: str,
     loc_name_2: str,
-    n_slabs_per_segment: Optional[int] = 8,
-    electron_fraction: Optional[float] = gd.ELECTRON_FRACTION_EARTH_CRUST
+    n_slabs_per_segment: int = 8,
+    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST
 ) -> Tuple[float, float, float, float, float, float, float, float, float]:
     r"""Returns the three-flavor probabilities between two named locations.
 
@@ -970,3 +1118,115 @@ def _costhz_of_named_pair(loc_name_1: str, loc_name_2: str) -> float:
             'them' % (loc_name_1, loc_name_2))
 
     return costhz
+
+
+def probabilities_4nu_earth(
+    h_vacuum_energy_independent: Union[list, np.ndarray],
+    energy: Union[int, float],
+    costhz: Union[int, float],
+    n_slabs_per_segment: int = 8,
+    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST
+) -> Tuple[float, ...]:
+    r"""Returns the four-flavor probabilities across the Earth.
+
+    Builds the PREM slabs along the chord for the given direction and
+    propagates through them exactly, slab by slab, exactly as at two and
+    three flavors.  The one thing that is new is the potential: a
+    sterile state does not feel the neutral-current interaction, so
+    :math:`V_{NC}` no longer cancels between the flavors and is built
+    per slab alongside :math:`V_{CC}`.  This is what puts the sterile
+    matter resonance where it belongs; see
+    :func:`hamiltonians4nu.hamiltonian_4nu_matter`.
+
+    .. versionadded:: 1.11.0
+
+    Parameters
+    ----------
+    h_vacuum_energy_independent : array_like
+        Energy-independent four-flavor vacuum Hamiltonian, as returned
+        by
+        `hamiltonians4nu.hamiltonian_4nu_vacuum_energy_independent`.
+    energy : int or float
+        Neutrino energy, in units of eV.
+    costhz : int or float
+        Cosine of the zenith angle of the neutrino direction.  Must be
+        negative.
+    n_slabs_per_segment : int, optional
+        Number of equal sub-slabs per chord segment.  A segment runs
+        between consecutive PREM boundary crossings; a chord crosses most
+        shells twice, so there are more segments than shells.  Default: 8.
+    electron_fraction : float, optional
+        Electrons per nucleon.  The neutron fraction is taken as its
+        complement, which is what sets :math:`V_{NC}`.  Default:
+        `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`.
+
+    Returns
+    -------
+    tuple of float
+        The sixteen probabilities, with the initial flavor varying
+        slowest.  With the fourth state read as sterile, the flavor
+        order is :math:`(\nu_e, \nu_\mu, \nu_\tau, \nu_s)`.
+
+    Raises
+    ------
+    ValueError
+        If ``costhz >= 0`` or ``n_slabs_per_segment`` is not positive.
+    """
+    h, widths = _earth_hamiltonians(h_vacuum_energy_independent, energy,
+                                    costhz, n_slabs_per_segment,
+                                    electron_fraction, 4)
+
+    return slabs.probabilities_4nu_slabs(h, widths)
+
+
+def probabilities_4nu_between_locations(
+    h_vacuum_energy_independent: Union[list, np.ndarray],
+    energy: Union[int, float],
+    loc_name_1: str,
+    loc_name_2: str,
+    n_slabs_per_segment: int = 8,
+    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST
+) -> Tuple[float, ...]:
+    r"""Returns the four-flavor probabilities between two named locations.
+
+    Convenience wrapper: looks both locations up in `LOC_COORDS_DMS`,
+    finds the zenith angle of the chord joining them, and evaluates
+    `probabilities_4nu_earth` along it.
+
+    .. versionadded:: 1.11.0
+
+    Parameters
+    ----------
+    h_vacuum_energy_independent : array_like
+        Energy-independent four-flavor vacuum Hamiltonian.
+    energy : int or float
+        Neutrino energy, in units of eV.
+    loc_name_1 : str
+        Name of the source location, e.g. ``'cern'``.
+    loc_name_2 : str
+        Name of the detector location, e.g. ``'gran_sasso'``.
+    n_slabs_per_segment : int, optional
+        Number of equal sub-slabs per chord segment.  A segment runs
+        between consecutive PREM boundary crossings; a chord crosses most
+        shells twice, so there are more segments than shells.  Default: 8.
+    electron_fraction : float, optional
+        Electrons per nucleon.  Default:
+        `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`.
+
+    Returns
+    -------
+    tuple of float
+        The sixteen probabilities, with the initial flavor varying
+        slowest.
+
+    Raises
+    ------
+    ValueError
+        If either name is not predefined, or if the two locations
+        coincide, so that there is no chord between them.
+    """
+    costhz = _costhz_of_named_pair(loc_name_1, loc_name_2)
+
+    return probabilities_4nu_earth(h_vacuum_energy_independent, energy,
+                                   costhz, n_slabs_per_segment,
+                                   electron_fraction)

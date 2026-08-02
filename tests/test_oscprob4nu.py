@@ -532,3 +532,84 @@ def test_probabilities_accept_a_nested_list():
 
     assert len(probabilities) == 16
     assert np.isclose(sum(probabilities[0:4]), 1.0)
+
+
+def test_four_flavor_liv_reduces_to_the_three_flavor_term():
+    r"""With the sterile LIV angles and eigenvalue off, the active block
+    is the three-flavor LIV Hamiltonian.
+
+    The same decoupling argument that validates the vacuum and matter
+    Hamiltonians, applied to the term added in 1.11.0.
+    """
+    h_vacuum_4nu = vacuum_4nu()
+    h_vacuum_3nu = np.asarray(
+        hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(
+            gd.S12_NO_BF, gd.S23_NO_BF, gd.S13_NO_BF, gd.DCP_NO_BF,
+            gd.D21_NO_BF, gd.D31_NO_BF))
+
+    four = np.asarray(hamiltonians4nu.hamiltonian_4nu_liv(
+        h_vacuum_4nu, ENERGY, 0.3, 0.4, 0.5, 0.0, 0.0, 0.0, 0.7,
+        1.0e-9, 1.5e-9, 2.0e-9, 0.0, 1.0e12))
+    three = np.asarray(hamiltonians3nu.hamiltonian_3nu_liv(
+        h_vacuum_3nu, ENERGY, 0.3, 0.4, 0.5, 0.7,
+        1.0e-9, 1.5e-9, 2.0e-9, 1.0e12))
+
+    assert np.max(np.abs(four[:3, :3] - three)) < 1.e-27
+    assert np.max(np.abs(four - four.conj().T)) < 1.e-27
+
+
+def test_four_flavor_liv_scales_with_the_energy_and_broadcasts():
+    r"""The LIV term grows as E/Lambda, and a stack of energies works."""
+    h_vacuum = vacuum_4nu(s14=np.sqrt(0.10))
+    args = (0.3, 0.4, 0.5, 0.2, 0.1, 0.0, 0.7,
+            1.0e-9, 1.5e-9, 2.0e-9, 2.5e-9, 1.0e12)
+
+    single = np.asarray(hamiltonians4nu.hamiltonian_4nu_liv(
+        h_vacuum, ENERGY, *args))
+    stacked = np.asarray(hamiltonians4nu.hamiltonian_4nu_liv(
+        h_vacuum, np.array([ENERGY, 2.0*ENERGY]), *args))
+
+    assert stacked.shape == (2, 4, 4)
+    assert np.allclose(stacked[0], single, atol=0.0)
+
+    # The vacuum part falls as 1/E and the LIV part rises as E, so the
+    # difference of the two energies isolates the LIV scaling
+    liv_once = single - np.asarray(h_vacuum)/ENERGY
+    liv_twice = stacked[1] - np.asarray(h_vacuum)/(2.0*ENERGY)
+    assert np.allclose(liv_twice, 2.0*liv_once, rtol=1.e-12)
+
+
+def test_the_3plus1_rotation_order_is_the_one_documented():
+    r"""R34 R24 R14 R23 R13 R12, and the order is observable.
+
+    :func:`hamiltonians4nu.mixing_matrix_4nu` documents that ordering.
+    Swapping the first two rotations left the whole suite green, because
+    every test that exercised the mixing matrix either set
+    ``s34 = 0`` --- which makes R34 the identity, so the order cannot
+    matter --- or checked only unitarity, which no reordering breaks.
+    With all three sterile angles non-zero the difference is 0.12 in the
+    entries of U.
+    """
+    angles = (0.5, 0.5, 0.15, np.sqrt(0.10), np.sqrt(0.10), np.sqrt(0.20))
+    dcp = 0.3
+    mixing = hamiltonians4nu.mixing_matrix_4nu(*angles, dcp)
+
+    rotation = hamiltonians4nu._rotation_4nu
+    expected = (rotation(2, 3, angles[5])
+                @ rotation(1, 3, angles[4])
+                @ rotation(0, 3, angles[3])
+                @ rotation(1, 2, angles[1])
+                @ rotation(0, 2, angles[2], dcp)
+                @ rotation(0, 1, angles[0]))
+
+    assert np.max(np.abs(mixing - expected)) < 1.e-15
+
+    # And the order is not a free choice: swapping the two outermost
+    # rotations, which share the index 3, changes U materially
+    swapped = (rotation(1, 3, angles[4])
+               @ rotation(2, 3, angles[5])
+               @ rotation(0, 3, angles[3])
+               @ rotation(1, 2, angles[1])
+               @ rotation(0, 2, angles[2], dcp)
+               @ rotation(0, 1, angles[0]))
+    assert np.max(np.abs(mixing - swapped)) > 0.1

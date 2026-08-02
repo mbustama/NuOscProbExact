@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nuoscprobexact"
-version = "1.10.1"
+version = "1.11.0"
 description = "Exact two-, three- and four-flavor neutrino oscillation probabilities for arbitrary time-independent Hamiltonians"
 readme = "README.md"
 requires-python = ">=3.9"

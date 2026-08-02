@@ -70,8 +70,8 @@ The method relies on expansions of the Hamiltonian and time-evolution operators 
 * **Four flavors, for 3+1 sterile scenarios.**  `oscprob4nu` carries the same closed-form treatment to SU(4), which is the last place it reaches: at five flavors the eigenvalues stop being expressible in radicals, and that is a theorem rather than a missing feature.  A 3+1 system is closed and unitary over all four states, so it sits squarely inside the method's assumptions rather than "leaking" out of a three-flavor block.
 * **The evolution operator itself**, not only the probabilities, so it can be composed across segments or used to propagate a density matrix.
 * **Whole scans in one call.**  Every core routine accepts a stack of Hamiltonians, an array of baselines, or both broadcast against each other, which is tens of times faster than the equivalent Python loop and gives identical results.
-* **Piecewise-constant matter.**  `slabs` propagates across a sequence of adjacent slabs of arbitrary width and density, solving each exactly and multiplying the operators.
-* **The Earth.**  `earth` builds those slabs from the Preliminary Reference Earth Model, and computes probabilities along a given zenith angle or between two of fifteen predefined locations.
+* **Piecewise-constant matter.**  `slabs` propagates across a sequence of adjacent slabs of arbitrary width and density, solving each exactly and multiplying the operators, at two, three or four flavors.
+* **The Earth.**  `earth` builds those slabs from the Preliminary Reference Earth Model, and computes probabilities along a given zenith angle or between two of fifteen predefined locations.  A 3+1 crossing is included: the sterile state does not feel the neutral-current potential, so that potential stops cancelling and `earth` builds it per slab.
 * **An optional compiled backend.**  With `numba` installed, large batched calls run on compiled kernels; without it the NumPy path is used and the answers are the same to round-off.
 
 ### What it does not do
@@ -156,7 +156,7 @@ prob = oscprob3nu.probabilities_3nu(
     np.asarray(h_vacuum)/1.e9, 1300.0*gd.CONV_KM_TO_INV_EV)
 ```
 
-The modules are installed under their bare names --- `oscprob2nu`, `oscprob3nu`, `hamiltonians2nu`, `hamiltonians3nu`, `globaldefs`, `fastkernels`, `slabs`, `earth` --- which is the same way the paper and the worked examples refer to them.
+The modules are installed under their bare names --- `oscprob2nu`, `oscprob3nu`, `oscprob4nu`, `hamiltonians2nu`, `hamiltonians3nu`, `hamiltonians4nu`, `globaldefs`, `fastkernels`, `slabs`, `earth` --- which is the same way the paper and the worked examples refer to them.
 
 ### From GitHub
 
@@ -363,6 +363,8 @@ Measured on 2000-point scans, against the equivalent Python loop:
 | Two-flavor, vs. baseline | 6.9 ms | 0.07 ms (~93×) | *not used — see below* |
 
 Best of seven runs, interleaved, on one machine.  These are indicative, not precise: repeated runs vary by tens of per cent, so treat them as orders of magnitude.  [Notebook 09](notebooks/09_performance.ipynb) measures the same comparison on whatever machine runs it, which is the number to trust.
+
+**Checking the input costs more than the arithmetic on a large scan.**  Every entry point verifies that the Hamiltonian is Hermitian, because one that is not returns probabilities that still sum to one — so nothing downstream reveals the mistake.  Validating a stack is a pass over it, the same order of work as evaluating it: 1.3× to 1.8× at two thousand points, and 3.2× to 5.7× at two hundred thousand, where the compiled kernel has made the evaluation fast enough that the check dominates.  If your Hamiltonians come from a construction you already trust — everything `hamiltonians2nu`, `hamiltonians3nu` and `hamiltonians4nu` build is Hermitian to round-off — decline it with `oscprob3nu.CHECK_HERMITICITY = False`, and likewise on the other two modules.
 
 **The backend is not used where it would not help.**  For three flavors it wins at every stack size, by between two and sixteen times.  For two flavors it does not: that expansion reduces to a square root and a sine per element, which NumPy already does about as well as compiled code can, and the kernel additionally has to materialise the Hamiltonian stack.  Below fifty thousand elements the NumPy path is quicker, so it is kept; above, the kernel leads by about 1.3–1.8×.  The thresholds are measured, and the library picks whichever is faster without you doing anything.
 

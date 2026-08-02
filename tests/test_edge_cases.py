@@ -7,13 +7,17 @@ the argument of the arc cosine marginally outside :math:`[-1, 1]`
 through round-off.  Neither may produce NaN or a non-unitary operator.
 """
 
+import importlib
+
 import numpy as np
 import pytest
 
+import hamiltonians2nu
+import hamiltonians3nu
 import oscprob2nu
 import oscprob3nu
 
-from conftest import ATOL, as_nested_list
+from conftest import ATOL, as_nested_list, random_hermitian
 
 
 DEGENERATE_3NU = [
@@ -119,3 +123,290 @@ def test_large_baseline_keeps_unitarity(rng):
         u = np.array(oscprob3nu.evolution_operator_3nu(
             as_nested_list(h_matrix), 1.0e6))
         assert np.allclose(u.conj().T @ u, np.eye(3), atol=1.0e-8)
+
+
+# --------------------------------------------------------------------------
+# Input the expansions cannot make sense of, which used to pass silently
+# --------------------------------------------------------------------------
+
+NOT_HERMITIAN = {
+    2: [[1.0+0.j, 2.0+0.j], [0.0+0.j, 1.0+0.j]],
+    3: [[1.0+0.j, 2.0+0.j, 0.j], [0.j, 1.0+0.j, 0.j], [0.j, 0.j, 1.0+0.j]],
+    4: [[1.0+0.j, 2.0+0.j, 0.j, 0.j], [0.j, 1.0+0.j, 0.j, 0.j],
+        [0.j, 0.j, 1.0+0.j, 0.j], [0.j, 0.j, 0.j, 1.0+0.j]],
+}
+
+
+@pytest.mark.parametrize('n_flavors', [2, 3, 4])
+@pytest.mark.parametrize('routine', ['probabilities', 'evolution_operator'])
+def test_a_non_hermitian_hamiltonian_is_refused(n_flavors, routine):
+    r"""A non-Hermitian Hamiltonian raises rather than returning numbers.
+
+    This is the failure that had to be caught by checking, because
+    nothing downstream reveals it: the expansion returns probabilities
+    that still **sum to one**, so the sanity check a caller would
+    actually apply cannot tell that the answer is meaningless.  Before
+    the check existed, the matrix below returned 1.000000 for the first
+    row and no warning of any kind.
+    """
+    module = importlib.import_module('oscprob%dnu' % n_flavors)
+    call = getattr(module, '%s_%dnu' % (routine, n_flavors))
+
+    with pytest.raises(ValueError, match='not Hermitian'):
+        call(NOT_HERMITIAN[n_flavors], 1.0)
+
+
+@pytest.mark.parametrize('n_flavors', [2, 3, 4])
+def test_a_non_hermitian_stack_is_refused(n_flavors):
+    r"""The batched path checks too, not only the scalar one."""
+    module = importlib.import_module('oscprob%dnu' % n_flavors)
+    call = getattr(module, 'probabilities_%dnu' % n_flavors)
+    stack = np.stack([np.array(NOT_HERMITIAN[n_flavors], dtype=complex)]*50)
+
+    with pytest.raises(ValueError, match='not Hermitian'):
+        call(stack, np.full(50, 1.0))
+
+
+@pytest.mark.parametrize('n_flavors', [2, 3, 4])
+def test_the_hermiticity_check_can_be_switched_off(n_flavors):
+    r"""The switch is the escape hatch for scans that cannot afford it.
+
+    Checking costs a pass over the stack, which is the same order as the
+    evaluation; `CHECK_HERMITICITY` exists so that a caller whose
+    Hamiltonians are Hermitian by construction can decline it.
+    """
+    module = importlib.import_module('oscprob%dnu' % n_flavors)
+    call = getattr(module, 'probabilities_%dnu' % n_flavors)
+
+    original = module.CHECK_HERMITICITY
+    try:
+        module.CHECK_HERMITICITY = False
+        prob = call(NOT_HERMITIAN[n_flavors], 1.0)
+    finally:
+        module.CHECK_HERMITICITY = original
+
+    assert len(prob) == n_flavors*n_flavors
+
+
+@pytest.mark.parametrize('n_flavors', [2, 3, 4])
+def test_hamiltonians_the_library_builds_pass_the_check(n_flavors, rng):
+    r"""The tolerance is loose enough for matrices assembled in floating
+    point, which is the whole difficulty of checking this at all."""
+    module = importlib.import_module('oscprob%dnu' % n_flavors)
+    call = getattr(module, 'probabilities_%dnu' % n_flavors)
+
+    for _ in range(20):
+        h_matrix = random_hermitian(rng, n_flavors)
+        prob = np.asarray(call(as_nested_list(h_matrix), 1.5))
+        assert np.isclose(prob[:n_flavors].sum(), 1.0, atol=ATOL)
+
+
+SINE_OUT_OF_RANGE = [
+    ('hamiltonians2nu', 'mixing_matrix_2nu', (1.5,)),
+    ('hamiltonians3nu', 'pmns_mixing_matrix', (1.5, 0.1, 0.1, 0.0)),
+    ('hamiltonians4nu', 'mixing_matrix_4nu',
+     (1.5, 0.1, 0.1, 0.0, 0.0, 0.0, 0.0)),
+]
+
+
+@pytest.mark.parametrize('module_name,routine,args', SINE_OUT_OF_RANGE)
+def test_a_sine_outside_its_range_is_refused_the_same_way(module_name,
+                                                          routine, args):
+    r"""All three flavor counts refuse it, and say the same thing.
+
+    They did not.  Two and three flavors took the cosine with
+    :mod:`math` and raised ``math domain error``, which names neither
+    the parameter nor the value; four flavors took it with
+    :func:`numpy.sqrt`, which returns ``nan`` and let it run silently
+    into the probabilities.  Same invalid input, three behaviours.
+    """
+    module = importlib.import_module(module_name)
+
+    with pytest.raises(ValueError, match='sine of an angle'):
+        getattr(module, routine)(*args)
+
+
+def test_a_sine_of_exactly_one_is_still_allowed():
+    r"""The boundary is inclusive: maximal mixing is a legal angle."""
+    assert np.isclose(hamiltonians2nu.mixing_matrix_2nu(1.0)[0][0], 0.0)
+    assert np.isclose(hamiltonians3nu.pmns_mixing_matrix(1.0, 0.1, 0.1,
+                                                         0.0)[0][0].real, 0.0)
+
+
+@pytest.mark.parametrize('n_flavors', [2, 3, 4])
+def test_a_complex_diagonal_entry_is_refused(n_flavors):
+    r"""Hermiticity constrains the diagonal too, not only the pairs.
+
+    A Hamiltonian whose off-diagonal entries are properly conjugate can
+    still fail to be Hermitian, by carrying an imaginary part on the
+    diagonal.  That is a separate branch of the check, and a separate
+    way to get a wrong answer that still sums to one.
+    """
+    module = importlib.import_module('oscprob%dnu' % n_flavors)
+    call = getattr(module, 'probabilities_%dnu' % n_flavors)
+
+    h_matrix = np.eye(n_flavors, dtype=complex)
+    h_matrix[0, 0] = 1.0 + 0.5j
+
+    with pytest.raises(ValueError, match='diagonal entry'):
+        call([[complex(z) for z in row] for row in h_matrix], 1.0)
+
+
+@pytest.mark.parametrize('n_flavors', [2, 3, 4])
+def test_an_empty_stack_passes_the_check_and_returns_empty(n_flavors):
+    r"""Nothing to check, and nothing to compute.
+
+    An empty stack has no entries to compare, so the check returns
+    early; the scale it would otherwise take is undefined on an empty
+    array and would raise from inside NumPy.
+    """
+    module = importlib.import_module('oscprob%dnu' % n_flavors)
+    call = getattr(module, 'probabilities_%dnu' % n_flavors)
+
+    empty = np.zeros((0, n_flavors, n_flavors), dtype=complex)
+    result = call(empty, np.zeros(0))
+
+    assert result.shape == (0, n_flavors*n_flavors)
+
+
+@pytest.mark.parametrize('n_flavors', [2, 3, 4])
+def test_every_entry_point_honours_the_switch_in_both_positions(n_flavors,
+                                                                 rng):
+    r"""Both settings, on every public route into the expansions.
+
+    The check sits at seven entry points, and a switch that is only ever
+    exercised in one position is half tested: the branch that skips the
+    check is the one a production scan actually takes.  This runs each
+    route with the switch on and off, over the scalar path, the batched
+    NumPy path and the compiled kernel, and requires the answers to be
+    identical --- checking must not change what is computed.
+    """
+    module = importlib.import_module('oscprob%dnu' % n_flavors)
+    probabilities = getattr(module, 'probabilities_%dnu' % n_flavors)
+    operator = getattr(module, 'evolution_operator_%dnu' % n_flavors)
+
+    scalar = random_hermitian(rng, n_flavors)
+    # Large enough to reach the compiled kernel where one is used
+    stack = np.stack([random_hermitian(rng, n_flavors) for _ in range(64)])
+    baselines = rng.uniform(0.1, 20.0, 64)
+
+    original = module.CHECK_HERMITICITY
+    results = {}
+    try:
+        for setting in (True, False):
+            module.CHECK_HERMITICITY = setting
+            results[setting] = (
+                np.asarray(probabilities(as_nested_list(scalar), 1.5)),
+                np.asarray(operator(as_nested_list(scalar), 1.5)),
+                np.asarray(probabilities(stack, baselines)),
+                np.asarray(operator(stack, baselines)),
+            )
+    finally:
+        module.CHECK_HERMITICITY = original
+
+    for checked, unchecked in zip(results[True], results[False]):
+        assert np.array_equal(checked, unchecked)
+
+
+@pytest.mark.parametrize('n_flavors', [2, 3, 4])
+@pytest.mark.parametrize('bad', [np.inf, -np.inf, np.nan])
+def test_a_non_finite_entry_cannot_disable_the_check(n_flavors, bad):
+    r"""A non-finite entry must not switch the check off.
+
+    The tolerance is relative to the largest entry, so one infinity made
+    the scale infinite, the tolerance infinite, and every comparison
+    false --- a Hamiltonian that was both non-finite *and* non-Hermitian
+    then passed a check whose entire purpose is to refuse the second.
+    The matrix below is non-Hermitian in the (0, 1) pair as well as
+    non-finite, so it must be refused on one ground or the other.
+    """
+    module = importlib.import_module('oscprob%dnu' % n_flavors)
+    call = getattr(module, 'probabilities_%dnu' % n_flavors)
+
+    h_matrix = np.eye(n_flavors, dtype=complex)
+    h_matrix[0, 1] = 2.0          # not the conjugate of h[1, 0], which is 0
+    h_matrix[0, 0] = bad
+
+    with pytest.raises(ValueError):
+        call([[complex(z) for z in row] for row in h_matrix], 1.0)
+
+
+HELPER_COPIES = [
+    ('_check_hermitian',
+     ['oscprob2nu', 'oscprob3nu', 'oscprob4nu']),
+    ('_cos_from_sin',
+     ['hamiltonians2nu', 'hamiltonians3nu', 'hamiltonians4nu']),
+]
+
+
+@pytest.mark.parametrize('name,modules', HELPER_COPIES)
+def test_the_duplicated_helpers_have_not_drifted(name, modules):
+    r"""Six copies of two helpers, kept identical by a test.
+
+    :mod:`oscprob2nu` and :mod:`oscprob3nu` are documented as
+    self-contained --- copying either into another project is a
+    supported way to use this library --- so a shared module for these
+    would break the property that makes that work.  Duplication is the
+    deliberate cost, and this is what stops it becoming drift: the
+    bodies must match character for character, apart from the flavor
+    count and the module named in the error message.
+
+    That matters most for `_check_hermitian`, where a fix applied to one
+    copy and not the others would leave two flavor counts silently
+    accepting what the third refuses --- which is the class of bug the
+    check was added to remove.
+    """
+    import inspect
+    import re
+
+    def normalise(source):
+        source = re.sub(r'range\((?:i\+1, )?\d\)',
+                        lambda m: m.group(0).replace(m.group(0)[-2], 'N'),
+                        source)
+        source = re.sub(r'oscprob\dnu', 'oscprobNnu', source)
+        source = re.sub(r'hamiltonians\dnu', 'hamiltoniansNnu', source)
+        source = re.sub(r'\(\.\.\., \d, \d\)', '(..., N, N)', source)
+        source = re.sub(r'the \w+ independent pairs', 'the N independent pairs',
+                        source)
+        return source
+
+    bodies = {}
+    for module_name in modules:
+        module = importlib.import_module(module_name)
+        bodies[module_name] = normalise(
+            inspect.getsource(getattr(module, name)))
+
+    reference = bodies[modules[0]]
+    for module_name in modules[1:]:
+        assert bodies[module_name] == reference, (
+            '%s.%s has drifted from %s.%s; the copies are duplicated on '
+            'purpose and must stay identical'
+            % (module_name, name, modules[0], name))
+
+
+def test_the_degeneracy_tolerance_is_not_free_to_widen():
+    r"""``DEGENERACY_TOL`` separates two exact expressions, not two
+    approximations.
+
+    Below it the two-projector form is used, which is exact for a
+    repeated root and an approximation otherwise; above it the general
+    Lagrange form is used, which is exact for distinct roots and
+    singular at a repeated one.  Widening the tolerance from 1e-12 to
+    1e-2 left the whole suite green while taking a spectrum whose roots
+    differ by a part in a thousand from 2e-14 against ``expm`` to
+    7e-3 --- eleven orders of magnitude, unnoticed.
+    """
+    from scipy.linalg import expm
+
+    h_matrix = np.diag([1.0, 1.0 + 3.0e-3, -2.0 - 3.0e-3]).astype(complex)
+    traceless = h_matrix - np.trace(h_matrix).real/3.0*np.eye(3)
+    reference = expm(-1.j*traceless*5.0)
+
+    operator = np.asarray(oscprob3nu.evolution_operator_3nu(
+        as_nested_list(h_matrix), 5.0))
+    assert np.max(np.abs(operator - reference)) < 1.0e-11
+
+    # The separation above sits four orders above the tolerance, so the
+    # general form must be the one taken; pin the tolerance itself, since
+    # that is what decides it
+    assert oscprob3nu.DEGENERACY_TOL <= 1.0e-10

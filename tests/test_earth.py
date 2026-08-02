@@ -15,6 +15,7 @@ import earth
 import globaldefs as gd
 import hamiltonians2nu
 import hamiltonians3nu
+import hamiltonians4nu
 import oscprob3nu
 import slabs
 
@@ -366,3 +367,286 @@ def test_between_locations_matches_the_explicit_chord():
         np.array(earth.probabilities_2nu_earth(
             h_vac2, 1.e9, costhz, n_slabs_per_segment=3)),
         atol=ATOL)
+
+
+# --------------------------------------------------------------------------
+# Four flavors through the Earth, which was not possible before 1.11.0
+# --------------------------------------------------------------------------
+
+def _vacuum_4nu(s14=0.0, s24=0.0, s34=0.0, dm41=1.0):
+    r"""Returns a 3+1 energy-independent vacuum Hamiltonian."""
+    return hamiltonians4nu.hamiltonian_4nu_vacuum_energy_independent(
+        gd.S12_NO_BF, gd.S23_NO_BF, gd.S13_NO_BF, s14, s24, s34,
+        gd.DCP_NO_BF, gd.D21_NO_BF, gd.D31_NO_BF, dm41)
+
+
+def _vacuum_3nu():
+    r"""Returns the matching three-flavor vacuum Hamiltonian."""
+    return np.asarray(
+        hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(
+            gd.S12_NO_BF, gd.S23_NO_BF, gd.S13_NO_BF, gd.DCP_NO_BF,
+            gd.D21_NO_BF, gd.D31_NO_BF))
+
+
+@pytest.mark.parametrize('costhz', [-1.0, -0.8, -0.3, -0.05])
+def test_a_decoupled_sterile_crosses_the_earth_as_three_flavors_do(costhz):
+    r"""With the sterile angles off, the active block is the 3nu answer.
+
+    The strongest check available for the four-flavor Earth path, and
+    the reason it is worth having: it runs the whole PREM chord --- the
+    boundary crossings, the per-slab densities, the composition of
+    nineteen segments' worth of operators --- through machinery that had
+    never been exercised at four flavors, and compares it against a
+    module that has.  A wrong sterile matter entry, a wrong slab order
+    or a wrong flavor ordering would all show here.
+    """
+    four = np.asarray(earth.probabilities_4nu_earth(
+        _vacuum_4nu(), 1.0e10, costhz)).reshape(4, 4)
+    three = np.asarray(earth.probabilities_3nu_earth(
+        _vacuum_3nu(), 1.0e10, costhz)).reshape(3, 3)
+
+    assert np.max(np.abs(four[:3, :3] - three)) < 1.0e-11
+    assert np.max(np.abs(four[:3, 3])) == 0.0
+    assert np.max(np.abs(four[3, :3])) == 0.0
+    assert np.allclose(four.sum(axis=1), 1.0, atol=1.0e-9)
+
+
+def test_the_sterile_state_feels_the_neutral_current_potential():
+    r"""V_NC does not cancel once a sterile state is present.
+
+    It is flavor-universal across the three active states, so at three
+    flavors it is proportional to the identity and drops out.  A sterile
+    state does not feel it, so removing it from all four leaves
+    ``-V_NC`` on the sterile entry --- and that entry is what places the
+    sterile matter resonance.  Dropping it would be invisible in vacuum,
+    which is exactly why it is pinned here.
+    """
+    assert earth.matter_potential_nc(3.0) < 0.0
+    assert np.isclose(earth.matter_potential_nc(3.0), gd.VNC_EARTH_CRUST)
+
+    # Twice the density is twice the potential, and the ratio to V_CC is
+    # fixed by the isoscalar assumption
+    assert np.isclose(earth.matter_potential_nc(6.0),
+                      2.0*earth.matter_potential_nc(3.0))
+    assert np.isclose(-earth.matter_potential_nc(3.0)
+                      / earth.matter_potential(3.0), 0.5)
+
+    mixed = _vacuum_4nu(s14=np.sqrt(0.10), s24=np.sqrt(0.10))
+    with_nc = np.asarray(earth.probabilities_4nu_earth(mixed, 1.0e10, -0.8))
+    assert abs(sum(with_nc[0:4]) - 1.0) < 1.0e-9
+    # The sterile channel is actually open, or this test proves nothing
+    assert with_nc[3] > 1.0e-6
+
+
+def test_4nu_earth_converges_as_the_slabs_are_refined():
+    r"""Refining the discretisation settles, as at three flavors."""
+    h_vacuum = _vacuum_4nu(s14=np.sqrt(0.10), s24=np.sqrt(0.10))
+    values = [np.asarray(earth.probabilities_4nu_earth(
+        h_vacuum, 1.0e10, -0.8, n_slabs_per_segment=n))[0]
+        for n in (2, 4, 8, 16, 32)]
+
+    differences = np.abs(np.diff(values))
+    assert differences[-1] < differences[0]
+    assert differences[-1] < 1.0e-3
+
+
+def test_4nu_between_locations_matches_the_chord_it_names():
+    r"""The named-pair wrapper is the chord calculation, not a new one."""
+    h_vacuum = _vacuum_4nu(s14=np.sqrt(0.10))
+    costhz = earth.costhz_between_points_on_surface(
+        *earth.coordinates_of_named_location('fermilab'),
+        *earth.coordinates_of_named_location('homestake'))
+
+    named = earth.probabilities_4nu_between_locations(
+        h_vacuum, 1.0e9, 'fermilab', 'homestake')
+    direct = earth.probabilities_4nu_earth(h_vacuum, 1.0e9, costhz)
+
+    assert np.allclose(named, direct, atol=0.0)
+
+
+def test_a_coordinate_smaller_than_one_degree_south_is_expressible():
+    r"""The sign can ride on the minutes when the degree part is zero.
+
+    ``dms_to_decimal`` puts the sign on the degree part, which works
+    until the degree part is zero: ``(-0, 30, 0)`` is ``(0, 30, 0)`` in
+    Python, so 0 deg 30' South silently came back as 0 deg 30' North.
+    No predefined location reaches that band, which is why it went
+    unnoticed, but a user-supplied one can.
+    """
+    assert earth.dms_to_decimal(0, -30, 0) == -0.5
+    assert earth.dms_to_decimal(0, 30, 0) == 0.5
+    assert earth.dms_to_decimal(-5, 30, 0) == -5.5
+    assert earth.dms_to_decimal(5, 30, 0) == 5.5
+
+    # Every predefined location still round-trips
+    for name in earth.LOC_COORDS_DMS:
+        lat, lon = earth.coordinates_of_named_location(name)
+        assert -90.0 <= earth.dms_to_decimal(*lat) <= 90.0
+        assert -180.0 <= earth.dms_to_decimal(*lon) <= 180.0
+
+
+def test_an_unknown_location_says_what_the_known_ones_are():
+    r"""And does not bury that behind a chained KeyError."""
+    with pytest.raises(ValueError, match='is not a predefined location'):
+        earth.coordinates_of_named_location('atlantis')
+
+    try:
+        earth.coordinates_of_named_location('atlantis')
+    except ValueError as error:
+        assert error.__cause__ is None
+        assert error.__suppress_context__ is True
+        assert 'kamioka' in str(error)
+
+
+def test_the_radius_along_a_chord_stays_real_at_the_endpoints():
+    r"""Round-off at the endpoints must not surface as a nan.
+
+    ``r2`` vanishes nowhere on a chord, but the expression for it can
+    land a few ulp below zero at ``l = 0`` and ``l = d``.  It is clipped
+    at zero rather than passed through ``abs``, which would also hide a
+    genuinely negative value.
+    """
+    for costhz in (-1.0, -0.5, -1.0e-9):
+        d = earth.distance_traveled_inside_earth(costhz)
+        for l in (0.0, d, d/2.0):
+            r = earth.earth_radial_distance_from_depth(costhz, l)
+            assert np.isfinite(r)
+            assert 0.0 <= r <= gd.EARTH_RADIUS*(1.0 + 1.0e-12)
+        assert np.isclose(earth.earth_radial_distance_from_depth(costhz, 0.0),
+                          gd.EARTH_RADIUS)
+        assert np.isclose(earth.earth_radial_distance_from_depth(costhz, d),
+                          gd.EARTH_RADIUS)
+
+
+def test_the_neutron_fraction_can_be_given_explicitly():
+    r"""A profile that is not isoscalar can say so.
+
+    The default takes the neutron fraction as the complement of the
+    electron fraction, which is the isoscalar assumption; a caller
+    modelling something else supplies it directly.
+    """
+    isoscalar = earth.matter_potential_nc(3.0)
+
+    assert np.isclose(earth.matter_potential_nc(3.0, neutron_fraction=0.5),
+                      isoscalar)
+    assert np.isclose(earth.matter_potential_nc(3.0, neutron_fraction=1.0),
+                      2.0*isoscalar)
+    # Zero neutrons, no neutral-current potential at all
+    assert earth.matter_potential_nc(3.0, neutron_fraction=0.0) == 0.0
+
+
+@pytest.mark.parametrize('costhz', [-1.5, -2.0, 1.5, -1.0e6, 42.0])
+def test_a_costhz_outside_its_range_is_refused(costhz):
+    r"""``costhz`` is a cosine, and a chord cannot exceed the diameter.
+
+    The chord length is ``-2 R costhz``, an expression happy to accept
+    anything: ``costhz = -1.5`` gave 19 113 km against an Earth diameter
+    of 12 742 km, and that chord then acquired seventy-six
+    plausible-looking slabs with densities spanning the whole PREM
+    range.  Nothing downstream noticed.
+    """
+    with pytest.raises(ValueError, match=r'must lie in \[-1, 1\]'):
+        earth.distance_traveled_inside_earth(costhz)
+
+    if costhz < 0.0:
+        with pytest.raises(ValueError, match=r'must lie in \[-1, 1\]'):
+            earth.earth_slabs(costhz, 4)
+
+
+def test_the_boundaries_of_costhz_are_still_allowed():
+    r"""Inclusive: the diametric chord and the horizon are both real."""
+    assert np.isclose(earth.distance_traveled_inside_earth(-1.0),
+                      2.0*gd.EARTH_RADIUS)
+    assert earth.distance_traveled_inside_earth(1.0) == 0.0
+    assert earth.distance_traveled_inside_earth(0.0) == 0.0
+    assert len(earth.earth_slabs(-1.0, 2)[0]) > 0
+
+
+# Published baselines of real experiments, in km.  These are what the
+# chord between the two sites is *for*, and they are the only external
+# check on the haversine geometry: every other test here compares the
+# geometry against itself.  The tolerance absorbs the spherical-Earth
+# approximation and the fact that a published baseline is quoted between
+# beam target and detector hall rather than between site centroids.
+PUBLISHED_BASELINES = [
+    ('cern', 'gran_sasso', 732.0),      # CNGS
+    ('fermilab', 'homestake', 1300.0),  # DUNE
+    ('tokai', 'kamioka', 295.0),        # T2K
+    ('cern', 'pyhaasalmi', 2288.0),     # LBNO, as proposed
+]
+
+
+@pytest.mark.parametrize('site_1,site_2,published', PUBLISHED_BASELINES)
+def test_named_baselines_match_the_published_ones(site_1, site_2, published):
+    r"""The chord between two sites is the experiment's baseline.
+
+    Nothing else in this module checks the haversine against anything
+    outside the code: replacing ``cos(lat2)`` by ``sin(lat2)`` in it left
+    the whole suite green, which means the geometry of every
+    ``*_between_locations`` call rested on no external evidence at all.
+    """
+    chord = earth.chord_length_inside_earth(
+        *earth.coordinates_of_named_location(site_1),
+        *earth.coordinates_of_named_location(site_2))
+
+    assert abs(chord - published)/published < 0.02, (
+        '%s to %s came out %.1f km against a published %.1f km'
+        % (site_1, site_2, chord, published))
+
+
+def test_the_haversine_is_right_at_the_poles_too():
+    r"""A pole is where a wrong latitude term shows up most.
+
+    Mid-latitude pairs are forgiving --- ``cos`` and ``sin`` are close
+    together near 45 degrees, which is where most of these sites are ---
+    so the geometry is pinned somewhere it cannot hide: a chord to the
+    South Pole, and the diameter between the two poles.
+    """
+    poles = earth.chord_length_inside_earth(
+        *earth.coordinates_of_named_location('north_pole'),
+        *earth.coordinates_of_named_location('south_pole'))
+    assert np.isclose(poles, 2.0*gd.EARTH_RADIUS)
+
+    # CERN sits at 46 deg 14' N, so its angular distance to the South
+    # Pole is 136.23 deg and the chord is 2 R sin(half of that)
+    cern_to_pole = earth.chord_length_inside_earth(
+        *earth.coordinates_of_named_location('cern'),
+        *earth.coordinates_of_named_location('south_pole'))
+    expected = 2.0*gd.EARTH_RADIUS*np.sin(np.radians(90.0 + 46.2338)/2.0)
+    assert np.isclose(cern_to_pole, expected, rtol=1.0e-4)
+
+    # A site is zero from itself, whatever its latitude
+    for name in ('north_pole', 'kamioka', 'south_pole'):
+        coords = earth.coordinates_of_named_location(name)
+        assert earth.chord_length_inside_earth(*coords, *coords) < 1.0e-9
+
+
+@pytest.mark.parametrize('boundary', list(earth.PREM_BOUNDARIES))
+def test_a_radius_exactly_on_a_shell_boundary_takes_the_inner_shell(boundary):
+    r"""The PREM bins are right-closed, and the code says so.
+
+    ``density_prem`` looks the shell up with ``side='left'``, whose
+    comment explains that this reproduces bins of the form
+    ``r <= 1221.5``.  Nothing tested it: switching to ``side='right'``
+    left the suite green, because a slab midpoint never lands exactly on
+    a boundary.  A caller evaluating the density *at* a boundary is
+    entitled to the documented answer.
+    """
+    on = earth.density_prem(boundary)
+    just_inside = earth.density_prem(boundary*(1.0 - 1.0e-12))
+    just_outside = earth.density_prem(boundary*(1.0 + 1.0e-12))
+
+    assert np.isclose(on, just_inside, rtol=1.0e-9)
+
+    # Eight of the nine boundaries are genuine density discontinuities,
+    # jumping by between 1.9% and 61%, so the two sides must differ
+    # there --- without that, this test would pass on either convention
+    # and prove nothing.  The ninth, 5771 km, is not a discontinuity:
+    # PREM changes polynomial there but the two meet, agreeing to
+    # 5.9e-8 relative, which is continuity to the precision the
+    # published coefficients are quoted at.  It is a change of fit
+    # inside the transition zone, not a change of rock.
+    if boundary != 5771.0:
+        assert not np.isclose(on, just_outside, rtol=1.0e-3)
+    else:
+        assert np.isclose(on, just_outside, rtol=1.0e-6)
