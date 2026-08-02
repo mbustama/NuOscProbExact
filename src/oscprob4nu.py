@@ -576,10 +576,13 @@ def _polish_roots(
     on the separation, of order :math:`10^{-8}` relative.  No Newton step
     against :math:`\chi` recovers that, and the guarded step does not
     try.  What it guarantees is the weaker and correct thing: refining
-    never leaves the roots worse than the closed form left them.
-    Measured over the same sweep, the worst refined error is about half
-    the worst unrefined one, and a test asserts the ordering case by
-    case rather than only in the aggregate.
+    never leaves the roots worse than the closed form left them, and a
+    test asserts that ordering case by case.  Over the same sweep the
+    guard refuses the step outright for about forty per cent of the
+    spectra, and on one machine the worst refined error came out about
+    half the worst unrefined one --- but which spectrum carries the
+    worst error is decided by the last bit and is not a property to
+    depend on.
 
     It costs one comparison per root and does not fire otherwise: over
     three thousand ordinary random Hermitian spectra it changed nothing,

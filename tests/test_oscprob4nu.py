@@ -402,8 +402,13 @@ def test_a_nearly_degenerate_pair_does_not_derail_the_refinement():
     worse, which unguarded it did by seven orders of magnitude.
 
     So: the refined roots are never worse than the unrefined ones, and
-    stay bounded.  Measured here, the worst refined error is about half
-    the worst unrefined one, across the whole sweep.
+    stay bounded.  Case by case, since that is where the content is ---
+    on the sweep below the guard refuses the step outright for about
+    forty per cent of the spectra, and which of them happens to carry
+    the worst error is a matter of the last bit and differs between
+    machines.  The aggregate comparison is therefore ``<=`` and not
+    ``<``; asserting the strict form passed here and failed on CI under
+    two of the five Python versions, for exactly that reason.
     """
     rng = np.random.default_rng(24680)
 
@@ -443,7 +448,7 @@ def test_a_nearly_degenerate_pair_does_not_derail_the_refinement():
     assert worst_refined < 1.e-4, (
         'a nearly degenerate pair moved the latent roots by %.2e relative'
         % worst_refined)
-    assert worst_refined < worst_unrefined
+    assert worst_refined <= worst_unrefined
 
 
 def test_the_step_guard_leaves_ordinary_spectra_untouched():
@@ -454,6 +459,12 @@ def test_the_step_guard_leaves_ordinary_spectra_untouched():
     is pinned from the other side too: on ordinary random Hamiltonians
     the refined roots must still reach round-off, which they cannot do
     from the closed form alone.
+
+    That the refinement *helps* is asserted where it is unambiguous, in
+    `test_root_polishing_is_what_makes_a_stiff_spectrum_accurate`.  Here
+    the aggregate is only required not to get worse, because on a
+    generic spectrum the closed form is already near round-off and which
+    element carries the worst error is decided by the last bit.
     """
     rng = np.random.default_rng(13579)
 
@@ -480,7 +491,7 @@ def test_the_step_guard_leaves_ordinary_spectra_untouched():
         oscprob4nu.POLISH_ROOTS = original
 
     assert worst_refined < 1.e-14
-    assert worst_refined < worst_unrefined
+    assert worst_refined <= worst_unrefined
 
 
 def test_roots_of_a_traceless_free_hamiltonian_all_vanish():

@@ -47,8 +47,12 @@ testing the four-flavor kernel, not caused by it.
   on the separation, of order 1e-8 relative.  No Newton step against `chi`
   recovers that.  The guarantee is the weaker and correct one — refining
   never leaves the roots worse than the closed form left them — and a test
-  asserts that ordering case by case, not merely in the aggregate.  The
-  worst refined error across the sweep is about half the worst unrefined one.
+  asserts that ordering case by case, which is where the content is.  The
+  guard refuses the step outright for about forty per cent of that sweep,
+  so which spectrum carries the worst error is decided by the last bit;
+  the aggregate comparison is `<=` rather than `<` for that reason, a
+  distinction CI found under two of the five Python versions after the
+  strict form passed locally.
 
 ### Unchanged
 
