@@ -43,14 +43,11 @@ Every figure below is produced by a notebook in [`notebooks/`](notebooks/), and 
 
 7. [Usage and examples](#usage-and-examples)
    1. [Basics](#basics)
-   2. [Trivial example](#trivial-example)
-   3. [Oscillations in vacuum: fixed energy and baseline](#oscillations-in-vacuum-fixed-energy-and-baseline)
-   4. [Three-neutrino oscillations in vacuum: fixed energy, varying baseline](#three-neutrino-oscillations-in-vacuum-fixed-energy-varying-baseline)
-   5. [Three-neutrino oscillations in vacuum: fixed baseline, varying energy](#three-neutrino-oscillations-in-vacuum-fixed-baseline-varying-energy)
-   6. [Three-neutrino oscillations in matter](#three-neutrino-oscillations-in-matter)
-   7. [Three-neutrino oscillations in matter with non-standard interactions (NSI)](#three-neutrino-oscillations-in-matter-with-non-standard-interactions-nsi)
-   8. [Three-neutrino oscillations in a Lorentz invariance-violating (LIV) background](#three-neutrino-oscillations-in-a-lorentz-invariance-violating-liv-background)
-   9. [Arbitrary Hamiltonians](#arbitrary-hamiltonians)
+   2. [A first probability](#a-first-probability)
+   3. [Whole scans in one call](#whole-scans-in-one-call)
+   4. [Four flavors: a 3+1 sterile state](#four-flavors-a-31-sterile-state)
+   5. [Arbitrary Hamiltonians](#arbitrary-hamiltonians)
+   6. [Where the rest is](#where-the-rest-is)
 
 8. [Notebooks](#notebooks)
 
@@ -188,7 +185,7 @@ NuOscProbExact/
 ├── LICENSE                          # MIT license
 ├── README.md                        # The file that you are reading
 ├── pyproject.toml                   # Packaging metadata and pytest configuration
-├── examples/                        # Runnable scripts, the ones the README walks through
+├── examples/                        # Runnable scripts, one per scenario, linked from README.md
 │   ├── example_2nu_trivial.py       # Two-flavor, arbitrary Hamiltonian
 │   ├── example_2nu_vacuum.py        # Two-flavor, oscillations in vacuum
 │   ├── example_2nu_vacuum_coeffs.py # Two-flavor, expansion coefficients
@@ -215,7 +212,7 @@ NuOscProbExact/
 │       ├── changelog.rst            # Includes the root CHANGELOG.md
 │       └── _static/
 │           └── nuoscprobexact_logo.png
-├── img/                             # Pre-computed figures shown in README.md
+├── img/                             # Figures from earlier versions of README.md
 │   ├── prob_3nu_vacuum_vs_baseline_ee_em_et.png
 │   ├── prob_3nu_vacuum_vs_energy_ee_em_et.png
 │   └── gallery/                     # Figures lifted from the notebooks, shown in README.md
@@ -299,7 +296,7 @@ import oscprob3nu
 ### Checking the installation
 
 **Run the worked examples.**
-   Inside the directory `examples/`, we provide several example files to get you started.  We also elaborate on these examples later in this README, and show the output thay you should expect from them.  To run any of the examples, just execute, *e.g.*,
+   Inside the directory `examples/`, we provide several example files to get you started.  Each is runnable as it stands and prints the probabilities it computes; [Usage and examples](#usage-and-examples) below walks through the first of them.  To run any of the examples, just execute, *e.g.*,
    ```shell
    python example_2nu_trivial.py
    ```
@@ -381,126 +378,39 @@ One thing that *is* worth doing by hand: build the energy-independent part of th
 
 ## Usage and examples
 
-There are only two core modules: `oscprobn2nu.py` and `oscprob3nu.py`.  Each one is stand-alone (except for the dependencies described [above](#requirements)).  To use either module in your code, copy it to your project's working directory, or add their location to the paths where your environment looks for modules, *e.g.*,
+There are three core modules, one per flavor count: `oscprob2nu.py`, `oscprob3nu.py` and `oscprob4nu.py`.  Each is stand-alone apart from the dependencies described [above](#requirements).  Install the package, or add `src/` to the path, which is what the bundled examples do:
+
 ```python
 import sys
 
 sys.path.append('../src')
 ```
 
-In the examples below, we focus mostly on `oscprob3nu`, but what we show applies to `oscprob2nu` as well.
+What follows is the short version: what the functions take and return, and four examples that between them cover a single probability, a whole scan, four flavors, and your own Hamiltonian.  Everything else --- matter, non-standard interactions, Lorentz-invariance violation, oscillograms, the Earth, the expansion coefficients --- lives in the runnable scripts in [`examples/`](examples/) and in the [notebooks](#notebooks), which store their figures inline and are executed by CI.  It is not repeated here, so there is one copy of each to keep correct.
 
 
 ### Basics
 
-Most of the time, you will be only interested in computing oscillation probabilities, not in the intermediate steps of the method.  The functions to compute and return the probabilities are `probabilities_3nu`, for the three-neutrino case, and `probabilities_2nu`, for the two-neutrino case.  Below, we show how to use them.
+Most of the time you want probabilities, not the intermediate steps.  The routine is `probabilities_Nnu` in `oscprobNnu`, and it takes a Hermitian matrix and a baseline:
 
-#### Three-neutrino oscillations
+| Flavors | Call | Returns |
+|---|---|---|
+| 2 | `oscprob2nu.probabilities_2nu(h, L)` | 4 values: `Pee, Pem, Pme, Pmm` |
+| 3 | `oscprob3nu.probabilities_3nu(h, L)` | 9 values: `Pee, Pem, Pet, Pme, ..., Ptt` |
+| 4 | `oscprob4nu.probabilities_4nu(h, L)` | 16 values: `Pee, Pem, Pet, Pes, Pme, ..., Pss` |
 
-The function to compute three-neutrino probabilities is `probabilities_3nu` in the module `oscprob3nu`.  It takes as input parameters the `hamiltonian`, in the form of a 3x3 Hermitian matrix, and the baseline `L`.
+In every case the initial flavor varies slowest, so `P[n*alpha + beta]` is P(nu_alpha -> nu_beta) for `n` flavors.  The two-flavor labels could equally be `Pmm, Pmt, Ptm, Ptt` --- which pair of flavors they describe is set by the Hamiltonian you pass, not by the code.
 
-This function returns the list of probabilities `Pee` (nu_e --> nu_e), `Pem` (nu_e --> nu_mu), `Pet` (nu_e --> nu_tau), `Pme` (nu_mu --> nu_e), `Pmm` (nu_mu --> nu_mu), `Pmt` (nu_mu --> nu_tau), `Pte` (nu_tau --> nu_e), `Ptm` (nu_tau --> nu_mu), and `Ptt` (nu_tau --> nu_tau).
+The evolution operator itself is available too, as `evolution_operator_Nnu(h, L)`, if you want to compose it across segments or propagate a density matrix rather than read off probabilities.
 
-To use it, call
-```python
-import oscprob3nu
+> **Important:** If you feed the code a non-Hermitian matrix, it will output nonsensical results.
 
-hamiltonian = [[H11, H12, H13], [H21, H22, H23], [H31, H32, H33]]
-Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu(hamiltonian, L)
-```
-
-#### Two-neutrino oscillations
-
-The function to compute two-neutrino probabilities is `probabilities_2nu` in the module `oscprob2nu`.  It takes as input parameters the `hamiltonian`, in the form of a 2x2 Hermitian matrix, and the baseline `L`.
-
-This function returns the list of probabilities `Pee` (nu_e --> nu_e), `Pem` (nu_e --> nu_mu), `Pme` (nu_mu --> nu_e), and `Pmm` (nu_mu --> nu_mu).  (These probabilities could also be `Pmm`, `Pmt`, `Pmt`, and `Ptt` instead, depending on what Hamiltonian you pass to `probabilities_2nu`.)
-
-To use it, call
-```python
-import oscprob2nu
-
-hamiltonian = [[H11, H12], [H21, H22]]
-Pee, Pem, Pme, Pmm = oscprob2nu.probabilities_2nu(hamiltonian, L)
-```
-
-> **Important:** If you feed the code a non-Hermitian matrix, it will output nonsensical results
-
-> **About the units:** The code in the modules `oscprob3nu` and `osprob2nu` does not assume units for any of the model parameters, so you need to make sure that you pass values with the correct units.  The module `globaldefs` contains conversion factors which might come in handy for this.
+> **About the units:** These modules assume no units for any of the model parameters, so you need to pass values with consistent ones --- all that is required is that `H*L` be dimensionless.  The module `globaldefs` provides physical constants and conversion factors, including `CONV_KM_TO_INV_EV`, which converts a baseline in km to eV^{-1}.
 
 
-### Trivial example
+### A first probability
 
-#### Three-neutrino oscillations
-
-As a first, trivial example, we pass an arbitrary Hamiltonian and baseline to `probabilities_3nu`:
-```python
-# Find this example in NuOscProbExact/examples/example_3nu_trivial.py
-
-import oscprob3nu
-
-hamiltonian = [
-                [1.0+0.0j, 0.0+2.0j, 0.0-1.0j],
-                [0.0-2.0j, 3.0+0.0j, 3.0+0.0j],
-                [0.0+1.0j, 3.0-0.0j, 5.0+0.0j]
-]
-
-L = 1.0
-
-Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu(hamiltonian, L)
-
-print("Pee = %6.5f, Pem = %6.5f, Pet = %6.5f" % (Pee, Pem, Pet))
-print("Pme = %6.5f, Pmm = %6.5f, Pmt = %6.5f" % (Pme, Pmm, Pmt))
-print("Pte = %6.5f, Ptm = %6.5f, Ptt = %6.5f" % (Pte, Ptm, Ptt))
-```
-This returns
-```shell
-Pee = 0.34273, Pem = 0.41369, Pet = 0.24358
-Pme = 0.41369, Pmm = 0.00485, Pmt = 0.58146
-Pte = 0.24358, Ptm = 0.58146, Ptt = 0.17497
-```
-
-As expected, `Pme + Pmm + Pmt = 1`, and `Pte + Ptm + Ptt = 1`.
-
-#### Two-neutrino oscillations
-
-In this case, we use `probabilities_2nu`:
-```python
-# Find this example in NuOscProbExact/examples/example_2nu_trivial.py
-
-import oscprob2nu
-
-hamiltonian = [
-                [1.0+0.0j, 1.0+2.0j],
-                [1.0-2.0j, 3.0+0.0j]
-]
-
-L = 1.0
-
-Pee, Pem, Pme, Pmm = oscprob2nu.probabilities_2nu(hamiltonian, L)
-
-print("Pee = %6.5f, Pem = %6.5f" % (Pee, Pem))
-print("Pme = %6.5f, Pmm = %6.5f" % (Pme, Pmm))
-```
-This returns
-```shell
-Pee = 0.66063, Pem = 0.33937
-Pme = 0.33937, Pmm = 0.66063
-```
-
-As expected, `Pem == Pme` and `Pee + Pem = 1`.
-
-
-### Oscillations in vacuum: fixed energy and baseline
-
-#### Three-neutrino oscillations
-
-Now we compute the three-neutrino oscillation probabilities in vacuum.  To do this, we can use the routine
-```python
-hamiltonian_3nu_vacuum_energy_independent(s12, s23, s13, dCP, D21, D31)
-```
-that is provided in the `hamiltonians3nu` module.  It returns the 3x3 Hamiltonian for oscillations in vacuum.  The input parameters `s12`, `s23`, `s13`, `dCP`, `D21`, and `D31` are, respectively, sin(theta_12), sin(theta_23), sin(theta_13), delta_CP, Delta m_21^2, and Delta m_31^2.  For this example, we set them to their current best-fit values, which we pull from `globaldefs` (inspect that file for more information about these values).
-
-> **Important:** The function `hamiltonian_3nu_vacuum_energy_independent` returns the Hamiltonian in vacuum **without** multiplying it by the *1/E* prefactor, where *E* is the neutrino energy.  It was done in this way so that, if we wish to compute the probabilities at different energies, we need to compute `hamiltonian_3nu_vacuum_energy_independent` only once, and then multiply it by a varying *1/E* prefactor.
+Three-flavor oscillations in vacuum, at a fixed energy and baseline.  `hamiltonian_3nu_vacuum_energy_independent` returns the vacuum Hamiltonian **without** the *1/E* prefactor, so that a scan over energies computes it once and divides by a varying *E*:
 
 ```python
 # Find this example in NuOscProbExact/examples/example_3nu_vacuum.py
@@ -514,188 +424,36 @@ from globaldefs import *
 energy = 1.e9     # Neutrino energy [eV]
 baseline = 1.3e3  # Baseline [km]
 
-# Use the NuFit 4.0 best-fit values of the mixing parameters pulled from globaldefs
-# NO means "normal ordering"; change NO to IO if you want to use inverted ordering
-h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent( \
-                                                                                S12_NO_BF, S23_NO_BF,
-                                                                                S13_NO_BF, DCP_NO_BF,
-                                                                                D21_NO_BF, D31_NO_BF)
-h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
+# NuFit best-fit mixing parameters, pulled from globaldefs.  NO means
+# "normal ordering"; change NO to IO for inverted ordering
+h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(
+    S12_NO_BF, S23_NO_BF, S13_NO_BF, DCP_NO_BF, D21_NO_BF, D31_NO_BF)
+h_vacuum = np.asarray(h_vacuum_energy_indep)/energy
 
-# CONV_KM_TO_INV_EV is pulled from globaldefs; it converts km to eV^{-1}
-Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( h_vacuum,
-                                                                            baseline*CONV_KM_TO_INV_EV)
+Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu(
+    h_vacuum, baseline*CONV_KM_TO_INV_EV)
 
 print("Pee = %6.5f, Pem = %6.5f, Pet = %6.5f" % (Pee, Pem, Pet))
 print("Pme = %6.5f, Pmm = %6.5f, Pmt = %6.5f" % (Pme, Pmm, Pmt))
 print("Pte = %6.5f, Ptm = %6.5f, Ptt = %6.5f" % (Pte, Ptm, Ptt))
-````
+```
+
 This returns
+
 ```shell
 Pee = 0.92768, Pem = 0.01432, Pet = 0.05800
 Pme = 0.04023, Pmm = 0.37887, Pmt = 0.58090
 Pte = 0.03210, Ptm = 0.60680, Ptt = 0.36110
 ```
 
-> **Computing anti-neutrino probabilities**: All of the examples shown in this README (and in the files inside the `examples/` directory) are for neutrinos, not anti-neutrinos.  If you wish to compute probabilities for anti-neutrinos, a simple way to do this is to pass `-dCP` instead of `dCP` to `hamiltonian_3nu_vacuum_energy_independent` (or to `hamiltonian_2nu_vacuum_energy_independent`).
+Each row sums to one, as it must.
 
-> **About `globaldefs`**: This module contains physical constants and unit-conversion constants that are used in the examples and that you can use in your code.
-
-Sometimes, you might be interested also in returning the coefficients `h1`, ..., `h8` of the expansion of the Hamiltonian in terms of Gell-Mann matrices (Table II in the paper), the coefficients `u0`, ..., `u8` of the SU(3) expansion of the associated time-evolution operator (Eqs. (13) and (14) in the paper), or the time-evolution operator `evol_operator` itself, as a 3x3 matrix (Eq. (15) in the paper).  See the paper [arXiv:1904.12391](http://arxiv.org/abs/1904.12391) for details on these quantities.
-
-The module `oscprob3nu` has functions to do this:
-```python
-# Find this example in NuOscProbExact/examples/example_3nu_vacuum_coeffs.py
-
-import numpy as np
-
-import oscprob3nu
-import hamiltonians3nu
-from globaldefs import *
-
-energy = 1.e9     # Neutrino energy [eV]
-baseline = 1.3e3  # Baseline [km]
-
-h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent( \
-                                                                                S12_NO_BF, S23_NO_BF,
-                                                                                S13_NO_BF, DCP_NO_BF,
-                                                                                D21_NO_BF, D31_NO_BF)
-h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
-
-h1, h2, h3, h4, h5, h6, h7, h8 = oscprob3nu.hamiltonian_3nu_coefficients(h_vacuum)
-print('h1: {:.4e}'.format(h1))
-print('h2: {:.4e}'.format(h2))
-print('h3: {:.4e}'.format(h3))
-print('h4: {:.4e}'.format(h4))
-print('h5: {:.4e}'.format(h5))
-print('h6: {:.4e}'.format(h6))
-print('h7: {:.4e}'.format(h7))
-print('h8: {:.4e}'.format(h8))
-print()
-
-u0, u1, u2, u3, u4, u5, u6, u7, u8 = oscprob3nu.evolution_operator_3nu_u_coefficients(  \
-                                                                            h_vacuum,
-                                                                            baseline*CONV_KM_TO_INV_EV)
-print('u0: {:.4f}'.format(u0))
-print('u1: {:.4f}'.format(u1))
-print('u2: {:.4f}'.format(u2))
-print('u3: {:.4f}'.format(u3))
-print('u4: {:.4f}'.format(u4))
-print('u5: {:.4f}'.format(u5))
-print('u6: {:.4f}'.format(u6))
-print('u7: {:.4f}'.format(u7))
-print('u8: {:.4f}'.format(u8))
-print()
-
-evol_operator = oscprob3nu.evolution_operator_3nu(h_vacuum, baseline*CONV_KM_TO_INV_EV)
-print('U3 = ')
-with np.printoptions(precision=3, suppress=True):
-    print(np.array(evol_operator))
-```
-This returns
-```shell
-h1: -1.0187e-13
-h2: -8.4997e-14
-h3: -3.4583e-13
-h4: -1.0848e-13
-h5: -7.2033e-14
-h6: 5.9597e-13
-h7: 1.5392e-15
-h8: -8.2865e-14
-
-u0: -0.3794+0.5072j
-u1: 0.0318+0.1167j
-u2: -0.0257+0.1095j
-u3: -0.1270+0.4507j
-u4: -0.1066+0.1569j
-u5: -0.0217+0.0928j
-u6: 0.1383-0.7580j
-u7: 0.0093-0.0040j
-u8: -0.0323+0.1084j
-
-[[-0.893+0.362j -0.142+0.141j -0.179-0.014j]
- [-0.091-0.078j  0.009+0.615j  0.767+0.134j]
- [-0.135-0.199j  0.749+0.142j -0.254+0.545j]]
-```
+> **Antineutrinos:** pass `-dCP` instead of `dCP`, and flip the sign of the matter potential.  [Notebook 13](notebooks/13_antineutrinos.ipynb) works through both, and the two ways to get it wrong.
 
 
+### Whole scans in one call
 
-#### Two-neutrino oscillations
-
-To compute the two-neutrino oscillation probabilities in vacuum, we can use the routine
-```python
-hamiltonian_2nu_vacuum_energy_independent(sth, Dm2)
-```
-that is provided in the `hamiltonians2nu` module.  The input parameters `sth`, and `Dm2` are, respectively, sin(theta), and Delta m^2.  For this example, we set them to current best-fit values for atmospheric neutrinos.
-
-```python
-# Find this example in NuOscProbExact/examples/example_2nu_vacuum.py
-
-import numpy as np
-
-import oscprob2nu
-import hamiltonians2nu
-from globaldefs import *
-
-energy = 1.e9     # Neutrino energy [eV]
-baseline = 1.3e3  # Baseline [km]
-
-h_vacuum_energy_indep = hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(S23_NO_BF, D31_NO_BF)
-h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
-
-Pee, Pem, Pme, Pmm = oscprob2nu.probabilities_2nu(h_vacuum, baseline*CONV_KM_TO_INV_EV)
-
-print("Pee = %6.5f, Pem = %6.5f" % (Pee, Pem))
-print("Pme = %6.5f, Pmm = %6.5f" % (Pme, Pmm))
-````
-This returns
-```shell
-Pee = 0.29595, Pem = 0.70405
-Pme = 0.70405, Pmm = 0.29595
-```
-
-Like in the three-neutrino case, we can also return the coefficients `h1`, `h2`, `h3` of the expansion of the Hamiltonian in terms of Pauli matrices (Table I in the paper), or the time-evolution operator `evol_operator` itself, as a 2x2 matrix (Eq. (5) in the paper).
-```python
-# Find this example in NuOscProbExact/examples/example_2nu_vacuum_coeffs.py
-
-import numpy as np
-
-import oscprob2nu
-import hamiltonians2nu
-from globaldefs import *
-
-energy = 1.e9     # Neutrino energy [eV]
-baseline = 1.3e3  # Baseline [km]
-
-h_vacuum_energy_indep = hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(S23_NO_BF, D31_NO_BF)
-h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
-
-h1, h2, h3 = oscprob2nu.hamiltonian_2nu_coefficients(h_vacuum)
-print('h1: {:.4e}'.format(h1))
-print('h2: {:.4e}'.format(h2))
-print('h3: {:.4e}'.format(h3))
-print()
-
-evol_operator = oscprob2nu.evolution_operator_2nu(h_vacuum, baseline*CONV_KM_TO_INV_EV)
-print('U2 = ')
-with np.printoptions(precision=3, suppress=True):
-    print(np.array(evol_operator))
-```
-This returns
-```shell
-h1: 6.2270e-13
-h2: -0.0000e+00
-h3: 1.0352e-13
-
-U2 =
-[[-0.526+0.139j  0.   +0.839j]
- [ 0.   +0.839j -0.526-0.139j]]
-```
-
-
-### Three-neutrino oscillations in vacuum: fixed energy, varying baseline
-
-Now we fix the energy at, say, 10 MeV, and vary the baseline between 1 and 500 km.  We use a fine grid in `L` so that the oscillations are clearly rendered.
+Do not call the routine in a Python loop.  Every core routine accepts a **stack** of Hamiltonians, an array of baselines, or both broadcast against each other, and evaluates the lot in one call --- which is [tens of times faster](#performance) and gives identical results:
 
 ```python
 import numpy as np
@@ -704,326 +462,76 @@ import oscprob3nu
 import hamiltonians3nu
 from globaldefs import *
 
-energy = 1.e7     # Neutrino energy [eV]
+baseline = 1.3e3*CONV_KM_TO_INV_EV       # [eV^{-1}]
+energies = np.logspace(-1.0, 1.0, 200)*1.e9   # 0.1 to 10 GeV [eV]
 
-# Baselines, L
-log10_l_min = 0.0  # log10 [km]
-log10_l_max = 3.0  # log10 [km]
-log10_l_npts = 1000
-log10_l_val = np.linspace(log10_l_min, log10_l_max, log10_l_npts)  # [km]
-l_val = [10.**x for x in log10_l_val]
+h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(
+    S12_NO_BF, S23_NO_BF, S13_NO_BF, DCP_NO_BF, D21_NO_BF, D31_NO_BF)
 
+# One Hamiltonian per energy, stacked along a leading axis
+h_stack = np.asarray(h_vacuum_energy_indep)/energies[:, None, None]
 
-h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent( \
-                                                                                S12_NO_BF, S23_NO_BF,
-                                                                                S13_NO_BF, DCP_NO_BF,
-                                                                                D21_NO_BF, D31_NO_BF)
-h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
+prob = oscprob3nu.probabilities_3nu(h_stack, baseline)   # shape (200, 9)
+prob_ee, prob_em, prob_et = prob[:, 0], prob[:, 1], prob[:, 2]
 
-# Each element of prob: [Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt]
-prob = [oscprob3nu.probabilities_3nu(h_vacuum, CONV_KM_TO_INV_EV*l) for l in l_val]
-prob_ee = [x[0] for x in prob]  # Pee
-prob_em = [x[1] for x in prob]  # Pem
-prob_et = [x[2] for x in prob]  # Pet
+print("prob.shape =", prob.shape)
+print("P_ee at %5.2f GeV = %.5f" % (energies[0]/1.e9, prob_ee[0]))
+print("P_ee at %5.2f GeV = %.5f" % (energies[-1]/1.e9, prob_ee[-1]))
 ```
 
-To plot the data:
-```python
-from pylab import *
-from matplotlib import *
-import matplotlib as mpl
+This returns
 
-fig = plt.figure(figsize=[9,9])
-ax = fig.add_subplot(1,1,1)
+```shell
+prob.shape = (200, 9)
+P_ee at  0.10 GeV = 0.24693
+P_ee at 10.00 GeV = 0.98582
+```
 
-ax.plot(l_val, prob_ee, label=r'$P_{\nu_e \to \nu_e}$', color='C0', zorder=1)
-ax.plot(l_val, prob_em, label=r'$P_{\nu_e \to \nu_\mu}$', color='C1', zorder=1)
-ax.plot(l_val, prob_et, label=r'$P_{\nu_e \to \nu_\tau}$', color='C2', zorder=1)
-
-ax.set_xlabel(r'Baseline $L$ [km]', fontsize=25)
-ax.set_ylabel(r'Three-neutrino probability', fontsize=25)
-ax.legend(loc='center left', frameon=False)
-ax.set_xlim([10.**log10_l_min, 10.**log10_l_max])
-ax.set_xscale('log')
-ax.set_ylim([0.0, 1.0])
-
-plt.show()
-````
-
-The same curve, and the equivalents for oscillations in matter, with non-standard interactions, and in a Lorentz invariance-violating background, are drawn in [notebook 02](notebooks/02_vacuum_oscillations.ipynb) and [notebook 03](notebooks/03_matter_nsi_liv.ipynb), which store their figures inline:
-
-<img align="middle" class="center" src="https://github.com/mbustama/NuOscProbExact/blob/main/img/prob_3nu_vacuum_vs_baseline_ee_em_et.png" width="400"/>
-
-The default mixing parameters used throughout come from the `globaldefs` module, which carries the NuFit best fit for both mass orderings.  For more on the scenarios themselves, see the paper [arXiv:1904.12391](http://arxiv.org/abs/1904.12391).
+The same works for a scan over baselines, or for both at once to build an oscillogram.  The sample Hamiltonians in matter accept an array of energies directly, so a matter scan is two calls and no loop.  [Notebook 02](notebooks/02_vacuum_oscillations.ipynb) plots these curves, [notebook 04](notebooks/04_oscillogram.ipynb) builds an oscillogram, and [notebook 09](notebooks/09_performance.ipynb) measures what the broadcasting buys on whatever machine runs it.
 
 
-### Three-neutrino oscillations in vacuum: fixed baseline, varying energy
+### Four flavors: a 3+1 sterile state
 
-Now we fix the baseline at, say, 1300 km, and vary the energy between 100 MeV and 10 GeV.
+`oscprob4nu` works exactly the same way, with a 4x4 Hamiltonian and sixteen probabilities.  With the fourth state read as sterile, the flavor order is (nu_e, nu_mu, nu_tau, nu_s):
 
 ```python
 import numpy as np
 
-import oscprob3nu
-import hamiltonians3nu
+import oscprob4nu
+import hamiltonians4nu
 from globaldefs import *
 
-baseline = 1.3e3                       # Baseline [km]
-baseline = baseline*CONV_KM_TO_INV_EV  # [eV^{-1}]
+# Three extra mixing angles and one extra mass-squared splitting,
+# here Dm41^2 = 1 eV^2
+h_vacuum_energy_indep = hamiltonians4nu.hamiltonian_4nu_vacuum_energy_independent(
+    S12_NO_BF, S23_NO_BF, S13_NO_BF,
+    np.sqrt(0.10), np.sqrt(0.10), 0.0,
+    DCP_NO_BF, D21_NO_BF, D31_NO_BF, 1.0)
 
-# Neutrino energies
-log10_energy_min = -1.0 # [GeV]
-log10_energy_max = 1.0  # [GeV]
-log10_energy_npts = 200
-log10_energy = np.linspace( log10_energy_min,
-                            log10_energy_max,
-                            log10_energy_npts)
-energy = [10.**x for x in log10_energy] # [GeV]
+prob = oscprob4nu.probabilities_4nu(
+    np.asarray(h_vacuum_energy_indep)/1.e9, 1.3e3*CONV_KM_TO_INV_EV)
 
-h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent( \
-                                                                                S12_NO_BF, S23_NO_BF,
-                                                                                S13_NO_BF, DCP_NO_BF,
-                                                                                D21_NO_BF, D31_NO_BF)
-
-# Each element of prob: [Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt]
-prob = [oscprob3nu.probabilities_3nu(np.multiply(1./x/1.e9, h_vacuum_energy_indep), baseline) \
-        for x in energy]
-prob_ee = [x[0] for x in prob]  # Pee
-prob_em = [x[1] for x in prob]  # Pem
-prob_et = [x[2] for x in prob]  # Pet
+print("%d probabilities" % len(prob))
+print("Pee = %6.5f, Pem = %6.5f, Pet = %6.5f, Pes = %6.5f" % tuple(prob[0:4]))
+print("they sum to %.5f" % sum(prob[0:4]))
 ```
 
-To plot the data:
-```python
-from pylab import *
-from matplotlib import *
-import matplotlib as mpl
-
-fig = plt.figure(figsize=[9,9])
-ax = fig.add_subplot(1,1,1)
-
-ax.plot(energy, prob_ee, label=r'$P_{\nu_e \to \nu_e}$', color='C0', zorder=1)
-ax.plot(energy, prob_em, label=r'$P_{\nu_e \to \nu_\mu}$', color='C1', zorder=1)
-ax.plot(energy, prob_et, label=r'$P_{\nu_e \to \nu_\tau}$', color='C2', zorder=1)
-
-ax.set_xlabel(r'Neutrino energy $E$ [GeV]', fontsize=25)
-ax.set_ylabel(r'Three-neutrino probability', fontsize=25)
-ax.legend(loc='center right', frameon=False)
-ax.set_xlim([10.**log10_energy_min, 10.**log10_energy_max])
-ax.set_xscale('log')
-ax.set_ylim([0.0, 1.0])
-
-plt.show()
-````
-
-The same curve is drawn in [notebook 02](notebooks/02_vacuum_oscillations.ipynb), which stores its figures inline:
-
-<img align="middle" class="center" src="https://github.com/mbustama/NuOscProbExact/blob/main/img/prob_3nu_vacuum_vs_energy_ee_em_et.png" width="400"/>
-
-For more on the oscillation scenarios themselves, see the paper [arXiv:1904.12391](http://arxiv.org/abs/1904.12391).
-
-
-### Three-neutrino oscillations in vacuum: fixed baseline, varying energy
-
-Now we fix the baseline at, say, 1300 km, and vary the energy between 100 MeV and 10 GeV.
-
-```python
-import numpy as np
-
-import oscprob3nu
-import hamiltonians3nu
-from globaldefs import *
-
-baseline = 1.3e3                       # Baseline [km]
-baseline = baseline*CONV_KM_TO_INV_EV  # [eV^{-1}]
-
-# Neutrino energies
-log10_energy_min = -1.0 # [GeV]
-log10_energy_max = 1.0  # [GeV]
-log10_energy_npts = 200
-log10_energy = np.linspace( log10_energy_min,
-                            log10_energy_max,
-                            log10_energy_npts)
-energy = [10.**x for x in log10_energy] # [GeV]
-
-h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent( \
-                                                                                S12_NO_BF, S23_NO_BF,
-                                                                                S13_NO_BF, DCP_NO_BF,
-                                                                                D21_NO_BF, D31_NO_BF)
-
-# Each element of prob: [Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt]
-prob = [oscprob3nu.probabilities_3nu(np.multiply(1./x/1.e9, h_vacuum_energy_indep), baseline) \
-        for x in energy]
-prob_ee = [x[0] for x in prob]  # Pee
-prob_em = [x[1] for x in prob]  # Pem
-prob_et = [x[2] for x in prob]  # Pet
-```
-
-To plot the data:
-```python
-from pylab import *
-from matplotlib import *
-import matplotlib as mpl
-
-fig = plt.figure(figsize=[9,9])
-ax = fig.add_subplot(1,1,1)
-
-ax.plot(energy, prob_ee, label=r'$P_{\nu_e \to \nu_e}$', color='C0', zorder=1)
-ax.plot(energy, prob_em, label=r'$P_{\nu_e \to \nu_\mu}$', color='C1', zorder=1)
-ax.plot(energy, prob_et, label=r'$P_{\nu_e \to \nu_\tau}$', color='C2', zorder=1)
-
-ax.set_xlabel(r'Neutrino energy $E$ [GeV]', fontsize=25)
-ax.set_ylabel(r'Three-neutrino probability', fontsize=25)
-ax.legend(loc='center right', frameon=False)
-ax.set_xlim([10.**log10_energy_min, 10.**log10_energy_max])
-ax.set_xscale('log')
-ax.set_ylim([0.0, 1.0])
-
-plt.show()
-````
-
-The same curve is drawn in [notebook 02](notebooks/02_vacuum_oscillations.ipynb):
-
-
-<img align="middle" class="center" src="https://github.com/mbustama/NuOscProbExact/blob/main/img/prob_3nu_vacuum_vs_energy_ee_em_et.png" width="400"/>
-
-
-
-### Three-neutrino oscillations in matter
-
-For oscillation in matter, we proceed in an analogous way as for oscillations in vacuum.  To compute the Hamiltonian in matter, we can use the routine `hamiltonian_matter` in the module `hamiltonians3nu`.  First, we need to compute the energy-independent `h_vacuum_energy_independent`, and then pass it to `hamiltonian_3nu_matter`, together with the `energy` and the neutrino-electron charged-current potential `VCC`, with V_CC = sqrt(2.0) * G_F * n_e.  This routine is called as:
-```python
-hamiltonian_3nu_matter(h_vacuum_energy_independent, energy, VCC)
-```
-
-In the example below, we set the matter potential to `VCC_EARTH_CRUST`, which is computed using the averaage electron density of the crust of the Earth (3 g cm^{-3}), and is read from `globaldefs`.
-```python
-# Find this example in NuOscProbExact/examples/example_3nu_matter.py
-
-import oscprob3nu
-import hamiltonians3nu
-from globaldefs import *
-
-energy = 1.e9     # Neutrino energy [eV]
-baseline = 1.3e3  # Baseline [km]
-
-h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent( \
-                                                                                S12_NO_BF, S23_NO_BF,
-                                                                                S13_NO_BF, DCP_NO_BF,
-                                                                                D21_NO_BF, D31_NO_BF)
-
-# Units of VCC_EARTH_CRUST: [eV]
-h_matter = hamiltonians3nu.hamiltonian_3nu_matter(h_vacuum_energy_indep, energy, VCC_EARTH_CRUST)
-
-Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( h_matter,
-                                                                            baseline*CONV_KM_TO_INV_EV)
-
-print("Pee = %6.5f, Pem = %6.5f, Pet = %6.5f" % (Pee, Pem, Pet))
-print("Pme = %6.5f, Pmm = %6.5f, Pmt = %6.5f" % (Pme, Pmm, Pmt))
-print("Pte = %6.5f, Ptm = %6.5f, Ptt = %6.5f" % (Pte, Ptm, Ptt))
-````
-This returns
 ```shell
-Pee = 0.95262, Pem = 0.00623, Pet = 0.04115
-Pme = 0.02590, Pmm = 0.37644, Pmt = 0.59766
-Pte = 0.02148, Ptm = 0.61733, Ptt = 0.36119
+16 probabilities
+Pee = 0.76700, Pem = 0.00149, Pet = 0.05220, Pes = 0.17931
+they sum to 1.00000
 ```
 
-### Three-neutrino oscillations in matter with non-standard interactions (NSI)
+[Notebook 16](notebooks/16_four_neutrinos.ipynb) works a 3+1 scenario through properly --- the sterile entry in the matter potential, a short-baseline scan, the sterile matter resonance through the Earth --- and explains why four flavors is where the closed form ends.
 
-For oscillation in matter with NSI, we can use the routine `hamiltonian_3nu_nsi` in the module `hamiltonians3nu`.  First, we need to compute `h_vacuum_energy_independent`, and then pass it to `hamiltonian_nsi`, together with `energy`, `VCC`, and a vector `eps` containing the NSI strength parameters, *i.e.*,
-```python
-eps = [eps_ee, eps_em, eps_et, eps_mm, eps_mt, eps_tt]
-```
-This routine is called as
-```python
-hamiltonian_3nu_nsi(h_vacuum_energy_independent, energy, VCC, eps)
-```
-
-In the example below, we set `eps` to its default value `EPS_3` pulled from `globaldefs`:
-```python
-# Find this example in NuOscProbExact/examples/example_3nu_nsi.py
-
-import oscprob3nu
-import hamiltonians3nu
-from globaldefs import *
-
-energy = 1.e9     # Neutrino energy [eV]
-baseline = 1.3e3  # Baseline [km]
-
-h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent( \
-                                                                                S12_NO_BF, S23_NO_BF,
-                                                                                S13_NO_BF, DCP_NO_BF,
-                                                                                D21_NO_BF, D31_NO_BF)
-
-# EPS_3 is the 3x3 matrix of NSI strength parameters, read from globaldefs; see that file for the values
-h_nsi = hamiltonians3nu.hamiltonian_3nu_nsi(h_vacuum_energy_indep, energy, VCC_EARTH_CRUST, EPS_3)
-
-Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( h_nsi,
-                                                                            baseline*CONV_KM_TO_INV_EV)
-
-print("Pee = %6.5f, Pem = %6.5f, Pet = %6.5f" % (Pee, Pem, Pet))
-print("Pme = %6.5f, Pmm = %6.5f, Pmt = %6.5f" % (Pme, Pmm, Pmt))
-print("Pte = %6.5f, Ptm = %6.5f, Ptt = %6.5f" % (Pte, Ptm, Ptt))
-````
-This returns
-```shell
-Pee = 0.92494, Pem = 0.01758, Pet = 0.05749
-Pme = 0.03652, Pmm = 0.32524, Pmt = 0.63824
-Pte = 0.03855, Ptm = 0.65718, Ptt = 0.30427
-```
-
-
-### Three-neutrino oscillations in a Lorentz invariance-violating (LIV) background
-
-For oscillation LIV, we can use the routine `hamiltonian_3nu_liv` in the module `hamiltonians3nu`.  As before, first, we need to compute `h_vacuum_energy_independent`, and then pass it to `hamiltonian_3nu_liv`, together with `energy` and the following LIV parameters: `sxi12` (sin(xi_12)), `sxi23` (sin(xi_23)), `sxi13` (sin(xi_13)), `dxiCP` (new CP-violation phase), `b1` (first eigenvalue of the LIV operator), `b2` (second eigenvalue), `b3` (third eigenvalue), and `Lambda` (energy scale of LIV).
-
-This routine is called as
-```python
-hamiltonian_3nu_liv(h_vacuum_energy_independent, energy, sxi12, sxi23, sxi13, dxiCP, b1, b2, b3, Lambda)
-```
-
-In the example below, we set the LIV parameters to their default values pulled from `globaldefs`:
-```python
-# Find this example in NuOscProbExact/examples/example_3nu_liv.py
-
-import oscprob3nu
-import hamiltonians3nu
-from globaldefs import *
-
-energy = 1.e9     # Neutrino energy [eV]
-baseline = 1.3e3  # Baseline [km]
-
-h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(  S12_BF, S23_BF,
-                                                                                    S13_BF, DCP_BF,
-                                                                                    D21_BF, D31_BF)
-
-# The values of the LIV parameters (SXI12, SXI23, SXI13, DXICP, B1, B2, B3, LAMBDA) are read
-# from globaldefs
-h_liv = hamiltonians3nu.hamiltonian_3nu_liv(h_vacuum_energy_indep, energy,
-                                            SXI12, SXI23, SXI13, DXICP,
-                                            B1, B2, B3, LAMBDA)
-
-Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( h_liv,
-                                                                            baseline*CONV_KM_TO_INV_EV)
-
-print("Pee = %6.5f, Pem = %6.5f, Pet = %6.5f" % (Pee, Pem, Pet))
-print("Pme = %6.5f, Pmm = %6.5f, Pmt = %6.5f" % (Pme, Pmm, Pmt))
-print("Pte = %6.5f, Ptm = %6.5f, Ptt = %6.5f" % (Pte, Ptm, Ptt))
-````
-This returns
-```shell
-Pee = 0.92721, Pem = 0.05299, Pet = 0.01980
-Pme = 0.05609, Pmm = 0.25288, Pmt = 0.69103
-Pte = 0.01670, Ptm = 0.69412, Ptt = 0.28917
-```
 
 ### Arbitrary Hamiltonians
 
-Of course, you can supply your custom Hamiltonian and compute the associated oscillation probabilities; see [Trivial example](#trivial-example) above.  Usually, you will want to add an extra term from your preferred model to the vacuum Hamiltonian.  To do that, take a cue from the examples above.
+Nothing above is a special case in the code: vacuum, matter, non-standard interactions and Lorentz-invariance violation are each just a different Hermitian matrix handed to the same routine.  So your own model is too.  Usually you will want to add a term to the vacuum Hamiltonian, where `hamiltonian_mymodel` is yours to write and returns a 3x3 matrix:
 
-In the following example, the function `hamiltonian_mymodel`, supplied by you, should return a 3x3 matrix:
 ```python
+import numpy as np
+
 import oscprob3nu
 import hamiltonians3nu
 from globaldefs import *
@@ -1031,17 +539,33 @@ from globaldefs import *
 energy = 1.e9     # Neutrino energy [eV]
 baseline = 1.3e3  # Baseline [km]
 
-h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(  S12_BF, S23_BF,
-                                                                                    S13_BF, DCP_BF,
-                                                                                    D21_BF, D31_BF)
-h_vacuum = np.multiply(1./energy, h_vacuum_energy_indep)
+h_vacuum_energy_indep = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(
+    S12_NO_BF, S23_NO_BF, S13_NO_BF, DCP_NO_BF, D21_NO_BF, D31_NO_BF)
+h_vacuum = np.asarray(h_vacuum_energy_indep)/energy
+
 h_mymodel = h_vacuum + hamiltonian_mymodel(mymodel_parameters)
 
-Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = oscprob3nu.probabilities_3nu( h_mymodel,
-                                                                            baseline*CONV_KM_TO_INV_EV)
-
+prob = oscprob3nu.probabilities_3nu(h_mymodel, baseline*CONV_KM_TO_INV_EV)
 ```
-Though we do not show it here, `hamiltonian_mymodel` could also depend on `energy`.  The code for two-neutrino oscillations is analogous, but `hamiltonian_mymodel` should return a 2x2 matrix instead.
+
+`hamiltonian_mymodel` may depend on the energy too.  For two flavors it returns a 2x2 matrix instead, and for four, a 4x4 one.  Passing an arbitrary matrix directly, with no vacuum term at all, works exactly as you would expect --- see [`examples/example_3nu_trivial.py`](examples/example_3nu_trivial.py).
+
+
+### Where the rest is
+
+Each of these is a runnable script; none of them is transcribed into this file, so there is a single copy to keep correct.
+
+| Scenario | Script | Notebook |
+|---|---|---|
+| Arbitrary Hamiltonian, 2 and 3 flavors | [`example_2nu_trivial.py`](examples/example_2nu_trivial.py), [`example_3nu_trivial.py`](examples/example_3nu_trivial.py) | [01](notebooks/01_basics.ipynb) |
+| Vacuum, 2 and 3 flavors | [`example_2nu_vacuum.py`](examples/example_2nu_vacuum.py), [`example_3nu_vacuum.py`](examples/example_3nu_vacuum.py) | [02](notebooks/02_vacuum_oscillations.ipynb) |
+| Constant-density matter | [`example_3nu_matter.py`](examples/example_3nu_matter.py) | [03](notebooks/03_matter_nsi_liv.ipynb) |
+| Matter with non-standard interactions | [`example_3nu_nsi.py`](examples/example_3nu_nsi.py) | [03](notebooks/03_matter_nsi_liv.ipynb) |
+| Lorentz-invariance violation | [`example_3nu_liv.py`](examples/example_3nu_liv.py) | [03](notebooks/03_matter_nsi_liv.ipynb) |
+| SU(2) and SU(3) expansion coefficients, and the evolution operator | [`example_2nu_vacuum_coeffs.py`](examples/example_2nu_vacuum_coeffs.py), [`example_3nu_vacuum_coeffs.py`](examples/example_3nu_vacuum_coeffs.py) | [18](notebooks/18_evolution_operator.ipynb) |
+| Layered matter, and the Earth through PREM | — | [06](notebooks/06_earth_and_prem.ipynb), [07](notebooks/07_earth_probabilities.ipynb) |
+
+The [numerical recipes](https://mbustama.github.io/NuOscProbExact/recipes.html) page collects the same material as runnable snippets, and the [API reference](https://mbustama.github.io/NuOscProbExact/functions.html) documents every routine, with examples that are executed when the documentation is built rather than pasted beside it.
 
 
 ## Notebooks

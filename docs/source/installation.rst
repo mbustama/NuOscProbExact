@@ -163,7 +163,7 @@ File tree
    ├── LICENSE                          # MIT license
    ├── README.md                        # The file that you are reading
    ├── pyproject.toml                   # Packaging metadata and pytest configuration
-   ├── examples/                        # Runnable scripts, the ones the README walks through
+   ├── examples/                        # Runnable scripts, one per scenario, linked from README.md
    │   ├── example_2nu_trivial.py       # Two-flavor, arbitrary Hamiltonian
    │   ├── example_2nu_vacuum.py        # Two-flavor, oscillations in vacuum
    │   ├── example_2nu_vacuum_coeffs.py # Two-flavor, expansion coefficients
@@ -190,7 +190,7 @@ File tree
    │       ├── changelog.rst            # Includes the root CHANGELOG.md
    │       └── _static/
    │           └── nuoscprobexact_logo.png
-   ├── img/                             # Pre-computed figures shown in README.md
+   ├── img/                             # Figures from earlier versions of README.md
    │   ├── prob_3nu_vacuum_vs_baseline_ee_em_et.png
    │   ├── prob_3nu_vacuum_vs_energy_ee_em_et.png
    │   └── gallery/                     # Figures lifted from the notebooks, shown in README.md
