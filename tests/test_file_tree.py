@@ -175,6 +175,8 @@ TREE = [
     ('tests/test_earth.py', 'PREM, geometry, and Earth probabilities'),
     ('tests/test_documented_figures.py',
      'Keeps the quoted performance figures agreeing'),
+    ('tests/test_version_consistency.py',
+     'Keeps the version agreeing wherever it is implied'),
     ('tests/test_nusquids_comparison.py',
      'Against nuSQuIDS, an independent external code'),
     ('tests/nusquids_reference.py',
