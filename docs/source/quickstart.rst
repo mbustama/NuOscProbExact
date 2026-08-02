@@ -217,6 +217,67 @@ Because :math:`H` is time-independent, the evolution operator obeys the group
 property :math:`U(L_1+L_2) = U(L_2) U(L_1)`, which is what makes composing
 across segments of constant density legitimate.
 
+Layered matter: slabs
+---------------------
+
+A *slab* is a stretch of the trajectory over which the density is taken
+constant.  :mod:`slabs` solves each one exactly and multiplies the resulting
+operators together, so the only approximation anywhere is the caller's ---
+how finely to cut a profile that really varies continuously.  Within a slab
+there is none.
+
+Give it one Hamiltonian per slab and one width per slab:
+
+.. jupyter-execute::
+
+   import earth
+   import slabs
+
+   # A denser layer between two lighter ones
+   densities = [3.0, 5.0, 3.0]                                # [g cm^-3]
+   widths = np.array([1000.0, 2000.0, 1000.0])*CONV_KM_TO_INV_EV
+
+   h_layers = hamiltonians3nu.hamiltonian_3nu_matter(
+       h_vacuum_energy_indep, energy, earth.matter_potential(densities))
+
+   prob = slabs.probabilities_3nu_slabs(h_layers, widths)
+
+   print('h_layers has shape', np.shape(h_layers))
+   print('P_mue across the three layers = %.6f' % prob[3])
+
+Both arguments are ordered along the trajectory, and the slab met first is
+applied first --- rightmost in :math:`U = U_n \cdots U_2 U_1`, since the
+operators act to the left on the initial state.  The widths are baselines
+like any other, so they are in eV\ :sup:`-1`, which is what
+``CONV_KM_TO_INV_EV`` is doing there.
+
+The group property quoted just above is what licenses all of this, and it is
+visible directly: cutting a *uniform* profile into slabs must change nothing.
+
+.. jupyter-execute::
+
+   uniform = hamiltonians3nu.hamiltonian_3nu_matter(
+       h_vacuum_energy_indep, energy, VCC_EARTH_CRUST)
+   total = 4000.0*CONV_KM_TO_INV_EV
+
+   one_call = oscprob3nu.probabilities_3nu(uniform, total)
+   split = slabs.probabilities_3nu_slabs(np.stack([uniform]*4),
+                                         np.full(4, total/4))
+
+   print('one call   %.9f' % one_call[3])
+   print('four slabs %.9f' % split[3])
+
+The two differ by :math:`6 \times 10^{-16}` here, and by
+:math:`1 \times 10^{-14}` if the same 4000 km is cut into forty slabs
+instead: round-off in the extra matrix products, and nothing else.
+
+For the Earth you need not build the slabs at all --- :mod:`earth` cuts a
+chord into PREM layers for you.  For the case where the arrangement of the
+matter, and not merely its mean, is what changes the answer, see "An
+arbitrary matter profile" in :doc:`recipes`.  Two and four flavors work the
+same way, through :func:`slabs.probabilities_2nu_slabs` and
+:func:`slabs.probabilities_4nu_slabs`.
+
 .. _scanning:
 
 Scanning: pass arrays

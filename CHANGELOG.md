@@ -187,6 +187,19 @@ fixes six docstrings that stated the opposite of the code.
   and `methodology.rst`, where the measured cost of the check and the two
   attempts to reduce it are now recorded.
 
+- **`slabs` reached the quickstart too.**  The page named it once, in a
+  clause inside the four-flavor section, so a reader could finish it without
+  learning that the library handles piecewise-constant matter at all — the
+  answer to "what about the Earth?", which is the first question the
+  constant-density example provokes.  A section now follows the evolution
+  operator, where the group property `U(L_1+L_2) = U(L_2) U(L_1)` was already
+  stated and then left unused, and shows a three-layer profile and a uniform
+  one cut into four slabs, which returns the same probability to 6e-16.
+  `recipes.rst` was deliberately left alone: its "An arbitrary matter
+  profile" already *is* that recipe, down to the castle wall that changes the
+  answer at 0.44 GeV while the mean density does not, and a second entry
+  would only duplicate it.
+
 - **The documentation's inert code is now run by a test.**  Snippets shown as
   `jupyter-execute` are executed by the documentation build and cannot rot
   silently; snippets shown as `code-block` are rendered and never run.  The
