@@ -5,6 +5,124 @@ All notable changes to **NuOscProbExact** are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.11.0] - 2026-08-02
+
+**The pre-publishing audit of `src/`.**  Two passes over all ten modules,
+7378 lines, checking the code, the comments and the docstrings against each
+other and against what the code actually does when run.  A minor release:
+it adds public API — four-flavor propagation through layered matter and the
+Earth, a Lorentz-violating four-flavor term, and a Hermiticity check — and
+fixes six docstrings that stated the opposite of the code.
+
+### Added
+
+- **Four flavors through layered matter and the Earth.**
+  `slabs.evolution_operator_4nu_slabs`, `slabs.probabilities_4nu_slabs`,
+  `earth.probabilities_4nu_earth` and
+  `earth.probabilities_4nu_between_locations`.  Everything they need already
+  existed — `hamiltonians4nu.hamiltonian_4nu_matter` accepts an array of
+  potentials, which is the shape `earth` feeds it — so a 3+1 user could
+  compute a probability but could not propagate one through the Earth, which
+  is the case the sterile matter resonance lives in.
+
+- **`earth.matter_potential_nc`**, the neutral-current potential.  It is
+  flavor-universal across the three active states, so at two and three
+  flavors it is proportional to the identity and drops out, which is why
+  `earth` never needed it.  A sterile state does not feel it, so it stops
+  cancelling and leaves `-V_NC` on the sterile entry — the entry that places
+  the resonance.  It reproduces `globaldefs.VNC_EARTH_CRUST` exactly.
+
+- **`hamiltonians4nu.hamiltonian_4nu_liv`**, the missing counterpart to the
+  three-flavor LIV term.  `b4` is an eigenvalue like the others, so a sterile
+  state may couple to the LIV background whether or not it couples to matter.
+
+- **`CHECK_HERMITICITY`**, in each of `oscprob2nu`, `oscprob3nu` and
+  `oscprob4nu`.  A non-Hermitian Hamiltonian was accepted silently, and
+  nothing downstream revealed it: the probabilities returned still **sum to
+  one**, so the check a caller would actually apply could not tell the answer
+  was meaningless.  All seven public entry points now verify it.
+
+  It is not free, and the cost is stated rather than buried: validating a
+  stack is a pass over it, the same order as evaluating it, and the compiled
+  kernel has made evaluating it fast.  Interleaved, best of fifteen, the
+  check costs 1.3x–1.8x on a 2000-point scan and 3.2x–5.7x on a 200 000-point
+  one.  It defaults to `True` anyway, because a library that silently returns
+  meaningless numbers costs its user more than the check does; set it to
+  `False` for scans whose Hamiltonians are Hermitian by construction.
+
+- **21 tests**, covering the four-flavor slab and Earth paths, the
+  Hermiticity refusal on every entry point and both backends, the mixing-angle
+  domain check, and the three `earth` edge cases below.
+
+### Fixed
+
+- **Six docstring claims that the code contradicts.**  `pmns_mixing_matrix`
+  and `mixing_matrix_2nu` each said 1.1.0 made them return a
+  `numpy.ndarray` "rather than a nested list"; both return a nested list, and
+  always have.  `hamiltonian_2nu_liv` and `hamiltonian_3nu_liv` each said
+  1.3.0 let "the matter potential be an array too"; neither has a matter
+  potential.  `psi_roots` said 1.5.0 formed the arc-cosine argument "as a
+  division rather than a power of -1.5", where the line reads
+  `pow(h2, -1.5)`.  `distance_traveled_inside_earth` called `costhz >= 0`
+  "upward-going" two lines above calling `costhz = -1` "straight up".
+
+- **`sin(theta)` outside [-1, 1] behaved three different ways**: two and
+  three flavors raised `math domain error`, naming neither the parameter nor
+  the value; four flavors returned `nan` and let it run silently into the
+  probabilities.  One helper now serves all three.
+
+- **`CONV_EV_TO_G`** was `1.783e-33` against CODATA's `1.78266192e-33` — off
+  by `1.9e-4` relative, three orders of magnitude worse than every other
+  constant in `globaldefs`.  It reaches `VCC_EARTH_CRUST` and every Earth
+  crossing.  The nuSQuIDS cross-check is unmoved by it, at 3.9e-16 and
+  3.0e-10 as before.
+
+- **`earth.dms_to_decimal` could not express a coordinate between 0 and −1
+  degrees.**  The sign rides on the degree part, and `-0` is `0`, so 0°30′S
+  came back North.  No predefined location reaches that band; a user-supplied
+  one can, so the minutes may now carry the sign.
+
+- **`earth.earth_radial_distance_from_depth`** took `sqrt(abs(r2))`, which
+  absorbs endpoint round-off and would equally hide a genuinely negative
+  radicand.  It clips at zero.
+
+- **`earth.coordinates_of_named_location`** raised its helpful message from
+  inside `except KeyError` without `from None`, burying it under a chained
+  traceback.
+
+- **`probabilities_4nu` and friends carried no `versionchanged` for 1.10.1**,
+  although that release changed their results for a nearly degenerate
+  spectrum.
+
+### Changed
+
+- **The NSI defaults are described accurately.**  Their comment claimed
+  compatibility "at 2 sigma with LMA+coherent"; with `EPS_EE = 0.06` and
+  `EPS_MM = 1.2` the combination matter oscillations are sensitive to is
+  `eps_ee - eps_mm = -1.14`, which is the LMA-D solution.  The values are
+  **unchanged** — they are deliberately large so the worked examples show a
+  visible effect — and the comment now says so and warns against reusing them
+  as a fit.
+
+- **14 parameters annotated `Optional[T]` with non-None defaults** now say
+  `T`; three private functions gained the `Parameters` sections every other
+  private function in `src/` has; `globaldefs` no longer describes itself as
+  serving "plotting modules", which no longer exist, nor omits `oscprob4nu`
+  from the modules that do not need it.
+
+- **Notebook 16** said, in a code comment, that `earth` does the full PREM
+  profile — which it could not do at four flavors.  It now measures the
+  averaged and PREM answers against each other.
+
+### Known limits
+
+- **The electron number density uses the free-nucleon mean mass**,
+  `(m_p + m_n)/2`, rather than the atomic mass unit.  Nucleons in nuclei are
+  bound, so this undercounts `n_e`, and hence `V_CC`, by about 0.85%.  It is
+  applied consistently in `globaldefs` and `earth.matter_potential`, so it is
+  a modelling choice rather than an inconsistency, and it is left alone
+  deliberately.
+
 ## [1.10.1] - 2026-08-02
 
 **A Newton step that could throw a latent root across the spectrum.**  A
