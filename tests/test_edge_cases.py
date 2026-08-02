@@ -306,3 +306,79 @@ def test_every_entry_point_honours_the_switch_in_both_positions(n_flavors,
 
     for checked, unchecked in zip(results[True], results[False]):
         assert np.array_equal(checked, unchecked)
+
+
+@pytest.mark.parametrize('n_flavors', [2, 3, 4])
+@pytest.mark.parametrize('bad', [np.inf, -np.inf, np.nan])
+def test_a_non_finite_entry_cannot_disable_the_check(n_flavors, bad):
+    r"""A non-finite entry must not switch the check off.
+
+    The tolerance is relative to the largest entry, so one infinity made
+    the scale infinite, the tolerance infinite, and every comparison
+    false --- a Hamiltonian that was both non-finite *and* non-Hermitian
+    then passed a check whose entire purpose is to refuse the second.
+    The matrix below is non-Hermitian in the (0, 1) pair as well as
+    non-finite, so it must be refused on one ground or the other.
+    """
+    module = importlib.import_module('oscprob%dnu' % n_flavors)
+    call = getattr(module, 'probabilities_%dnu' % n_flavors)
+
+    h_matrix = np.eye(n_flavors, dtype=complex)
+    h_matrix[0, 1] = 2.0          # not the conjugate of h[1, 0], which is 0
+    h_matrix[0, 0] = bad
+
+    with pytest.raises(ValueError):
+        call([[complex(z) for z in row] for row in h_matrix], 1.0)
+
+
+HELPER_COPIES = [
+    ('_check_hermitian',
+     ['oscprob2nu', 'oscprob3nu', 'oscprob4nu']),
+    ('_cos_from_sin',
+     ['hamiltonians2nu', 'hamiltonians3nu', 'hamiltonians4nu']),
+]
+
+
+@pytest.mark.parametrize('name,modules', HELPER_COPIES)
+def test_the_duplicated_helpers_have_not_drifted(name, modules):
+    r"""Six copies of two helpers, kept identical by a test.
+
+    :mod:`oscprob2nu` and :mod:`oscprob3nu` are documented as
+    self-contained --- copying either into another project is a
+    supported way to use this library --- so a shared module for these
+    would break the property that makes that work.  Duplication is the
+    deliberate cost, and this is what stops it becoming drift: the
+    bodies must match character for character, apart from the flavor
+    count and the module named in the error message.
+
+    That matters most for `_check_hermitian`, where a fix applied to one
+    copy and not the others would leave two flavor counts silently
+    accepting what the third refuses --- which is the class of bug the
+    check was added to remove.
+    """
+    import inspect
+    import re
+
+    def normalise(source):
+        source = re.sub(r'range\((?:i\+1, )?\d\)',
+                        lambda m: m.group(0).replace(m.group(0)[-2], 'N'),
+                        source)
+        source = re.sub(r'oscprob\dnu', 'oscprobNnu', source)
+        source = re.sub(r'hamiltonians\dnu', 'hamiltoniansNnu', source)
+        source = re.sub(r'\(\.\.\., \d, \d\)', '(..., N, N)', source)
+        source = re.sub(r'the \w+ independent pairs', 'the N independent pairs',
+                        source)
+        return source
+
+    bodies = {}
+    for module_name in modules:
+        module = importlib.import_module(module_name)
+        bodies[module_name] = normalise(
+            inspect.getsource(getattr(module, name)))
+
+    reference = bodies[modules[0]]
+    for module_name in modules[1:]:
+        assert bodies[module_name] == reference, (
+            '%s.%s has drifted from %s.%s; the copies are duplicated on '
+            'purpose and must stay identical'
+            % (module_name, name, modules[0], name))

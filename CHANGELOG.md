@@ -50,9 +50,13 @@ fixes six docstrings that stated the opposite of the code.
   meaningless numbers costs its user more than the check does; set it to
   `False` for scans whose Hamiltonians are Hermitian by construction.
 
-- **21 tests**, covering the four-flavor slab and Earth paths, the
+- **44 tests**, covering the four-flavor slab and Earth paths, the
   Hermiticity refusal on every entry point and both backends, the mixing-angle
-  domain check, and the three `earth` edge cases below.
+  and `costhz` domain checks, the `earth` edge cases below, and a guard that
+  the two helpers duplicated across three modules each do not drift apart —
+  `oscprob2nu` and `oscprob3nu` are documented as self-contained, so a shared
+  module would break the property that makes copying them work, and
+  duplication is the deliberate cost.
 
 ### Fixed
 
@@ -93,6 +97,21 @@ fixes six docstrings that stated the opposite of the code.
 - **`probabilities_4nu` and friends carried no `versionchanged` for 1.10.1**,
   although that release changed their results for a nearly degenerate
   spectrum.
+
+- **A non-finite entry disabled the Hermiticity check.**  Found by a later
+  pass over the check itself: the tolerance is relative to the largest
+  entry, so a single infinity made the scale infinite, the tolerance
+  infinite, and every comparison false — a Hamiltonian that was both
+  non-finite *and* non-Hermitian passed a check whose purpose is to refuse
+  the second.  Caught for the cost of one `isfinite`, since the scale is
+  computed anyway.
+
+- **`earth`'s `costhz` was not required to be a cosine.**  The chord length
+  is `-2 R costhz`, which accepts anything: `costhz = -1.5` gave a chord of
+  19 113 km against an Earth diameter of 12 742 km, and that chord then
+  acquired seventy-six plausible slabs spanning the whole PREM density
+  range.  Nothing downstream noticed.  The geometry routines now refuse a
+  value outside [-1, 1], inclusive at both ends.
 
 ### Changed
 

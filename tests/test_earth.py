@@ -533,3 +533,30 @@ def test_the_neutron_fraction_can_be_given_explicitly():
                       2.0*isoscalar)
     # Zero neutrons, no neutral-current potential at all
     assert earth.matter_potential_nc(3.0, neutron_fraction=0.0) == 0.0
+
+
+@pytest.mark.parametrize('costhz', [-1.5, -2.0, 1.5, -1.0e6, 42.0])
+def test_a_costhz_outside_its_range_is_refused(costhz):
+    r"""``costhz`` is a cosine, and a chord cannot exceed the diameter.
+
+    The chord length is ``-2 R costhz``, an expression happy to accept
+    anything: ``costhz = -1.5`` gave 19 113 km against an Earth diameter
+    of 12 742 km, and that chord then acquired seventy-six
+    plausible-looking slabs with densities spanning the whole PREM
+    range.  Nothing downstream noticed.
+    """
+    with pytest.raises(ValueError, match=r'must lie in \[-1, 1\]'):
+        earth.distance_traveled_inside_earth(costhz)
+
+    if costhz < 0.0:
+        with pytest.raises(ValueError, match=r'must lie in \[-1, 1\]'):
+            earth.earth_slabs(costhz, 4)
+
+
+def test_the_boundaries_of_costhz_are_still_allowed():
+    r"""Inclusive: the diametric chord and the horizon are both real."""
+    assert np.isclose(earth.distance_traveled_inside_earth(-1.0),
+                      2.0*gd.EARTH_RADIUS)
+    assert earth.distance_traveled_inside_earth(1.0) == 0.0
+    assert earth.distance_traveled_inside_earth(0.0) == 0.0
+    assert len(earth.earth_slabs(-1.0, 2)[0]) > 0

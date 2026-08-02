@@ -172,6 +172,18 @@ def _check_hermitian(h_matrix: np.ndarray, caller: str) -> None:
     # those views are strided over the complex array while `np.abs` reads
     # it contiguously.  Tried, measured, reverted.
     scale = max(float(np.max(np.abs(real))), float(np.max(np.abs(imaginary))))
+
+    # A non-finite entry has to be caught here rather than left to
+    # propagate.  It would otherwise make `scale` infinite or nan, hence
+    # `tolerance` infinite or nan, and every comparison below false ---
+    # so a Hamiltonian that is both non-finite *and* non-Hermitian would
+    # pass a check whose whole purpose is to refuse the second.
+    if not np.isfinite(scale):
+        raise ValueError(
+            '%s: the Hamiltonian has a non-finite entry, so it is neither '
+            'Hermitian nor usable.  Set %s.CHECK_HERMITICITY = False to '
+            'skip this check.' % (caller, 'oscprob2nu'))
+
     tolerance = _HERMITICITY_TOL*scale if scale > 0.0 else _HERMITICITY_TOL
 
     complaint = (

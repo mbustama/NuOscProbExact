@@ -423,6 +423,45 @@ def matter_potential_nc(
     return float(potential) if scalar_input else potential
 
 
+def _check_costhz(costhz: Union[int, float], caller: str) -> None:
+    r"""Raises unless `costhz` is a cosine.
+
+    Every geometry routine here funnels through
+    `distance_traveled_inside_earth`, whose chord length is
+    :math:`-2 R \cos\theta_z`.  That expression is happy to be handed a
+    number outside :math:`[-1, 1]` and returns a chord longer than the
+    Earth --- 19 113 km for ``costhz = -1.5``, against a diameter of
+    12 742 km --- which then acquires a full set of plausible-looking
+    slabs and densities.  Nothing further downstream notices, so it is
+    caught here.
+
+    Parameters
+    ----------
+    costhz : int or float
+        Cosine of the zenith angle, which must lie in :math:`[-1, 1]`.
+    caller : str
+        Name of the calling routine, used in the error message.
+
+    Returns
+    -------
+    None
+        Nothing; the routine either returns or raises.
+
+    Raises
+    ------
+    ValueError
+        If ``costhz`` lies outside :math:`[-1, 1]`, or is not a number.
+
+    .. versionadded:: 1.11.0
+    """
+    if not -1.0 <= costhz <= 1.0:
+        raise ValueError(
+            '%s: costhz is the cosine of the zenith angle and so must lie '
+            'in [-1, 1]; got %r.  A value outside that range describes no '
+            'direction, and would give a chord longer than the Earth.'
+            % (caller, costhz))
+
+
 def distance_traveled_inside_earth(costhz: Union[int, float]) -> float:
     r"""Returns the chord length through the Earth for a given direction.
 
@@ -444,6 +483,12 @@ def distance_traveled_inside_earth(costhz: Union[int, float]) -> float:
     float
         The chord length, in units of km.
 
+    Raises
+    ------
+    ValueError
+        If ``costhz`` lies outside :math:`[-1, 1]`, where it describes
+        no direction.
+
     Examples
     --------
     .. jupyter-execute::
@@ -453,6 +498,8 @@ def distance_traveled_inside_earth(costhz: Union[int, float]) -> float:
         print('%.1f' % earth.distance_traveled_inside_earth(-1.0))
         print('%.1f' % earth.distance_traveled_inside_earth(0.5))
     """
+    _check_costhz(costhz, 'distance_traveled_inside_earth')
+
     return 0.0 if costhz >= 0.0 else -2.0*gd.EARTH_RADIUS*costhz
 
 
@@ -746,6 +793,7 @@ def earth_slabs(
         widths, densities = earth.earth_slabs(-1.0, n_slabs_per_segment=2)
         print(len(widths), '%.1f' % sum(widths))
     """
+    _check_costhz(costhz, 'earth_slabs')
     if costhz >= 0.0:
         raise ValueError(
             'earth_slabs: costhz must be negative for the neutrino to cross '
