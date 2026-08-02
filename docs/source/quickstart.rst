@@ -394,9 +394,9 @@ path --- to compare the two, say --- set
 The scalar path is deliberately left uncompiled: a single probability
 takes about eight microseconds, which is not worth a compilation
 pause.  At two and three flavors short *stacks* are also evaluated one
-element at a time, since below eleven elements at three flavors --- seven at
-two, where each element costs less and the overhead amortises sooner --- the
-array machinery costs more than it saves; four flavors has no such shortcut,
+element at a time, since below thirteen elements at three flavors, and twelve
+at two, the array machinery costs more than it saves; four flavors has no
+such shortcut,
 because it has no separate scalar closed form to fall back to.
 
 More examples

@@ -94,15 +94,22 @@ except ImportError:                                       # pragma: no cover
     fastkernels = _NoFastKernels()
 
 
-SMALL_BATCH = 6
+SMALL_BATCH = 11
 r"""int: Module-level constant.
 
 Stacks with at most this many elements are evaluated one at a time
 through the scalar path, whose fixed cost is lower than the array
-machinery's.  The threshold is lower than
-:data:`oscprob3nu.SMALL_BATCH` because the two-flavor expansion does
-much less work per element, so the array path amortises its overhead
-sooner: the measured crossover is seven elements.
+machinery's.  The measured crossover is twelve elements, and it governs
+every two-flavor stack below `fastkernels.MIN_BATCH`, which is fifty
+thousand here --- so unlike :data:`oscprob3nu.SMALL_BATCH` this one is
+consulted whether or not the compiled backend is installed.
+
+The threshold was 6, measured before `CHECK_HERMITICITY` existed and
+made a scalar call several times dearer; with the check given a path
+for a single matrix it was re-measured.  It sits close to the
+three-flavor crossover despite that expansion doing much more work per
+element, because what is being amortised is the array machinery's fixed
+cost rather than the arithmetic.
 """
 
 
@@ -134,7 +141,10 @@ Stack            2 flavors   4 flavors
 
 Three flavors sits between them, at 1.8x and 3.9x.  So a scan that the
 compiled backend was installed to speed up can spend most of its time
-here instead.  For production scans whose Hamiltonians come from a
+here instead.  On a *single* matrix the check costs about 1.35x, and it
+takes its own branch to manage that: the reductions above are all fixed
+cost at one element, so without the branch one probability spent nine
+tenths of its time here.  For production scans whose Hamiltonians come from a
 construction already known to be Hermitian --- everything
 :mod:`hamiltonians2nu` builds is Hermitian to round-off, as the table
 below records --- set this to ``False``.
@@ -193,6 +203,63 @@ def _check_hermitian(h_matrix: np.ndarray, caller: str) -> None:
     if h_matrix.size == 0:
         return
 
+    non_finite = (
+        '%s: the Hamiltonian has a non-finite entry, so it is neither '
+        'Hermitian nor usable.  Set %s.CHECK_HERMITICITY = False to '
+        'skip this check.')
+
+    complaint = (
+        '%s: the Hamiltonian is not Hermitian%s.  The expansion assumes '
+        'Hermiticity, and without it the probabilities returned are '
+        'meaningless even though they still sum to one.  Set '
+        'oscprob2nu.CHECK_HERMITICITY = False to skip this check.')
+
+
+    # A single matrix takes its own path, because everything below is
+    # fixed cost at this size.  The reductions run about sixty
+    # microseconds on one matrix against half a microsecond per element
+    # on a stack of two thousand, and a scalar probability costs eight
+    # microseconds in total --- so when this check arrived in 1.11.0 it
+    # became nine tenths of the work, and made short stacks slower than
+    # the batched path they exist to avoid.  Comparing the entries as
+    # Python complex numbers is one conversion and a few scalar
+    # operations, and reaches the same verdict.
+    if h_matrix.ndim == 2:
+        entries = h_matrix.tolist()
+
+        # Tested per entry rather than by letting a non-finite value
+        # reach `scale`: `max` keeps its running value when the
+        # comparison is with a nan, since every comparison against one is
+        # false, so a nan would never arrive and `isfinite` would pass.
+        # The array path has no such hole, `np.max` propagating nan --- so
+        # the first draft of this branch returned probabilities for a
+        # Hamiltonian the batched path refuses, which is the divergence
+        # this check exists to prevent.
+        scale = 0.0
+        for row in entries:
+            for entry in row:
+                real, imaginary = abs(entry.real), abs(entry.imag)
+                if not (math.isfinite(real) and math.isfinite(imaginary)):
+                    raise ValueError(non_finite % (caller, 'oscprob2nu'))
+                scale = max(scale, real, imaginary)
+
+        tolerance = (_HERMITICITY_TOL*scale if scale > 0.0
+                     else _HERMITICITY_TOL)
+
+        for i in range(2):
+            if abs(entries[i][i].imag) > tolerance:
+                raise ValueError(complaint % (
+                    caller, ' --- the diagonal entry (%d, %d) has a non-zero '
+                    'imaginary part' % (i, i)))
+            for j in range(i+1, 2):
+                upper, lower = entries[i][j], entries[j][i]
+                if (abs(upper.real - lower.real) > tolerance
+                        or abs(upper.imag + lower.imag) > tolerance):
+                    raise ValueError(complaint % (
+                        caller, ' --- entry (%d, %d) is not the complex '
+                        'conjugate of entry (%d, %d)' % (i, j, j, i)))
+        return
+
     real, imaginary = h_matrix.real, h_matrix.imag
 
     # `np.abs(...).max()` allocates a float array the size of the stack,
@@ -209,18 +276,9 @@ def _check_hermitian(h_matrix: np.ndarray, caller: str) -> None:
     # so a Hamiltonian that is both non-finite *and* non-Hermitian would
     # pass a check whose whole purpose is to refuse the second.
     if not np.isfinite(scale):
-        raise ValueError(
-            '%s: the Hamiltonian has a non-finite entry, so it is neither '
-            'Hermitian nor usable.  Set %s.CHECK_HERMITICITY = False to '
-            'skip this check.' % (caller, 'oscprob2nu'))
+        raise ValueError(non_finite % (caller, 'oscprob2nu'))
 
     tolerance = _HERMITICITY_TOL*scale if scale > 0.0 else _HERMITICITY_TOL
-
-    complaint = (
-        '%s: the Hamiltonian is not Hermitian%s.  The expansion assumes '
-        'Hermiticity, and without it the probabilities returned are '
-        'meaningless even though they still sum to one.  Set '
-        'oscprob2nu.CHECK_HERMITICITY = False to skip this check.')
 
     for i in range(2):
         if np.any(np.abs(imaginary[..., i, i]) > tolerance):

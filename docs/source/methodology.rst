@@ -503,8 +503,8 @@ spends on the whole job.  Stacks below
 
 The thresholds are measured, not guessed, and differ between the two
 expansions because the two-flavor one does much less work per element and so
-amortises its overhead sooner: eleven elements for three flavors, seven for
-two.  Nothing about this is visible from the outside; the answers are the
+amortises its overhead sooner: thirteen elements for three flavors, twelve
+for two.  Nothing about this is visible from the outside; the answers are the
 same either way.
 
 The optional compiled backend

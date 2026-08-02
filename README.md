@@ -376,7 +376,7 @@ Two costs, so the trade is visible: importing Numba takes about 140 ms against 6
 
 ### What you do not have to think about
 
-* **Short stacks.** Below eleven elements at three flavors, and seven at two, the array machinery costs more than it saves, so those are evaluated one at a time automatically.
+* **Short stacks.** Below thirteen elements at three flavors, and twelve at two, the array machinery costs more than it saves, so those are evaluated one at a time automatically.
 * **The scalar path.** It is deliberately left uncompiled: 8 µs is not worth a compilation pause on a first call.
 * **Turning Numba off.** `fastkernels.USE_NUMBA = False` forces the NumPy path, which is how the test suite checks that the two agree.
 

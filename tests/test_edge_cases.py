@@ -332,6 +332,36 @@ def test_a_non_finite_entry_cannot_disable_the_check(n_flavors, bad):
         call([[complex(z) for z in row] for row in h_matrix], 1.0)
 
 
+@pytest.mark.parametrize('n_flavors', [2, 3, 4])
+@pytest.mark.parametrize('bad', [np.inf, -np.inf, np.nan])
+def test_a_non_finite_entry_is_refused_on_both_paths(n_flavors, bad):
+    r"""Non-finite alone is enough, and the two paths must agree.
+
+    The test above makes its matrix non-finite *and* non-Hermitian, so it
+    is refused either way and cannot tell which ground did it.  This one
+    is Hermitian apart from being non-finite, so only the non-finite
+    branch can refuse it --- and it checks the scalar and the batched
+    path separately, because they do not share an implementation.
+
+    Both of those gaps were real.  The scalar path added in 1.11.0 built
+    its scale with `max`, which keeps its running value when compared
+    against a nan, so a nan never reached `isfinite` and a Hamiltonian
+    the batched path refuses came back with probabilities instead.  The
+    whole suite passed.
+    """
+    module = importlib.import_module('oscprob%dnu' % n_flavors)
+    call = getattr(module, 'probabilities_%dnu' % n_flavors)
+
+    h_matrix = np.eye(n_flavors, dtype=complex)
+    h_matrix[0, 0] = bad
+
+    with pytest.raises(ValueError, match='non-finite'):
+        call([[complex(z) for z in row] for row in h_matrix], 1.0)
+
+    with pytest.raises(ValueError, match='non-finite'):
+        call(np.stack([h_matrix]*4), 1.0)
+
+
 HELPER_COPIES = [
     ('_check_hermitian',
      ['oscprob2nu', 'oscprob3nu', 'oscprob4nu']),

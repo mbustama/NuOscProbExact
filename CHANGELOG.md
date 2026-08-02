@@ -60,6 +60,55 @@ fixes six docstrings that stated the opposite of the code.
 
 ### Fixed
 
+- **`CHECK_HERMITICITY` made a single probability nine times dearer, and
+  nothing measured it.**  The check was written for stacks, as a dozen
+  whole-array reductions, and that is the right shape at two hundred
+  thousand elements and pure overhead at one: 59 µs to validate a single
+  3x3, against 0.63 µs per element on a stack of two thousand.  A scalar
+  three-flavor probability went from 8 µs to 143 µs — and
+  `probabilities_3nu` paid it **twice**, being the only one of the three
+  that reached its answer through the public `evolution_operator_3nu`,
+  which validates the same matrix again.
+
+  Two consequences, neither visible from the test suite, which checks that
+  the documented figures agree with *each other* and never against the
+  code.  The 8 µs quoted in five places became wrong by a factor of nine.
+  And `SMALL_BATCH`, which exists to send short stacks down the cheaper
+  scalar path, inverted: at its own threshold of ten the scalar path was
+  **17.7x slower** than batching, so the optimisation had become a
+  pessimisation at every size.
+
+  `_check_hermitian` now takes a separate path for a single matrix,
+  comparing the entries as Python complex numbers, and `probabilities_3nu`
+  assembles the operator through a private helper rather than through the
+  public routine.  Measured after: a scalar three-flavor probability costs
+  17.5 µs against 143, a two-flavor one 4.3 against 34, and the check
+  itself 3.6 µs against 59.  The check now costs 1.35x on the scalar path
+  rather than 9.4x, in line with the 1.3x–1.8x it costs on a stack.
+
+  The thresholds were then re-measured, interleaved, best of seven, since
+  the numbers they were set from predate the check: the crossover is
+  thirteen elements at three flavors and twelve at two, so `SMALL_BATCH`
+  goes from 10 to 12 and from 6 to 11.  Note these govern the NumPy path
+  only — with the compiled backend installed, `fastkernels.MIN_BATCH` is
+  one at three and four flavors, so the kernel takes every stack before
+  `SMALL_BATCH` is consulted.
+
+- **A nan could pass the scalar Hermiticity check.**  The first version of
+  the fast path above built its scale with `max`, which keeps its running
+  value when the comparison is against a nan — every comparison with one
+  being false — so a nan never reached `isfinite`, and a Hamiltonian the
+  batched path refuses came back with probabilities instead.  The two paths
+  disagreeing about what is valid is worse than the cost the fast path was
+  written to remove.
+
+  The whole suite passed.  The existing guard makes its matrix non-finite
+  *and* non-Hermitian, so it is refused on the second ground and cannot
+  tell whether the first works; and it never exercised the batched path.
+  Both gaps are now covered by a test that is Hermitian apart from being
+  non-finite and runs each path separately, confirmed to fail without the
+  guard.  Non-finite entries are now caught per entry, before `max`.
+
 - **Six docstring claims that the code contradicts.**  `pmns_mixing_matrix`
   and `mixing_matrix_2nu` each said 1.1.0 made them return a
   `numpy.ndarray` "rather than a nested list"; both return a nested list, and

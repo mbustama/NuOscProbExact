@@ -113,17 +113,27 @@ r"""float: Module-level constant equal to :math:`1/\sqrt{3}`."""
 NEG_HALF_SQRT3_INV = -SQRT3_INV/2.0
 r"""float: Module-level constant equal to :math:`-1/(2\sqrt{3})`."""
 
-SMALL_BATCH = 10
+SMALL_BATCH = 12
 r"""int: Module-level constant.
 
 Stacks with at most this many elements are evaluated one at a time
 through the scalar path.  A batched call carries a fixed cost of a
 couple of hundred microseconds --- allocating and reducing a dozen small
 arrays --- which for a short stack exceeds what the scalar path spends
-on the whole job.  Measured crossover: eleven elements, so a single
-Hamiltonian and baseline costs about a third of what the array path
-would.  The two-flavor expansion does less work per element, so its
-threshold is lower; see :data:`oscprob2nu.SMALL_BATCH`.
+on the whole job.  Measured crossover: thirteen elements.
+
+This governs the NumPy path only.  With the compiled backend installed
+:func:`fastkernels.worthwhile` sends every three- and four-flavor stack
+to the kernel before this is consulted, because `fastkernels.MIN_BATCH`
+is one there.
+
+The threshold was 10, measured before `CHECK_HERMITICITY` existed.  The
+check then made a scalar call nine times dearer, which moved the
+crossover below one --- batching won at every size, and this constant
+was sending stacks the slow way round.  With the check given a path for
+a single matrix the scalar route is cheap again, and the crossover
+re-measured at thirteen.  The two-flavor expansion does less work per
+element; see :data:`oscprob2nu.SMALL_BATCH`.
 """
 
 DEGENERACY_TOL = 1.e-12
@@ -164,7 +174,10 @@ Stack            2 flavors   4 flavors
 
 Three flavors sits between them, at 1.8x and 3.9x.  So a scan that the
 compiled backend was installed to speed up can spend most of its time
-here instead.  For production scans whose Hamiltonians come from a
+here instead.  On a *single* matrix the check costs about 1.35x, and it
+takes its own branch to manage that: the reductions above are all fixed
+cost at one element, so without the branch one probability spent nine
+tenths of its time here.  For production scans whose Hamiltonians come from a
 construction already known to be Hermitian --- everything
 :mod:`hamiltonians3nu` builds is Hermitian to round-off, as the table
 below records --- set this to ``False``.
@@ -223,6 +236,63 @@ def _check_hermitian(h_matrix: np.ndarray, caller: str) -> None:
     if h_matrix.size == 0:
         return
 
+    non_finite = (
+        '%s: the Hamiltonian has a non-finite entry, so it is neither '
+        'Hermitian nor usable.  Set %s.CHECK_HERMITICITY = False to '
+        'skip this check.')
+
+    complaint = (
+        '%s: the Hamiltonian is not Hermitian%s.  The expansion assumes '
+        'Hermiticity, and without it the probabilities returned are '
+        'meaningless even though they still sum to one.  Set '
+        'oscprob3nu.CHECK_HERMITICITY = False to skip this check.')
+
+
+    # A single matrix takes its own path, because everything below is
+    # fixed cost at this size.  The reductions run about sixty
+    # microseconds on one matrix against half a microsecond per element
+    # on a stack of two thousand, and a scalar probability costs eight
+    # microseconds in total --- so when this check arrived in 1.11.0 it
+    # became nine tenths of the work, and made short stacks slower than
+    # the batched path they exist to avoid.  Comparing the entries as
+    # Python complex numbers is one conversion and a few scalar
+    # operations, and reaches the same verdict.
+    if h_matrix.ndim == 2:
+        entries = h_matrix.tolist()
+
+        # Tested per entry rather than by letting a non-finite value
+        # reach `scale`: `max` keeps its running value when the
+        # comparison is with a nan, since every comparison against one is
+        # false, so a nan would never arrive and `isfinite` would pass.
+        # The array path has no such hole, `np.max` propagating nan --- so
+        # the first draft of this branch returned probabilities for a
+        # Hamiltonian the batched path refuses, which is the divergence
+        # this check exists to prevent.
+        scale = 0.0
+        for row in entries:
+            for entry in row:
+                real, imaginary = abs(entry.real), abs(entry.imag)
+                if not (math.isfinite(real) and math.isfinite(imaginary)):
+                    raise ValueError(non_finite % (caller, 'oscprob3nu'))
+                scale = max(scale, real, imaginary)
+
+        tolerance = (_HERMITICITY_TOL*scale if scale > 0.0
+                     else _HERMITICITY_TOL)
+
+        for i in range(3):
+            if abs(entries[i][i].imag) > tolerance:
+                raise ValueError(complaint % (
+                    caller, ' --- the diagonal entry (%d, %d) has a non-zero '
+                    'imaginary part' % (i, i)))
+            for j in range(i+1, 3):
+                upper, lower = entries[i][j], entries[j][i]
+                if (abs(upper.real - lower.real) > tolerance
+                        or abs(upper.imag + lower.imag) > tolerance):
+                    raise ValueError(complaint % (
+                        caller, ' --- entry (%d, %d) is not the complex '
+                        'conjugate of entry (%d, %d)' % (i, j, j, i)))
+        return
+
     real, imaginary = h_matrix.real, h_matrix.imag
 
     # `np.abs(...).max()` allocates a float array the size of the stack,
@@ -239,18 +309,9 @@ def _check_hermitian(h_matrix: np.ndarray, caller: str) -> None:
     # so a Hamiltonian that is both non-finite *and* non-Hermitian would
     # pass a check whose whole purpose is to refuse the second.
     if not np.isfinite(scale):
-        raise ValueError(
-            '%s: the Hamiltonian has a non-finite entry, so it is neither '
-            'Hermitian nor usable.  Set %s.CHECK_HERMITICITY = False to '
-            'skip this check.' % (caller, 'oscprob3nu'))
+        raise ValueError(non_finite % (caller, 'oscprob3nu'))
 
     tolerance = _HERMITICITY_TOL*scale if scale > 0.0 else _HERMITICITY_TOL
-
-    complaint = (
-        '%s: the Hamiltonian is not Hermitian%s.  The expansion assumes '
-        'Hermiticity, and without it the probabilities returned are '
-        'meaningless even though they still sum to one.  Set '
-        'oscprob3nu.CHECK_HERMITICITY = False to skip this check.')
 
     for i in range(3):
         if np.any(np.abs(imaginary[..., i, i]) > tolerance):
@@ -1225,6 +1286,41 @@ def evolution_operator_3nu_u_coefficients(
     return _u_coefficients_3nu_single(h, h2, h3, L, star_coeffs)
 
 
+def _u_matrix_3nu(
+    hamiltonian_matrix: Union[list, np.ndarray],
+    L: Union[int, float]
+) -> List[List[complex]]:
+    r"""Returns :math:`U_3(L)`, without checking Hermiticity.
+
+    The assembly of the operator from its nine expansion coefficients,
+    factored out so that `evolution_operator_3nu` and
+    `probabilities_3nu` can each validate the Hamiltonian once and then
+    share this.  Calling the public routine from the other would check
+    the same matrix twice, which on the scalar path is the larger half
+    of the work.
+
+    Parameters
+    ----------
+    hamiltonian_matrix : array_like
+        Hamiltonian, of shape ``(3, 3)``.
+    L : int or float
+        Baseline, in units reciprocal to those of the Hamiltonian.
+
+    Returns
+    -------
+    list of list of complex
+        The evolution operator, indexed ``[final][initial]``.
+    """
+    u0, u1, u2, u3, u4, u5, u6, u7, u8 = \
+        evolution_operator_3nu_u_coefficients(hamiltonian_matrix, L)
+
+    return [
+        [u0+1.j*(u3+u8/SQRT3), 1.j*u1+u2, 1.j*u4+u5],
+        [1.j*u1-u2, u0-1.j*(u3-u8/SQRT3), 1.j*u6+u7],
+        [1.j*u4-u5, 1.j*u6-u7, u0-1.j*2.*u8/SQRT3]
+    ]
+
+
 def evolution_operator_3nu(
     hamiltonian_matrix: Union[list, np.ndarray],
     L: Union[int, float, list, np.ndarray]
@@ -1312,14 +1408,7 @@ def evolution_operator_3nu(
         _check_hermitian(np.asarray(hamiltonian_matrix, dtype=complex),
                          'evolution_operator_3nu')
 
-    u0, u1, u2, u3, u4, u5, u6, u7, u8 = \
-        evolution_operator_3nu_u_coefficients(hamiltonian_matrix, L)
-
-    return [
-        [u0+1.j*(u3+u8/SQRT3), 1.j*u1+u2, 1.j*u4+u5],
-        [1.j*u1-u2, u0-1.j*(u3-u8/SQRT3), 1.j*u6+u7],
-        [1.j*u4-u5, 1.j*u6-u7, u0-1.j*2.*u8/SQRT3]
-    ]
+    return _u_matrix_3nu(hamiltonian_matrix, L)
 
 
 def probabilities_3nu(
@@ -1444,9 +1533,13 @@ def probabilities_3nu(
         _check_hermitian(np.asarray(hamiltonian_matrix, dtype=complex),
                          'probabilities_3nu')
 
-    U = evolution_operator_3nu(hamiltonian_matrix, L)
-
-    row_e, row_m, row_t = U
+    # Built here rather than through `evolution_operator_3nu`, which would
+    # validate the same matrix a second time.  The check is the dominant
+    # cost of a scalar call, so paying it twice doubled it --- and this
+    # was the only one of the three modules that did: `probabilities_2nu`
+    # works from the coefficients directly and `probabilities_4nu`
+    # validates once.
+    row_e, row_m, row_t = _u_matrix_3nu(hamiltonian_matrix, L)
 
     # P_ab = |U_ba|^2: the evolution operator is indexed (final, initial)
     return (_abs2(row_e[0]), _abs2(row_m[0]), _abs2(row_t[0]),
