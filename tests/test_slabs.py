@@ -15,6 +15,7 @@ from scipy.linalg import expm
 
 import oscprob2nu
 import oscprob3nu
+import oscprob4nu
 import slabs
 
 from conftest import ATOL, traceless
@@ -187,3 +188,62 @@ def test_malformed_slab_sequences_raise(slab_evolution, n_flavors):
 
     with pytest.raises(ValueError, match='one-dimensional'):
         slab_evolution(good, [[1.0], [1.0], [1.0]])
+
+
+# --------------------------------------------------------------------------
+# Four flavors, which slabs could not compose until 1.11.0
+# --------------------------------------------------------------------------
+
+def test_4nu_slabs_reproduce_a_product_of_matrix_exponentials(rng):
+    r"""Composing four-flavor slabs is propagating once, per slab.
+
+    The same claim the two- and three-flavor tests make, against the
+    same independent reference: ``scipy.linalg.expm`` of each traceless
+    slab Hamiltonian, multiplied in the order the neutrino meets them.
+    """
+    for n_slabs in (1, 2, 5, 17):
+        h_stack = np.stack([random_hermitian(rng, 4) for _ in range(n_slabs)])
+        widths = rng.uniform(0.1, 3.0, n_slabs)
+
+        ours = np.asarray(slabs.evolution_operator_4nu_slabs(h_stack, widths))
+
+        reference = np.eye(4, dtype=complex)
+        for h_matrix, width in zip(h_stack, widths):
+            reference = expm(-1.j*traceless(h_matrix)*width) @ reference
+
+        assert np.allclose(ours, reference, atol=1.0e-12)
+
+
+def test_4nu_one_hamiltonian_split_into_slabs_is_the_same_propagation(rng):
+    r"""Cutting one constant Hamiltonian into slabs changes nothing."""
+    h_matrix = random_hermitian(rng, 4)
+    total = 4.0
+
+    once = np.asarray(oscprob4nu.evolution_operator_4nu(h_matrix, total))
+    for n_slabs in (2, 7, 40):
+        split = np.asarray(slabs.evolution_operator_4nu_slabs(
+            np.stack([h_matrix]*n_slabs), np.full(n_slabs, total/n_slabs)))
+        assert np.allclose(split, once, atol=1.0e-12)
+
+
+def test_4nu_slab_probabilities_are_unitary(rng):
+    r"""Each initial flavor's sixteen probabilities sum to one."""
+    h_stack = np.stack([random_hermitian(rng, 4) for _ in range(6)])
+    prob = np.asarray(slabs.probabilities_4nu_slabs(
+        h_stack, rng.uniform(0.1, 2.0, 6))).reshape(4, 4)
+
+    assert np.allclose(prob.sum(axis=1), 1.0, atol=ATOL)
+    assert np.allclose(prob.sum(axis=0), 1.0, atol=ATOL)
+
+
+def test_4nu_slabs_reject_a_malformed_sequence(rng):
+    r"""The same validation the other flavor counts get."""
+    h_stack = np.stack([random_hermitian(rng, 4) for _ in range(3)])
+
+    with pytest.raises(ValueError, match='one width per slab'):
+        slabs.evolution_operator_4nu_slabs(h_stack, [1.0, 2.0])
+    with pytest.raises(ValueError, match=r'shape \(n, 4, 4\)'):
+        slabs.evolution_operator_4nu_slabs(
+            np.stack([random_hermitian(rng, 3) for _ in range(3)]), [1., 2., 3.])
+    with pytest.raises(ValueError, match='cannot be negative'):
+        slabs.evolution_operator_4nu_slabs(h_stack, [1.0, -1.0, 1.0])

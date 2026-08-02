@@ -52,6 +52,7 @@ Routine listings
     * coordinates_of_named_location - Coordinates of a named site
     * density_prem - PREM density at a radius
     * matter_potential - Charged-current potential from a density
+    * matter_potential_nc - Neutral-current potential, for a sterile state
     * distance_traveled_inside_earth - Chord length for a given costhz
     * earth_radial_distance_from_depth - Radius at a point on the chord
     * prem_layer_edges_along_chord - Where a chord crosses PREM shells
@@ -60,8 +61,10 @@ Routine listings
     * earth_slabs - Slab widths and densities along a chord
     * probabilities_2nu_earth - Two-flavor probabilities across the Earth
     * probabilities_3nu_earth - Three-flavor probabilities across the Earth
+    * probabilities_4nu_earth - Four-flavor probabilities across the Earth
     * probabilities_2nu_between_locations - Between two named sites
     * probabilities_3nu_between_locations - Between two named sites
+    * probabilities_4nu_between_locations - Between two named sites
 """
 
 __author__ = "Mauricio Bustamante"
@@ -69,14 +72,16 @@ __email__ = "mbustamante@gmail.com"
 
 __all__ = ['LOC_COORDS_DMS', 'PREM_BOUNDARIES',
            'dms_to_decimal', 'coordinates_of_named_location',
-           'density_prem', 'matter_potential',
+           'density_prem', 'matter_potential', 'matter_potential_nc',
            'distance_traveled_inside_earth',
            'earth_radial_distance_from_depth',
            'prem_layer_edges_along_chord', 'chord_length_inside_earth',
            'costhz_between_points_on_surface', 'earth_slabs',
            'probabilities_2nu_earth', 'probabilities_3nu_earth',
+           'probabilities_4nu_earth',
            'probabilities_2nu_between_locations',
-           'probabilities_3nu_between_locations']
+           'probabilities_3nu_between_locations',
+           'probabilities_4nu_between_locations']
 
 from typing import Optional, Tuple, Union
 
@@ -85,6 +90,7 @@ import numpy as np
 import globaldefs as gd
 import hamiltonians2nu
 import hamiltonians3nu
+import hamiltonians4nu
 import slabs
 
 
@@ -334,6 +340,70 @@ def matter_potential(
                      * electron_fraction
                      / pow(gd.CONV_CM_TO_INV_EV, 3.0))
     potential = np.sqrt(2.0)*gd.GF*num_density_e
+
+    return float(potential) if scalar_input else potential
+
+
+def matter_potential_nc(
+    density: Union[int, float, list, np.ndarray],
+    neutron_fraction: Optional[float] = None,
+    electron_fraction: Optional[float] = gd.ELECTRON_FRACTION_EARTH_CRUST
+) -> Union[float, np.ndarray]:
+    r"""Returns the neutral-current matter potential for a density.
+
+    Returns :math:`V_{NC} = -G_F n_n/\sqrt{2}`, which is **negative**
+    for neutrinos.  It is felt equally by all three active flavors, so
+    at two and three flavors it is proportional to the identity and
+    drops out of the probabilities entirely --- which is why
+    `matter_potential` alone serves them.
+
+    It does not drop out once a sterile state is present, because the
+    sterile state does not feel it.  Removing it from all four states
+    costs only a global phase and leaves :math:`-V_{NC}` on the sterile
+    entry; see :func:`hamiltonians4nu.hamiltonian_4nu_matter`.
+
+    .. versionadded:: 1.11.0
+
+    Parameters
+    ----------
+    density : int, float, list or numpy.ndarray
+        Matter density, in units of g cm\ :sup:`-3`.
+    neutron_fraction : float, optional
+        Neutrons per nucleon.  Default: ``1 - electron_fraction``, the
+        isoscalar value, since a nucleon is either a proton --- matched
+        by an electron --- or a neutron.
+    electron_fraction : float, optional
+        Electrons per nucleon, used only to derive `neutron_fraction`
+        when that is not given.  Default:
+        `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`.
+
+    Returns
+    -------
+    float or numpy.ndarray
+        The potential :math:`V_{NC}`, in units of eV.  Negative for
+        neutrinos.
+
+    Examples
+    --------
+    .. jupyter-execute::
+
+        import earth
+
+        print('%.4e' % earth.matter_potential_nc(3.0))
+    """
+    if neutron_fraction is None:
+        neutron_fraction = 1.0 - electron_fraction
+
+    scalar_input = (np.ndim(density) == 0)
+    density = np.asarray(density, dtype=float)
+
+    # Neutron number density in eV^3, by the same route as the electron
+    # one in `matter_potential`
+    num_density_n = (density*gd.CONV_G_TO_EV
+                     / ((gd.MASS_PROTON+gd.MASS_NEUTRON)/2.0)
+                     * neutron_fraction
+                     / pow(gd.CONV_CM_TO_INV_EV, 3.0))
+    potential = -gd.GF*num_density_n/np.sqrt(2.0)
 
     return float(potential) if scalar_input else potential
 
@@ -711,7 +781,7 @@ def _earth_hamiltonians(
     electron_fraction : float
         Electrons per nucleon.
     n_flavors : int
-        Number of neutrino flavors, 2 or 3.
+        Number of neutrino flavors, 2, 3, or 4.
 
     Returns
     -------
@@ -727,9 +797,16 @@ def _earth_hamiltonians(
     if n_flavors == 2:
         h = hamiltonians2nu.hamiltonian_2nu_matter(
             h_vacuum_energy_independent, energy, potentials)
-    else:
+    elif n_flavors == 3:
         h = hamiltonians3nu.hamiltonian_3nu_matter(
             h_vacuum_energy_independent, energy, potentials)
+    else:
+        # A sterile state does not feel the neutral-current potential,
+        # which therefore no longer cancels and has to be built too
+        h = hamiltonians4nu.hamiltonian_4nu_matter(
+            h_vacuum_energy_independent, energy, potentials,
+            matter_potential_nc(densities,
+                                electron_fraction=electron_fraction))
 
     return h, widths_km*gd.CONV_KM_TO_INV_EV
 
@@ -971,3 +1048,115 @@ def _costhz_of_named_pair(loc_name_1: str, loc_name_2: str) -> float:
             'them' % (loc_name_1, loc_name_2))
 
     return costhz
+
+
+def probabilities_4nu_earth(
+    h_vacuum_energy_independent: Union[list, np.ndarray],
+    energy: Union[int, float],
+    costhz: Union[int, float],
+    n_slabs_per_segment: int = 8,
+    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST
+) -> Tuple[float, ...]:
+    r"""Returns the four-flavor probabilities across the Earth.
+
+    Builds the PREM slabs along the chord for the given direction and
+    propagates through them exactly, slab by slab, exactly as at two and
+    three flavors.  The one thing that is new is the potential: a
+    sterile state does not feel the neutral-current interaction, so
+    :math:`V_{NC}` no longer cancels between the flavors and is built
+    per slab alongside :math:`V_{CC}`.  This is what puts the sterile
+    matter resonance where it belongs; see
+    :func:`hamiltonians4nu.hamiltonian_4nu_matter`.
+
+    .. versionadded:: 1.11.0
+
+    Parameters
+    ----------
+    h_vacuum_energy_independent : array_like
+        Energy-independent four-flavor vacuum Hamiltonian, as returned
+        by
+        `hamiltonians4nu.hamiltonian_4nu_vacuum_energy_independent`.
+    energy : int or float
+        Neutrino energy, in units of eV.
+    costhz : int or float
+        Cosine of the zenith angle of the neutrino direction.  Must be
+        negative.
+    n_slabs_per_segment : int, optional
+        Number of equal sub-slabs per chord segment.  A segment runs
+        between consecutive PREM boundary crossings; a chord crosses most
+        shells twice, so there are more segments than shells.  Default: 8.
+    electron_fraction : float, optional
+        Electrons per nucleon.  The neutron fraction is taken as its
+        complement, which is what sets :math:`V_{NC}`.  Default:
+        `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`.
+
+    Returns
+    -------
+    tuple of float
+        The sixteen probabilities, with the initial flavor varying
+        slowest.  With the fourth state read as sterile, the flavor
+        order is :math:`(\nu_e, \nu_\mu, \nu_\tau, \nu_s)`.
+
+    Raises
+    ------
+    ValueError
+        If ``costhz >= 0`` or ``n_slabs_per_segment`` is not positive.
+    """
+    h, widths = _earth_hamiltonians(h_vacuum_energy_independent, energy,
+                                    costhz, n_slabs_per_segment,
+                                    electron_fraction, 4)
+
+    return slabs.probabilities_4nu_slabs(h, widths)
+
+
+def probabilities_4nu_between_locations(
+    h_vacuum_energy_independent: Union[list, np.ndarray],
+    energy: Union[int, float],
+    loc_name_1: str,
+    loc_name_2: str,
+    n_slabs_per_segment: int = 8,
+    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST
+) -> Tuple[float, ...]:
+    r"""Returns the four-flavor probabilities between two named locations.
+
+    Convenience wrapper: looks both locations up in `LOC_COORDS_DMS`,
+    finds the zenith angle of the chord joining them, and evaluates
+    `probabilities_4nu_earth` along it.
+
+    .. versionadded:: 1.11.0
+
+    Parameters
+    ----------
+    h_vacuum_energy_independent : array_like
+        Energy-independent four-flavor vacuum Hamiltonian.
+    energy : int or float
+        Neutrino energy, in units of eV.
+    loc_name_1 : str
+        Name of the source location, e.g. ``'cern'``.
+    loc_name_2 : str
+        Name of the detector location, e.g. ``'gran_sasso'``.
+    n_slabs_per_segment : int, optional
+        Number of equal sub-slabs per chord segment.  A segment runs
+        between consecutive PREM boundary crossings; a chord crosses most
+        shells twice, so there are more segments than shells.  Default: 8.
+    electron_fraction : float, optional
+        Electrons per nucleon.  Default:
+        `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`.
+
+    Returns
+    -------
+    tuple of float
+        The sixteen probabilities, with the initial flavor varying
+        slowest.
+
+    Raises
+    ------
+    ValueError
+        If either name is not predefined, or if the two locations
+        coincide, so that there is no chord between them.
+    """
+    costhz = _costhz_of_named_pair(loc_name_1, loc_name_2)
+
+    return probabilities_4nu_earth(h_vacuum_energy_independent, energy,
+                                   costhz, n_slabs_per_segment,
+                                   electron_fraction)

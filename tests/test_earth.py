@@ -15,6 +15,7 @@ import earth
 import globaldefs as gd
 import hamiltonians2nu
 import hamiltonians3nu
+import hamiltonians4nu
 import oscprob3nu
 import slabs
 
@@ -366,3 +367,98 @@ def test_between_locations_matches_the_explicit_chord():
         np.array(earth.probabilities_2nu_earth(
             h_vac2, 1.e9, costhz, n_slabs_per_segment=3)),
         atol=ATOL)
+
+
+# --------------------------------------------------------------------------
+# Four flavors through the Earth, which was not possible before 1.11.0
+# --------------------------------------------------------------------------
+
+def _vacuum_4nu(s14=0.0, s24=0.0, s34=0.0, dm41=1.0):
+    r"""Returns a 3+1 energy-independent vacuum Hamiltonian."""
+    return hamiltonians4nu.hamiltonian_4nu_vacuum_energy_independent(
+        gd.S12_NO_BF, gd.S23_NO_BF, gd.S13_NO_BF, s14, s24, s34,
+        gd.DCP_NO_BF, gd.D21_NO_BF, gd.D31_NO_BF, dm41)
+
+
+def _vacuum_3nu():
+    r"""Returns the matching three-flavor vacuum Hamiltonian."""
+    return np.asarray(
+        hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(
+            gd.S12_NO_BF, gd.S23_NO_BF, gd.S13_NO_BF, gd.DCP_NO_BF,
+            gd.D21_NO_BF, gd.D31_NO_BF))
+
+
+@pytest.mark.parametrize('costhz', [-1.0, -0.8, -0.3, -0.05])
+def test_a_decoupled_sterile_crosses_the_earth_as_three_flavors_do(costhz):
+    r"""With the sterile angles off, the active block is the 3nu answer.
+
+    The strongest check available for the four-flavor Earth path, and
+    the reason it is worth having: it runs the whole PREM chord --- the
+    boundary crossings, the per-slab densities, the composition of
+    nineteen segments' worth of operators --- through machinery that had
+    never been exercised at four flavors, and compares it against a
+    module that has.  A wrong sterile matter entry, a wrong slab order
+    or a wrong flavor ordering would all show here.
+    """
+    four = np.asarray(earth.probabilities_4nu_earth(
+        _vacuum_4nu(), 1.0e10, costhz)).reshape(4, 4)
+    three = np.asarray(earth.probabilities_3nu_earth(
+        _vacuum_3nu(), 1.0e10, costhz)).reshape(3, 3)
+
+    assert np.max(np.abs(four[:3, :3] - three)) < 1.0e-11
+    assert np.max(np.abs(four[:3, 3])) == 0.0
+    assert np.max(np.abs(four[3, :3])) == 0.0
+    assert np.allclose(four.sum(axis=1), 1.0, atol=1.0e-9)
+
+
+def test_the_sterile_state_feels_the_neutral_current_potential():
+    r"""V_NC does not cancel once a sterile state is present.
+
+    It is flavor-universal across the three active states, so at three
+    flavors it is proportional to the identity and drops out.  A sterile
+    state does not feel it, so removing it from all four leaves
+    ``-V_NC`` on the sterile entry --- and that entry is what places the
+    sterile matter resonance.  Dropping it would be invisible in vacuum,
+    which is exactly why it is pinned here.
+    """
+    assert earth.matter_potential_nc(3.0) < 0.0
+    assert np.isclose(earth.matter_potential_nc(3.0), gd.VNC_EARTH_CRUST)
+
+    # Twice the density is twice the potential, and the ratio to V_CC is
+    # fixed by the isoscalar assumption
+    assert np.isclose(earth.matter_potential_nc(6.0),
+                      2.0*earth.matter_potential_nc(3.0))
+    assert np.isclose(-earth.matter_potential_nc(3.0)
+                      / earth.matter_potential(3.0), 0.5)
+
+    mixed = _vacuum_4nu(s14=np.sqrt(0.10), s24=np.sqrt(0.10))
+    with_nc = np.asarray(earth.probabilities_4nu_earth(mixed, 1.0e10, -0.8))
+    assert abs(sum(with_nc[0:4]) - 1.0) < 1.0e-9
+    # The sterile channel is actually open, or this test proves nothing
+    assert with_nc[3] > 1.0e-6
+
+
+def test_4nu_earth_converges_as_the_slabs_are_refined():
+    r"""Refining the discretisation settles, as at three flavors."""
+    h_vacuum = _vacuum_4nu(s14=np.sqrt(0.10), s24=np.sqrt(0.10))
+    values = [np.asarray(earth.probabilities_4nu_earth(
+        h_vacuum, 1.0e10, -0.8, n_slabs_per_segment=n))[0]
+        for n in (2, 4, 8, 16, 32)]
+
+    differences = np.abs(np.diff(values))
+    assert differences[-1] < differences[0]
+    assert differences[-1] < 1.0e-3
+
+
+def test_4nu_between_locations_matches_the_chord_it_names():
+    r"""The named-pair wrapper is the chord calculation, not a new one."""
+    h_vacuum = _vacuum_4nu(s14=np.sqrt(0.10))
+    costhz = earth.costhz_between_points_on_surface(
+        *earth.coordinates_of_named_location('fermilab'),
+        *earth.coordinates_of_named_location('homestake'))
+
+    named = earth.probabilities_4nu_between_locations(
+        h_vacuum, 1.0e9, 'fermilab', 'homestake')
+    direct = earth.probabilities_4nu_earth(h_vacuum, 1.0e9, costhz)
+
+    assert np.allclose(named, direct, atol=0.0)

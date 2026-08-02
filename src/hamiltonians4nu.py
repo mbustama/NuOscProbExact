@@ -50,6 +50,7 @@ Routine listings
     * hamiltonian_4nu_vacuum_energy_independent - Vacuum Hamiltonian
     * hamiltonian_4nu_matter - Adds matter of constant density
     * hamiltonian_4nu_nsi - Adds non-standard interactions
+    * hamiltonian_4nu_liv - Adds a Lorentz invariance-violating term
 
 References
 ----------
@@ -63,7 +64,8 @@ __email__ = "mbustamante@gmail.com"
 
 __all__ = ['mixing_matrix_4nu',
            'hamiltonian_4nu_vacuum_energy_independent',
-           'hamiltonian_4nu_matter', 'hamiltonian_4nu_nsi']
+           'hamiltonian_4nu_matter', 'hamiltonian_4nu_nsi',
+           'hamiltonian_4nu_liv']
 
 from typing import Union
 
@@ -483,3 +485,114 @@ def hamiltonian_4nu_nsi(
     return (h_vacuum/energy[..., None, None]
             + VCC[..., None, None]*nsi
             - VNC[..., None, None]*_SS_PROJECTOR_4NU)
+
+
+def hamiltonian_4nu_liv(
+    h_vacuum_energy_independent: Union[list, np.ndarray],
+    energy: Union[int, float, list, np.ndarray],
+    sxi12: Union[int, float],
+    sxi23: Union[int, float],
+    sxi13: Union[int, float],
+    sxi14: Union[int, float],
+    sxi24: Union[int, float],
+    sxi34: Union[int, float],
+    dxiCP: Union[int, float],
+    b1: Union[int, float],
+    b2: Union[int, float],
+    b3: Union[int, float],
+    b4: Union[int, float],
+    Lambda: Union[int, float]
+) -> np.ndarray:
+    r"""Returns the four-neutrino Hamiltonian for oscillations w/ LIV.
+
+    The four-flavor counterpart of
+    :func:`hamiltonians3nu.hamiltonian_3nu_liv`.  The LIV term is
+    :math:`(E/\Lambda) R B_4 R^\dagger`, with
+    :math:`B_4 = \mathrm{diag}(b_1, b_2, b_3, b_4)` and :math:`R` a
+    mixing matrix of the same 3+1 form as
+    :func:`mixing_matrix_4nu`, built from the angles :math:`\xi_{ij}`
+    and the phase :math:`\delta_{\xi,\rm CP}` that relate the
+    eigenvectors of :math:`B_4` to the flavor states.
+
+    Nothing here privileges the fourth state: :math:`b_4` is an
+    eigenvalue like the others, so a sterile neutrino may couple to the
+    LIV background whether or not it couples to matter.  Setting the
+    three new angles to zero and :math:`b_4` equal to the trace-shifted
+    remainder recovers the three-flavor term in the active block.
+
+    .. versionadded:: 1.11.0
+
+    Parameters
+    ----------
+    h_vacuum_energy_independent : array_like
+        Energy-independent four-flavor vacuum Hamiltonian, of shape
+        ``(4, 4)``, in eV\ :sup:`2`.  It is not modified.
+    energy : int or float or array_like
+        Neutrino energy, in eV, or an array of energies.
+    sxi12 : int or float
+        Sine of :math:`\xi_{12}`.
+    sxi23 : int or float
+        Sine of :math:`\xi_{23}`.
+    sxi13 : int or float
+        Sine of :math:`\xi_{13}`.
+    sxi14 : int or float
+        Sine of :math:`\xi_{14}`.
+    sxi24 : int or float
+        Sine of :math:`\xi_{24}`.
+    sxi34 : int or float
+        Sine of :math:`\xi_{34}`.
+    dxiCP : int or float
+        CP-violation phase of the LIV operator, in radian.
+    b1 : int or float
+        Eigenvalue :math:`b_1` of the LIV operator :math:`B_4` [eV].
+    b2 : int or float
+        Eigenvalue :math:`b_2` of the LIV operator :math:`B_4` [eV].
+    b3 : int or float
+        Eigenvalue :math:`b_3` of the LIV operator :math:`B_4` [eV].
+    b4 : int or float
+        Eigenvalue :math:`b_4` of the LIV operator :math:`B_4` [eV].
+    Lambda : int or float
+        Energy scale :math:`\Lambda` of the LIV operator [eV].
+
+    Returns
+    -------
+    numpy.ndarray
+        Complex array of shape ``(4, 4)`` for a scalar energy, or
+        ``(..., 4, 4)`` for an array of energies, in eV.
+
+    Examples
+    --------
+    .. jupyter-execute::
+
+        import numpy as np
+
+        import globaldefs as gd
+        import hamiltonians4nu
+        import oscprob4nu
+
+        h_vacuum = hamiltonians4nu.hamiltonian_4nu_vacuum_energy_independent(
+            gd.S12_NO_BF, gd.S23_NO_BF, gd.S13_NO_BF,
+            np.sqrt(0.10), np.sqrt(0.10), 0.0,
+            gd.DCP_NO_BF, gd.D21_NO_BF, gd.D31_NO_BF, 1.0)
+
+        h_liv = hamiltonians4nu.hamiltonian_4nu_liv(
+            h_vacuum, 1.0e9, 0.3, 0.4, 0.5, 0.0, 0.0, 0.0, 0.7,
+            1.0e-9, 1.5e-9, 2.0e-9, 2.5e-9, 1.0e12)
+
+        prob = oscprob4nu.probabilities_4nu(
+            h_liv, 1300.0*gd.CONV_KM_TO_INV_EV)
+
+        print('P_ee with LIV = %.6f' % prob[0])
+    """
+    h_vacuum = np.asarray(h_vacuum_energy_independent, dtype=complex)
+    energy = np.asarray(energy, dtype=float)
+
+    rotation = mixing_matrix_4nu(sxi12, sxi23, sxi13, sxi14, sxi24, sxi34,
+                                 dxiCP)
+    operator = np.diag([b1, b2, b3, b4]).astype(complex)
+    liv = rotation @ operator @ rotation.conj().T
+
+    factor = energy/Lambda
+
+    return (h_vacuum/energy[..., None, None]
+            + factor[..., None, None]*liv)
