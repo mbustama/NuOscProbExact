@@ -622,8 +622,10 @@ def probabilities_2nu(
 
     Notes
     -----
-    Passing arrays evaluates the whole stack at once, which is roughly
-    fifty times faster than calling this routine in a Python loop; see
+    Passing arrays evaluates the whole stack at once, which on a
+    2000-point scan is about ninety times faster than calling this
+    routine in a Python loop --- the figure measured in ``README.md``
+    and guarded by ``tests/test_documented_figures.py``; see
     the notes on :func:`oscprob3nu.probabilities_3nu` for the two scans
     that broadcast naturally.
 

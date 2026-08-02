@@ -441,9 +441,11 @@ def psi_roots(h2: Union[int, float], h3: Union[int, float]) -> List[float]:
 
     .. versionchanged:: 1.5.0
        Faster, with identical results; the probabilities agree with
-       1.4.0 to 1.6e-13 across every code path.  :math:`\sqrt{|h|^2}` is
-       taken once rather than three times, and the arc-cosine argument
-       is formed as a division rather than a power of -1.5.
+       1.4.0 to 1.6e-13 across every code path.  The prefactor takes
+       :math:`\sqrt{|h|^2}` once rather than three times.  The
+       arc-cosine argument still forms :math:`|h|^2` to the power of
+       -1.5, which is what the code does and what an earlier version of
+       this note wrongly described as a division.
 
     Parameters
     ----------

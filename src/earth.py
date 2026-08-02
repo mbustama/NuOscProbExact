@@ -342,8 +342,9 @@ def distance_traveled_inside_earth(costhz: Union[int, float]) -> float:
     r"""Returns the chord length through the Earth for a given direction.
 
     The neutrino is assumed to arrive at a detector on the surface, not
-    underground, so the distance is zero for any upward-going direction,
-    ``costhz >= 0``.
+    underground, so the distance is zero for any *down*-going direction,
+    ``costhz >= 0``, which reaches the detector from the sky without
+    entering the Earth at all.
 
     .. versionadded:: 1.8.0
 
