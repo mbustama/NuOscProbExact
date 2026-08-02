@@ -94,6 +94,20 @@ fixes six docstrings that stated the opposite of the code.
   one at three and four flavors, so the kernel takes every stack before
   `SMALL_BATCH` is consulted.
 
+  A later pass caught what that re-measurement broke around it.
+  `oscprob4nu.SMALL_BATCH` was documented as matching the three-flavor
+  threshold, which stopped being true the moment the three-flavor one
+  moved; its docstring also described a scalar path that four flavors does
+  not have, the quickstart having said so for two releases.  Nothing reads
+  that constant, and it now says as much.  `methodology.rst` explained the
+  two thresholds as differing because two flavors amortises its overhead
+  sooner — an explanation for a gap of four elements that survived the gap
+  becoming one, and one that contradicts the `oscprob2nu` docstring beside
+  it: they are close *despite* the difference in work per element, because
+  what is amortised is the array machinery's fixed cost.  And
+  `_check_hermitian`'s own docstring described only the stack strategy,
+  never the single-matrix branch that is now half of it.
+
 - **A nan could pass the scalar Hermiticity check.**  The first version of
   the fast path above built its scale with `max`, which keeps its running
   value when the comparison is against a nan — every comparison with one

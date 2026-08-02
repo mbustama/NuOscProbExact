@@ -501,11 +501,11 @@ for a handful of points it spends more on the machinery than the scalar path
 spends on the whole job.  Stacks below
 :data:`oscprob3nu.SMALL_BATCH` are therefore evaluated one element at a time.
 
-The thresholds are measured, not guessed, and differ between the two
-expansions because the two-flavor one does much less work per element and so
-amortises its overhead sooner: thirteen elements for three flavors, twelve
-for two.  Nothing about this is visible from the outside; the answers are the
-same either way.
+The thresholds are measured, not guessed: thirteen elements for three
+flavors, twelve for two.  They sit close together even though the two-flavor
+expansion does much less work per element, because what has to be amortised
+is the array machinery's fixed cost rather than the arithmetic.  Nothing
+about this is visible from the outside; the answers are the same either way.
 
 The optional compiled backend
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

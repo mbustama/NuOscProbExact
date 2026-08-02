@@ -216,6 +216,11 @@ def _check_hermitian(h_matrix: np.ndarray, caller: str) -> None:
     factor of three on a large stack, where this check would otherwise
     cost several times the evaluation it guards.
 
+    That describes the stack.  A single matrix takes its own branch and
+    compares its entries as Python complex numbers, because the
+    reductions above are all fixed cost at one element and would
+    otherwise dominate a scalar probability.
+
     Parameters
     ----------
     h_matrix : numpy.ndarray
@@ -1295,9 +1300,9 @@ def _u_matrix_3nu(
     The assembly of the operator from its nine expansion coefficients,
     factored out so that `evolution_operator_3nu` and
     `probabilities_3nu` can each validate the Hamiltonian once and then
-    share this.  Calling the public routine from the other would check
-    the same matrix twice, which on the scalar path is the larger half
-    of the work.
+    share this.  Calling the public routine from the other checked the
+    same matrix twice, which is pure duplication whatever the check
+    costs, and cost a great deal when it was first noticed.
 
     Parameters
     ----------
@@ -1534,11 +1539,11 @@ def probabilities_3nu(
                          'probabilities_3nu')
 
     # Built here rather than through `evolution_operator_3nu`, which would
-    # validate the same matrix a second time.  The check is the dominant
-    # cost of a scalar call, so paying it twice doubled it --- and this
-    # was the only one of the three modules that did: `probabilities_2nu`
-    # works from the coefficients directly and `probabilities_4nu`
-    # validates once.
+    # validate the same matrix a second time.  This was the only one of the
+    # three modules that did --- `probabilities_2nu` works from the
+    # coefficients directly and `probabilities_4nu` validates once --- and
+    # it went unnoticed until the check became the dominant cost of a
+    # scalar call and doubling it became visible.
     row_e, row_m, row_t = _u_matrix_3nu(hamiltonian_matrix, L)
 
     # P_ab = |U_ba|^2: the evolution operator is indexed (final, initial)

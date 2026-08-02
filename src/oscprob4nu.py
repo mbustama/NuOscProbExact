@@ -167,13 +167,17 @@ except ImportError:                                       # pragma: no cover
 SMALL_BATCH = 10
 r"""int: Module-level constant.
 
-Stacks with at most this many elements are evaluated one at a time
-through the scalar path.  A batched call carries a fixed cost --- here a
-batched :math:`4\times4` determinant and linear solve --- which for a
-short stack exceeds what the scalar path spends on the whole job.  The
-threshold matches :data:`oscprob3nu.SMALL_BATCH`; the four-flavor
-expansion does strictly more work per element, so a threshold measured
-for three flavors is a safe one here.
+Nothing reads this.  At two and three flavors the constant of the same
+name selects between a scalar path and a batched one; four flavors has
+no separate scalar closed form to select, so every stack goes through
+the array path whatever its length, and there is no short-stack case for
+a threshold to name.  It is exported and documented as being what it is,
+rather than quietly kept.
+
+It also no longer matches :data:`oscprob3nu.SMALL_BATCH`, which it once
+did and was documented as doing: that one was re-measured when the
+scalar path was given a cheap Hermiticity check, and this one, governing
+nothing, was not.
 """
 
 POLISH_ROOTS = True
@@ -324,6 +328,11 @@ def _check_hermitian(h_matrix: np.ndarray, caller: str) -> None:
     complex array, no square root per element.  That is worth about a
     factor of three on a large stack, where this check would otherwise
     cost several times the evaluation it guards.
+
+    That describes the stack.  A single matrix takes its own branch and
+    compares its entries as Python complex numbers, because the
+    reductions above are all fixed cost at one element and would
+    otherwise dominate a scalar probability.
 
     Parameters
     ----------

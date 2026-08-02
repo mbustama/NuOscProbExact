@@ -183,6 +183,11 @@ def _check_hermitian(h_matrix: np.ndarray, caller: str) -> None:
     factor of three on a large stack, where this check would otherwise
     cost several times the evaluation it guards.
 
+    That describes the stack.  A single matrix takes its own branch and
+    compares its entries as Python complex numbers, because the
+    reductions above are all fixed cost at one element and would
+    otherwise dominate a scalar probability.
+
     Parameters
     ----------
     h_matrix : numpy.ndarray
