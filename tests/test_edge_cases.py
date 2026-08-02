@@ -7,13 +7,17 @@ the argument of the arc cosine marginally outside :math:`[-1, 1]`
 through round-off.  Neither may produce NaN or a non-unitary operator.
 """
 
+import importlib
+
 import numpy as np
 import pytest
 
+import hamiltonians2nu
+import hamiltonians3nu
 import oscprob2nu
 import oscprob3nu
 
-from conftest import ATOL, as_nested_list
+from conftest import ATOL, as_nested_list, random_hermitian
 
 
 DEGENERATE_3NU = [
@@ -119,3 +123,111 @@ def test_large_baseline_keeps_unitarity(rng):
         u = np.array(oscprob3nu.evolution_operator_3nu(
             as_nested_list(h_matrix), 1.0e6))
         assert np.allclose(u.conj().T @ u, np.eye(3), atol=1.0e-8)
+
+
+# --------------------------------------------------------------------------
+# Input the expansions cannot make sense of, which used to pass silently
+# --------------------------------------------------------------------------
+
+NOT_HERMITIAN = {
+    2: [[1.0+0.j, 2.0+0.j], [0.0+0.j, 1.0+0.j]],
+    3: [[1.0+0.j, 2.0+0.j, 0.j], [0.j, 1.0+0.j, 0.j], [0.j, 0.j, 1.0+0.j]],
+    4: [[1.0+0.j, 2.0+0.j, 0.j, 0.j], [0.j, 1.0+0.j, 0.j, 0.j],
+        [0.j, 0.j, 1.0+0.j, 0.j], [0.j, 0.j, 0.j, 1.0+0.j]],
+}
+
+
+@pytest.mark.parametrize('n_flavors', [2, 3, 4])
+@pytest.mark.parametrize('routine', ['probabilities', 'evolution_operator'])
+def test_a_non_hermitian_hamiltonian_is_refused(n_flavors, routine):
+    r"""A non-Hermitian Hamiltonian raises rather than returning numbers.
+
+    This is the failure that had to be caught by checking, because
+    nothing downstream reveals it: the expansion returns probabilities
+    that still **sum to one**, so the sanity check a caller would
+    actually apply cannot tell that the answer is meaningless.  Before
+    the check existed, the matrix below returned 1.000000 for the first
+    row and no warning of any kind.
+    """
+    module = importlib.import_module('oscprob%dnu' % n_flavors)
+    call = getattr(module, '%s_%dnu' % (routine, n_flavors))
+
+    with pytest.raises(ValueError, match='not Hermitian'):
+        call(NOT_HERMITIAN[n_flavors], 1.0)
+
+
+@pytest.mark.parametrize('n_flavors', [2, 3, 4])
+def test_a_non_hermitian_stack_is_refused(n_flavors):
+    r"""The batched path checks too, not only the scalar one."""
+    module = importlib.import_module('oscprob%dnu' % n_flavors)
+    call = getattr(module, 'probabilities_%dnu' % n_flavors)
+    stack = np.stack([np.array(NOT_HERMITIAN[n_flavors], dtype=complex)]*50)
+
+    with pytest.raises(ValueError, match='not Hermitian'):
+        call(stack, np.full(50, 1.0))
+
+
+@pytest.mark.parametrize('n_flavors', [2, 3, 4])
+def test_the_hermiticity_check_can_be_switched_off(n_flavors):
+    r"""The switch is the escape hatch for scans that cannot afford it.
+
+    Checking costs a pass over the stack, which is the same order as the
+    evaluation; `CHECK_HERMITICITY` exists so that a caller whose
+    Hamiltonians are Hermitian by construction can decline it.
+    """
+    module = importlib.import_module('oscprob%dnu' % n_flavors)
+    call = getattr(module, 'probabilities_%dnu' % n_flavors)
+
+    original = module.CHECK_HERMITICITY
+    try:
+        module.CHECK_HERMITICITY = False
+        prob = call(NOT_HERMITIAN[n_flavors], 1.0)
+    finally:
+        module.CHECK_HERMITICITY = original
+
+    assert len(prob) == n_flavors*n_flavors
+
+
+@pytest.mark.parametrize('n_flavors', [2, 3, 4])
+def test_hamiltonians_the_library_builds_pass_the_check(n_flavors, rng):
+    r"""The tolerance is loose enough for matrices assembled in floating
+    point, which is the whole difficulty of checking this at all."""
+    module = importlib.import_module('oscprob%dnu' % n_flavors)
+    call = getattr(module, 'probabilities_%dnu' % n_flavors)
+
+    for _ in range(20):
+        h_matrix = random_hermitian(rng, n_flavors)
+        prob = np.asarray(call(as_nested_list(h_matrix), 1.5))
+        assert np.isclose(prob[:n_flavors].sum(), 1.0, atol=ATOL)
+
+
+SINE_OUT_OF_RANGE = [
+    ('hamiltonians2nu', 'mixing_matrix_2nu', (1.5,)),
+    ('hamiltonians3nu', 'pmns_mixing_matrix', (1.5, 0.1, 0.1, 0.0)),
+    ('hamiltonians4nu', 'mixing_matrix_4nu',
+     (1.5, 0.1, 0.1, 0.0, 0.0, 0.0, 0.0)),
+]
+
+
+@pytest.mark.parametrize('module_name,routine,args', SINE_OUT_OF_RANGE)
+def test_a_sine_outside_its_range_is_refused_the_same_way(module_name,
+                                                          routine, args):
+    r"""All three flavor counts refuse it, and say the same thing.
+
+    They did not.  Two and three flavors took the cosine with
+    :mod:`math` and raised ``math domain error``, which names neither
+    the parameter nor the value; four flavors took it with
+    :func:`numpy.sqrt`, which returns ``nan`` and let it run silently
+    into the probabilities.  Same invalid input, three behaviours.
+    """
+    module = importlib.import_module(module_name)
+
+    with pytest.raises(ValueError, match='sine of an angle'):
+        getattr(module, routine)(*args)
+
+
+def test_a_sine_of_exactly_one_is_still_allowed():
+    r"""The boundary is inclusive: maximal mixing is a legal angle."""
+    assert np.isclose(hamiltonians2nu.mixing_matrix_2nu(1.0)[0][0], 0.0)
+    assert np.isclose(hamiltonians3nu.pmns_mixing_matrix(1.0, 0.1, 0.1,
+                                                         0.0)[0][0].real, 0.0)

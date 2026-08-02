@@ -67,11 +67,55 @@ __all__ = ['mixing_matrix_4nu',
 
 from typing import Union
 
+import math
+
 import numpy as np
 
 
 _EE_PROJECTOR_4NU = np.diag([1.0, 0.0, 0.0, 0.0])
 _SS_PROJECTOR_4NU = np.diag([0.0, 0.0, 0.0, 1.0])
+
+
+def _cos_from_sin(sth: Union[int, float], name: str, caller: str) -> float:
+    r"""Returns :math:`\cos\theta` from :math:`\sin\theta`, checked.
+
+    The mixing parameters throughout **NuOscProbExact** are sines of the
+    angles, so every one of them has to lie in :math:`[-1, 1]`.  Taking
+    the cosine as :math:`\sqrt{1 - \sin^2\theta}` without checking
+    turns a value outside that range into whatever the square root does
+    with a negative argument, which differed between the flavor counts:
+    :mod:`math` raised ``math domain error``, naming neither the
+    parameter nor the value, while :func:`numpy.sqrt` returned ``nan``
+    and let it propagate silently into the probabilities.
+
+    Parameters
+    ----------
+    sth : int or float
+        Sine of the angle.
+    name : str
+        Name of the parameter, used in the error message.
+    caller : str
+        Name of the calling routine, used in the error message.
+
+    Returns
+    -------
+    float
+        :math:`\cos\theta`, taken non-negative.
+
+    Raises
+    ------
+    ValueError
+        If ``sth`` does not lie in :math:`[-1, 1]`, or is not a number.
+
+    .. versionadded:: 1.11.0
+    """
+    if not -1.0 <= sth <= 1.0:
+        raise ValueError(
+            '%s: %s must be the sine of an angle and so lie in [-1, 1]; '
+            'got %r.  The mixing parameters are sines, not angles.'
+            % (caller, name, sth))
+
+    return math.sqrt(1.0 - sth*sth)
 
 
 def _rotation_4nu(
@@ -98,7 +142,7 @@ def _rotation_4nu(
     numpy.ndarray
         Complex array of shape ``(4, 4)``.
     """
-    cth = np.sqrt(1.0 - sth*sth)
+    cth = _cos_from_sin(sth, 'sth', 'mixing_matrix_4nu')
     rotation = np.eye(4, dtype=complex)
     rotation[index_1, index_1] = cth
     rotation[index_2, index_2] = cth

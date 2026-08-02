@@ -99,6 +99,48 @@ charged currents with the electrons in matter.
 """
 
 
+def _cos_from_sin(sth: Union[int, float], name: str, caller: str) -> float:
+    r"""Returns :math:`\cos\theta` from :math:`\sin\theta`, checked.
+
+    The mixing parameters throughout **NuOscProbExact** are sines of the
+    angles, so every one of them has to lie in :math:`[-1, 1]`.  Taking
+    the cosine as :math:`\sqrt{1 - \sin^2\theta}` without checking
+    turns a value outside that range into whatever the square root does
+    with a negative argument, which differed between the flavor counts:
+    :mod:`math` raised ``math domain error``, naming neither the
+    parameter nor the value, while :func:`numpy.sqrt` returned ``nan``
+    and let it propagate silently into the probabilities.
+
+    Parameters
+    ----------
+    sth : int or float
+        Sine of the angle.
+    name : str
+        Name of the parameter, used in the error message.
+    caller : str
+        Name of the calling routine, used in the error message.
+
+    Returns
+    -------
+    float
+        :math:`\cos\theta`, taken non-negative.
+
+    Raises
+    ------
+    ValueError
+        If ``sth`` does not lie in :math:`[-1, 1]`, or is not a number.
+
+    .. versionadded:: 1.11.0
+    """
+    if not -1.0 <= sth <= 1.0:
+        raise ValueError(
+            '%s: %s must be the sine of an angle and so lie in [-1, 1]; '
+            'got %r.  The mixing parameters are sines, not angles.'
+            % (caller, name, sth))
+
+    return math.sqrt(1.0 - sth*sth)
+
+
 def mixing_matrix_2nu(sth: Union[int, float]) -> List[List[float]]:
     r"""Returns the :math:`2\times2` rotation matrix.
 
@@ -142,7 +184,7 @@ def mixing_matrix_2nu(sth: Union[int, float]) -> List[List[float]]:
         R = hamiltonians2nu.mixing_matrix_2nu(0.6)
         print('%.6f  %.6f' % (R[0][0], R[0][1]))
     """
-    cth = math.sqrt(1.0-sth*sth)
+    cth = _cos_from_sin(sth, 'sth', 'mixing_matrix_2nu')
 
     return [[cth, sth], [-sth, cth]]
 
@@ -219,7 +261,8 @@ def hamiltonian_2nu_vacuum_energy_independent(
     # Trigonometric identities, rather than arcsin followed by cos and
     # sin, keep this consistent with mixing_matrix_2nu and avoid a
     # needless round trip through the angle itself.
-    cth = math.sqrt(1.0-sth*sth)
+    cth = _cos_from_sin(sth, 'sth',
+                        'hamiltonian_2nu_vacuum_energy_independent')
     c2th = 1.0-2.0*sth*sth
     s2th = 2.0*sth*cth
 
@@ -638,7 +681,7 @@ def hamiltonian_2nu_liv(
     h_vacuum = np.asarray(h_vacuum_energy_independent, dtype=complex)
     energy = np.asarray(energy, dtype=float)
 
-    cxi = np.sqrt(1.0-sxi*sxi)
+    cxi = _cos_from_sin(sxi, 'sxi', 'hamiltonian_2nu_liv')
 
     # R.B2.R^T, with R the rotation by xi and B2 = diag(b1, b2)
     liv = np.array([[b1*cxi*cxi + b2*sxi*sxi, (-b1+b2)*cxi*sxi],
