@@ -653,7 +653,7 @@ If you are citing **NuOscProbExact** in a document that will be uploaded to the 
 }
 ```
 
-The paper covers two and three flavors, which is what it was written about.  To cite *the software* — a particular version of it, including the four-flavor extension that came after the paper — use the Zenodo DOI badge at the top of this file, which resolves to the most recent release.
+The paper covers two and three flavors, which is what it was written about.  To cite *the software* — a particular version of it, including the four-flavor extension that came after the paper — use the Zenodo DOI badge at the top of this file, which resolves to the most recently archived release.  Zenodo mints a DOI per GitHub Release, so citing a specific version means citing the DOI archived for it.
 
 
 ## License
