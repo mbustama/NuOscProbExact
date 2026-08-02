@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 362" width="760" height="362"
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 21 760 353" width="760" height="353"
      role="img" aria-labelledby="slabs-title slabs-desc"
      font-family="Lato, 'Helvetica Neue', Helvetica, Arial, sans-serif">
   <title id="slabs-title">Composing evolution operators across slabs of constant density</title>
@@ -22,7 +22,7 @@
 
   <!-- An explicit background: the figure is also opened on its own, where a
        viewer in dark mode would otherwise leave the slate text invisible. -->
-  <rect x="0" y="0" width="760" height="362" fill="#ffffff"/>
+  <rect x="0" y="21" width="760" height="353" fill="#ffffff"/>
 
   <!-- the trajectory, entering and leaving -->
   <line x1="18" y1="117" x2="84" y2="117" stroke="#334155" stroke-width="2"
