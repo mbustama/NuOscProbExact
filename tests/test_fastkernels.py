@@ -305,6 +305,52 @@ def test_4nu_degenerate_spectra_on_both_backends(backend, rng, baseline):
         assert np.allclose(prob[index], reference.reshape(16), atol=1.0e-11)
 
 
+@needs_numba
+def test_4nu_nearly_degenerate_pairs_agree_between_the_paths(monkeypatch):
+    r"""The two paths agree where the Newton step is refused.
+
+    This is the case that made the guard necessary, and it is the one
+    place where the kernel and the NumPy path could not simply be
+    expected to track each other: the resolvent root that vanishes for a
+    degenerate pair is computed to a different last bit by each, and a
+    square root near zero turns that into the pair's entire separation.
+    One path would then see two identical roots and the other two roots
+    a hair apart, and the unguarded step treated those two situations
+    completely differently --- the paths disagreed by 186 on quantities
+    that cannot exceed one.
+
+    With the step refused whenever it would cross a neighbour, both
+    paths decline it together and the disagreement is round-off again.
+    """
+    monkeypatch.setattr(fastkernels, 'USE_NUMBA', True)
+    rng = np.random.default_rng(20240202)
+
+    matrices = []
+    for _ in range(120):
+        separation = 10.0**rng.uniform(-16.0, -6.0)
+        base = rng.normal()
+        spectrum = np.array([base, base + separation,
+                             base + rng.uniform(0.5, 2.0), 0.0])
+        spectrum[3] = -spectrum[:3].sum()
+        a = rng.standard_normal((4, 4)) + 1.j*rng.standard_normal((4, 4))
+        unitary, _ = np.linalg.qr(a)
+        rotated = (unitary @ np.diag(spectrum).astype(complex)
+                   @ unitary.conj().T)
+        matrices.append(0.5*(rotated + rotated.conj().T))
+
+    h_stack = np.stack(matrices)
+    l_stack = rng.uniform(0.1, 50.0, len(matrices))
+
+    with_numba = oscprob4nu.probabilities_4nu(h_stack, l_stack)
+    monkeypatch.setattr(fastkernels, 'USE_NUMBA', False)
+    without = oscprob4nu.probabilities_4nu(h_stack, l_stack)
+
+    assert np.all(np.isfinite(with_numba))
+    assert np.allclose(with_numba.reshape(-1, 4, 4).sum(axis=-1), 1.0,
+                       atol=1.0e-9)
+    assert np.allclose(with_numba, without, atol=1.0e-9)
+
+
 def test_4nu_broadcasting_patterns(backend, rng):
     r"""All three broadcasting patterns work on whichever backend."""
     h_stack = np.stack([random_hermitian(rng, 4) for _ in range(13)])

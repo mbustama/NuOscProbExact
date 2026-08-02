@@ -23,7 +23,7 @@ sys.path.insert(0, os.path.abspath('../../src'))
 project = 'NuOscProbExact'
 copyright = '2019-2026, Mauricio Bustamante'
 author = 'Mauricio Bustamante'
-release = '1.10.0'
+release = '1.10.1'
 version = '1.10'
 
 # -- General configuration ---------------------------------------------------

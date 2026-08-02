@@ -551,7 +551,10 @@ if HAVE_NUMBA:                                          # pragma: no branch
 
         if polish:
             # One Newton step on chi, with chi'(psi_m) taken as the
-            # product of the gaps to the other three roots
+            # product of the gaps to the other three roots, and refused
+            # wherever it would carry a root more than halfway to its
+            # nearest neighbour --- see oscprob4nu._polish_roots, whose
+            # guard this is
             gap_01 = psi_0 - psi_1
             gap_02 = psi_0 - psi_2
             gap_03 = psi_0 - psi_3
@@ -559,18 +562,31 @@ if HAVE_NUMBA:                                          # pragma: no branch
             gap_13 = psi_1 - psi_3
             gap_23 = psi_2 - psi_3
 
+            near_0 = min(abs(gap_01), abs(gap_02), abs(gap_03))
+            near_1 = min(abs(gap_01), abs(gap_12), abs(gap_13))
+            near_2 = min(abs(gap_02), abs(gap_12), abs(gap_23))
+            near_3 = min(abs(gap_03), abs(gap_13), abs(gap_23))
+
             derivative = gap_01*gap_02*gap_03
             if derivative != 0.0:
-                psi_0 -= _chi_4nu(traceless, psi_0, shifted)/derivative
+                step = _chi_4nu(traceless, psi_0, shifted)/derivative
+                if abs(step) <= 0.5*near_0:
+                    psi_0 -= step
             derivative = -gap_01*gap_12*gap_13
             if derivative != 0.0:
-                psi_1 -= _chi_4nu(traceless, psi_1, shifted)/derivative
+                step = _chi_4nu(traceless, psi_1, shifted)/derivative
+                if abs(step) <= 0.5*near_1:
+                    psi_1 -= step
             derivative = gap_02*gap_12*gap_23
             if derivative != 0.0:
-                psi_2 -= _chi_4nu(traceless, psi_2, shifted)/derivative
+                step = _chi_4nu(traceless, psi_2, shifted)/derivative
+                if abs(step) <= 0.5*near_2:
+                    psi_2 -= step
             derivative = -gap_03*gap_13*gap_23
             if derivative != 0.0:
-                psi_3 -= _chi_4nu(traceless, psi_3, shifted)/derivative
+                step = _chi_4nu(traceless, psi_3, shifted)/derivative
+                if abs(step) <= 0.5*near_3:
+                    psi_3 -= step
 
             if psi_0 > psi_1:
                 psi_0, psi_1 = psi_1, psi_0

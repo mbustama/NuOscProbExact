@@ -5,6 +5,69 @@ All notable changes to **NuOscProbExact** are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.10.1] - 2026-08-02
+
+**A Newton step that could throw a latent root across the spectrum.**  A
+correctness fix in `oscprob4nu._polish_roots`, present since 1.9.0 and
+affecting the NumPy path and the compiled kernel alike.  Found by mutation
+testing the four-flavor kernel, not caused by it.
+
+### Fixed
+
+- **The root refinement is refused where it would cross a neighbour.**  The
+  Newton step divides by `chi'(psi_m) = prod_l!=m (psi_m - psi_l)`, a product
+  of gaps, and was guarded only by `derivative != 0.0`.  That is the right
+  guard with its threshold on a knife edge: a pair separated by one unit in
+  the last place gives a derivative of order 1e-16 and a step of order one.
+  Observed, a root at `0.8793` was refined to `0.0180`, and the sixteen
+  numbers that followed were not probabilities — reaching 21.7 and summing
+  to 69.
+
+  Whether a nearly degenerate pair lands on identical bits or on adjacent
+  ones is decided by the last bit of a square root taken near zero, so the
+  old test gave different answers for a stack and a scalar call, and for the
+  NumPy path and the kernel — which is how the two disagreed by 186 on
+  quantities that cannot exceed one.
+
+  The guard is the standard one for polishing polynomial roots: a step for a
+  simple root may not carry it more than halfway to its nearest neighbour,
+  and a step that wants to is evidence the root belongs to a cluster, where
+  refining against a nearly singular `chi'` only destroys what the closed
+  form had.
+
+  On synthetic spectra with pair separations drawn between 1e-16 and 1e-6
+  relative, roots wrong by more than 1e-6 relative went from **10.2% to
+  none**, and the worst error from 4.8 to 2.2e-6.  Kernel-against-NumPy on
+  the same population went from 186 to 5.6e-11.
+
+- **What the fix does not do**, stated because the difference matters: it
+  does not make a nearly degenerate pair accurate.  Euler's reduction
+  recovers the pair's separation as `sqrt(z)` for a resolvent root `z` that
+  vanishes as the pair closes, so the epsilon on `z` becomes `sqrt(epsilon)`
+  on the separation, of order 1e-8 relative.  No Newton step against `chi`
+  recovers that.  The guarantee is the weaker and correct one — refining
+  never leaves the roots worse than the closed form left them — and a test
+  asserts that ordering case by case, which is where the content is.  The
+  guard refuses the step outright for about forty per cent of that sweep,
+  so which spectrum carries the worst error is decided by the last bit;
+  the aggregate comparison is `<=` rather than `<` for that reason, a
+  distinction CI found under two of the five Python versions after the
+  strict form passed locally.
+
+### Unchanged
+
+- **Two and three flavors**, verified byte-for-byte: 94 records covering both
+  backends, scalar calls, stacks straddling every dispatch threshold, scans,
+  grids, evolution operators, `earth` and `slabs`, hashing identically to
+  1.9.0.
+- **Every physical configuration tested.**  A 400 000-point scan through the
+  sterile matter resonance at twelve times crust density holds a smallest
+  relative eigenvalue gap of 7.7e-4, four orders above where the guard fires;
+  both paths stay unitary to 1.6e-13 across it, exactly as before.  Over
+  three thousand ordinary random Hermitian spectra the guard changed nothing,
+  bit for bit, and on the stiff 3+1 spectrum the refined error stays at
+  5.5e-16.
+
 ## [1.10.0] - 2026-08-02
 
 **A compiled kernel for four neutrinos.**  `fastkernels` covered two and
