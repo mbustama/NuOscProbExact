@@ -462,3 +462,57 @@ def test_4nu_between_locations_matches_the_chord_it_names():
     direct = earth.probabilities_4nu_earth(h_vacuum, 1.0e9, costhz)
 
     assert np.allclose(named, direct, atol=0.0)
+
+
+def test_a_coordinate_smaller_than_one_degree_south_is_expressible():
+    r"""The sign can ride on the minutes when the degree part is zero.
+
+    ``dms_to_decimal`` puts the sign on the degree part, which works
+    until the degree part is zero: ``(-0, 30, 0)`` is ``(0, 30, 0)`` in
+    Python, so 0 deg 30' South silently came back as 0 deg 30' North.
+    No predefined location reaches that band, which is why it went
+    unnoticed, but a user-supplied one can.
+    """
+    assert earth.dms_to_decimal(0, -30, 0) == -0.5
+    assert earth.dms_to_decimal(0, 30, 0) == 0.5
+    assert earth.dms_to_decimal(-5, 30, 0) == -5.5
+    assert earth.dms_to_decimal(5, 30, 0) == 5.5
+
+    # Every predefined location still round-trips
+    for name in earth.LOC_COORDS_DMS:
+        lat, lon = earth.coordinates_of_named_location(name)
+        assert -90.0 <= earth.dms_to_decimal(*lat) <= 90.0
+        assert -180.0 <= earth.dms_to_decimal(*lon) <= 180.0
+
+
+def test_an_unknown_location_says_what_the_known_ones_are():
+    r"""And does not bury that behind a chained KeyError."""
+    with pytest.raises(ValueError, match='is not a predefined location'):
+        earth.coordinates_of_named_location('atlantis')
+
+    try:
+        earth.coordinates_of_named_location('atlantis')
+    except ValueError as error:
+        assert error.__cause__ is None
+        assert error.__suppress_context__ is True
+        assert 'kamioka' in str(error)
+
+
+def test_the_radius_along_a_chord_stays_real_at_the_endpoints():
+    r"""Round-off at the endpoints must not surface as a nan.
+
+    ``r2`` vanishes nowhere on a chord, but the expression for it can
+    land a few ulp below zero at ``l = 0`` and ``l = d``.  It is clipped
+    at zero rather than passed through ``abs``, which would also hide a
+    genuinely negative value.
+    """
+    for costhz in (-1.0, -0.5, -1.0e-9):
+        d = earth.distance_traveled_inside_earth(costhz)
+        for l in (0.0, d, d/2.0):
+            r = earth.earth_radial_distance_from_depth(costhz, l)
+            assert np.isfinite(r)
+            assert 0.0 <= r <= gd.EARTH_RADIUS*(1.0 + 1.0e-12)
+        assert np.isclose(earth.earth_radial_distance_from_depth(costhz, 0.0),
+                          gd.EARTH_RADIUS)
+        assert np.isclose(earth.earth_radial_distance_from_depth(costhz, d),
+                          gd.EARTH_RADIUS)

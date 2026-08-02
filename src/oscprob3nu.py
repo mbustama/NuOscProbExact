@@ -662,12 +662,21 @@ def _star_all(h: Union[list, np.ndarray]) -> Tuple[float, ...]:
 
 
 def _abs2(z: complex) -> float:
-    r"""Returns :math:`|z|^2` for a complex number.
+    r"""Returns :math:`|z|^2` without taking a square root.
 
-    ``abs(z)**2`` takes a square root and then squares it again, which
-    costs a call to ``hypot`` and loses a little precision for nothing.
-    This routine is used for the nine (or four) probabilities, which is
-    often enough to be worth spelling out.
+    :func:`abs` on a complex number computes a hypotenuse, which is then
+    squared again; forming the sum of squares directly skips the square
+    root and its rounding.
+
+    Parameters
+    ----------
+    z : complex
+        The number whose squared modulus is wanted.
+
+    Returns
+    -------
+    float
+        The squared modulus :math:`|z|^2`.
     """
     return z.real*z.real + z.imag*z.imag
 
@@ -677,7 +686,7 @@ def _u_coefficients_3nu_single(
     h2: Union[int, float],
     h3: Union[int, float],
     L: Union[int, float],
-    star_coeffs: Optional[Union[tuple, np.ndarray]]=None
+    star_coeffs: Optional[Union[tuple, np.ndarray]] = None
 ) -> List[complex]:
     r"""Returns the nine :math:`u_k` for one Hamiltonian and baseline.
 
@@ -1063,6 +1072,18 @@ def _is_batched(
     ``numpy.ndim`` --- which would convert a nested list to an array
     every time --- is reached only for an argument that is neither a
     plain Python number nor a NumPy array.
+
+    Parameters
+    ----------
+    hamiltonian_matrix : array_like
+        Hamiltonian, or stack of them.
+    L : int or float or array_like
+        Baseline, or array of baselines.
+
+    Returns
+    -------
+    bool
+        Whether the vectorised path applies.
     """
     if type(L) is not float and type(L) is not int:
         if np.ndim(L) > 0:

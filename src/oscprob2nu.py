@@ -491,6 +491,18 @@ def _is_batched(
     ``numpy.ndim`` --- which would convert a nested list to an array
     every time --- is reached only for an argument that is neither a
     plain Python number nor a NumPy array.
+
+    Parameters
+    ----------
+    hamiltonian_matrix : array_like
+        Hamiltonian, or stack of them.
+    L : int or float or array_like
+        Baseline, or array of baselines.
+
+    Returns
+    -------
+    bool
+        Whether the vectorised path applies.
     """
     if type(L) is not float and type(L) is not int:
         if np.ndim(L) > 0:

@@ -77,7 +77,7 @@ __all__ = ['pmns_mixing_matrix',
            'probabilities_3nu_vacuum_std', 'hamiltonian_3nu_matter',
            'hamiltonian_3nu_nsi', 'hamiltonian_3nu_liv']
 
-from typing import List, Optional, Union
+from typing import List, Union
 
 import math
 
@@ -221,7 +221,7 @@ def hamiltonian_3nu_vacuum_energy_independent(
     dCP: Union[int, float],
     D21: Union[int, float],
     D31: Union[int, float],
-    compute_matrix_multiplication: Optional[bool]=False
+    compute_matrix_multiplication: bool = False
 ) -> np.ndarray:
     r"""Returns the three-neutrino Hamiltonian for vacuum oscillations.
 

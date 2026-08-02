@@ -153,9 +153,15 @@ def dms_to_decimal(
     ----------
     degrees : int or float
         Degree part of the coordinate.  Carries the sign: a location at
-        5 degrees South is ``(-5, ...)``.
+        5 degrees South is ``(-5, ...)``.  For a coordinate between zero
+        and one degree South or West, where the degree part cannot carry
+        a sign, negate the minutes instead: 0 deg 30' S is
+        ``(0, -30, 0)``.
     minutes : int or float
-        Minute part of the coordinate, taken as positive.
+        Minute part of the coordinate.  Normally positive; a negative
+        value flips the sign of the whole coordinate, which is the only
+        way to express a southern or western coordinate smaller than one
+        degree.
     seconds : int or float
         Second part of the coordinate, taken as positive.
 
@@ -172,11 +178,17 @@ def dms_to_decimal(
 
         print('%.6f' % earth.dms_to_decimal(36, 25, 50.05))
     """
-    magnitude = abs(degrees) + minutes/60.0 + seconds/3600.0
+    magnitude = abs(degrees) + abs(minutes)/60.0 + seconds/3600.0
 
     # The sign lives on the degree part, so a negative latitude must not
-    # have its minutes and seconds added back the other way.
-    return -magnitude if degrees < 0 else magnitude
+    # have its minutes and seconds added back the other way.  Between
+    # zero and one degree the degree part is zero and cannot carry a
+    # sign, so the minutes are allowed to carry it instead --- without
+    # that, 0 deg 30' South is inexpressible, and silently comes back
+    # North.
+    negative = degrees < 0 or (degrees == 0 and minutes < 0)
+
+    return -magnitude if negative else magnitude
 
 
 def coordinates_of_named_location(
@@ -217,17 +229,20 @@ def coordinates_of_named_location(
     try:
         entry = LOC_COORDS_DMS[key]
     except KeyError:
+        # `from None` keeps the KeyError out of the traceback: it is an
+        # implementation detail of the lookup, and chaining it only
+        # buries the message that explains what to do.
         raise ValueError(
             'coordinates_of_named_location: %r is not a predefined '
             'location; the available names, in earth.LOC_COORDS_DMS, are: '
-            '%s' % (loc_name, ', '.join(sorted(LOC_COORDS_DMS))))
+            '%s' % (loc_name, ', '.join(sorted(LOC_COORDS_DMS)))) from None
 
     return entry['lat'], entry['lon']
 
 
 def density_prem(
     r: Union[int, float, list, np.ndarray],
-    tol: Optional[float] = 1.e-8
+    tol: float = 1.e-8
 ) -> Union[float, np.ndarray]:
     r"""Returns the matter density inside the Earth, according to PREM.
 
@@ -297,7 +312,7 @@ def density_prem(
 
 def matter_potential(
     density: Union[int, float, list, np.ndarray],
-    electron_fraction: Optional[float] = gd.ELECTRON_FRACTION_EARTH_CRUST
+    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST
 ) -> Union[float, np.ndarray]:
     r"""Returns the charged-current matter potential for a density.
 
@@ -347,7 +362,7 @@ def matter_potential(
 def matter_potential_nc(
     density: Union[int, float, list, np.ndarray],
     neutron_fraction: Optional[float] = None,
-    electron_fraction: Optional[float] = gd.ELECTRON_FRACTION_EARTH_CRUST
+    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST
 ) -> Union[float, np.ndarray]:
     r"""Returns the neutral-current matter potential for a density.
 
@@ -444,7 +459,7 @@ def distance_traveled_inside_earth(costhz: Union[int, float]) -> float:
 def earth_radial_distance_from_depth(
     costhz: Union[int, float],
     l: Union[int, float, list, np.ndarray],
-    tol: Optional[float] = 1.e-8
+    tol: float = 1.e-8
 ) -> Union[float, np.ndarray]:
     r"""Returns the radius at a point along a chord through the Earth.
 
@@ -507,7 +522,13 @@ def earth_radial_distance_from_depth(
     u = d - l
     r2 = (gd.EARTH_RADIUS*gd.EARTH_RADIUS + u*u
           + 2.0*gd.EARTH_RADIUS*u*costhz)
-    r = np.sqrt(np.abs(r2))
+
+    # r2 is a squared distance and cannot be negative for an `l` inside
+    # the chord, which the clamping above guarantees; round-off can still
+    # take it a few ulp below zero at the endpoints, where it vanishes.
+    # Clipping at zero absorbs that without also hiding a genuinely
+    # negative value the way `np.abs` would.
+    r = np.sqrt(np.maximum(r2, 0.0))
 
     return float(r) if scalar_input else r
 
@@ -575,7 +596,8 @@ def prem_layer_edges_along_chord(costhz: Union[int, float]) -> np.ndarray:
             if 0.0 < u < d:                       # pragma: no branch
                 crossings.append(d - u)
 
-    return np.unique(np.array(sorted(crossings)))
+    # `np.unique` sorts, so the crossings need not be sorted first
+    return np.unique(np.array(crossings))
 
 
 def chord_length_inside_earth(
@@ -681,7 +703,7 @@ def costhz_between_points_on_surface(
 
 def earth_slabs(
     costhz: Union[int, float],
-    n_slabs_per_segment: Optional[int] = 8
+    n_slabs_per_segment: int = 8
 ) -> Tuple[np.ndarray, np.ndarray]:
     r"""Returns the slab widths and densities along a chord.
 
@@ -815,8 +837,8 @@ def probabilities_2nu_earth(
     h_vacuum_energy_independent: Union[list, np.ndarray],
     energy: Union[int, float],
     costhz: Union[int, float],
-    n_slabs_per_segment: Optional[int] = 8,
-    electron_fraction: Optional[float] = gd.ELECTRON_FRACTION_EARTH_CRUST
+    n_slabs_per_segment: int = 8,
+    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST
 ) -> Tuple[float, float, float, float]:
     r"""Returns the two-flavor probabilities across the Earth.
 
@@ -865,8 +887,8 @@ def probabilities_3nu_earth(
     h_vacuum_energy_independent: Union[list, np.ndarray],
     energy: Union[int, float],
     costhz: Union[int, float],
-    n_slabs_per_segment: Optional[int] = 8,
-    electron_fraction: Optional[float] = gd.ELECTRON_FRACTION_EARTH_CRUST
+    n_slabs_per_segment: int = 8,
+    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST
 ) -> Tuple[float, float, float, float, float, float, float, float, float]:
     r"""Returns the three-flavor probabilities across the Earth.
 
@@ -918,8 +940,8 @@ def probabilities_2nu_between_locations(
     energy: Union[int, float],
     loc_name_1: str,
     loc_name_2: str,
-    n_slabs_per_segment: Optional[int] = 8,
-    electron_fraction: Optional[float] = gd.ELECTRON_FRACTION_EARTH_CRUST
+    n_slabs_per_segment: int = 8,
+    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST
 ) -> Tuple[float, float, float, float]:
     r"""Returns the two-flavor probabilities between two named locations.
 
@@ -971,8 +993,8 @@ def probabilities_3nu_between_locations(
     energy: Union[int, float],
     loc_name_1: str,
     loc_name_2: str,
-    n_slabs_per_segment: Optional[int] = 8,
-    electron_fraction: Optional[float] = gd.ELECTRON_FRACTION_EARTH_CRUST
+    n_slabs_per_segment: int = 8,
+    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST
 ) -> Tuple[float, float, float, float, float, float, float, float, float]:
     r"""Returns the three-flavor probabilities between two named locations.
 

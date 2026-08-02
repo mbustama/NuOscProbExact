@@ -965,6 +965,16 @@ def evolution_operator_4nu_u_coefficients(
 
     .. versionadded:: 1.9.0
 
+    .. versionchanged:: 1.10.1
+       Results changed for a spectrum with two nearly coincident latent
+       roots.  The Newton refinement of :data:`POLISH_ROOTS` divides by
+       a product of gaps, and was guarded only against a gap of exactly
+       zero; a pair separated by one unit in the last place passed that
+       guard and was thrown across the spectrum.  The step is now
+       refused whenever it would carry a root more than halfway to its
+       nearest neighbour.  Nothing else moved: ordinary and stiff
+       spectra are bit-for-bit what 1.10.0 gave.
+
     Parameters
     ----------
     hamiltonian_matrix : array_like
@@ -1012,6 +1022,16 @@ def evolution_operator_4nu(
     cancels in the probabilities.
 
     .. versionadded:: 1.9.0
+
+    .. versionchanged:: 1.10.1
+       Results changed for a spectrum with two nearly coincident latent
+       roots.  The Newton refinement of :data:`POLISH_ROOTS` divides by
+       a product of gaps, and was guarded only against a gap of exactly
+       zero; a pair separated by one unit in the last place passed that
+       guard and was thrown across the spectrum.  The step is now
+       refused whenever it would carry a root more than halfway to its
+       nearest neighbour.  Nothing else moved: ordinary and stiff
+       spectra are bit-for-bit what 1.10.0 gave.
 
     Parameters
     ----------
@@ -1066,6 +1086,16 @@ def probabilities_4nu(
     :math:`(\nu_e, \nu_\mu, \nu_\tau, \nu_s)`.
 
     .. versionadded:: 1.9.0
+
+    .. versionchanged:: 1.10.1
+       Results changed for a spectrum with two nearly coincident latent
+       roots.  The Newton refinement of :data:`POLISH_ROOTS` divides by
+       a product of gaps, and was guarded only against a gap of exactly
+       zero; a pair separated by one unit in the last place passed that
+       guard and was thrown across the spectrum.  The step is now
+       refused whenever it would carry a root more than halfway to its
+       nearest neighbour.  Nothing else moved: ordinary and stiff
+       spectra are bit-for-bit what 1.10.0 gave.
 
     Parameters
     ----------

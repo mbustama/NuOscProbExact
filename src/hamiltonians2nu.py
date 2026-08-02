@@ -83,7 +83,7 @@ __all__ = ['mixing_matrix_2nu', 'hamiltonian_2nu_vacuum_energy_independent',
            'probabilities_2nu_matter_std', 'hamiltonian_2nu_nsi',
            'hamiltonian_2nu_liv']
 
-from typing import List, Optional, Union
+from typing import List, Union
 
 import math
 
@@ -192,7 +192,7 @@ def mixing_matrix_2nu(sth: Union[int, float]) -> List[List[float]]:
 def hamiltonian_2nu_vacuum_energy_independent(
     sth: Union[int, float],
     Dm2: Union[int, float],
-    compute_matrix_multiplication: Optional[bool]=False
+    compute_matrix_multiplication: bool = False
 ) -> np.ndarray:
     r"""Returns the two-neutrino Hamiltonian for vacuum oscillations.
 
