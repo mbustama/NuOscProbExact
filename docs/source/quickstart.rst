@@ -249,6 +249,22 @@ enough to win below about fifty thousand elements, so it is kept there.
 :func:`fastkernels.worthwhile` makes that choice from measured thresholds,
 so installing the extra can only help.
 
+Checking the input has a cost too, and it is the larger of the two on a
+big scan.  Every entry point verifies that the Hamiltonian is Hermitian,
+because one that is not returns probabilities that still sum to one and
+so betrays nothing.  That check is a pass over the stack, the same order
+of work as evaluating it: 1.3x to 1.8x on a 2000-point scan and 3.2x to
+5.7x on a 200 000-point one.  Where the Hamiltonians come from a trusted
+construction, decline it with
+
+.. code-block:: python
+
+   import oscprob3nu
+   oscprob3nu.CHECK_HERMITICITY = False
+
+and likewise for :mod:`oscprob2nu` and :mod:`oscprob4nu`.  Everything
+:mod:`hamiltonians3nu` and its siblings build is Hermitian to round-off.
+
 The first call compiles, which takes a few seconds.  The kernels are
 cached on disk, so later runs start in milliseconds.  To force the NumPy
 path --- to compare the two, say --- set

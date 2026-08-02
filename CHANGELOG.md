@@ -133,6 +133,14 @@ fixes six docstrings that stated the opposite of the code.
   profile — which it could not do at four flavors.  It now measures the
   averaged and PREM answers against each other.
 
+- **`README.md`'s list of installed module names** omitted `oscprob4nu` and
+  `hamiltonians4nu`, which have been installed since 1.9.0.  The `slabs` and
+  `earth` bullets now say which flavor counts they cover, and both the
+  README and the quickstart document `CHECK_HERMITICITY` and what it costs —
+  a user-facing switch worth 3.2x to 5.7x on a large scan was described
+  nowhere but its own docstring, where `USE_NUMBA` has been in the quickstart
+  since 1.6.0.
+
 ### Known limits
 
 - **The electron number density uses the free-nucleon mean mass**,
