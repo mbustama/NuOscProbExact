@@ -60,6 +60,29 @@ fixes six docstrings that stated the opposite of the code.
 
 ### Fixed
 
+- **Every image and link in `README.md` would have been broken on PyPI.**
+  The README *is* the PyPI long description, and PyPI resolves relative
+  URLs against `pypi.org` — so the ten-image gallery the file opens with,
+  and thirty-two links to notebooks, examples, `LICENSE` and the changelog,
+  would every one have 404ed on the page that `pip install` sends people
+  to.  They are now absolute, images through `raw.githubusercontent.com`
+  and the rest through `blob`/`tree`, which changes nothing about how
+  GitHub renders them.  The twenty-seven in-page anchors are left alone.
+
+  Worth knowing why nothing caught this: `twine check` passes, and passed
+  before the fix.  It validates that the markup *parses* as PyPI will
+  parse it, not that anything it points at resolves.  This was found by
+  building the distribution and reading the `METADATA` out of the wheel.
+
+- **A refusal branch lost its only test.** Giving `_check_hermitian` a
+  path for a single matrix took the scalar and batched routes off a shared
+  implementation, and the test for an imaginary entry on the diagonal
+  passes a nested list — so it stopped covering the batched version of
+  that refusal, which was then exercised by nothing.  Coverage fell from
+  100% to 99.62%, comfortably above the floor and therefore green.  The
+  test now checks both paths, as its non-finite counterpart already does
+  for the same reason.
+
 - **`CHECK_HERMITICITY` made a single probability nine times dearer, and
   nothing measured it.**  The check was written for stacks, as a dozen
   whole-array reductions, and that is the right shape at two hundred
@@ -296,6 +319,14 @@ fixes six docstrings that stated the opposite of the code.
   route that leaves a public record.  It is deliberately *not* folded into
   Citing: the name is already in the BibTeX entry directly below, and no
   citation format carries an e-mail address.
+
+- **The PyPI project page gained the links it was missing.**  `Homepage`
+  and `Paper` were the only two, so the deployed documentation and the
+  release history — both of which exist — were reachable from PyPI only
+  through the repository.  `Documentation`, `Changelog` and `Issues` are
+  now declared, along with the `Development Status` and `Operating System`
+  classifiers that the page filters on.  Verified by reading them back out
+  of a built wheel rather than by trusting the source.
 
 - **A two-pass audit of every documentation file and the README**, run
   before publishing, checking each claim against the code rather than against

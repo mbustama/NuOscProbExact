@@ -13,8 +13,10 @@ authors = [{name = "Mauricio Bustamante", email = "mbustamante@gmail.com"}]
 keywords = ["neutrino", "oscillations", "physics", "sterile neutrinos",
             "SU(2)", "SU(3)", "SU(4)"]
 classifiers = [
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -50,8 +52,16 @@ docs = ["sphinx", "sphinx-rtd-theme", "sphinx-copybutton",
 notebooks = ["jupyter", "nbclient", "nbformat", "ipykernel", "matplotlib",
              "scipy"]
 
+# These become the sidebar links on the PyPI project page, which is the only
+# navigation a reader arriving from `pip` gets.  Documentation and Changelog
+# were missing, so the built docs and the release history --- both of which
+# exist and are deployed --- were reachable from there only by way of the
+# repository.
 [project.urls]
 Homepage = "https://github.com/mbustama/NuOscProbExact"
+Documentation = "https://mbustama.github.io/NuOscProbExact/"
+Changelog = "https://github.com/mbustama/NuOscProbExact/blob/main/CHANGELOG.md"
+Issues = "https://github.com/mbustama/NuOscProbExact/issues"
 Paper = "https://arxiv.org/abs/1904.12391"
 
 # The library is a flat set of top-level modules living in src/, which is
@@ -170,9 +180,13 @@ exclude_also = [
 # A floor, not a target, and one that only ever moves up.  Measured, rather
 # than guessed, in all three configurations the suite supports:
 #
-#     Numba installed and used            100%    (0 of 829 statements missed)
+#     Numba installed and used            100%
 #     Numba installed, USE_NUMBA = False  100%
 #     Numba not importable                 97.75%
+#
+# The statement count is deliberately not quoted here: it moves with every
+# commit, and a comment that has to be re-measured to stay true is one that
+# will silently stop being true.
 #
 # The third is lower for a reason that is not a coverage regression: with
 # Numba absent the `if HAVE_NUMBA:` block never executes, so `_run` and both

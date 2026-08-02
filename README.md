@@ -13,19 +13,19 @@
 # NuOscProbExact
 Code to compute exact two-, three- and four-neutrino oscillation probabilities using SU(2), SU(3) and SU(4) expansions
 
-> **Note:** The oscillation probabilities are computed exactly, with no approximation beyond floating-point round-off.  A regression test suite lives in `tests/` and can be run with `pytest`, and the results are cross-checked against [nuSQuIDS](https://github.com/arguelles/nuSQuIDS), an independent external code — see [notebook 17](notebooks/17_cross_checks.ipynb).
+> **Note:** The oscillation probabilities are computed exactly, with no approximation beyond floating-point round-off.  A regression test suite lives in `tests/` and can be run with `pytest`, and the results are cross-checked against [nuSQuIDS](https://github.com/arguelles/nuSQuIDS), an independent external code — see [notebook 17](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/17_cross_checks.ipynb).
 
 ## What you can compute
 
-Every figure below is produced by a notebook in [`notebooks/`](notebooks/), and the link under each one goes to the code that drew it.  The documentation collects the same material, with runnable snippets, on its [numerical recipes](https://mbustama.github.io/NuOscProbExact/recipes.html) page.
+Every figure below is produced by a notebook in [`notebooks/`](https://github.com/mbustama/NuOscProbExact/tree/main/notebooks/), and the link under each one goes to the code that drew it.  The documentation collects the same material, with runnable snippets, on its [numerical recipes](https://mbustama.github.io/NuOscProbExact/recipes.html) page.
 
 | | |
 |:--:|:--:|
-| <img src="img/gallery/gallery_vacuum.png" width="380"/><br/>**Oscillation probabilities** against baseline or energy, for two, three or four flavors.<br/>[notebook 02](notebooks/02_vacuum_oscillations.ipynb) | <img src="img/gallery/gallery_matter.png" width="380"/><br/>**Matter, NSI and Lorentz-invariance violation** — each just a different Hermitian matrix.<br/>[notebook 03](notebooks/03_matter_nsi_liv.ipynb) |
-| <img src="img/gallery/gallery_oscillogram.png" width="380"/><br/>**Oscillograms** over energy and baseline: 57 600 probabilities in a single call.<br/>[notebook 04](notebooks/04_oscillogram.ipynb) | <img src="img/gallery/gallery_biprobability.png" width="380"/><br/>**CP violation**, as bi-probability ellipses in vacuum and in matter.<br/>[notebook 05](notebooks/05_biprobability.ipynb) |
-| <img src="img/gallery/gallery_prem.png" width="380"/><br/>**The Earth's density**, from the Preliminary Reference Earth Model.<br/>[notebook 06](notebooks/06_earth_and_prem.ipynb) | <img src="img/gallery/gallery_earth.png" width="380"/><br/>**Neutrinos through the Earth**, in energy and zenith angle, or between two named sites.<br/>[notebook 07](notebooks/07_earth_probabilities.ipynb) |
-| <img src="img/gallery/gallery_profiles.png" width="380"/><br/>**Arbitrary matter profiles** — castle walls and worse, exactly.<br/>[notebook 08](notebooks/08_unusual_density_profiles.ipynb) | <img src="img/gallery/gallery_ordering.png" width="380"/><br/>**Mass ordering and the θ₂₃ octant**, separated by matter through the Earth.<br/>[notebook 12](notebooks/12_ordering_and_octant.ipynb) |
-| <img src="img/gallery/gallery_sterile.png" width="380"/><br/>**Four flavors: a 3+1 sterile state**, resolved at a short baseline.<br/>[notebook 16](notebooks/16_four_neutrinos.ipynb) | <img src="img/gallery/gallery_sterile_earth.png" width="380"/><br/>**The sterile matter resonance** through the Earth, in energy and zenith angle.<br/>[notebook 16](notebooks/16_four_neutrinos.ipynb) |
+| <img src="https://raw.githubusercontent.com/mbustama/NuOscProbExact/main/img/gallery/gallery_vacuum.png" width="380"/><br/>**Oscillation probabilities** against baseline or energy, for two, three or four flavors.<br/>[notebook 02](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/02_vacuum_oscillations.ipynb) | <img src="https://raw.githubusercontent.com/mbustama/NuOscProbExact/main/img/gallery/gallery_matter.png" width="380"/><br/>**Matter, NSI and Lorentz-invariance violation** — each just a different Hermitian matrix.<br/>[notebook 03](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/03_matter_nsi_liv.ipynb) |
+| <img src="https://raw.githubusercontent.com/mbustama/NuOscProbExact/main/img/gallery/gallery_oscillogram.png" width="380"/><br/>**Oscillograms** over energy and baseline: 57 600 probabilities in a single call.<br/>[notebook 04](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/04_oscillogram.ipynb) | <img src="https://raw.githubusercontent.com/mbustama/NuOscProbExact/main/img/gallery/gallery_biprobability.png" width="380"/><br/>**CP violation**, as bi-probability ellipses in vacuum and in matter.<br/>[notebook 05](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/05_biprobability.ipynb) |
+| <img src="https://raw.githubusercontent.com/mbustama/NuOscProbExact/main/img/gallery/gallery_prem.png" width="380"/><br/>**The Earth's density**, from the Preliminary Reference Earth Model.<br/>[notebook 06](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/06_earth_and_prem.ipynb) | <img src="https://raw.githubusercontent.com/mbustama/NuOscProbExact/main/img/gallery/gallery_earth.png" width="380"/><br/>**Neutrinos through the Earth**, in energy and zenith angle, or between two named sites.<br/>[notebook 07](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/07_earth_probabilities.ipynb) |
+| <img src="https://raw.githubusercontent.com/mbustama/NuOscProbExact/main/img/gallery/gallery_profiles.png" width="380"/><br/>**Arbitrary matter profiles** — castle walls and worse, exactly.<br/>[notebook 08](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/08_unusual_density_profiles.ipynb) | <img src="https://raw.githubusercontent.com/mbustama/NuOscProbExact/main/img/gallery/gallery_ordering.png" width="380"/><br/>**Mass ordering and the θ₂₃ octant**, separated by matter through the Earth.<br/>[notebook 12](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/12_ordering_and_octant.ipynb) |
+| <img src="https://raw.githubusercontent.com/mbustama/NuOscProbExact/main/img/gallery/gallery_sterile.png" width="380"/><br/>**Four flavors: a 3+1 sterile state**, resolved at a short baseline.<br/>[notebook 16](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/16_four_neutrinos.ipynb) | <img src="https://raw.githubusercontent.com/mbustama/NuOscProbExact/main/img/gallery/gallery_sterile_earth.png" width="380"/><br/>**The sterile matter resonance** through the Earth, in energy and zenith angle.<br/>[notebook 16](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/16_four_neutrinos.ipynb) |
 
 ## Contents
 
@@ -69,7 +69,7 @@ The method relies on expansions of the Hamiltonian and time-evolution operators 
 
 ### What it does
 
-* **Exact probabilities for any Hermitian 2×2, 3×3 or 4×4 Hamiltonian.**  There is no approximation beyond floating-point round-off, and the probabilities agree with the independently written [nuSQuIDS](https://github.com/arguelles/nuSQuIDS) to round-off once conventions are matched ([notebook 17](notebooks/17_cross_checks.ipynb)).  Oscillations in vacuum, in matter, with non-standard interactions, in a Lorentz invariance-violating background and with sterile states are not special cases in the code — each is a different matrix handed to the same routine.
+* **Exact probabilities for any Hermitian 2×2, 3×3 or 4×4 Hamiltonian.**  There is no approximation beyond floating-point round-off, and the probabilities agree with the independently written [nuSQuIDS](https://github.com/arguelles/nuSQuIDS) to round-off once conventions are matched ([notebook 17](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/17_cross_checks.ipynb)).  Oscillations in vacuum, in matter, with non-standard interactions, in a Lorentz invariance-violating background and with sterile states are not special cases in the code — each is a different matrix handed to the same routine.
 * **Four flavors, for 3+1 sterile scenarios.**  `oscprob4nu` carries the same closed-form treatment to SU(4), which is the last place it reaches: at five flavors the eigenvalues stop being expressible in radicals, and that is a theorem rather than a missing feature.  A 3+1 system is closed and unitary over all four states, so it sits squarely inside the method's assumptions rather than "leaking" out of a three-flavor block.
 * **The evolution operator itself**, not only the probabilities, so it can be composed across segments or used to propagate a density matrix.
 * **Whole scans in one call.**  Every core routine accepts a stack of Hamiltonians, an array of baselines, or both broadcast against each other, which is tens of times faster than the equivalent Python loop and gives identical results.
@@ -98,7 +98,7 @@ Use **Magnus** instead when **the Hamiltonian varies continuously and appreciabl
 | Smoothly varying, fast against the oscillation — the Sun, adiabatic MSW | **Magnus** | Slabbing needs ~10<sup>4</sup> steps per resonance crossing |
 | Open systems: decay, decoherence | neither | Needs a Lindblad solver, not a unitary one |
 
-[Notebook 14](notebooks/14_solar_and_adiabatic_msw.ipynb) works the solar case through and shows exactly where the wall is, rather than asserting it.
+[Notebook 14](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/14_solar_and_adiabatic_msw.ipynb) works the solar case through and shows exactly where the wall is, rather than asserting it.
 
 **NuOscProbExact** was developed by Mauricio Bustamante.  If you use it in your work, please follow the directions on [Citing](#citing).
 
@@ -367,7 +367,7 @@ Measured on 2000-point scans, against the equivalent Python loop:
 | Three-flavor oscillogram, 100×100 | 197 ms | 5.3 ms (~37×) | 0.85 ms (**~230×**) |
 | Two-flavor, vs. baseline | 6.9 ms | 0.07 ms (~99×) | *not used — see below* |
 
-Best of seven runs, interleaved, on one machine.  These are indicative, not precise: repeated runs vary by tens of per cent, so treat them as orders of magnitude.  [Notebook 09](notebooks/09_performance.ipynb) measures the same comparison on whatever machine runs it, which is the number to trust.
+Best of seven runs, interleaved, on one machine.  These are indicative, not precise: repeated runs vary by tens of per cent, so treat them as orders of magnitude.  [Notebook 09](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/09_performance.ipynb) measures the same comparison on whatever machine runs it, which is the number to trust.
 
 **Checking the input costs more than the arithmetic on a large scan.**  Every entry point verifies that the Hamiltonian is Hermitian, because one that is not returns probabilities that still sum to one — so nothing downstream reveals the mistake.  Validating a stack is a pass over it, the same order of work as evaluating it: 1.3× to 1.8× at two thousand points, and 3.2× to 5.7× at two hundred thousand, where the compiled kernel has made the evaluation fast enough that the check dominates.  If your Hamiltonians come from a construction you already trust — everything `hamiltonians2nu`, `hamiltonians3nu` and `hamiltonians4nu` build is Hermitian to round-off — decline it with `oscprob3nu.CHECK_HERMITICITY = False`, and likewise on the other two modules.
 
@@ -393,7 +393,7 @@ import sys
 sys.path.append('../src')
 ```
 
-What follows is the short version: what the functions take and return, and four examples that between them cover a single probability, a whole scan, four flavors, and your own Hamiltonian.  Everything else --- matter, non-standard interactions, Lorentz-invariance violation, oscillograms, the Earth, the expansion coefficients --- lives in the runnable scripts in [`examples/`](examples/) and in the [notebooks](#notebooks), which store their figures inline and are executed by CI.  It is not repeated here, so there is one copy of each to keep correct.
+What follows is the short version: what the functions take and return, and four examples that between them cover a single probability, a whole scan, four flavors, and your own Hamiltonian.  Everything else --- matter, non-standard interactions, Lorentz-invariance violation, oscillograms, the Earth, the expansion coefficients --- lives in the runnable scripts in [`examples/`](https://github.com/mbustama/NuOscProbExact/tree/main/examples/) and in the [notebooks](#notebooks), which store their figures inline and are executed by CI.  It is not repeated here, so there is one copy of each to keep correct.
 
 
 ### Basics
@@ -455,7 +455,7 @@ Pte = 0.03210, Ptm = 0.60680, Ptt = 0.36110
 
 Each row sums to one, as it must.
 
-> **Antineutrinos:** pass `-dCP` instead of `dCP`, and flip the sign of the matter potential.  [Notebook 13](notebooks/13_antineutrinos.ipynb) works through both, and the two ways to get it wrong.
+> **Antineutrinos:** pass `-dCP` instead of `dCP`, and flip the sign of the matter potential.  [Notebook 13](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/13_antineutrinos.ipynb) works through both, and the two ways to get it wrong.
 
 
 ### Whole scans in one call
@@ -494,7 +494,7 @@ P_ee at  0.10 GeV = 0.24693
 P_ee at 10.00 GeV = 0.98582
 ```
 
-The same works for a scan over baselines, or for both at once to build an oscillogram.  The sample Hamiltonians in matter accept an array of energies directly, so a matter scan is two calls and no loop.  [Notebook 02](notebooks/02_vacuum_oscillations.ipynb) plots these curves, [notebook 04](notebooks/04_oscillogram.ipynb) builds an oscillogram, and [notebook 09](notebooks/09_performance.ipynb) measures what the broadcasting buys on whatever machine runs it.
+The same works for a scan over baselines, or for both at once to build an oscillogram.  The sample Hamiltonians in matter accept an array of energies directly, so a matter scan is two calls and no loop.  [Notebook 02](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/02_vacuum_oscillations.ipynb) plots these curves, [notebook 04](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/04_oscillogram.ipynb) builds an oscillogram, and [notebook 09](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/09_performance.ipynb) measures what the broadcasting buys on whatever machine runs it.
 
 
 ### Four flavors: a 3+1 sterile state
@@ -529,7 +529,7 @@ Pee = 0.76700, Pem = 0.00149, Pet = 0.05220, Pes = 0.17931
 they sum to 1.00000
 ```
 
-[Notebook 16](notebooks/16_four_neutrinos.ipynb) works a 3+1 scenario through properly --- the sterile entry in the matter potential, a short-baseline scan, the sterile matter resonance through the Earth --- and explains why four flavors is where the closed form ends.
+[Notebook 16](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/16_four_neutrinos.ipynb) works a 3+1 scenario through properly --- the sterile entry in the matter potential, a short-baseline scan, the sterile matter resonance through the Earth --- and explains why four flavors is where the closed form ends.
 
 
 ### Arbitrary Hamiltonians
@@ -555,7 +555,7 @@ h_mymodel = h_vacuum + hamiltonian_mymodel(mymodel_parameters)
 prob = oscprob3nu.probabilities_3nu(h_mymodel, baseline*CONV_KM_TO_INV_EV)
 ```
 
-`hamiltonian_mymodel` may depend on the energy too.  For two flavors it returns a 2x2 matrix instead, and for four, a 4x4 one.  Passing an arbitrary matrix directly, with no vacuum term at all, works exactly as you would expect --- see [`examples/example_3nu_trivial.py`](examples/example_3nu_trivial.py).
+`hamiltonian_mymodel` may depend on the energy too.  For two flavors it returns a 2x2 matrix instead, and for four, a 4x4 one.  Passing an arbitrary matrix directly, with no vacuum term at all, works exactly as you would expect --- see [`examples/example_3nu_trivial.py`](https://github.com/mbustama/NuOscProbExact/blob/main/examples/example_3nu_trivial.py).
 
 
 ### Where the rest is
@@ -564,41 +564,41 @@ Each of these is a runnable script; none of them is transcribed into this file, 
 
 | Scenario | Script | Notebook |
 |---|---|---|
-| Arbitrary Hamiltonian, 2 and 3 flavors | [`example_2nu_trivial.py`](examples/example_2nu_trivial.py), [`example_3nu_trivial.py`](examples/example_3nu_trivial.py) | [01](notebooks/01_basics.ipynb) |
-| Vacuum, 2 and 3 flavors | [`example_2nu_vacuum.py`](examples/example_2nu_vacuum.py), [`example_3nu_vacuum.py`](examples/example_3nu_vacuum.py) | [02](notebooks/02_vacuum_oscillations.ipynb) |
-| Constant-density matter | [`example_3nu_matter.py`](examples/example_3nu_matter.py) | [03](notebooks/03_matter_nsi_liv.ipynb) |
-| Matter with non-standard interactions | [`example_3nu_nsi.py`](examples/example_3nu_nsi.py) | [03](notebooks/03_matter_nsi_liv.ipynb) |
-| Lorentz-invariance violation | [`example_3nu_liv.py`](examples/example_3nu_liv.py) | [03](notebooks/03_matter_nsi_liv.ipynb) |
-| SU(2) and SU(3) expansion coefficients, and the evolution operator | [`example_2nu_vacuum_coeffs.py`](examples/example_2nu_vacuum_coeffs.py), [`example_3nu_vacuum_coeffs.py`](examples/example_3nu_vacuum_coeffs.py) | [18](notebooks/18_evolution_operator.ipynb) |
-| Layered matter, and the Earth through PREM | — | [06](notebooks/06_earth_and_prem.ipynb), [07](notebooks/07_earth_probabilities.ipynb) |
+| Arbitrary Hamiltonian, 2 and 3 flavors | [`example_2nu_trivial.py`](https://github.com/mbustama/NuOscProbExact/blob/main/examples/example_2nu_trivial.py), [`example_3nu_trivial.py`](https://github.com/mbustama/NuOscProbExact/blob/main/examples/example_3nu_trivial.py) | [01](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/01_basics.ipynb) |
+| Vacuum, 2 and 3 flavors | [`example_2nu_vacuum.py`](https://github.com/mbustama/NuOscProbExact/blob/main/examples/example_2nu_vacuum.py), [`example_3nu_vacuum.py`](https://github.com/mbustama/NuOscProbExact/blob/main/examples/example_3nu_vacuum.py) | [02](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/02_vacuum_oscillations.ipynb) |
+| Constant-density matter | [`example_3nu_matter.py`](https://github.com/mbustama/NuOscProbExact/blob/main/examples/example_3nu_matter.py) | [03](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/03_matter_nsi_liv.ipynb) |
+| Matter with non-standard interactions | [`example_3nu_nsi.py`](https://github.com/mbustama/NuOscProbExact/blob/main/examples/example_3nu_nsi.py) | [03](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/03_matter_nsi_liv.ipynb) |
+| Lorentz-invariance violation | [`example_3nu_liv.py`](https://github.com/mbustama/NuOscProbExact/blob/main/examples/example_3nu_liv.py) | [03](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/03_matter_nsi_liv.ipynb) |
+| SU(2) and SU(3) expansion coefficients, and the evolution operator | [`example_2nu_vacuum_coeffs.py`](https://github.com/mbustama/NuOscProbExact/blob/main/examples/example_2nu_vacuum_coeffs.py), [`example_3nu_vacuum_coeffs.py`](https://github.com/mbustama/NuOscProbExact/blob/main/examples/example_3nu_vacuum_coeffs.py) | [18](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/18_evolution_operator.ipynb) |
+| Layered matter, and the Earth through PREM | — | [06](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/06_earth_and_prem.ipynb), [07](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/07_earth_probabilities.ipynb) |
 
 The [numerical recipes](https://mbustama.github.io/NuOscProbExact/recipes.html) page collects the same material as runnable snippets, and the [API reference](https://mbustama.github.io/NuOscProbExact/functions.html) documents every routine, with examples that are executed when the documentation is built rather than pasted beside it.
 
 
 ## Notebooks
 
-Eighteen worked notebooks live in [`notebooks/`](notebooks/), numbered in reading order.  They carry their figures inline, so they render on GitHub without being run:
+Eighteen worked notebooks live in [`notebooks/`](https://github.com/mbustama/NuOscProbExact/tree/main/notebooks/), numbered in reading order.  They carry their figures inline, so they render on GitHub without being run:
 
 | Notebook | What it covers |
 |---|---|
-| [01 Basics](notebooks/01_basics.ipynb) | Units, one probability, and why to pass arrays rather than loop |
-| [02 Vacuum oscillations](notebooks/02_vacuum_oscillations.ipynb) | Against baseline and against energy, checked against the textbook formula |
-| [03 Matter, NSI, LIV](notebooks/03_matter_nsi_liv.ipynb) | Constant-density matter and two kinds of new physics |
-| [04 Oscillograms](notebooks/04_oscillogram.ipynb) | A 240x240 energy-baseline map in a single call |
-| [05 Bi-probability](notebooks/05_biprobability.ipynb) | CP ellipses, in vacuum and in matter |
-| [06 The Earth and PREM](notebooks/06_earth_and_prem.ipynb) | The density profile, chord geometry, slabs, and their convergence |
-| [07 Through the Earth](notebooks/07_earth_probabilities.ipynb) | Zenith-angle scans, an Earth oscillogram, and real baselines |
-| [08 Unusual density profiles](notebooks/08_unusual_density_profiles.ipynb) | Castle-wall and serrated profiles, and parametric enhancement |
-| [09 Performance](notebooks/09_performance.ipynb) | Looping versus broadcasting, and the compiled backend, measured live |
-| [10 The paper's figures](notebooks/10_paper_figures.ipynb) | The two figures from [arXiv:1904.12391](https://arxiv.org/abs/1904.12391) |
-| [11 Exact vs approximations](notebooks/11_exact_vs_approximations.ipynb) | Where the familiar formulas agree, and where they do not |
-| [12 Ordering and octant](notebooks/12_ordering_and_octant.ipynb) | Normal against inverted, and the θ₂₃ octant degeneracy |
-| [13 Antineutrinos](notebooks/13_antineutrinos.ipynb) | Conjugate *and* flip the potential — and two ways to get it wrong |
-| [14 Solar and the MSW resonance](notebooks/14_solar_and_adiabatic_msw.ipynb) | The adiabatic resonance, validated — and why slabs are the wrong tool for it |
-| [15 Numerical edge cases](notebooks/15_numerical_edge_cases.ipynb) | Degenerate spectra, and what returns a number instead of NaN |
-| [16 Four neutrinos](notebooks/16_four_neutrinos.ipynb) | A 3+1 sterile state through SU(4), and why the method stops at four |
-| [17 Cross-checks with other codes](notebooks/17_cross_checks.ipynb) | Corroboration from nuSQuIDS and from Zaglauer–Schwarzer, and the conventions that had to be matched |
-| [18 The evolution operator](notebooks/18_evolution_operator.ipynb) | The operator itself, the group property, and the SU(*n*) coefficients underneath |
+| [01 Basics](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/01_basics.ipynb) | Units, one probability, and why to pass arrays rather than loop |
+| [02 Vacuum oscillations](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/02_vacuum_oscillations.ipynb) | Against baseline and against energy, checked against the textbook formula |
+| [03 Matter, NSI, LIV](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/03_matter_nsi_liv.ipynb) | Constant-density matter and two kinds of new physics |
+| [04 Oscillograms](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/04_oscillogram.ipynb) | A 240x240 energy-baseline map in a single call |
+| [05 Bi-probability](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/05_biprobability.ipynb) | CP ellipses, in vacuum and in matter |
+| [06 The Earth and PREM](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/06_earth_and_prem.ipynb) | The density profile, chord geometry, slabs, and their convergence |
+| [07 Through the Earth](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/07_earth_probabilities.ipynb) | Zenith-angle scans, an Earth oscillogram, and real baselines |
+| [08 Unusual density profiles](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/08_unusual_density_profiles.ipynb) | Castle-wall and serrated profiles, and parametric enhancement |
+| [09 Performance](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/09_performance.ipynb) | Looping versus broadcasting, and the compiled backend, measured live |
+| [10 The paper's figures](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/10_paper_figures.ipynb) | The two figures from [arXiv:1904.12391](https://arxiv.org/abs/1904.12391) |
+| [11 Exact vs approximations](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/11_exact_vs_approximations.ipynb) | Where the familiar formulas agree, and where they do not |
+| [12 Ordering and octant](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/12_ordering_and_octant.ipynb) | Normal against inverted, and the θ₂₃ octant degeneracy |
+| [13 Antineutrinos](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/13_antineutrinos.ipynb) | Conjugate *and* flip the potential — and two ways to get it wrong |
+| [14 Solar and the MSW resonance](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/14_solar_and_adiabatic_msw.ipynb) | The adiabatic resonance, validated — and why slabs are the wrong tool for it |
+| [15 Numerical edge cases](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/15_numerical_edge_cases.ipynb) | Degenerate spectra, and what returns a number instead of NaN |
+| [16 Four neutrinos](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/16_four_neutrinos.ipynb) | A 3+1 sterile state through SU(4), and why the method stops at four |
+| [17 Cross-checks with other codes](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/17_cross_checks.ipynb) | Corroboration from nuSQuIDS and from Zaglauer–Schwarzer, and the conventions that had to be matched |
+| [18 The evolution operator](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/18_evolution_operator.ipynb) | The operator itself, the group property, and the SU(*n*) coefficients underneath |
 
 Run them with `pip install -e ".[notebooks]"` and `jupyter lab notebooks/`.  Every one of them is executed by CI, so an example that stops working fails the build.
 
@@ -614,9 +614,9 @@ A full Sphinx project lives in `docs/`.  Build it with
 pip install -r docs/requirements.txt
 cd docs && make html
 ```
-and open `docs/build/html/index.html`.  It contains an installation guide, a quickstart, a description of the [method](docs/source/methodology.rst) and its sign conventions, the API reference generated from the docstrings, a bibliography, and the changelog.
+and open `docs/build/html/index.html`.  It contains an installation guide, a quickstart, a description of the [method](https://github.com/mbustama/NuOscProbExact/blob/main/docs/source/methodology.rst) and its sign conventions, the API reference generated from the docstrings, a bibliography, and the changelog.
 
-Notable changes between versions are recorded in [CHANGELOG.md](CHANGELOG.md), which the documentation renders as its own page, so there is a single source of truth.
+Notable changes between versions are recorded in [CHANGELOG.md](https://github.com/mbustama/NuOscProbExact/blob/main/CHANGELOG.md), which the documentation renders as its own page, so there is a single source of truth.
 
 To view the documentation of a module from within an interactive Python session, run, *e.g.*,
 ```python
@@ -659,5 +659,5 @@ The paper covers two and three flavors, which is what it was written about.  To 
 
 ## License
 
-**NuOscProbExact** is released under the [MIT License](https://opensource.org/licenses/MIT).  The full text ships with the source, as [`LICENSE`](LICENSE) in the repository root.
+**NuOscProbExact** is released under the [MIT License](https://opensource.org/licenses/MIT).  The full text ships with the source, as [`LICENSE`](https://github.com/mbustama/NuOscProbExact/blob/main/LICENSE) in the repository root.
 
