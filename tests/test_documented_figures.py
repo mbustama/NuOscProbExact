@@ -349,3 +349,80 @@ def test_every_frozen_case_is_reachable_by_the_notebook():
             'the frozen case %r carries %s, which neither the notebook nor '
             'the comparison test knows how to apply'
             % (case['name'], sorted(unexpected)))
+
+
+# ---------------------------------------------------------------------------
+# Code the documentation shows but nothing runs
+# ---------------------------------------------------------------------------
+
+QUICKSTART_RST_PATH = QUICKSTART_RST
+INDEX_RST_PATH = INDEX_RST
+
+
+def _code_blocks(path):
+    r"""Returns the ``.. code-block:: python`` bodies in an rst file.
+
+    These are *not* the ``jupyter-execute`` blocks, which the
+    documentation build runs and which therefore cannot rot silently.
+    A ``code-block`` is inert: Sphinx renders it and never executes it.
+    """
+    text = read(path)
+    blocks = []
+    for match in re.finditer(r'\.\. code-block:: python\n\n((?:   +.*\n|\n)+)',
+                             text):
+        blocks.append('\n'.join(
+            line[3:] if line.startswith('   ') else line
+            for line in match.group(1).split('\n')))
+
+    return blocks
+
+
+def test_the_landing_page_getting_started_example_runs():
+    r"""The first code a reader sees is executed by nothing else.
+
+    ``index.rst`` shows a complete worked example under *Getting
+    started* as a ``code-block``, which Sphinx renders without running.
+    Every other snippet in the documentation is either a
+    ``jupyter-execute`` block, run at build time, or a deliberate
+    fragment; this one is a whole program and is checked here.
+    """
+    import subprocess
+    import sys
+
+    complete = [b for b in _code_blocks(INDEX_RST_PATH)
+                if 'probabilities_3nu' in b]
+    assert complete, 'index.rst no longer shows a getting-started example'
+
+    for block in complete:
+        result = subprocess.run(
+            [sys.executable, '-c',
+             'import sys; sys.path.insert(0, %r)\n' % os.path.join(ROOT, 'src')
+             + block],
+            capture_output=True, text=True)
+        assert result.returncode == 0, (
+            'the getting-started example in index.rst does not run:\n%s'
+            % result.stderr[-800:])
+
+
+def test_the_documented_switches_are_spelled_correctly():
+    r"""``CHECK_HERMITICITY`` and ``USE_NUMBA`` snippets actually work.
+
+    Both are shown as two-line ``code-block`` snippets that set a module
+    attribute.  A typo in either --- a renamed switch, a wrong module ---
+    renders perfectly and does nothing, which is the worst way for a
+    documented escape hatch to fail.
+    """
+    import importlib
+
+    for block in _code_blocks(QUICKSTART_RST_PATH):
+        found = re.search(r'import (\w+)\n\s*(\w+)\.(\w+) = (\w+)', block)
+        if not found:
+            continue
+        module_name, target, attribute, value = found.groups()
+        assert module_name == target, block
+        module = importlib.import_module(module_name)
+        assert hasattr(module, attribute), (
+            'quickstart.rst sets %s.%s, which does not exist'
+            % (module_name, attribute))
+        assert isinstance(getattr(module, attribute), bool), (
+            '%s.%s is not a switch' % (module_name, attribute))

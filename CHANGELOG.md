@@ -187,6 +187,14 @@ fixes six docstrings that stated the opposite of the code.
   and `methodology.rst`, where the measured cost of the check and the two
   attempts to reduce it are now recorded.
 
+- **The documentation's inert code is now run by a test.**  Snippets shown as
+  `jupyter-execute` are executed by the documentation build and cannot rot
+  silently; snippets shown as `code-block` are rendered and never run.  The
+  landing page's *Getting started* example — the first code a reader sees —
+  was one of the latter.  So were the two switch snippets in
+  `quickstart.rst`, where a renamed attribute would render perfectly and do
+  nothing, which is the worst way for a documented escape hatch to fail.
+
 - **Smaller corrections**: "the two core modules" in three documents where
   there are three; "every routine above accepts a stack" where the
   coefficient routines raise `TypeError`; "returns probabilities" of routines
