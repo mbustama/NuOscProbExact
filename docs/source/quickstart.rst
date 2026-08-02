@@ -267,9 +267,10 @@ More examples
 -------------
 
 The ``examples/`` directory holds a runnable script for each of the cases
-above.  They are the same examples given in the `README
-<https://github.com/mbustama/NuOscProbExact/blob/main/README.md>`_, with the
-output you should expect.
+above, each printing the probabilities it computes.  The `README
+<https://github.com/mbustama/NuOscProbExact/blob/main/README.md>`_ walks
+through the first of them and links the rest, rather than transcribing them,
+so that there is one copy of each to keep correct.
 
 .. note::
 
