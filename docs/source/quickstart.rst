@@ -232,7 +232,7 @@ Going faster still
 
 If `Numba <https://numba.pydata.org>`_ is installed, the batched paths are
 evaluated by compiled kernels instead of NumPy, which is worth roughly
-1.5x to 15x on large stacks, depending on the number of flavors:
+1.5x to 20x on large stacks, depending on the number of flavors:
 
 .. code-block:: shell
 
@@ -243,10 +243,11 @@ automatically, and the answers are the same to round-off.  If it is not
 installed, the NumPy path is used and everything works as before.
 
 It is used only where it is faster.  For three flavors that is every stack
-size, by between two and sixteen times; for two flavors the NumPy path is
-already lean enough to win below about fifty thousand elements, so it is
-kept there.  :func:`fastkernels.worthwhile` makes that choice from measured
-thresholds, so installing the extra can only help.
+size, by between two and sixteen times, and for four flavors likewise, by
+between five and nineteen; for two flavors the NumPy path is already lean
+enough to win below about fifty thousand elements, so it is kept there.
+:func:`fastkernels.worthwhile` makes that choice from measured thresholds,
+so installing the extra can only help.
 
 The first call compiles, which takes a few seconds.  The kernels are
 cached on disk, so later runs start in milliseconds.  To force the NumPy

@@ -61,6 +61,29 @@ def hermitian_3nu(rng):
             for _ in range(100)]
 
 
+@pytest.fixture(params=['numpy', 'numba'])
+def backend(request, monkeypatch):
+    r"""Runs the test once per available backend.
+
+    The ``numba`` case is skipped when Numba is absent; the ``numpy``
+    case always runs, with the compiled path forced off.
+
+    This lives here rather than beside the tests of :mod:`fastkernels`
+    because the four-flavor tests need it too: with a compiled kernel in
+    play, every batched assertion in :mod:`oscprob4nu`'s own suite is
+    otherwise made about whichever backend happens to be installed.
+    """
+    import fastkernels
+
+    if request.param == 'numba':
+        if not fastkernels.HAVE_NUMBA:
+            pytest.skip('Numba is not installed')
+        monkeypatch.setattr(fastkernels, 'USE_NUMBA', True)
+    else:
+        monkeypatch.setattr(fastkernels, 'USE_NUMBA', False)
+    return request.param
+
+
 @pytest.fixture
 def kernel_spy(monkeypatch):
     r"""Counts calls to the compiled kernels, by name.
@@ -75,7 +98,8 @@ def kernel_spy(monkeypatch):
     # The dict handed back is the one the counters write to, not a copy
     counts = _CountingDict()
 
-    for name in ('probabilities_2nu_kernel', 'probabilities_3nu_kernel'):
+    for name in ('probabilities_2nu_kernel', 'probabilities_3nu_kernel',
+                 'probabilities_4nu_kernel'):
         original = getattr(fastkernels, name, None)
         if original is None:
             continue

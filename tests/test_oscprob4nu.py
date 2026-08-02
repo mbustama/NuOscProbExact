@@ -191,8 +191,20 @@ def test_degenerate_spectra_are_exact(spectrum, baseline):
     assert np.max(np.abs(operator - reference)) < 1.e-11
 
 
-def test_batched_agrees_with_scalar():
-    r"""A stack gives exactly what the scalar path gives."""
+def test_batched_agrees_with_scalar(backend):
+    r"""A stack gives what the scalar path gives, to round-off.
+
+    Run on both backends, because with Numba installed the batched call
+    is the compiled kernel while the one-by-one calls stay on the NumPy
+    path --- so this is the test that compares the two implementations
+    element by element, and without the fixture it would only ever
+    exercise whichever backend happened to be present.
+
+    The bar was ``1e-15`` while both sides ran the same code, which is
+    tighter than two implementations of the same expansion can be
+    expected to agree; a few ulp on probabilities of order one is
+    ``4e-15``.
+    """
     rng = np.random.default_rng(5)
     stack = np.stack([random_hermitian(rng) for _ in range(40)])
     baselines = rng.uniform(1.0, 10.0, 40)
@@ -202,10 +214,10 @@ def test_batched_agrees_with_scalar():
                            for matrix, baseline in zip(stack, baselines)])
 
     assert batched.shape == (40, 16)
-    assert np.max(np.abs(batched - one_by_one)) < 1.e-15
+    assert np.max(np.abs(batched - one_by_one)) < 1.e-13
 
 
-def test_broadcasting_gives_an_oscillogram():
+def test_broadcasting_gives_an_oscillogram(backend):
     r"""Hamiltonians and baselines broadcast against each other."""
     rng = np.random.default_rng(6)
     stack = np.stack([random_hermitian(rng) for _ in range(12)])

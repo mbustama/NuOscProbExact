@@ -132,6 +132,8 @@ import math
 
 import numpy as np
 
+import fastkernels
+
 
 SMALL_BATCH = 10
 r"""int: Module-level constant.
@@ -938,7 +940,22 @@ def probabilities_4nu(
         print('P_ee = %.6f' % prob[0])
         print('they sum to %.6f' % sum(prob[0:4]))
     """
-    operator = _evolution_operator_4nu_array(hamiltonian_matrix, L)
+    matrix = np.asarray(hamiltonian_matrix, dtype=complex)
+    baseline = np.asarray(L, dtype=float)
+
+    # A single Hamiltonian and baseline must keep returning a tuple, and
+    # is not worth the shape arithmetic either, so it leaves before it
+    if matrix.ndim > 2 or baseline.ndim > 0:
+        batch = np.broadcast_shapes(matrix.shape[:-2], baseline.shape)
+        size = int(np.prod(batch, dtype=np.int64))
+
+        if size > 0 and fastkernels.worthwhile(4, size):
+            return fastkernels.probabilities_4nu_kernel(
+                np.broadcast_to(matrix, batch+(4, 4)),
+                np.broadcast_to(baseline, batch),
+                POLISH_ROOTS)
+
+    operator = _evolution_operator_4nu_array(matrix, baseline)
 
     # P[alpha][beta] = |U[beta][alpha]|^2, so the initial flavor varies
     # slowest once the last two axes are swapped and flattened.

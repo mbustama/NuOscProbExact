@@ -14,10 +14,15 @@ where Numba is installed --- otherwise it would rot unnoticed.
 
 import numpy as np
 import pytest
+import scipy.linalg
+
+import globaldefs as gd
+import hamiltonians4nu
 
 import fastkernels
 import oscprob2nu
 import oscprob3nu
+import oscprob4nu
 
 from conftest import ATOL, as_nested_list, random_hermitian
 
@@ -26,20 +31,28 @@ needs_numba = pytest.mark.skipif(not fastkernels.HAVE_NUMBA,
                                  reason='Numba is not installed')
 
 
-@pytest.fixture(params=['numpy', 'numba'])
-def backend(request, monkeypatch):
-    r"""Runs the test once per available backend.
+# The stiff 3+1 spectrum, which is the four-flavor case that separates a
+# faithful kernel from a plausible one.  An eV-scale sterile puts four
+# orders of magnitude between the eigenvalues and clusters three of them.
+STIFF_BASELINE = 1300.0*gd.CONV_KM_TO_INV_EV
+STIFF_31 = np.asarray(hamiltonians4nu.hamiltonian_4nu_matter(
+    hamiltonians4nu.hamiltonian_4nu_vacuum_energy_independent(
+        gd.S12_NO_BF, gd.S23_NO_BF, gd.S13_NO_BF,
+        np.sqrt(0.10), np.sqrt(0.10), 0.0, gd.DCP_NO_BF,
+        gd.D21_NO_BF, gd.D31_NO_BF, 1.0),
+    1.0e9, gd.VCC_EARTH_CRUST, gd.VNC_EARTH_CRUST))
 
-    The ``numba`` case is skipped when Numba is absent; the ``numpy``
-    case always runs, with the compiled path forced off.
+
+def stiff_reference():
+    r"""Returns the sixteen probabilities for `STIFF_31`, from ``expm``.
+
+    An independent computation, so that the two paths are compared
+    against something outside both rather than only against each other.
     """
-    if request.param == 'numba':
-        if not fastkernels.HAVE_NUMBA:
-            pytest.skip('Numba is not installed')
-        monkeypatch.setattr(fastkernels, 'USE_NUMBA', True)
-    else:
-        monkeypatch.setattr(fastkernels, 'USE_NUMBA', False)
-    return request.param
+    traceless = STIFF_31 - np.trace(STIFF_31).real/4.0*np.eye(4)
+    operator = scipy.linalg.expm(-1.j*traceless*STIFF_BASELINE)
+
+    return (np.abs(operator.T)**2).reshape(16)
 
 
 # --------------------------------------------------------------------------
@@ -122,6 +135,60 @@ def test_2nu_kernel_matches_numpy_path(rng, monkeypatch, n, kernel_spy):
 
 
 @needs_numba
+@pytest.mark.parametrize('n', [1, 5, 17, 64, 300, 1000])
+def test_4nu_kernel_matches_numpy_path(rng, monkeypatch, n, kernel_spy):
+    r"""Compiled and NumPy paths agree, for four flavors.
+
+    The tolerance is looser than the three-flavor one above, and that is
+    a property of the expansion rather than of the backend: see
+    `test_4nu_stiff_spectrum_is_as_close_as_it_can_be`.  For a generic
+    spectrum the two paths still land within a few ulp of each other.
+    """
+    h_stack = np.stack([random_hermitian(rng, 4) for _ in range(n)])
+    l_stack = rng.uniform(0.1, 50.0, n)
+
+    monkeypatch.setattr(fastkernels, 'USE_NUMBA', True)
+    with_numba = oscprob4nu.probabilities_4nu(h_stack, l_stack)
+    assert kernel_spy['probabilities_4nu_kernel'] == 1
+
+    monkeypatch.setattr(fastkernels, 'USE_NUMBA', False)
+    without = oscprob4nu.probabilities_4nu(h_stack, l_stack)
+
+    assert with_numba.shape == without.shape == (n, 16)
+    assert np.allclose(with_numba, without, atol=1.0e-12)
+
+
+@needs_numba
+def test_4nu_kernel_polishes_its_roots(monkeypatch, kernel_spy):
+    r"""The compiled path refines the latent roots, as the NumPy one does.
+
+    ``POLISH_ROOTS`` is module-level state that an ``@njit`` function
+    cannot read at call time, so it is threaded through as an argument.
+    If that thread were ever cut the kernel would still return plausible
+    numbers --- just five hundred times worse on a stiff spectrum, which
+    is precisely the case the refinement exists for.  This pins both
+    settings, so a kernel that silently ignored the flag would fail
+    whichever way the flag was set.
+    """
+    monkeypatch.setattr(fastkernels, 'USE_NUMBA', True)
+    h_stack = np.stack([STIFF_31]*4)
+    l_stack = np.full(4, STIFF_BASELINE)
+
+    monkeypatch.setattr(oscprob4nu, 'POLISH_ROOTS', True)
+    polished = oscprob4nu.probabilities_4nu(h_stack, l_stack)
+    monkeypatch.setattr(oscprob4nu, 'POLISH_ROOTS', False)
+    unpolished = oscprob4nu.probabilities_4nu(h_stack, l_stack)
+    assert kernel_spy['probabilities_4nu_kernel'] == 2
+
+    reference = stiff_reference()
+    close = np.max(np.abs(polished[0] - reference))
+    far = np.max(np.abs(unpolished[0] - reference))
+
+    assert close < 1.0e-9
+    assert far > 10.0*close
+
+
+@needs_numba
 def test_kernel_matches_the_scalar_path(rng, monkeypatch):
     r"""The compiled kernel agrees with the scalar routine element by
     element, which is the reference both batched paths answer to."""
@@ -158,6 +225,151 @@ def test_broadcasting_patterns(backend, rng):
             expected = oscprob3nu.probabilities_3nu(
                 as_nested_list(h_stack[i]), l_stack[j])
             assert np.allclose(grid[i, j], expected, atol=1.0e-12)
+
+
+@needs_numba
+def test_4nu_stiff_spectrum_is_as_close_as_it_can_be(monkeypatch):
+    r"""On a stiff 3+1 spectrum the two paths part company at 1e-10.
+
+    That is not a defect in either of them, and the number is not a
+    fudge: the Newton-form reconstruction of :math:`U_4` cancels by a
+    factor of about :math:`10^6` on this spectrum --- its four terms
+    reach :math:`9.7 \times 10^5` and sum to a matrix of modulus one ---
+    so a last-bit difference anywhere in that sum arrives at
+    :math:`10^{-10}`, and the two paths reorder the arithmetic by
+    construction.  Measured, the amplification predicts 2.3e-10 and the
+    two paths differ by 2.4e-10.
+
+    Asserting round-off agreement here would therefore be asserting
+    something false about the mathematics.  What *can* be required is
+    that both paths sit inside the accuracy
+    :data:`oscprob4nu.POLISH_ROOTS` claims, against a reference outside
+    both, and that neither is quietly the worse of the two by an order
+    of magnitude --- which is what would show if the kernel had dropped
+    the refinement or botched the quartic.
+    """
+    h_stack = np.stack([STIFF_31]*8)
+    l_stack = np.full(8, STIFF_BASELINE)
+    reference = stiff_reference()
+
+    monkeypatch.setattr(fastkernels, 'USE_NUMBA', True)
+    with_numba = oscprob4nu.probabilities_4nu(h_stack, l_stack)
+    monkeypatch.setattr(fastkernels, 'USE_NUMBA', False)
+    without = oscprob4nu.probabilities_4nu(h_stack, l_stack)
+
+    assert np.allclose(with_numba, without, atol=1.0e-9)
+
+    kernel_error = np.max(np.abs(with_numba[0] - reference))
+    numpy_error = np.max(np.abs(without[0] - reference))
+    assert kernel_error < 1.0e-9
+    assert numpy_error < 1.0e-9
+    assert kernel_error < 100.0*numpy_error
+
+
+DEGENERATE_4NU = [
+    [2.5, 2.5, 2.5, 2.5],             # proportional to the identity
+    [0.0, 0.0, 0.0, 0.0],             # the zero Hamiltonian
+    [2.0, 2.0, -2.0, -2.0],           # two degenerate pairs
+    [3.0, -1.0, -1.0, -1.0],          # a triply degenerate root
+    [1.0, 1.0, 2.0, -4.0],            # one degenerate pair
+    [1.0, 1.0 + 1.e-13, 2.0, -4.0],   # nearly, but not exactly, degenerate
+    [1.0e6, 1.0e6, 1.0e6, 1.0e6],     # degenerate and large
+]
+
+
+@pytest.mark.parametrize('baseline', [1.0, 37.0])
+def test_4nu_degenerate_spectra_on_both_backends(backend, rng, baseline):
+    r"""Repeated latent roots survive whichever backend evaluates them.
+
+    The kernel carries its own copy of the confluent divided
+    differences, so this is not covered by the NumPy path's tests.  Half
+    of these spectra are the ones that made the rejected Vandermonde
+    solve singular; a kernel that reintroduced it for speed would fail
+    here rather than in production.
+    """
+    degenerate = [np.diag(spectrum).astype(complex)
+                  for spectrum in DEGENERATE_4NU]
+    ordinary = [random_hermitian(rng, 4) for _ in range(20)]
+    h_stack = np.stack(degenerate + ordinary)
+    l_stack = np.full(len(h_stack), baseline)
+
+    prob = oscprob4nu.probabilities_4nu(h_stack, l_stack)
+
+    assert np.all(np.isfinite(prob))
+    assert np.allclose(prob.reshape(-1, 4, 4).sum(axis=-1), 1.0, atol=ATOL)
+
+    for index, matrix in enumerate(degenerate):
+        traceless = matrix - np.trace(matrix).real/4.0*np.eye(4)
+        reference = np.abs(scipy.linalg.expm(
+            -1.j*traceless*baseline).T)**2
+        assert np.allclose(prob[index], reference.reshape(16), atol=1.0e-11)
+
+
+def test_4nu_broadcasting_patterns(backend, rng):
+    r"""All three broadcasting patterns work on whichever backend."""
+    h_stack = np.stack([random_hermitian(rng, 4) for _ in range(13)])
+    l_stack = np.linspace(0.5, 4.0, 11)
+
+    assert oscprob4nu.probabilities_4nu(h_stack, 2.0).shape == (13, 16)
+    assert oscprob4nu.probabilities_4nu(
+        as_nested_list(h_stack[0]), l_stack).shape == (11, 16)
+    grid = oscprob4nu.probabilities_4nu(h_stack[:, None, :, :],
+                                        l_stack[None, :])
+    assert grid.shape == (13, 11, 16)
+
+    for i in range(13):
+        for j in range(11):
+            expected = oscprob4nu.probabilities_4nu(
+                as_nested_list(h_stack[i]), l_stack[j])
+            assert np.allclose(grid[i, j], expected, atol=1.0e-12)
+
+
+def test_4nu_probabilities_are_normalized(backend, rng):
+    r"""Normalization and positivity hold on whichever backend."""
+    h_stack = np.stack([random_hermitian(rng, 4) for _ in range(400)])
+    l_stack = rng.uniform(0.1, 500.0, 400)
+
+    prob = oscprob4nu.probabilities_4nu(h_stack, l_stack).reshape(400, 4, 4)
+    assert np.allclose(prob.sum(axis=-1), 1.0, atol=1.0e-12)
+    assert np.allclose(prob.sum(axis=-2), 1.0, atol=1.0e-12)
+    assert np.all(prob >= -ATOL) and np.all(prob <= 1.0+ATOL)
+
+
+def test_4nu_empty_and_single_element_stacks(backend):
+    r"""Degenerate stack sizes behave on whichever backend."""
+    empty = oscprob4nu.probabilities_4nu(np.zeros((0, 4, 4), dtype=complex),
+                                         np.zeros(0))
+    assert empty.shape == (0, 16)
+
+    one = oscprob4nu.probabilities_4nu(np.eye(4, dtype=complex)[None], 1.0)
+    assert one.shape == (1, 16)
+    assert np.allclose(one.reshape(4, 4), np.eye(4), atol=ATOL)
+
+
+def test_4nu_zero_baseline(backend, rng):
+    r"""L = 0 gives the identity on whichever backend."""
+    h_stack = np.stack([random_hermitian(rng, 4) for _ in range(30)])
+    prob = oscprob4nu.probabilities_4nu(h_stack, np.zeros(30))
+    assert np.allclose(prob.reshape(30, 4, 4), np.eye(4), atol=ATOL)
+
+
+def test_4nu_scalar_call_never_reaches_the_kernel(backend, rng, kernel_spy):
+    r"""A single Hamiltonian and baseline keeps returning a tuple.
+
+    Four flavors is the one count where the scalar entry point shares
+    the batched machinery, so the dispatch has to exclude it explicitly
+    rather than fall out of a separate code path.  Were it not excluded,
+    a scalar call would return an array of sixteen and ``len(prob)``
+    would still be sixteen --- the shape of the bug is that nothing
+    obvious breaks.
+    """
+    matrix = as_nested_list(random_hermitian(rng, 4))
+
+    prob = oscprob4nu.probabilities_4nu(matrix, 1.5)
+
+    assert isinstance(prob, tuple)
+    assert len(prob) == 16
+    assert kernel_spy['probabilities_4nu_kernel'] == 0
 
 
 DEGENERATE = [np.eye(3, dtype=complex),
@@ -231,6 +443,54 @@ def test_small_batch_matches_large_batch(backend, rng):
 
 
 @needs_numba
+def test_chi_4nu_matches_numpy_and_pivots_when_it_must():
+    r"""The kernel's determinant is its own unit, and tested as one.
+
+    It has to be.  The determinant feeds the Newton refinement, and the
+    refinement's accuracy does not survive into the probabilities --- the
+    reconstruction's own conditioning swamps it --- so no end-to-end test
+    can tell a good determinant from a poor one.  Mutation testing
+    confirmed that: disabling the partial pivoting entirely left the
+    whole suite green.  Checking it here, against
+    :func:`numpy.linalg.det`, is what makes the choice of algorithm
+    defended by a test rather than only by a docstring.
+
+    The second half is the case that pivoting exists for.  Evaluating
+    ``chi`` at ``psi`` equal to a diagonal entry makes the leading entry
+    of ``psi*1 - H~`` exactly zero, and elimination without pivoting
+    divides by it.
+    """
+    rng = np.random.default_rng(31415)
+    scratch = np.empty((4, 4), dtype=np.complex128)
+
+    for _ in range(200):
+        traceless = random_hermitian(rng, 4)
+        traceless -= np.trace(traceless).real/4.0*np.eye(4)
+        traceless = np.ascontiguousarray(traceless)
+        psi = float(rng.uniform(-2.0, 2.0))
+
+        ours = fastkernels._chi_4nu(traceless, psi, scratch)
+        reference = np.linalg.det(psi*np.eye(4) - traceless).real
+        assert np.isclose(ours, reference, rtol=1.0e-10, atol=1.0e-14)
+
+    # A leading entry that vanishes at the evaluation point
+    singular = np.array([[0.5, 1.0, 0.0, 0.0],
+                         [1.0, -0.5, 0.0, 0.0],
+                         [0.0, 0.0, 0.25, 0.75],
+                         [0.0, 0.0, 0.75, -0.25]], dtype=complex)
+    assert np.isclose(np.trace(singular).real, 0.0)
+
+    ours = fastkernels._chi_4nu(singular, 0.5, scratch)
+    reference = np.linalg.det(0.5*np.eye(4) - singular).real
+
+    assert np.isfinite(ours)
+    assert not np.isclose(reference, 0.0), (
+        'the pivoting case must have a non-vanishing determinant, or a '
+        'routine that gave up and returned zero would pass')
+    assert np.isclose(ours, reference, rtol=1.0e-12)
+
+
+@needs_numba
 def test_kernels_are_cached_on_disk():
     r"""The kernels are declared with cache=True.
 
@@ -239,7 +499,8 @@ def test_kernels_are_cached_on_disk():
     """
     from numba.core.caching import NullCache
     for name in ('_run_3nu_serial', '_run_3nu_parallel',
-                 '_run_2nu_serial', '_run_2nu_parallel'):
+                 '_run_2nu_serial', '_run_2nu_parallel',
+                 '_run_4nu_serial', '_run_4nu_parallel'):
         dispatcher = getattr(fastkernels, name)
         assert not isinstance(dispatcher._cache, NullCache), name
 
@@ -265,6 +526,10 @@ def test_worthwhile_respects_the_measured_thresholds(monkeypatch):
     assert fastkernels.worthwhile(2, 1) is False
     assert fastkernels.worthwhile(2, fastkernels.MIN_BATCH[2]-1) is False
     assert fastkernels.worthwhile(2, fastkernels.MIN_BATCH[2]) is True
+
+    # Four flavors was measured to win at every size, like three, and
+    # unlike three it has no short-stack shortcut to lose to
+    assert fastkernels.worthwhile(4, 1) is True
 
 
 def test_worthwhile_is_false_when_unavailable(monkeypatch):

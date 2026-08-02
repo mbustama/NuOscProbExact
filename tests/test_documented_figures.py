@@ -68,6 +68,17 @@ BENCHMARKS = [
 ]
 
 
+# The four-flavor kernel's speedups, stated in `fastkernels`' own module
+# docstring and again in the methodology page's table.  Held as the "~19x"
+# spelling both documents use.
+SPEEDUP_4NU = [('200 000 energies, four flavors', '19'),
+               ('20 000 energies, four flavors', '18')]
+
+# The span quoted for the backend as a whole, in the two documents that
+# summarise it in one sentence rather than tabulating it.
+SPEEDUP_SPAN = '1.5x to 20x'
+
+
 def read(path):
     r"""Returns the text of ``path``."""
     with open(path) as handle:
@@ -158,6 +169,48 @@ def test_quoted_speedup_span_matches_the_table():
             '%s should quote the array speedup as 20 to 90 times, which is '
             'what its own benchmark table gives (%.0fx to %.0fx)'
             % (os.path.relpath(path, ROOT), low, high))
+
+
+def test_four_flavor_speedups_agree_between_module_and_methodology():
+    r"""The four-flavor rows say the same thing in both places.
+
+    Added with the four-flavor kernel in 1.10.0, because the figure is
+    stated twice the moment it is stated at all --- which is the shape of
+    every drift this module already guards against.
+    """
+    for stack, speedup in SPEEDUP_4NU:
+        rows = stack.split(',')[0]
+        for path in (FASTKERNELS, METHODOLOGY_RST):
+            text = read_flowed(path)
+            assert '~%sx' % speedup in text, (
+                '%s does not quote ~%sx, the measured speedup for the "%s" '
+                'row of the four-flavor benchmark'
+                % (os.path.relpath(path, ROOT), speedup, stack))
+            assert rows in text, (
+                '%s quotes four-flavor speedups but no longer names the "%s" '
+                'stack they were measured on'
+                % (os.path.relpath(path, ROOT), stack))
+
+
+def test_the_quoted_speedup_span_covers_the_four_flavor_rows():
+    r"""The one-sentence summary brackets the tabulated figures.
+
+    The README and the quickstart compress the whole table into a single
+    range.  A four-flavor row above the top of that range is exactly the
+    kind of contradiction that has been found by hand here before.
+    """
+    top = max(int(speedup) for _, speedup in SPEEDUP_4NU)
+    quoted = int(re.search(r'to (\d+)x', SPEEDUP_SPAN).group(1))
+    assert quoted >= top, (
+        'the documents quote "%s" but the four-flavor table reaches ~%dx'
+        % (SPEEDUP_SPAN, top))
+
+    for path in (README, QUICKSTART_RST):
+        text = read_flowed(path)
+        assert SPEEDUP_SPAN in text, (
+            '%s should quote the backend as worth "%s"; the four-flavor '
+            'rows reach ~%dx' % (os.path.relpath(path, ROOT),
+                                 SPEEDUP_SPAN, top))
 
 
 def test_two_flavor_row_is_marked_as_not_using_the_backend():
