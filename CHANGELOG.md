@@ -208,6 +208,18 @@ fixes six docstrings that stated the opposite of the code.
   `quickstart.rst`, where a renamed attribute would render perfectly and do
   nothing, which is the worst way for a documented escape hatch to fail.
 
+- **The documentation now says who wrote it.**  `grep Bustamante docs/source`
+  returned exactly one hit, the `author` field inside the BibTeX entry on the
+  references page — so the docs site, the one artifact a reader reaches
+  without seeing `README.md` or `pyproject.toml`, credited its author only
+  incidentally and gave no way to reach him.  `index.rst` gains an **Author**
+  section next to Citing and License, mirroring the line `README.md` has
+  carried all along, with the address already declared in `pyproject.toml`
+  and in every module's `__email__`, and a pointer to GitHub issues as the
+  route that leaves a public record.  It is deliberately *not* folded into
+  Citing: the name is already in the BibTeX entry directly below, and no
+  citation format carries an e-mail address.
+
 - **Smaller corrections**: "the two core modules" in three documents where
   there are three; "every routine above accepts a stack" where the
   coefficient routines raise `TypeError`; "returns probabilities" of routines

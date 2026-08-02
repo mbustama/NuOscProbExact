@@ -342,6 +342,14 @@ See :doc:`installation` and :doc:`quickstart` for the longer version.
    references
    changelog
 
+Author
+------
+
+**NuOscProbExact** was written by Mauricio Bustamante
+(mbustamante@gmail.com).  Bug reports and questions are best raised as
+`GitHub issues <https://github.com/mbustama/NuOscProbExact/issues>`_, which
+leave a public record others can find.
+
 Citing
 ------
 
