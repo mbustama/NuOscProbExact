@@ -516,3 +516,20 @@ def test_the_radius_along_a_chord_stays_real_at_the_endpoints():
                           gd.EARTH_RADIUS)
         assert np.isclose(earth.earth_radial_distance_from_depth(costhz, d),
                           gd.EARTH_RADIUS)
+
+
+def test_the_neutron_fraction_can_be_given_explicitly():
+    r"""A profile that is not isoscalar can say so.
+
+    The default takes the neutron fraction as the complement of the
+    electron fraction, which is the isoscalar assumption; a caller
+    modelling something else supplies it directly.
+    """
+    isoscalar = earth.matter_potential_nc(3.0)
+
+    assert np.isclose(earth.matter_potential_nc(3.0, neutron_fraction=0.5),
+                      isoscalar)
+    assert np.isclose(earth.matter_potential_nc(3.0, neutron_fraction=1.0),
+                      2.0*isoscalar)
+    # Zero neutrons, no neutral-current potential at all
+    assert earth.matter_potential_nc(3.0, neutron_fraction=0.0) == 0.0

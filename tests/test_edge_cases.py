@@ -231,3 +231,78 @@ def test_a_sine_of_exactly_one_is_still_allowed():
     assert np.isclose(hamiltonians2nu.mixing_matrix_2nu(1.0)[0][0], 0.0)
     assert np.isclose(hamiltonians3nu.pmns_mixing_matrix(1.0, 0.1, 0.1,
                                                          0.0)[0][0].real, 0.0)
+
+
+@pytest.mark.parametrize('n_flavors', [2, 3, 4])
+def test_a_complex_diagonal_entry_is_refused(n_flavors):
+    r"""Hermiticity constrains the diagonal too, not only the pairs.
+
+    A Hamiltonian whose off-diagonal entries are properly conjugate can
+    still fail to be Hermitian, by carrying an imaginary part on the
+    diagonal.  That is a separate branch of the check, and a separate
+    way to get a wrong answer that still sums to one.
+    """
+    module = importlib.import_module('oscprob%dnu' % n_flavors)
+    call = getattr(module, 'probabilities_%dnu' % n_flavors)
+
+    h_matrix = np.eye(n_flavors, dtype=complex)
+    h_matrix[0, 0] = 1.0 + 0.5j
+
+    with pytest.raises(ValueError, match='diagonal entry'):
+        call([[complex(z) for z in row] for row in h_matrix], 1.0)
+
+
+@pytest.mark.parametrize('n_flavors', [2, 3, 4])
+def test_an_empty_stack_passes_the_check_and_returns_empty(n_flavors):
+    r"""Nothing to check, and nothing to compute.
+
+    An empty stack has no entries to compare, so the check returns
+    early; the scale it would otherwise take is undefined on an empty
+    array and would raise from inside NumPy.
+    """
+    module = importlib.import_module('oscprob%dnu' % n_flavors)
+    call = getattr(module, 'probabilities_%dnu' % n_flavors)
+
+    empty = np.zeros((0, n_flavors, n_flavors), dtype=complex)
+    result = call(empty, np.zeros(0))
+
+    assert result.shape == (0, n_flavors*n_flavors)
+
+
+@pytest.mark.parametrize('n_flavors', [2, 3, 4])
+def test_every_entry_point_honours_the_switch_in_both_positions(n_flavors,
+                                                                 rng):
+    r"""Both settings, on every public route into the expansions.
+
+    The check sits at seven entry points, and a switch that is only ever
+    exercised in one position is half tested: the branch that skips the
+    check is the one a production scan actually takes.  This runs each
+    route with the switch on and off, over the scalar path, the batched
+    NumPy path and the compiled kernel, and requires the answers to be
+    identical --- checking must not change what is computed.
+    """
+    module = importlib.import_module('oscprob%dnu' % n_flavors)
+    probabilities = getattr(module, 'probabilities_%dnu' % n_flavors)
+    operator = getattr(module, 'evolution_operator_%dnu' % n_flavors)
+
+    scalar = random_hermitian(rng, n_flavors)
+    # Large enough to reach the compiled kernel where one is used
+    stack = np.stack([random_hermitian(rng, n_flavors) for _ in range(64)])
+    baselines = rng.uniform(0.1, 20.0, 64)
+
+    original = module.CHECK_HERMITICITY
+    results = {}
+    try:
+        for setting in (True, False):
+            module.CHECK_HERMITICITY = setting
+            results[setting] = (
+                np.asarray(probabilities(as_nested_list(scalar), 1.5)),
+                np.asarray(operator(as_nested_list(scalar), 1.5)),
+                np.asarray(probabilities(stack, baselines)),
+                np.asarray(operator(stack, baselines)),
+            )
+    finally:
+        module.CHECK_HERMITICITY = original
+
+    for checked, unchecked in zip(results[True], results[False]):
+        assert np.array_equal(checked, unchecked)
