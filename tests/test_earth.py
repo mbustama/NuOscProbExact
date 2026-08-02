@@ -560,3 +560,93 @@ def test_the_boundaries_of_costhz_are_still_allowed():
     assert earth.distance_traveled_inside_earth(1.0) == 0.0
     assert earth.distance_traveled_inside_earth(0.0) == 0.0
     assert len(earth.earth_slabs(-1.0, 2)[0]) > 0
+
+
+# Published baselines of real experiments, in km.  These are what the
+# chord between the two sites is *for*, and they are the only external
+# check on the haversine geometry: every other test here compares the
+# geometry against itself.  The tolerance absorbs the spherical-Earth
+# approximation and the fact that a published baseline is quoted between
+# beam target and detector hall rather than between site centroids.
+PUBLISHED_BASELINES = [
+    ('cern', 'gran_sasso', 732.0),      # CNGS
+    ('fermilab', 'homestake', 1300.0),  # DUNE
+    ('tokai', 'kamioka', 295.0),        # T2K
+    ('cern', 'pyhaasalmi', 2288.0),     # LBNO, as proposed
+]
+
+
+@pytest.mark.parametrize('site_1,site_2,published', PUBLISHED_BASELINES)
+def test_named_baselines_match_the_published_ones(site_1, site_2, published):
+    r"""The chord between two sites is the experiment's baseline.
+
+    Nothing else in this module checks the haversine against anything
+    outside the code: replacing ``cos(lat2)`` by ``sin(lat2)`` in it left
+    the whole suite green, which means the geometry of every
+    ``*_between_locations`` call rested on no external evidence at all.
+    """
+    chord = earth.chord_length_inside_earth(
+        *earth.coordinates_of_named_location(site_1),
+        *earth.coordinates_of_named_location(site_2))
+
+    assert abs(chord - published)/published < 0.02, (
+        '%s to %s came out %.1f km against a published %.1f km'
+        % (site_1, site_2, chord, published))
+
+
+def test_the_haversine_is_right_at_the_poles_too():
+    r"""A pole is where a wrong latitude term shows up most.
+
+    Mid-latitude pairs are forgiving --- ``cos`` and ``sin`` are close
+    together near 45 degrees, which is where most of these sites are ---
+    so the geometry is pinned somewhere it cannot hide: a chord to the
+    South Pole, and the diameter between the two poles.
+    """
+    poles = earth.chord_length_inside_earth(
+        *earth.coordinates_of_named_location('north_pole'),
+        *earth.coordinates_of_named_location('south_pole'))
+    assert np.isclose(poles, 2.0*gd.EARTH_RADIUS)
+
+    # CERN sits at 46 deg 14' N, so its angular distance to the South
+    # Pole is 136.23 deg and the chord is 2 R sin(half of that)
+    cern_to_pole = earth.chord_length_inside_earth(
+        *earth.coordinates_of_named_location('cern'),
+        *earth.coordinates_of_named_location('south_pole'))
+    expected = 2.0*gd.EARTH_RADIUS*np.sin(np.radians(90.0 + 46.2338)/2.0)
+    assert np.isclose(cern_to_pole, expected, rtol=1.0e-4)
+
+    # A site is zero from itself, whatever its latitude
+    for name in ('north_pole', 'kamioka', 'south_pole'):
+        coords = earth.coordinates_of_named_location(name)
+        assert earth.chord_length_inside_earth(*coords, *coords) < 1.0e-9
+
+
+@pytest.mark.parametrize('boundary', list(earth.PREM_BOUNDARIES))
+def test_a_radius_exactly_on_a_shell_boundary_takes_the_inner_shell(boundary):
+    r"""The PREM bins are right-closed, and the code says so.
+
+    ``density_prem`` looks the shell up with ``side='left'``, whose
+    comment explains that this reproduces bins of the form
+    ``r <= 1221.5``.  Nothing tested it: switching to ``side='right'``
+    left the suite green, because a slab midpoint never lands exactly on
+    a boundary.  A caller evaluating the density *at* a boundary is
+    entitled to the documented answer.
+    """
+    on = earth.density_prem(boundary)
+    just_inside = earth.density_prem(boundary*(1.0 - 1.0e-12))
+    just_outside = earth.density_prem(boundary*(1.0 + 1.0e-12))
+
+    assert np.isclose(on, just_inside, rtol=1.0e-9)
+
+    # Eight of the nine boundaries are genuine density discontinuities,
+    # jumping by between 1.9% and 61%, so the two sides must differ
+    # there --- without that, this test would pass on either convention
+    # and prove nothing.  The ninth, 5771 km, is not a discontinuity:
+    # PREM changes polynomial there but the two meet, agreeing to
+    # 5.9e-8 relative, which is continuity to the precision the
+    # published coefficients are quoted at.  It is a change of fit
+    # inside the transition zone, not a change of rock.
+    if boundary != 5771.0:
+        assert not np.isclose(on, just_outside, rtol=1.0e-3)
+    else:
+        assert np.isclose(on, just_outside, rtol=1.0e-6)

@@ -577,3 +577,39 @@ def test_four_flavor_liv_scales_with_the_energy_and_broadcasts():
     liv_once = single - np.asarray(h_vacuum)/ENERGY
     liv_twice = stacked[1] - np.asarray(h_vacuum)/(2.0*ENERGY)
     assert np.allclose(liv_twice, 2.0*liv_once, rtol=1.e-12)
+
+
+def test_the_3plus1_rotation_order_is_the_one_documented():
+    r"""R34 R24 R14 R23 R13 R12, and the order is observable.
+
+    :func:`hamiltonians4nu.mixing_matrix_4nu` documents that ordering.
+    Swapping the first two rotations left the whole suite green, because
+    every test that exercised the mixing matrix either set
+    ``s34 = 0`` --- which makes R34 the identity, so the order cannot
+    matter --- or checked only unitarity, which no reordering breaks.
+    With all three sterile angles non-zero the difference is 0.12 in the
+    entries of U.
+    """
+    angles = (0.5, 0.5, 0.15, np.sqrt(0.10), np.sqrt(0.10), np.sqrt(0.20))
+    dcp = 0.3
+    mixing = hamiltonians4nu.mixing_matrix_4nu(*angles, dcp)
+
+    rotation = hamiltonians4nu._rotation_4nu
+    expected = (rotation(2, 3, angles[5])
+                @ rotation(1, 3, angles[4])
+                @ rotation(0, 3, angles[3])
+                @ rotation(1, 2, angles[1])
+                @ rotation(0, 2, angles[2], dcp)
+                @ rotation(0, 1, angles[0]))
+
+    assert np.max(np.abs(mixing - expected)) < 1.e-15
+
+    # And the order is not a free choice: swapping the two outermost
+    # rotations, which share the index 3, changes U materially
+    swapped = (rotation(1, 3, angles[4])
+               @ rotation(2, 3, angles[5])
+               @ rotation(0, 3, angles[3])
+               @ rotation(1, 2, angles[1])
+               @ rotation(0, 2, angles[2], dcp)
+               @ rotation(0, 1, angles[0]))
+    assert np.max(np.abs(mixing - swapped)) > 0.1

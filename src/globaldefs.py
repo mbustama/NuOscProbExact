@@ -38,6 +38,24 @@ References
 __author__ = "Mauricio Bustamante"
 __email__ = "mbustamante@gmail.com"
 
+# Every constant this module defines, and nothing else.  The worked
+# examples do `from globaldefs import *`, which without this also
+# injects `np` into their namespace -- a name they neither asked for
+# nor should shadow.  Every other module in src/ declares one.
+__all__ = ['CONV_KM_TO_INV_EV', 'CONV_CM_TO_INV_EV', 'CONV_INV_EV_TO_CM',
+           'CONV_EV_TO_G', 'CONV_G_TO_EV', 'GF', 'MASS_ELECTRON',
+           'MASS_PROTON', 'MASS_NEUTRON', 'EARTH_RADIUS',
+           'ELECTRON_FRACTION_EARTH_CRUST',
+           'DENSITY_MATTER_CRUST_G_PER_CM3', 'NUM_DENSITY_E_EARTH_CRUST',
+           'VCC_EARTH_CRUST', 'NEUTRON_FRACTION_EARTH_CRUST',
+           'NUM_DENSITY_N_EARTH_CRUST', 'VNC_EARTH_CRUST', 'S12_NO_BF',
+           'S23_NO_BF', 'S13_NO_BF', 'DCP_NO_BF', 'D21_NO_BF',
+           'D31_NO_BF', 'S12_IO_BF', 'S23_IO_BF', 'S13_IO_BF',
+           'DCP_IO_BF', 'D21_IO_BF', 'D32_IO_BF', 'D31_IO_BF', 'EPS_EE',
+           'EPS_EM', 'EPS_ET', 'EPS_MM', 'EPS_MT', 'EPS_TT', 'EPS_2',
+           'EPS_3', 'SXI12', 'SXI23', 'SXI13', 'DXICP', 'B1', 'B2', 'B3',
+           'LAMBDA']
+
 import numpy as np
 
 

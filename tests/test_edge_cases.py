@@ -382,3 +382,31 @@ def test_the_duplicated_helpers_have_not_drifted(name, modules):
             '%s.%s has drifted from %s.%s; the copies are duplicated on '
             'purpose and must stay identical'
             % (module_name, name, modules[0], name))
+
+
+def test_the_degeneracy_tolerance_is_not_free_to_widen():
+    r"""``DEGENERACY_TOL`` separates two exact expressions, not two
+    approximations.
+
+    Below it the two-projector form is used, which is exact for a
+    repeated root and an approximation otherwise; above it the general
+    Lagrange form is used, which is exact for distinct roots and
+    singular at a repeated one.  Widening the tolerance from 1e-12 to
+    1e-2 left the whole suite green while taking a spectrum whose roots
+    differ by a part in a thousand from 2e-14 against ``expm`` to
+    7e-3 --- eleven orders of magnitude, unnoticed.
+    """
+    from scipy.linalg import expm
+
+    h_matrix = np.diag([1.0, 1.0 + 3.0e-3, -2.0 - 3.0e-3]).astype(complex)
+    traceless = h_matrix - np.trace(h_matrix).real/3.0*np.eye(3)
+    reference = expm(-1.j*traceless*5.0)
+
+    operator = np.asarray(oscprob3nu.evolution_operator_3nu(
+        as_nested_list(h_matrix), 5.0))
+    assert np.max(np.abs(operator - reference)) < 1.0e-11
+
+    # The separation above sits four orders above the tolerance, so the
+    # general form must be the one taken; pin the tolerance itself, since
+    # that is what decides it
+    assert oscprob3nu.DEGENERACY_TOL <= 1.0e-10
