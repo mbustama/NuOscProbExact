@@ -252,6 +252,14 @@ def test_a_complex_diagonal_entry_is_refused(n_flavors):
     with pytest.raises(ValueError, match='diagonal entry'):
         call([[complex(z) for z in row] for row in h_matrix], 1.0)
 
+    # And as a stack.  The two paths stopped sharing an implementation when
+    # `_check_hermitian` gained a branch for a single matrix, and this
+    # assertion is what noticed: the scalar case above had been the only
+    # thing covering the batched diagonal refusal, so adding that branch
+    # left it exercised by nothing while the suite stayed green.
+    with pytest.raises(ValueError, match='diagonal entry'):
+        call(np.stack([h_matrix]*4), 1.0)
+
 
 @pytest.mark.parametrize('n_flavors', [2, 3, 4])
 def test_an_empty_stack_passes_the_check_and_returns_empty(n_flavors):
