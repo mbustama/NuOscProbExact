@@ -14,6 +14,8 @@ inside a package, so that directory is put on ``sys.path`` below and
 """
 
 import os
+import pathlib
+import re
 import sys
 
 sys.path.insert(0, os.path.abspath('../../src'))
@@ -23,8 +25,35 @@ sys.path.insert(0, os.path.abspath('../../src'))
 project = 'NuOscProbExact'
 copyright = '2019-2026, Mauricio Bustamante'
 author = 'Mauricio Bustamante'
-release = '1.11.0'
-version = '1.11'
+# The version is not written here.  It lives in pyproject.toml, which is
+# what `python -m build` reads and what publish.yml stamps for a TestPyPI
+# rehearsal, so that file is the only one entitled to state it.  Keeping a
+# second copy here meant two hand-edits per release and no check that they
+# agreed -- and the short form below is not a fact at all but a derivation,
+# which is the kind of thing that has no business being typed.
+#
+# Read from the file rather than from package metadata so that the
+# documentation builds from a source tree that has not been installed,
+# which is what `cd docs && make html` does; metadata is the fallback for a
+# build that runs from an installed distribution instead.
+def _project_version():
+    """Returns the version, from pyproject.toml or installed metadata."""
+    pyproject = pathlib.Path(__file__).resolve().parents[2]/'pyproject.toml'
+    try:
+        found = re.search(r'^version = "([^"]+)"',
+                          pyproject.read_text(), re.M)
+    except OSError:
+        found = None
+    if found is not None:
+        return found.group(1)
+
+    from importlib.metadata import version as installed_version
+
+    return installed_version('nuoscprobexact')
+
+
+release = _project_version()
+version = '.'.join(release.split('.')[:2])
 
 # -- General configuration ---------------------------------------------------
 

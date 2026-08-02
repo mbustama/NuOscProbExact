@@ -123,6 +123,17 @@ fixes six docstrings that stated the opposite of the code.
   visible effect — and the comment now says so and warns against reusing them
   as a fit.
 
+- **The version is written in one place.**  `docs/source/conf.py` derives
+  `release` from `pyproject.toml` and `version` from that, rather than
+  restating both by hand — the short form was never a fact in the first
+  place, only a derivation someone had to remember to redo.  What cannot be
+  derived is guarded instead, in `tests/test_version_consistency.py`: the
+  changelog must lead with the declared version, its headings must descend
+  without duplicates down to 1.0.0, every `versionadded` directive must name
+  a released version and none may name an unreleased one, and `src/` must
+  not restate the version at all.  Six of those seven checks existed only as
+  scripts run by hand during this audit.
+
 - **14 parameters annotated `Optional[T]` with non-None defaults** now say
   `T`; three private functions gained the `Parameters` sections every other
   private function in `src/` has; `globaldefs` no longer describes itself as
