@@ -237,8 +237,9 @@ fixes six docstrings that stated the opposite of the code.
   attempts to reduce it are now recorded.
 
 - **A diagram of how slabs compose**, in the quickstart section above,
-  drawn as SVG rather than generated: four slabs of differing width and
-  density, the Hamiltonian and exactly-solved `U_k` each one contributes,
+  drawn as SVG rather than generated: a neutrino entering as `nu_alpha` and
+  leaving as `nu_beta`, four slabs of differing width and density, the
+  Hamiltonian and exactly-solved `U_k` each one contributes,
   and two dashed ties that cross to show the ordering — the slab crossed
   first is the rightmost factor in the product.  That reversal is the part
   of the API most easily got wrong, and it is the one thing prose states

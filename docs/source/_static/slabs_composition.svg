@@ -2,11 +2,12 @@
      role="img" aria-labelledby="slabs-title slabs-desc"
      font-family="Lato, 'Helvetica Neue', Helvetica, Arial, sans-serif">
   <title id="slabs-title">Composing evolution operators across slabs of constant density</title>
-  <desc id="slabs-desc">A neutrino travels left to right through four adjacent slabs of
-  differing width and density. Each slab k has its own Hamiltonian H_k, built from its
-  density, and contributes an evolution operator U_k(L_k) for its own width L_k. The total
-  operator is the product U_4(L_4) U_3(L_3) U_2(L_2) U_1(L_1): the slab crossed first is the
-  rightmost factor, because the operators act to the left on the initial state.</desc>
+  <desc id="slabs-desc">A neutrino enters on the left as flavor alpha and leaves on the
+  right as flavor beta, crossing four adjacent slabs of differing width and density. Each
+  slab k has its own Hamiltonian H_k, built from its density, and contributes an evolution
+  operator U_k(L_k) for its own width L_k. The total operator is the product
+  U_4(L_4) U_3(L_3) U_2(L_2) U_1(L_1): the slab crossed first is the rightmost factor,
+  because the operators act to the left on the initial state.</desc>
 
   <defs>
     <marker id="nu-arrow" viewBox="0 0 10 10" refX="9" refY="5"
@@ -28,7 +29,8 @@
         marker-end="url(#nu-arrow)"/>
   <line x1="662" y1="117" x2="742" y2="117" stroke="#334155" stroke-width="2"
         marker-end="url(#nu-arrow)"/>
-  <text x="30" y="105" font-size="15" font-style="italic" fill="#334155">&#957;</text>
+  <text x="51" y="104" font-size="15" text-anchor="middle" font-style="italic" fill="#334155">&#957;<tspan font-size="11" dy="4">&#945;</tspan></text>
+  <text x="702" y="104" font-size="15" text-anchor="middle" font-style="italic" fill="#334155">&#957;<tspan font-size="11" dy="4">&#946;</tspan></text>
 
   <!-- the slabs: width is the width crossed, shade is the density -->
   <rect x="90"  y="72" width="110" height="90" fill="#e8f1fd" stroke="#8fb5e3" stroke-width="1.5"/>
