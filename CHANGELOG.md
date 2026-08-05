@@ -354,6 +354,30 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **The Earth performance figures had drifted, and nothing was guarding them.**
+  `13.9x, 9.6x and 6.6x` was stated in `README.md`, `index.rst` and
+  `fastkernels`, agreed with itself in all three, and was wrong in two by the
+  time this release shipped — the palindrome had made the compiled side
+  quicker, so three and four flavors were being understated.  Re-measured, one
+  Earth crossing is ~12x, ~12x and ~9x.
+
+  `test_documented_figures.py` covered the constant-density tables and not
+  these, which is exactly the gap its own docstring warns about: "a guard that
+  covers part of a table is an invitation to the rest of it."  It now pins the
+  Earth crossing speedups, the 2000-energy scan table, what the palindrome is
+  worth, and that every document claiming the palindrome also names the switch
+  that turns it off.  Each new guard was checked by perturbing a document and
+  confirming it failed — two of the four did not, at first: a bare `1.5`
+  matched the unrelated `1.5x to 20x` span, and `USE_PALINDROME` matched any
+  misspelling containing it.
+
+  The narrative was stale as well as the numbers.  `index.rst`, `quickstart.rst`
+  and `README.md` described the slab kernel and none of what followed it —
+  array energies and angles, the fused chord kernels, the palindrome, `rtol`
+  and `atol`.  All three now carry the 2000-energy scan table, the oscillogram
+  figure, and the tolerance machinery, with `recipes.rst` holding the worked
+  examples.
+
 - **`test_root_polishing_is_what_makes_a_stiff_spectrum_accurate` measured
   whichever backend happened to be dispatched.**  When the compiled path
   took over `probabilities_4nu` earlier in this release, the gain it

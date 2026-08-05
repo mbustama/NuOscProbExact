@@ -291,10 +291,64 @@ could not use the backend at all before 1.12.0 --- it offered probability
 kernels only, and an Earth crossing quietly ran the NumPy path however the
 extra was installed.  They now compose a whole trajectory in one compiled
 pass, never materialising the stack of operators and never dispatching a
-product per slab, which is worth 13.9x, 9.6x and 6.6x on an Earth crossing
-at two, three and four flavors.  The threshold there is one slab rather
-than the fifty thousand above: the comparison is against a Python loop, so
-the kernel is ahead at every length.
+product per slab, which is worth ~12x, ~12x and ~9x on a single Earth
+crossing at two, three and four flavors.  The threshold there is one slab
+rather than the fifty thousand above: the comparison is against a Python
+loop, so the kernel is ahead at every length.
+
+**An Earth scan is one call, not a loop.**  Both the energy and the zenith
+angle may be arrays, and they broadcast, so an oscillogram is
+``probabilities_3nu_earth(h, energies[None, :], costhz[:, None])`` rather
+than a loop over its points.  The geometry, the matter potentials and the
+slab widths depend on the angle alone, so a scan builds them once instead
+of once per energy; the chord kernels then build each slab's Hamiltonian
+as they go, so the stack of operators that made the batched path
+memory-bound is never allocated at all.  Over 2000 energies:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 34 22 22 22
+
+   * - Earth scan, 2000 energies
+     - NumPy loop
+     - Compiled loop
+     - Compiled array
+   * - Two flavors
+     - 542 ms
+     - 44 ms
+     - **1.2 ms**
+   * - Three flavors
+     - 895 ms
+     - 77 ms
+     - **7.5 ms**
+   * - Four flavors
+     - 2224 ms
+     - 272 ms
+     - **25 ms**
+
+That is ~38x, ~10x and ~11x over the compiled loop, and ~460x, ~120x and
+~87x over the NumPy one.  A 100 x 100 oscillogram at three flavors takes
+42 ms against 371 ms for the loop, about 4 microseconds a point.
+
+**A chord is a palindrome.**  A neutrino crossing a spherically symmetric
+Earth meets every radius on the way in and again on the way out, so slab
+:math:`j` and slab :math:`n-1-j` carry the same Hamiltonian, the same
+width and therefore the same operator.  Composing from the centre outwards
+computes each of them once instead of twice, which is worth ~1.4x, ~1.5x
+and ~1.8x of the figures above.  Nothing about it is specific to PREM:
+:func:`fastkernels.palindromic` decides, and :mod:`slabs` asks it of any
+sequence handed to it, so a symmetric castle wall is composed at the same
+discount.  :data:`fastkernels.USE_PALINDROME` switches it off, which is
+how to ask for the plain left-to-right product when a comparison needs
+one.
+
+**Ask for an accuracy, not a slab count.**  ``n_slabs_per_segment`` fixes
+the discretisation rather than the error, and the two are not the same:
+the error is strongly energy- and angle-dependent.  Pass ``rtol`` or
+``atol`` to any :mod:`earth` entry point and the chord is refined until
+the measured error meets it, on every returned probability;
+:func:`earth.slabs_for_tolerance` does the search on its own, which is the
+cheap way to run a scan.  See :doc:`recipes`.
 
 **One cost runs the other way.**  Every entry point verifies that the
 Hamiltonian is Hermitian, because one that is not returns probabilities that

@@ -56,8 +56,20 @@ Four flavors                     ~187x       ~7x
 The margin narrows with length, which is the reverse of the table above,
 because what is being avoided here is the *caller's* fixed cost --- a
 dispatched matrix product per slab --- rather than the kernel's.  A whole
-Earth crossing at 120 slabs comes out 13.9x, 9.6x and 6.6x quicker at
-two, three and four flavors.
+Earth crossing at 120 slabs comes out ~12x, ~12x and ~9x quicker at two,
+three and four flavors.
+
+Since 1.12.0 that is not the whole of it, and for a scan it is not even
+the larger part.  An Earth scan takes its energies as an array and its
+zenith angles as another, so the geometry and the matter potentials are
+built once rather than once per point; the chord kernels build each
+slab's Hamiltonian as they go, so the stack that made the batched path
+memory-bound is never allocated; and a chord is a palindrome, so half its
+operators were being computed twice.  Against a Python loop over the same
+2000 energies, an Earth scan is ~38x, ~10x and ~11x quicker at two, three
+and four flavors, and ~460x, ~120x and ~87x against that loop on the
+NumPy path.  The palindrome is ~1.4x, ~1.5x and ~1.8x of that; see
+`USE_PALINDROME`.
 
 Four flavors gains the most, and not because the kernel is cleverer
 there: the NumPy path has the furthest to fall.  Its expansion needs a
