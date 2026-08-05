@@ -164,9 +164,12 @@ The SU(3) machinery is literally nested inside the SU(4) solution.
 
 **A longer star-product tower.**  The three-flavor identity
 :math:`(h \star h) \star h = \tfrac13 |h|^2 h` is a Cayley-Hamilton accident
-of :math:`n = 3` and is *false* at :math:`n = 4` --- over two hundred random
-Hamiltonians the two sides differ by a median of 56%, and by between 30% and
-230% --- so the third rung enters as independent data:
+of :math:`n = 3` and is *false* at :math:`n = 4` --- over two thousand random
+Hamiltonians the two sides differ by a median of 56%, with the central 90% of
+draws between 34% and 116% --- so the third rung enters as independent data.
+The median is the stable statistic here: the extremes of a finite draw are
+not, and grow with the sample, which is why a range of largest-and-smallest
+is not quoted.
 
 .. math::
    u_0 = \frac14 \sum_m e^{-i\psi_m L} , \qquad

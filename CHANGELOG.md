@@ -5,6 +5,47 @@ All notable changes to **NuOscProbExact** are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- **`tests/prem_scan.py` and `tests/prem_speed_accuracy.json`**, the frozen
+  data behind the paper's two Earth speed–accuracy figures, at three flavors
+  and at 3+1.  The module docstring carries the full provenance: the referee,
+  the check on the referee, and every convention that had to be matched
+  before six codes were propagating through the same Earth as this one.
+
+- **`tests/external_drivers/`**, the C and C++ drivers for `NuFast-Earth`,
+  `GLoBES` and `Prob3++`, with the raw output of each and a README recording
+  what every one of them had to be told.  The previous round of this
+  comparison built its drivers in a session scratchpad and lost them.
+  `gen_prem_header.py` emits this library's PREM as a C header from
+  `earth._PREM_COEFFS`, rather than anyone transcribing forty coefficients;
+  it reproduces `earth.density_prem` to 5e-14 over 6372 radii.
+
+### Fixed
+
+- **The convergence order of the slab product was being quoted as first.**
+  It is second: the density is sampled at slab *midpoints* and the PREM shell
+  boundaries are cut exactly, so the leading error is O(h^2).  Measured
+  exponents are 2.000 at 3, 10 and 40 GeV.  The consequence is practical — a
+  Richardson reference built for first order, `2*P(32) - P(16)`, is worse
+  than plain `P(32)`, while `[4*P(256) - P(128)]/3` reaches 1e-11 and is
+  confirmed there by an independent integration of the continuous profile.
+
+- **Three external codes carry three different roundings of the same
+  constant.**  `NuFast-Earth`'s 1.526493231029146e-4, `GLoBES`'
+  7.63247e-14 and `Prob3++`'s 1.52588e-4 are all sqrt(2) G_F over the atomic
+  mass unit, and no two agree, so each needs its own factor against this
+  library's 1.514423e-4 — 0.9920938, 0.992093 and 0.9924922.  Scanning for
+  the residual minimum returns 1.000000 for the first two.
+
+- **The star-product deviation in `methodology.rst` quoted a sample
+  extremum.**  "Between 30% and 230%" is the largest and smallest of one
+  finite draw and grows with the sample; at two thousand Hamiltonians the
+  same measurement gives 27% to 263%.  The median, 56%, is stable and is what
+  the text now leans on, with the central 90% of draws quoted beside it.
+
 ## [1.11.0] - 2026-08-02
 
 **The pre-publishing audit of `src/`.**  Two passes over all ten modules,
