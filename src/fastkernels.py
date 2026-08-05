@@ -80,6 +80,7 @@ Routine listings
     * probabilities_3nu_kernel - Three-flavor probabilities for a stack
     * probabilities_4nu_kernel - Four-flavor probabilities for a stack
     * evolution_operator_3nu_kernel - Three-flavor U_3 for a stack
+    * slab_product_3nu_kernel - U_3 composed across slabs
 """
 
 __author__ = "Mauricio Bustamante"
@@ -88,7 +89,8 @@ __email__ = "mbustamante@gmail.com"
 __all__ = ['HAVE_NUMBA', 'USE_NUMBA', 'MIN_BATCH', 'PARALLEL_THRESHOLD',
            'available', 'worthwhile',
            'probabilities_2nu_kernel', 'probabilities_3nu_kernel',
-           'probabilities_4nu_kernel', 'evolution_operator_3nu_kernel']
+           'probabilities_4nu_kernel', 'evolution_operator_3nu_kernel',
+           'slab_product_3nu_kernel']
 
 from typing import Callable
 
@@ -774,6 +776,59 @@ if HAVE_NUMBA:                                          # pragma: no branch
             _one_3nu_u(h_stack[n], l_stack[n], out, n)
 
     @njit(cache=True)
+    def _slab_product_3nu(h_stack, widths, out):
+        r"""Multiplies the per-slab operators into ``out``, in order.
+
+        Sequential by nature --- the product does not commute --- so
+        there is no parallel counterpart.  The win is not threads: it is
+        that the 120-odd operators of an Earth crossing are never
+        materialised, and the 119 matrix products never leave registers,
+        where the NumPy path allocated a stack of them and then made one
+        dispatched call per multiplication.
+
+        ``U = U_n ... U_2 U_1``: the slab crossed first is applied first
+        and so stands rightmost, because the operator is indexed
+        ``(final, initial)`` and acts to the left on the initial state.
+        Accumulating ``acc <- U_k @ acc`` in increasing k is exactly that
+        order, and getting it backwards is the classic way to be wrong
+        here by something that still looks like a probability.
+        """
+        acc = np.empty((3, 3), dtype=np.complex128)
+        tmp = np.empty((3, 3), dtype=np.complex128)
+
+        (u_ee, u_em, u_et,
+         u_me, u_mm, u_mt,
+         u_te, u_tm, u_tt) = _entries_3nu(h_stack[0], widths[0])
+        acc[0, 0] = u_ee
+        acc[0, 1] = u_em
+        acc[0, 2] = u_et
+        acc[1, 0] = u_me
+        acc[1, 1] = u_mm
+        acc[1, 2] = u_mt
+        acc[2, 0] = u_te
+        acc[2, 1] = u_tm
+        acc[2, 2] = u_tt
+
+        for k in range(1, widths.shape[0]):
+            (u_ee, u_em, u_et,
+             u_me, u_mm, u_mt,
+             u_te, u_tm, u_tt) = _entries_3nu(h_stack[k], widths[k])
+            for j in range(3):
+                a0 = acc[0, j]
+                a1 = acc[1, j]
+                a2 = acc[2, j]
+                tmp[0, j] = u_ee*a0 + u_em*a1 + u_et*a2
+                tmp[1, j] = u_me*a0 + u_mm*a1 + u_mt*a2
+                tmp[2, j] = u_te*a0 + u_tm*a1 + u_tt*a2
+            for i in range(3):
+                for j in range(3):
+                    acc[i, j] = tmp[i, j]
+
+        for i in range(3):
+            for j in range(3):
+                out[i, j] = acc[i, j]
+
+    @njit(cache=True)
     def _run_2nu_serial(h_stack, l_stack, out):
         for n in range(h_stack.shape[0]):
             _one_2nu(h_stack[n], l_stack[n], out, n)
@@ -899,6 +954,36 @@ if HAVE_NUMBA:                                          # pragma: no branch
                     _run_3nu_u_serial, _run_3nu_u_parallel,
                     dtype=complex)
         return flat.reshape(flat.shape[:-1] + (3, 3))
+
+    def slab_product_3nu_kernel(
+        h_stack: np.ndarray,
+        widths: np.ndarray
+    ) -> np.ndarray:
+        r"""Returns the composed :math:`U_3` across a sequence of slabs.
+
+        What :mod:`slabs` and :mod:`earth` actually want.  Computing the
+        per-slab operators in a kernel and then multiplying them in a
+        Python loop left the loop as the dominant cost of an Earth
+        crossing; this does both in one pass.
+
+        Parameters
+        ----------
+        h_stack : numpy.ndarray
+            One Hamiltonian per slab, of shape ``(n, 3, 3)``, ordered
+            along the trajectory.
+        widths : numpy.ndarray
+            Slab widths, of shape ``(n,)``, in units reciprocal to the
+            Hamiltonian.
+
+        Returns
+        -------
+        numpy.ndarray
+            The product ``U_n ... U_1``, of shape ``(3, 3)``.
+        """
+        out = np.empty((3, 3), dtype=complex)
+        _slab_product_3nu(np.ascontiguousarray(h_stack, dtype=complex),
+                          np.ascontiguousarray(widths, dtype=float), out)
+        return out
 
     def probabilities_2nu_kernel(
         h_stack: np.ndarray,

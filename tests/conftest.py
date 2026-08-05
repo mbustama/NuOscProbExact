@@ -100,7 +100,8 @@ def kernel_spy(monkeypatch):
 
     for name in ('probabilities_2nu_kernel', 'probabilities_3nu_kernel',
                  'probabilities_4nu_kernel',
-                 'evolution_operator_3nu_kernel'):
+                 'evolution_operator_3nu_kernel',
+                 'slab_product_3nu_kernel'):
         original = getattr(fastkernels, name, None)
         if original is None:
             continue

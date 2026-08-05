@@ -222,13 +222,21 @@ def test_evolution_operator_matches_between_the_paths(backend, rng):
                        np.eye(3), atol=1.0e-10)
 
 
-def test_evolution_operator_kernel_is_what_slabs_reaches(monkeypatch,
-                                                         kernel_spy):
-    r"""A slab composition enters the compiled operator kernel.
+def test_each_compiled_path_is_actually_reached(monkeypatch, kernel_spy):
+    r"""Each kernel is entered by the route that is supposed to use it.
 
-    Guards the wiring rather than the arithmetic: it is the dispatch in
-    `_evolution_operator_3nu_batch` that was missing, and a kernel that
-    exists but is never called is the bug this replaced.
+    Guards the wiring rather than the arithmetic, because a kernel that
+    exists and is never called is precisely the bug this replaced: the
+    backend had probability kernels only, so `slabs` and `earth` --- which
+    compose operators --- ran the NumPy path however it was configured.
+
+    The two routes are distinct and must stay so.  A bare batched
+    `evolution_operator_3nu` wants the per-slab operators and reaches
+    `evolution_operator_3nu_kernel`; a slab composition wants only their
+    product and reaches `slab_product_3nu_kernel`, which never
+    materialises the stack.  An earlier version of this test asserted the
+    first for the slab path and had to fail when the second arrived,
+    which is the test working.
     """
     if not fastkernels.HAVE_NUMBA:
         pytest.skip('needs the optional Numba backend')
@@ -236,10 +244,45 @@ def test_evolution_operator_kernel_is_what_slabs_reaches(monkeypatch,
 
     h = np.stack([np.diag([1.0, 2.0, -3.0]).astype(complex)]*12)
     widths = np.full(12, 0.3)
-    slabs.probabilities_3nu_slabs(h, widths)
 
+    oscprob3nu.evolution_operator_3nu(h, widths)
     assert kernel_spy['evolution_operator_3nu_kernel'] == 1, (
-        'the slab path did not reach the compiled evolution-operator kernel')
+        'a batched evolution_operator_3nu did not reach its kernel')
+
+    slabs.probabilities_3nu_slabs(h, widths)
+    assert kernel_spy['slab_product_3nu_kernel'] == 1, (
+        'the slab path did not reach the compiled product kernel')
+    assert kernel_spy['evolution_operator_3nu_kernel'] == 1, (
+        'the slab path materialised the operator stack instead of '
+        'composing it in the kernel')
+
+
+def test_slab_composition_matches_between_the_paths(backend, rng):
+    r"""The composed operator agrees on both backends.
+
+    Covers the NumPy composition loop, which is unreachable whenever
+    Numba is present --- `worthwhile(3, n)` is true at every size, so the
+    compiled product takes every three-flavor slab sequence.  This is the
+    third branch in this release to be orphaned by a kernel landing
+    above it, so it is worth saying why the `backend` fixture is not
+    decoration here.
+    """
+    for n in (1, 2, 17, 64):
+        h = np.stack([random_hermitian(rng, 3) for _ in range(n)])
+        w = rng.uniform(0.05, 2.0, size=n)
+
+        u = np.asarray(slabs.evolution_operator_3nu_slabs(h, w))
+        assert u.shape == (3, 3)
+        assert np.allclose(u.conj().T @ u, np.eye(3), atol=1.0e-10)
+
+        # Against the product built one slab at a time, in the order the
+        # neutrino meets them: first crossed, rightmost.
+        expected = np.asarray(oscprob3nu.evolution_operator_3nu(
+            as_nested_list(h[0]), float(w[0])))
+        for k in range(1, n):
+            expected = np.asarray(oscprob3nu.evolution_operator_3nu(
+                as_nested_list(h[k]), float(w[k]))) @ expected
+        assert np.allclose(u, expected, atol=ATOL)
 
 
 def test_kernel_matches_the_scalar_path(rng, monkeypatch):

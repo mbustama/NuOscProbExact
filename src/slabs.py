@@ -65,6 +65,7 @@ from typing import Tuple, Union
 
 import numpy as np
 
+import fastkernels
 import oscprob2nu
 import oscprob3nu
 import oscprob4nu
@@ -150,6 +151,13 @@ def _evolution_operator_slabs(
         ``(n_flavors, n_flavors)``.
     """
     h, w = _check_slabs(hamiltonian_matrices, widths, n_flavors, caller)
+
+    # The compiled path computes the operators *and* composes them in one
+    # pass, so the stack is never materialised and the products never
+    # leave registers.  Composing in Python was the largest single cost of
+    # an Earth crossing once the operators themselves were compiled.
+    if n_flavors == 3 and fastkernels.worthwhile(3, w.shape[0]):
+        return fastkernels.slab_product_3nu_kernel(h, w)
 
     # One batched call for all the slabs, rather than one call per slab:
     # the per-slab operators are independent of each other, and only their

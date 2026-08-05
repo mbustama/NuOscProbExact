@@ -83,6 +83,7 @@ __all__ = ['LOC_COORDS_DMS', 'PREM_BOUNDARIES',
            'probabilities_3nu_between_locations',
            'probabilities_4nu_between_locations']
 
+from functools import lru_cache
 from typing import Optional, Tuple, Union
 
 import numpy as np
@@ -748,6 +749,65 @@ def costhz_between_points_on_surface(
     return -0.5*chord/gd.EARTH_RADIUS
 
 
+@lru_cache(maxsize=256)
+def _earth_slabs_cached(
+    costhz: float,
+    n_slabs_per_segment: int
+) -> Tuple[np.ndarray, np.ndarray]:
+    r"""Returns the cached slab widths and densities along a chord.
+
+    The chord geometry depends on the zenith angle alone --- not on the
+    neutrino energy, nor on the flavor count, nor on the Hamiltonian.  A
+    scan over energy at fixed `costhz` therefore recomputed the identical
+    PREM crossing for every point, which measured 176 of the 396
+    microseconds an Earth probability took: the single largest cost in
+    the call, and entirely redundant.
+
+    The arrays handed back are marked read-only, so that the copy the
+    public `earth_slabs` makes is the only writable one and an accidental
+    write in here raises rather than silently poisoning the cache for
+    every later caller.
+
+    Validation lives in this function rather than in the wrapper because
+    `_earth_hamiltonians` calls it directly, and a check that only the
+    public path performs is a check with a way around it.
+    """
+    _check_costhz(costhz, 'earth_slabs')
+    if costhz >= 0.0:
+        raise ValueError(
+            'earth_slabs: costhz must be negative for the neutrino to cross '
+            'the Earth; got %s' % costhz)
+    if n_slabs_per_segment < 1:
+        raise ValueError('earth_slabs: n_slabs_per_segment must be at least 1')
+
+    d = distance_traveled_inside_earth(costhz)
+    edges = np.concatenate(([0.0], prem_layer_edges_along_chord(costhz), [d]))
+
+    widths = []
+    midpoints = []
+    for start, end in zip(edges[:-1], edges[1:]):
+        # `prem_layer_edges_along_chord` returns strictly increasing values
+        # strictly inside (0, d), and np.unique has already removed exact
+        # duplicates, so `edges` is strictly increasing and this cannot
+        # fire.  It is kept against a crossing that rounds onto an endpoint,
+        # which would otherwise produce a zero-width slab.
+        if end <= start:                          # pragma: no cover
+            continue
+        sub = np.linspace(start, end, n_slabs_per_segment+1)
+        widths.append(np.diff(sub))
+        midpoints.append((sub[:-1]+sub[1:])/2.0)
+
+    widths = np.concatenate(widths)
+    midpoints = np.concatenate(midpoints)
+    densities = density_prem(
+        earth_radial_distance_from_depth(costhz, midpoints))
+
+    widths.flags.writeable = False
+    densities.flags.writeable = False
+
+    return widths, densities
+
+
 def earth_slabs(
     costhz: Union[int, float],
     n_slabs_per_segment: int = 8
@@ -793,37 +853,12 @@ def earth_slabs(
         widths, densities = earth.earth_slabs(-1.0, n_slabs_per_segment=2)
         print(len(widths), '%.1f' % sum(widths))
     """
-    _check_costhz(costhz, 'earth_slabs')
-    if costhz >= 0.0:
-        raise ValueError(
-            'earth_slabs: costhz must be negative for the neutrino to cross '
-            'the Earth; got %s' % costhz)
-    if n_slabs_per_segment < 1:
-        raise ValueError('earth_slabs: n_slabs_per_segment must be at least 1')
+    widths, densities = _earth_slabs_cached(float(costhz),
+                                            int(n_slabs_per_segment))
 
-    d = distance_traveled_inside_earth(costhz)
-    edges = np.concatenate(([0.0], prem_layer_edges_along_chord(costhz), [d]))
-
-    widths = []
-    midpoints = []
-    for start, end in zip(edges[:-1], edges[1:]):
-        # `prem_layer_edges_along_chord` returns strictly increasing values
-        # strictly inside (0, d), and np.unique has already removed exact
-        # duplicates, so `edges` is strictly increasing and this cannot
-        # fire.  It is kept against a crossing that rounds onto an endpoint,
-        # which would otherwise produce a zero-width slab.
-        if end <= start:                          # pragma: no cover
-            continue
-        sub = np.linspace(start, end, n_slabs_per_segment+1)
-        widths.append(np.diff(sub))
-        midpoints.append((sub[:-1]+sub[1:])/2.0)
-
-    widths = np.concatenate(widths)
-    midpoints = np.concatenate(midpoints)
-    densities = density_prem(
-        earth_radial_distance_from_depth(costhz, midpoints))
-
-    return widths, densities
+    # A copy, because the cached arrays are shared with every other
+    # caller and this one is entitled to modify what it is given.
+    return widths.copy(), densities.copy()
 
 
 def _earth_hamiltonians(
@@ -859,7 +894,10 @@ def _earth_hamiltonians(
         The Hamiltonians, of shape ``(n, n_flavors, n_flavors)``, and
         the slab widths in units of eV\ :sup:`-1`.
     """
-    widths_km, densities = earth_slabs(costhz, n_slabs_per_segment)
+    # The cached arrays directly: this routine only reads them, and
+    # the multiplication below allocates its own result.
+    widths_km, densities = _earth_slabs_cached(float(costhz),
+                                               int(n_slabs_per_segment))
     potentials = matter_potential(densities, electron_fraction)
 
     # The Hamiltonian builders take an array of potentials and return one
