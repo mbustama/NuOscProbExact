@@ -1,0 +1,120 @@
+{
+ "note": "Speed-accuracy comparison at L = 1300 km, rho = 3 g/cm^3, three flavors, channel P(nu_mu -> nu_e). Accuracy is max |P - P_ref| over 60 energies spanning 0.6-20 GeV, against a 50-digit mpmath matrix exponential of the same Hamiltonian, so that no code serves as its own reference. Timing is per probability over a 2000-point scan, best of several runs, on one desktop machine. Every code is given the same V_CC and the same baseline in eV^-1; see the provenance comments in notebooks/10_paper_figures.ipynb.",
+ "series": [
+  {
+   "name": "NuOscProbExact",
+   "dial": "batch mode (speed only; accuracy is fixed)",
+   "points": [
+    {
+     "label": "Array + kernel",
+     "us_per_probability": 0.23,
+     "max_abs_error": 9.71e-16
+    },
+    {
+     "label": "Array",
+     "us_per_probability": 0.955,
+     "max_abs_error": 9.85e-16
+    },
+    {
+     "label": "One at a time",
+     "us_per_probability": 31.235,
+     "max_abs_error": 8.88e-16
+    }
+   ]
+  },
+  {
+   "name": "nuSQuIDS",
+   "version": "1.13.3",
+   "dial": "solver tolerance",
+   "points": [
+    {
+     "label": "1e-4",
+     "us_per_probability": 51.61,
+     "max_abs_error": 0.000183
+    },
+    {
+     "label": "1e-6",
+     "us_per_probability": 56.96,
+     "max_abs_error": 1.16e-06
+    },
+    {
+     "label": "1e-8",
+     "us_per_probability": 62.1,
+     "max_abs_error": 3.1e-08
+    },
+    {
+     "label": "1e-10",
+     "us_per_probability": 102.36,
+     "max_abs_error": 1.89e-08
+    },
+    {
+     "label": "1e-12",
+     "us_per_probability": 189.37,
+     "max_abs_error": 1.89e-08
+    }
+   ]
+  },
+  {
+   "name": "NuFast-LBL",
+   "version": "arXiv:2405.02400",
+   "dial": "Newton refinement steps",
+   "points": [
+    {
+     "label": "0",
+     "us_per_probability": 0.044,
+     "max_abs_error": 1.53e-05
+    },
+    {
+     "label": "1",
+     "us_per_probability": 0.052,
+     "max_abs_error": 4.87e-09
+    },
+    {
+     "label": "2",
+     "us_per_probability": 0.06,
+     "max_abs_error": 8.3e-12
+    },
+    {
+     "label": "3",
+     "us_per_probability": 0.066,
+     "max_abs_error": 8.3e-12
+    }
+   ]
+  },
+  {
+   "name": "GLoBES",
+   "version": "3.2.18",
+   "dial": "none exposed",
+   "points": [
+    {
+     "label": "glbConstantDensityProbability",
+     "us_per_probability": 0.739,
+     "max_abs_error": 1.04e-07
+    }
+   ]
+  },
+  {
+   "name": "Prob3++",
+   "version": "github.com/rogerwendell/Prob3plusplus",
+   "dial": "none exposed",
+   "points": [
+    {
+     "label": "propagateLinear",
+     "us_per_probability": 1.06,
+     "max_abs_error": 4.49e-05
+    }
+   ]
+  },
+  {
+   "name": "Second-order expansion",
+   "dial": "none",
+   "points": [
+    {
+     "label": "analytic",
+     "us_per_probability": 0.2495,
+     "max_abs_error": 0.00651
+    }
+   ]
+  }
+ ]
+}

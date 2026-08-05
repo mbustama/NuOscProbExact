@@ -366,7 +366,11 @@ evaluated by compiled kernels instead of NumPy, which is worth roughly
    pip install "nuoscprobexact[fast]"
 
 Nothing in your code changes; :mod:`fastkernels` is picked up
-automatically, and the answers are the same to round-off.  If it is not
+automatically, and the answers are the same to round-off.  That includes
+:mod:`slabs` and :mod:`earth`, which compose evolution operators rather
+than computing probabilities: they have their own kernel, which does a
+whole trajectory in one pass, and an Earth crossing is between seven and
+fourteen times quicker with it.  If it is not
 installed, the NumPy path is used and everything works as before.
 
 It is used only where it is faster.  For three flavors that is every stack

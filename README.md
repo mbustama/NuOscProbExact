@@ -75,7 +75,7 @@ The method relies on expansions of the Hamiltonian and time-evolution operators 
 * **Whole scans in one call.**  Every core routine accepts a stack of Hamiltonians, an array of baselines, or both broadcast against each other, which is tens of times faster than the equivalent Python loop and gives identical results.
 * **Piecewise-constant matter.**  `slabs` propagates across a sequence of adjacent slabs of arbitrary width and density, solving each exactly and multiplying the operators, at two, three or four flavors.
 * **The Earth.**  `earth` builds those slabs from the Preliminary Reference Earth Model, and computes probabilities along a given zenith angle or between two of fifteen predefined locations.  A 3+1 crossing is included: the sterile state does not feel the neutral-current potential, so that potential stops cancelling and `earth` builds it per slab.
-* **An optional compiled backend.**  With `numba` installed, large batched calls run on compiled kernels; without it the NumPy path is used and the answers are the same to round-off.
+* **An optional compiled backend.**  With `numba` installed, large batched calls run on compiled kernels, and so does the whole slab composition behind `slabs` and `earth` — an Earth crossing is 7–14× quicker depending on the flavor count.  Without it the NumPy path is used and the answers are the same to round-off.
 
 ### What it does not do
 
@@ -185,6 +185,7 @@ NuOscProbExact/
 │       └── publish.yml              # Publishes to PyPI on a GitHub Release
 ├── .gitignore                       # Build, cache, and generated-output artefacts
 ├── CHANGELOG.md                     # Notable changes, rendered as a docs page
+├── RELEASE_NOTES.md                 # What changed since the published version
 ├── LICENSE                          # MIT license
 ├── README.md                        # Project overview and worked examples
 ├── pyproject.toml                   # Packaging metadata and pytest configuration
@@ -249,7 +250,8 @@ NuOscProbExact/
 │   ├── 16_four_neutrinos.ipynb      # A 3+1 sterile state, through the SU(4) expansion
 │   ├── 17_cross_checks.ipynb        # Corroboration from nuSQuIDS and Zaglauer-Schwarzer
 │   ├── 18_evolution_operator.ipynb  # The operator, and the SU(n) coefficients
-│   └── make_notebooks.py            # Generates and executes all of the above
+│   ├── make_notebooks.py            # Generates and executes all of the above
+│   └── coastlines_crude.json        # Coastlines for the Earth cutaway, from GSHHS
 ├── src/                             # The library
 │   ├── oscprob2nu.py                # Two-flavor probabilities, SU(2) expansion
 │   ├── oscprob3nu.py                # Three-flavor probabilities, SU(3) expansion
@@ -279,11 +281,30 @@ NuOscProbExact/
     ├── test_physical_scales.py      # Both backends at the scales actually used
     ├── test_slabs.py                # Slab composition, against expm
     ├── test_earth.py                # PREM, geometry, and Earth probabilities
+    ├── test_batching_and_tolerance.py  # Energy batching, and the rtol/atol refinement
+    ├── bit_capture.py               # Exact-bit capture, for refactors meant to be invisible
+    ├── bit_compare.py               # Compares two captures, in ulps
     ├── test_documented_figures.py   # Keeps the quoted performance figures agreeing
     ├── test_version_consistency.py  # Keeps the version agreeing wherever it is implied
     ├── test_nusquids_comparison.py  # Against nuSQuIDS, an independent external code
     ├── nusquids_reference.py        # Regenerates the frozen nuSQuIDS reference data
     ├── nusquids_reference.json      # Those reference values, with their provenance
+    ├── nusquids_scan.py             # Regenerates the frozen nuSQuIDS energy scan
+    ├── nusquids_scan.json           # That scan, for the paper's figures
+    ├── nufast_scan.json             # NuFast-LBL at two Newton settings
+    ├── speed_accuracy.json          # The six-code constant-density speed-accuracy plane
+    ├── timing_other_codes.json      # Timings behind the performance figure
+    ├── prem_scan.py                 # Regenerates the two Earth speed-accuracy planes
+    ├── prem_speed_accuracy.json     # Those planes, at three flavors and at 3+1
+    ├── external_drivers/            # Drivers for the codes that cannot be called from Python
+    │   ├── README.md                # Every convention each one had to be told, and why
+    │   ├── gen_prem_header.py       # Emits this library's PREM as a C header
+    │   ├── nufast_drv.cpp           # NuFast-Earth on the PREM chord
+    │   ├── nufast_earth_prem.txt
+    │   ├── globes_drv.c             # GLoBES on the PREM chord
+    │   ├── globes_prem.txt
+    │   ├── prob3_drv.cpp            # Prob3++ on the PREM chord
+    │   └── prob3_prem.txt
     └── test_file_tree.py            # Keeps this tree in step with the repository
 ```
 
@@ -370,6 +391,8 @@ Measured on 2000-point scans, against the equivalent Python loop:
 Best of seven runs, interleaved, on one machine.  These are indicative, not precise: repeated runs vary by tens of per cent, so treat them as orders of magnitude.  [Notebook 09](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/09_performance.ipynb) measures the same comparison on whatever machine runs it, which is the number to trust.
 
 **Checking the input costs more than the arithmetic on a large scan.**  Every entry point verifies that the Hamiltonian is Hermitian, because one that is not returns probabilities that still sum to one — so nothing downstream reveals the mistake.  Validating a stack is a pass over it, the same order of work as evaluating it: 1.3× to 1.8× at two thousand points, and 3.2× to 5.7× at two hundred thousand, where the compiled kernel has made the evaluation fast enough that the check dominates.  If your Hamiltonians come from a construction you already trust — everything `hamiltonians2nu`, `hamiltonians3nu` and `hamiltonians4nu` build is Hermitian to round-off — decline it with `oscprob3nu.CHECK_HERMITICITY = False`, and likewise on the other two modules.
+
+**Layered matter gets its own kernel.**  `slabs` and `earth` compose evolution operators rather than computing probabilities, so until 1.12.0 they could not use the backend at all and quietly ran the NumPy path.  They now compose the whole trajectory in one compiled pass — never materialising the stack, never dispatching a product per slab — which is worth 13.9×, 9.6× and 6.6× on an Earth crossing at two, three and four flavors.  The threshold there is one slab, not `MIN_BATCH`: the comparison is against a Python loop, so the kernel is ahead at every length.
 
 **The backend is not used where it would not help.**  For three flavors it wins at every stack size, by between two and sixteen times.  For two flavors it does not: that expansion reduces to a square root and a sine per element, which NumPy already does about as well as compiled code can, and the kernel additionally has to materialise the Hamiltonian stack.  Below fifty thousand elements the NumPy path is quicker, so it is kept; above, the kernel leads by about 1.3–1.8×.  The thresholds are measured, and the library picks whichever is faster without you doing anything.
 

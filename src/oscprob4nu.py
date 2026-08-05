@@ -1025,6 +1025,16 @@ def _evolution_operator_4nu_array(
     traceless = np.broadcast_to(traceless, leading + (4, 4))
     baseline = np.broadcast_to(baseline, leading)
 
+    # The compiled path, where there is one.  This is what `slabs` and
+    # `earth` reach at four flavors: they compose operators, so they never
+    # call `probabilities_4nu` and saw no kernel until this existed.  The
+    # traceless part is passed on, since that is what the kernel expands
+    # and what the NumPy path below uses.
+    size = int(np.prod(leading, dtype=np.int64))
+    if size > 0 and fastkernels.worthwhile(4, size):
+        return fastkernels.evolution_operator_4nu_kernel(
+            traceless, baseline, POLISH_ROOTS)
+
     psi = _latent_roots(traceless)
     coefficients = _divided_differences(psi, baseline)
 

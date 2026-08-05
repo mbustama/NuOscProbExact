@@ -59,6 +59,7 @@ Routine listings
     * chord_length_inside_earth - Chord between two surface locations
     * costhz_between_points_on_surface - Its zenith angle
     * earth_slabs - Slab widths and densities along a chord
+    * slabs_for_tolerance - Subdivision needed for a stated tolerance
     * probabilities_2nu_earth - Two-flavor probabilities across the Earth
     * probabilities_3nu_earth - Three-flavor probabilities across the Earth
     * probabilities_4nu_earth - Four-flavor probabilities across the Earth
@@ -77,20 +78,25 @@ __all__ = ['LOC_COORDS_DMS', 'PREM_BOUNDARIES',
            'earth_radial_distance_from_depth',
            'prem_layer_edges_along_chord', 'chord_length_inside_earth',
            'costhz_between_points_on_surface', 'earth_slabs',
+           'slabs_for_tolerance',
            'probabilities_2nu_earth', 'probabilities_3nu_earth',
            'probabilities_4nu_earth',
            'probabilities_2nu_between_locations',
            'probabilities_3nu_between_locations',
            'probabilities_4nu_between_locations']
 
+import os
+from functools import lru_cache
 from typing import Optional, Tuple, Union
 
 import numpy as np
 
+import fastkernels
 import globaldefs as gd
 import hamiltonians2nu
 import hamiltonians3nu
 import hamiltonians4nu
+import oscprob4nu
 import slabs
 
 
@@ -748,6 +754,80 @@ def costhz_between_points_on_surface(
     return -0.5*chord/gd.EARTH_RADIUS
 
 
+@lru_cache(maxsize=256)
+def _earth_slabs_cached(
+    costhz: float,
+    n_slabs_per_segment: int
+) -> Tuple[np.ndarray, np.ndarray]:
+    r"""Returns the cached slab widths and densities along a chord.
+
+    The chord geometry depends on the zenith angle alone --- not on the
+    neutrino energy, nor on the flavor count, nor on the Hamiltonian.  A
+    scan over energy at fixed `costhz` therefore recomputed the identical
+    PREM crossing for every point, which measured 176 of the 396
+    microseconds an Earth probability took: the single largest cost in
+    the call, and entirely redundant.
+
+    The arrays handed back are marked read-only, so that the copy the
+    public `earth_slabs` makes is the only writable one and an accidental
+    write in here raises rather than silently poisoning the cache for
+    every later caller.
+
+    Validation lives in this function rather than in the wrapper because
+    `_earth_hamiltonians` calls it directly, and a check that only the
+    public path performs is a check with a way around it.
+    """
+    _check_costhz(costhz, 'earth_slabs')
+    if costhz >= 0.0:
+        raise ValueError(
+            'earth_slabs: costhz must be negative for the neutrino to cross '
+            'the Earth; got %s' % costhz)
+    if n_slabs_per_segment < 1:
+        raise ValueError('earth_slabs: n_slabs_per_segment must be at least 1')
+
+    d = distance_traveled_inside_earth(costhz)
+    edges = np.concatenate(([0.0], prem_layer_edges_along_chord(costhz), [d]))
+
+    widths = []
+    midpoints = []
+    for start, end in zip(edges[:-1], edges[1:]):
+        # `prem_layer_edges_along_chord` returns strictly increasing values
+        # strictly inside (0, d), and np.unique has already removed exact
+        # duplicates, so `edges` is strictly increasing and this cannot
+        # fire.  It is kept against a crossing that rounds onto an endpoint,
+        # which would otherwise produce a zero-width slab.
+        if end <= start:                          # pragma: no cover
+            continue
+        sub = np.linspace(start, end, n_slabs_per_segment+1)
+        widths.append(np.diff(sub))
+        midpoints.append((sub[:-1]+sub[1:])/2.0)
+
+    widths = np.concatenate(widths)
+    midpoints = np.concatenate(midpoints)
+    densities = density_prem(
+        earth_radial_distance_from_depth(costhz, midpoints))
+
+    # A chord through a spherically symmetric Earth meets every radius
+    # twice, symmetrically about its closest approach, so both of these
+    # are palindromes.  The densities come out exactly palindromic
+    # already; the widths do not, because each segment is cut by its own
+    # `linspace` and the two halves round differently --- by about
+    # 1e-12 km on a 100 km slab.  Averaging each element with its mirror
+    # makes both exact, since floating-point addition is commutative and
+    # so the two ends of a pair get bitwise identical results.
+    #
+    # This is not housekeeping.  `_palindromic` decides on exact equality
+    # whether a chord can be composed at half cost, and a difference in
+    # the last bit is the difference between taking that path and not.
+    widths = (widths + widths[::-1])/2.0
+    densities = (densities + densities[::-1])/2.0
+
+    widths.flags.writeable = False
+    densities.flags.writeable = False
+
+    return widths, densities
+
+
 def earth_slabs(
     costhz: Union[int, float],
     n_slabs_per_segment: int = 8
@@ -793,43 +873,18 @@ def earth_slabs(
         widths, densities = earth.earth_slabs(-1.0, n_slabs_per_segment=2)
         print(len(widths), '%.1f' % sum(widths))
     """
-    _check_costhz(costhz, 'earth_slabs')
-    if costhz >= 0.0:
-        raise ValueError(
-            'earth_slabs: costhz must be negative for the neutrino to cross '
-            'the Earth; got %s' % costhz)
-    if n_slabs_per_segment < 1:
-        raise ValueError('earth_slabs: n_slabs_per_segment must be at least 1')
+    widths, densities = _earth_slabs_cached(float(costhz),
+                                            int(n_slabs_per_segment))
 
-    d = distance_traveled_inside_earth(costhz)
-    edges = np.concatenate(([0.0], prem_layer_edges_along_chord(costhz), [d]))
-
-    widths = []
-    midpoints = []
-    for start, end in zip(edges[:-1], edges[1:]):
-        # `prem_layer_edges_along_chord` returns strictly increasing values
-        # strictly inside (0, d), and np.unique has already removed exact
-        # duplicates, so `edges` is strictly increasing and this cannot
-        # fire.  It is kept against a crossing that rounds onto an endpoint,
-        # which would otherwise produce a zero-width slab.
-        if end <= start:                          # pragma: no cover
-            continue
-        sub = np.linspace(start, end, n_slabs_per_segment+1)
-        widths.append(np.diff(sub))
-        midpoints.append((sub[:-1]+sub[1:])/2.0)
-
-    widths = np.concatenate(widths)
-    midpoints = np.concatenate(midpoints)
-    densities = density_prem(
-        earth_radial_distance_from_depth(costhz, midpoints))
-
-    return widths, densities
+    # A copy, because the cached arrays are shared with every other
+    # caller and this one is entitled to modify what it is given.
+    return widths.copy(), densities.copy()
 
 
 def _earth_hamiltonians(
     h_vacuum_energy_independent: Union[list, np.ndarray],
-    energy: Union[int, float],
-    costhz: Union[int, float],
+    energy: Union[int, float, list, np.ndarray],
+    costhz: Union[int, float, list, np.ndarray],
     n_slabs_per_segment: int,
     electron_fraction: float,
     n_flavors: int
@@ -840,8 +895,9 @@ def _earth_hamiltonians(
     ----------
     h_vacuum_energy_independent : array_like
         Energy-independent vacuum Hamiltonian.
-    energy : int or float
-        Neutrino energy, in units of eV.
+    energy : int, float or numpy.ndarray
+        Neutrino energy, in units of eV, or an array of energies, in
+        which case one chord of Hamiltonians is built per energy.
     costhz : int or float
         Cosine of the zenith angle.
     n_slabs_per_segment : int
@@ -856,11 +912,23 @@ def _earth_hamiltonians(
     Returns
     -------
     tuple of numpy.ndarray
-        The Hamiltonians, of shape ``(n, n_flavors, n_flavors)``, and
-        the slab widths in units of eV\ :sup:`-1`.
+        The Hamiltonians, of shape ``(n, n_flavors, n_flavors)`` for a
+        scalar energy and ``(..., n, n_flavors, n_flavors)`` for an
+        array of them, and the slab widths in units of eV\ :sup:`-1`.
     """
-    widths_km, densities = earth_slabs(costhz, n_slabs_per_segment)
+    # The cached arrays directly: this routine only reads them, and
+    # the multiplication below allocates its own result.
+    widths_km, densities = _earth_slabs_cached(float(costhz),
+                                               int(n_slabs_per_segment))
     potentials = matter_potential(densities, electron_fraction)
+
+    # The slab axis is the last one the potentials carry, so the energy
+    # gains a trailing axis of its own to broadcast against it: a scalar
+    # energy still yields one chord, and an array of energies yields one
+    # chord each, through the same expression.  The matter potential
+    # depends on the geometry alone, so a scan over energy builds it once
+    # here rather than once per energy.
+    energy = np.asarray(energy, dtype=float)[..., None]
 
     # The Hamiltonian builders take an array of potentials and return one
     # Hamiltonian per entry, so the whole chord is built in one call.
@@ -881,13 +949,641 @@ def _earth_hamiltonians(
     return h, widths_km*gd.CONV_KM_TO_INV_EV
 
 
+CHUNK_BYTES_FALLBACK = 16*1024*1024
+r"""int: Module-level constant.
+
+Chunk size assumed when the cache size cannot be read, in bytes.  A
+middling last-level cache for a machine of the era; see
+`MAX_CHUNK_BYTES`.
+
+.. versionadded:: 1.12.0
+"""
+
+CHUNK_BYTES_MIN = 4*1024*1024
+r"""int: Module-level constant.
+
+Smallest chunk the detected cache size may produce, in bytes.  Below
+roughly this the per-chunk overhead starts to cost more than the cache
+residency buys.
+
+.. versionadded:: 1.12.0
+"""
+
+CHUNK_BYTES_MAX = 64*1024*1024
+r"""int: Module-level constant.
+
+Largest chunk the detected cache size may produce, in bytes.  A server
+with a very large last-level cache should not turn that into a very
+large allocation.
+
+.. versionadded:: 1.12.0
+"""
+
+MIN_CHUNK_ENERGIES = 32
+r"""int: Module-level constant.
+
+Fewest energies a chunk may hold, whatever the byte budget says.  A
+four-flavor chord with a thousand slabs costs a quarter of a megabyte
+per energy, and cutting that into chunks of one or two would spend more
+time re-entering the kernel than it saved.
+
+.. versionadded:: 1.12.0
+"""
+
+
+_SYSFS_CACHE = '/sys/devices/system/cpu/cpu0/cache'
+
+
+def _cache_bytes_from_sysconf() -> Optional[int]:
+    r"""Returns the largest cache size :func:`os.sysconf` reports, or None.
+
+    Some POSIX builds carry ``SC_LEVEL*_CACHE_SIZE`` names and some do
+    not; the ones that do not raise `ValueError` when asked, which is
+    why each name is tried separately rather than in one block.
+
+    Returns
+    -------
+    int or None
+        The largest cache size in bytes, or None if none is reported.
+    """
+    largest = None
+    for name in ('SC_LEVEL4_CACHE_SIZE', 'SC_LEVEL3_CACHE_SIZE',
+                 'SC_LEVEL2_CACHE_SIZE'):
+        try:
+            size = os.sysconf(name)
+        except (ValueError, OSError, AttributeError):
+            continue
+        if isinstance(size, int) and size > 0:
+            largest = size if largest is None else max(largest, size)
+
+    return largest
+
+
+def _cache_bytes_from_sysfs() -> Optional[int]:
+    r"""Returns the largest cache size ``sysfs`` reports, or None.
+
+    Linux only, and the most reliable of the three where it exists.
+
+    Returns
+    -------
+    int or None
+        The largest cache size in bytes, or None if it cannot be read.
+    """
+    scale = {'K': 1024, 'M': 1024*1024, 'G': 1024*1024*1024}
+    largest = None
+
+    for entry in os.listdir(_SYSFS_CACHE):
+        try:
+            with open(os.path.join(_SYSFS_CACHE, entry, 'size')) as handle:
+                text = handle.read().strip()
+        except OSError:
+            continue
+        if not text:
+            continue
+        unit = scale.get(text[-1].upper(), 1)
+        try:
+            size = int(text[:-1] if unit > 1 else text)*unit
+        except ValueError:
+            continue
+        if largest is None or size > largest:
+            largest = size
+
+    return largest
+
+
+def _cache_bytes_from_sysctl() -> Optional[int]:
+    r"""Returns the largest cache size ``sysctl`` reports, or None.
+
+    macOS, through :mod:`ctypes` rather than the ``sysctl`` command:
+    spawning a subprocess while a module is still being imported is a
+    great deal more to go wrong than this is worth.  Apple Silicon
+    reports no ``hw.l3cachesize``, so the per-performance-level L2 is
+    asked for as well, that being the largest cache those machines have.
+
+    Returns
+    -------
+    int or None
+        The largest cache size in bytes, or None if none is reported.
+    """
+    import ctypes
+    import ctypes.util
+
+    path = ctypes.util.find_library('c')
+    if path is None:
+        return None
+    libc = ctypes.CDLL(path)
+    if not hasattr(libc, 'sysctlbyname'):
+        return None
+
+    largest = None
+    for name in (b'hw.l3cachesize', b'hw.perflevel0.l2cachesize',
+                 b'hw.l2cachesize'):
+        value = ctypes.c_uint64(0)
+        length = ctypes.c_size_t(ctypes.sizeof(value))
+        # `pointer` rather than `byref`: the extra object it builds costs
+        # nothing at import time, and it is writable from Python, so the
+        # parsing below can be tested on a machine with no `sysctl` at
+        # all rather than only asserted about.
+        if libc.sysctlbyname(name, ctypes.pointer(value),
+                             ctypes.pointer(length), None, 0) != 0:
+            continue
+        if value.value > 0:
+            largest = (value.value if largest is None
+                       else max(largest, value.value))
+
+    return largest
+
+
+def _last_level_cache_bytes() -> Optional[int]:
+    r"""Returns the size of the largest CPU cache, in bytes, or None.
+
+    There is no portable way to ask, so three ways are tried and the
+    first that answers wins: :func:`os.sysconf`, which some POSIX builds
+    carry; Linux's ``sysfs``; and macOS's ``sysctl``.  Windows is not
+    probed --- doing it means untested :mod:`ctypes` calls into
+    ``kernel32`` running at import time on machines this was never run
+    on, which is a poor trade for a hint.
+
+    Every probe is wrapped, and broadly.  This value only tunes how a
+    long scan is cut into pieces: being wrong costs some speed and
+    nothing else, so no failure of it should be able to stop
+    :mod:`earth` from importing.  `CHUNK_BYTES_FALLBACK` is deliberately
+    a plausible answer rather than a degenerate one.
+
+    Returns
+    -------
+    int or None
+        The largest cache size in bytes, or None if nothing answered.
+    """
+    for probe in (_cache_bytes_from_sysconf, _cache_bytes_from_sysfs,
+                  _cache_bytes_from_sysctl):
+        try:
+            size = probe()
+        except Exception:                       # noqa: BLE001
+            continue
+        if size:
+            return size
+
+    return None
+
+
+MAX_CHUNK_BYTES = min(CHUNK_BYTES_MAX,
+                      max(CHUNK_BYTES_MIN,
+                          _last_level_cache_bytes() or CHUNK_BYTES_FALLBACK))
+r"""int: Module-level constant.
+
+Rough ceiling on the Hamiltonian stack an array of energies may build at
+once, in bytes.  Longer scans are evaluated in chunks of that size.
+Set it to retune; nothing caches the value.
+
+There are two reasons to chunk, and the second is the one that sets the
+number.
+
+The first is memory.  The stack is proportional to the scan length: a
+hundred thousand energies across a 120-slab chord is 1.6 GB at three
+flavors and, counting the traceless copy the expansion needs, nearly
+6 GB at four.  That is an ordinary oscillogram, not an abusive input.
+
+The second is that **the batched kernel is memory-bound, not
+compute-bound**, and this is what makes the chunk size worth choosing
+rather than merely bounding.  The stack is written by the Hamiltonian
+builder and then streamed by the kernel, which does little arithmetic
+per byte; if it fits in the last-level cache the second pass is nearly
+free, and if it does not, every slab is fetched from memory.  Measured
+on one machine, cost per probability was 7.9 microseconds with an
+8 MB working set and 16.4 with a 540 MB one --- a factor of two paid for
+nothing but traffic.  Interleaved against a 64 MB chunk, a cache-sized
+one was 1.3x to 1.8x quicker across both chord lengths and all three
+flavor counts, and never slower.
+
+So the default is the detected last-level cache, clamped into
+``[CHUNK_BYTES_MIN, CHUNK_BYTES_MAX]``, falling back to
+`CHUNK_BYTES_FALLBACK` where it cannot be read.  That is a *guess at the
+right order of magnitude*, not a tuned constant: it was measured on one
+12 MB machine, the optimum is broad, and any value near the cache beats
+one far above it.  A machine whose cache is shared between busy cores
+may do better with less.  It is a plain module attribute for that
+reason.
+
+.. versionadded:: 1.12.0
+"""
+
+
+def _probabilities_earth_batch(
+    h_vacuum_energy_independent: Union[list, np.ndarray],
+    energy: np.ndarray,
+    costhz: Union[int, float, list, np.ndarray],
+    n_slabs_per_segment: int,
+    electron_fraction: float,
+    n_flavors: int,
+    caller: str
+) -> np.ndarray:
+    r"""Returns the probabilities for an array of energies, in chunks.
+
+    Parameters
+    ----------
+    h_vacuum_energy_independent : array_like
+        Energy-independent vacuum Hamiltonian.
+    energy : numpy.ndarray
+        Array of neutrino energies, in units of eV.
+    costhz : int or float
+        Cosine of the zenith angle.
+    n_slabs_per_segment : int
+        Number of equal sub-slabs per chord segment.
+    electron_fraction : float
+        Electrons per nucleon.
+    n_flavors : int
+        Number of neutrino flavors, 2, 3, or 4.
+    caller : str
+        Name of the calling routine, used in error messages.
+
+    Returns
+    -------
+    numpy.ndarray
+        The probabilities, of shape ``(..., n_flavors*n_flavors)``.
+    """
+    energy = np.asarray(energy, dtype=float)
+
+    # The chord is the same for every energy, so one look at the geometry
+    # says how much a single energy costs and therefore how many fit.
+    widths_km, densities = _earth_slabs_cached(float(costhz),
+                                               int(n_slabs_per_segment))
+    per_energy = widths_km.shape[0]*n_flavors*n_flavors*16
+    chunk = max(MIN_CHUNK_ENERGIES, MAX_CHUNK_BYTES//per_energy)
+
+    flat = energy.reshape(-1)
+
+    # The fused kernels build each slab's Hamiltonian as they go, so the
+    # stack that the chunking below exists to bound is never allocated at
+    # all: what they read is one potential and one width per slab, shared
+    # by every energy in the scan.  Nothing about the physics differs ---
+    # this is the same midpoint Hamiltonian, and agrees bit for bit.
+    if fastkernels.worthwhile_slabs(n_flavors,
+                                    flat.shape[0]*widths_km.shape[0]):
+        widths = widths_km*gd.CONV_KM_TO_INV_EV
+        potentials = matter_potential(densities, electron_fraction)
+        if n_flavors == 2:
+            u = fastkernels.earth_chords_2nu_kernel(
+                h_vacuum_energy_independent, flat, potentials, widths)
+        elif n_flavors == 3:
+            u = fastkernels.earth_chords_3nu_kernel(
+                h_vacuum_energy_independent, flat, potentials, widths)
+        else:
+            u = fastkernels.earth_chords_4nu_kernel(
+                h_vacuum_energy_independent, flat, potentials,
+                matter_potential_nc(densities,
+                                    electron_fraction=electron_fraction),
+                widths, oscprob4nu.POLISH_ROOTS)
+        # P_ab = |U_ba|^2, initial flavor varying slowest
+        p = np.abs(np.swapaxes(u, -1, -2))**2.0
+        return p.reshape(energy.shape + (n_flavors*n_flavors,))
+
+    if flat.shape[0] <= chunk:
+        h, widths = _earth_hamiltonians(h_vacuum_energy_independent, flat,
+                                        costhz, n_slabs_per_segment,
+                                        electron_fraction, n_flavors)
+        out = slabs._probabilities_slabs_batch(h, widths, n_flavors, caller)
+    else:
+        out = np.empty((flat.shape[0], n_flavors*n_flavors), dtype=float)
+        for start in range(0, flat.shape[0], chunk):
+            piece = flat[start:start+chunk]
+            h, widths = _earth_hamiltonians(
+                h_vacuum_energy_independent, piece, costhz,
+                n_slabs_per_segment, electron_fraction, n_flavors)
+            out[start:start+chunk] = slabs._probabilities_slabs_batch(
+                h, widths, n_flavors, caller)
+
+    # The caller's batch shape, with the probabilities as the last axis
+    return out.reshape(energy.shape + (n_flavors*n_flavors,))
+
+
+def slabs_for_tolerance(
+    h_vacuum_energy_independent: Union[list, np.ndarray],
+    energy: Union[int, float, list, np.ndarray],
+    costhz: Union[int, float, list, np.ndarray],
+    n_flavors: int = 3,
+    rtol: Optional[float] = None,
+    atol: Optional[float] = None,
+    n_start: int = 8,
+    n_max: int = slabs.N_SLABS_MAX,
+    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST
+) -> int:
+    r"""Returns the subdivision an Earth crossing needs for a tolerance.
+
+    The discretisation error of an Earth crossing is strongly
+    energy-dependent --- at the default eight sub-slabs per segment it
+    spans more than an order of magnitude between 3 and 40 GeV --- so a
+    fixed ``n_slabs_per_segment`` does not give a fixed accuracy.  This
+    returns the subdivision that does, for the direction and energies
+    asked about, by refining until the measured error meets the
+    tolerance.
+
+    Every probability the call returns must meet the tolerance, and when
+    an array of energies is given the answer covers all of them: the
+    subdivision is set by the worst-converging entry, which is what
+    makes one number safe to reuse across a scan.
+
+    .. versionadded:: 1.12.0
+
+    Parameters
+    ----------
+    h_vacuum_energy_independent : array_like
+        Energy-independent vacuum Hamiltonian, of the flavor count given
+        by `n_flavors`.
+    energy : int, float or array_like
+        Neutrino energy, in units of eV, or an array of energies, in
+        which case the answer meets the tolerance at every one of them.
+    costhz : int, float or array_like
+        Cosine of the zenith angle of the neutrino direction.  Must be
+        negative.  May be an array, which is how an oscillogram is
+        asked for: index the energies and the angles on different axes,
+        as ``energy[None, :]`` against ``costhz[:, None]``, and they
+        broadcast into a grid.  Each distinct angle costs one pass, so a
+        grid is far cheaper than a loop over its points.
+    n_flavors : int, optional
+        Number of neutrino flavors, 2, 3, or 4.  Default: 3.
+    rtol : float, optional
+        Relative tolerance, taken against the probability itself.
+        Default: None.
+    atol : float, optional
+        Absolute tolerance.  Default: None.  At least one of the two
+        must be given, and when both are, the threshold is
+        ``atol + rtol*abs(P)``, the convention of `numpy.isclose`.
+    n_start : int, optional
+        Coarsest subdivision to try, and the smallest that can be
+        returned.  Default: 8, the default of the probability routines.
+    n_max : int, optional
+        Largest subdivision to try.  Default: `slabs.N_SLABS_MAX`.
+    electron_fraction : float, optional
+        Electrons per nucleon.  Default:
+        `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`.
+
+    Returns
+    -------
+    int
+        The subdivision to pass as ``n_slabs_per_segment``.
+
+    Raises
+    ------
+    ValueError
+        If the tolerances are invalid or absent, if ``costhz >= 0``, or
+        if the tolerance is not met by ``n_max``.
+
+    Notes
+    -----
+    This costs several Earth crossings, the whole refinement adding up
+    to roughly twice the evaluation at the subdivision it returns.  It
+    is meant to be called **once** for a scan and its answer passed to
+    the calls in the loop, not called per probability --- passing
+    ``rtol`` to `probabilities_3nu_earth` for every point of a scan
+    repeats this search at every point.
+
+    Examples
+    --------
+    .. jupyter-execute::
+
+        import earth
+        import globaldefs as gd
+        import hamiltonians3nu
+
+        H = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(
+            gd.S12_NO_BF, gd.S23_NO_BF, gd.S13_NO_BF, gd.DCP_NO_BF,
+            gd.D21_NO_BF, gd.D31_NO_BF)
+        print(earth.slabs_for_tolerance(H, 1.0e10, -0.8, atol=1.0e-5))
+    """
+    def evaluate(n: int) -> np.ndarray:
+        return np.asarray(_probabilities_earth(
+            h_vacuum_energy_independent, energy, costhz, n,
+            electron_fraction, n_flavors, 'slabs_for_tolerance'),
+            dtype=float)
+
+    n, _ = slabs._n_for_tolerance(evaluate, rtol, atol, n_start, n_max,
+                                  'slabs_for_tolerance')
+
+    return n
+
+
+def _probabilities_earth(
+    h_vacuum_energy_independent: Union[list, np.ndarray],
+    energy: Union[int, float, list, np.ndarray],
+    costhz: Union[int, float, list, np.ndarray],
+    n_slabs_per_segment: int,
+    electron_fraction: float,
+    n_flavors: int,
+    caller: str
+) -> Union[Tuple[float, ...], np.ndarray]:
+    r"""Returns the probabilities for one subdivision, scalar or batched.
+
+    The common body of the three public entry points, so that the
+    tolerance search can reach the same code they do.
+
+    Parameters
+    ----------
+    h_vacuum_energy_independent : array_like
+        Energy-independent vacuum Hamiltonian.
+    energy : int, float or array_like
+        Neutrino energy, in units of eV, or an array of energies.
+    costhz : int or float
+        Cosine of the zenith angle.
+    n_slabs_per_segment : int
+        Number of equal sub-slabs per chord segment.
+    electron_fraction : float
+        Electrons per nucleon.
+    n_flavors : int
+        Number of neutrino flavors, 2, 3, or 4.
+    caller : str
+        Name of the calling routine, used in error messages.
+
+    Returns
+    -------
+    tuple of float or numpy.ndarray
+        The probabilities, as a tuple for a scalar energy and an array
+        of shape ``(..., n_flavors*n_flavors)`` for an array of them.
+    """
+    # An array of angles is a grid, however the energies are shaped
+    if np.ndim(costhz) != 0:
+        return _probabilities_earth_grid(
+            h_vacuum_energy_independent, energy, costhz, n_slabs_per_segment,
+            electron_fraction, n_flavors, caller)
+
+    if np.ndim(energy) == 0:
+        h, widths = _earth_hamiltonians(h_vacuum_energy_independent, energy,
+                                        costhz, n_slabs_per_segment,
+                                        electron_fraction, n_flavors)
+        if n_flavors == 2:
+            return slabs.probabilities_2nu_slabs(h, widths)
+        if n_flavors == 3:
+            return slabs.probabilities_3nu_slabs(h, widths)
+        return slabs.probabilities_4nu_slabs(h, widths)
+
+    return _probabilities_earth_batch(h_vacuum_energy_independent, energy,
+                                      costhz, n_slabs_per_segment,
+                                      electron_fraction, n_flavors, caller)
+
+
+def _probabilities_earth_grid(
+    h_vacuum_energy_independent: Union[list, np.ndarray],
+    energy: Union[int, float, list, np.ndarray],
+    costhz: Union[list, np.ndarray],
+    n_slabs_per_segment: int,
+    electron_fraction: float,
+    n_flavors: int,
+    caller: str
+) -> np.ndarray:
+    r"""Returns the probabilities over a grid of energies and angles.
+
+    An oscillogram, in other words.  The energies and angles broadcast
+    against each other in the usual way, so a grid is asked for as
+    ``probabilities_3nu_earth(h, energies[None, :], costhz[:, None])``
+    --- the same idiom `oscprob3nu.probabilities_3nu` uses for a stack
+    of Hamiltonians against a stack of baselines.
+
+    The angles are handled one at a time rather than all at once, and
+    that is not a compromise: the chord geometry is what changes with
+    the angle, so two angles share neither their slab widths nor their
+    number of slabs, and there is nothing for a single kernel call to
+    share.  What *is* shared is every energy at a given angle, which is
+    the axis the fused kernel already spreads over, so the work goes
+    from one call per grid point to one call per distinct angle.
+
+    Parameters
+    ----------
+    h_vacuum_energy_independent : array_like
+        Energy-independent vacuum Hamiltonian.
+    energy : int, float or array_like
+        Neutrino energies, in units of eV.
+    costhz : array_like
+        Cosines of the zenith angle, broadcastable against `energy`.
+    n_slabs_per_segment : int
+        Number of equal sub-slabs per chord segment.
+    electron_fraction : float
+        Electrons per nucleon.
+    n_flavors : int
+        Number of neutrino flavors, 2, 3, or 4.
+    caller : str
+        Name of the calling routine, used in error messages.
+
+    Returns
+    -------
+    numpy.ndarray
+        The probabilities, of shape ``(..., n_flavors*n_flavors)``,
+        on the broadcast grid.
+
+    Raises
+    ------
+    ValueError
+        If the energies and angles do not broadcast together.
+    """
+    try:
+        energy_b, costhz_b = np.broadcast_arrays(
+            np.asarray(energy, dtype=float), np.asarray(costhz, dtype=float))
+    except ValueError:
+        raise ValueError(
+            '%s: energy of shape %s and costhz of shape %s do not broadcast '
+            'together; for a grid, index them on different axes, as '
+            'energy[None, :] and costhz[:, None]'
+            % (caller, (np.shape(energy),), (np.shape(costhz),))) from None
+
+    flat_energy = energy_b.reshape(-1)
+    flat_costhz = costhz_b.reshape(-1)
+    out = np.empty((flat_energy.shape[0], n_flavors*n_flavors), dtype=float)
+
+    # One pass per distinct angle, each carrying all of that angle's
+    # energies.  np.unique also means a grid that repeats an angle --- a
+    # broadcast one always does --- pays for its geometry once.
+    for angle in np.unique(flat_costhz):
+        at_angle = flat_costhz == angle
+        out[at_angle] = _probabilities_earth_batch(
+            h_vacuum_energy_independent, flat_energy[at_angle], float(angle),
+            n_slabs_per_segment, electron_fraction, n_flavors, caller)
+
+    return out.reshape(energy_b.shape + (n_flavors*n_flavors,))
+
+
+def _probabilities_earth_tol(
+    h_vacuum_energy_independent: Union[list, np.ndarray],
+    energy: Union[int, float, list, np.ndarray],
+    costhz: Union[int, float, list, np.ndarray],
+    n_slabs_per_segment: int,
+    electron_fraction: float,
+    n_flavors: int,
+    rtol: Optional[float],
+    atol: Optional[float],
+    n_max: int,
+    return_n_slabs: bool,
+    caller: str
+) -> Union[Tuple[float, ...], np.ndarray, tuple]:
+    r"""Returns the probabilities, refining first if a tolerance is set.
+
+    With neither tolerance given this is `_probabilities_earth` and
+    nothing else, so the default path is exactly what it was before
+    tolerances existed.
+
+    Parameters
+    ----------
+    h_vacuum_energy_independent : array_like
+        Energy-independent vacuum Hamiltonian.
+    energy : int, float or array_like
+        Neutrino energy, in units of eV, or an array of energies.
+    costhz : int or float
+        Cosine of the zenith angle.
+    n_slabs_per_segment : int
+        Subdivision to use, or the coarsest to try when refining.
+    electron_fraction : float
+        Electrons per nucleon.
+    n_flavors : int
+        Number of neutrino flavors, 2, 3, or 4.
+    rtol : float or None
+        Relative tolerance, or None.
+    atol : float or None
+        Absolute tolerance, or None.
+    n_max : int
+        Largest subdivision to try when refining.
+    return_n_slabs : bool
+        Whether to return the subdivision used alongside the answer.
+    caller : str
+        Name of the calling routine, used in error messages.
+
+    Returns
+    -------
+    tuple of float, numpy.ndarray, or tuple
+        The probabilities, paired with the subdivision used when
+        `return_n_slabs` is set.
+    """
+    if rtol is None and atol is None:
+        p = _probabilities_earth(h_vacuum_energy_independent, energy, costhz,
+                                 n_slabs_per_segment, electron_fraction,
+                                 n_flavors, caller)
+        n = n_slabs_per_segment
+    else:
+        def evaluate(n_try: int) -> np.ndarray:
+            return np.asarray(_probabilities_earth(
+                h_vacuum_energy_independent, energy, costhz, n_try,
+                electron_fraction, n_flavors, caller), dtype=float)
+
+        # The search already evaluated the answer at the subdivision it
+        # settled on, so there is nothing left to compute here
+        n, p = slabs._n_for_tolerance(evaluate, rtol, atol,
+                                      n_slabs_per_segment, n_max, caller)
+        if np.ndim(energy) == 0:
+            # A scalar energy returns a tuple however the answer was
+            # reached, which the search's array does not preserve
+            p = tuple(float(x) for x in p)
+
+    return (p, n) if return_n_slabs else p
+
+
 def probabilities_2nu_earth(
     h_vacuum_energy_independent: Union[list, np.ndarray],
-    energy: Union[int, float],
-    costhz: Union[int, float],
+    energy: Union[int, float, list, np.ndarray],
+    costhz: Union[int, float, list, np.ndarray],
     n_slabs_per_segment: int = 8,
-    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST
-) -> Tuple[float, float, float, float]:
+    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST,
+    rtol: Optional[float] = None,
+    atol: Optional[float] = None,
+    n_max: int = slabs.N_SLABS_MAX,
+    return_n_slabs: bool = False
+) -> Union[Tuple[float, float, float, float], np.ndarray]:
     r"""Returns the two-flavor probabilities across the Earth.
 
     Builds the PREM slabs along the chord for the given direction and
@@ -895,16 +1591,28 @@ def probabilities_2nu_earth(
 
     .. versionadded:: 1.8.0
 
+    .. versionchanged:: 1.12.0
+       Accepts an array of energies, returning one row of probabilities
+       per energy.  A scalar energy returns exactly what it returned
+       before.
+
     Parameters
     ----------
     h_vacuum_energy_independent : array_like
         Energy-independent two-flavor vacuum Hamiltonian, as returned by
         `hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent`.
-    energy : int or float
-        Neutrino energy, in units of eV.
-    costhz : int or float
+    energy : int, float or array_like
+        Neutrino energy, in units of eV, or an array of energies.  The
+        whole array crosses the same chord, so the geometry and the
+        matter potentials are built once for the scan rather than once
+        per energy.
+    costhz : int, float or array_like
         Cosine of the zenith angle of the neutrino direction.  Must be
-        negative.
+        negative.  May be an array, which is how an oscillogram is
+        asked for: index the energies and the angles on different axes,
+        as ``energy[None, :]`` against ``costhz[:, None]``, and they
+        broadcast into a grid.  Each distinct angle costs one pass, so a
+        grid is far cheaper than a loop over its points.
     n_slabs_per_segment : int, optional
         Number of equal sub-slabs per chord segment.  A segment runs
         between consecutive PREM boundary crossings; a chord crosses most
@@ -912,32 +1620,58 @@ def probabilities_2nu_earth(
     electron_fraction : float, optional
         Electrons per nucleon.  Default:
         `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`.
+    rtol : float, optional
+        Relative tolerance on every returned probability.  Default:
+        None, meaning ``n_slabs_per_segment`` is used as given.  When
+        either tolerance is set, the chord is refined until the measured
+        discretisation error meets it, starting from
+        ``n_slabs_per_segment``; see `slabs_for_tolerance`, which does
+        the search and which is the cheaper way to run a scan, since it
+        can be called once and its answer reused.
+    atol : float, optional
+        Absolute tolerance on every returned probability.  Default:
+        None.  When both are given the threshold is
+        ``atol + rtol*abs(P)``, the convention of `numpy.isclose`.
+    n_max : int, optional
+        Largest subdivision the refinement may try before giving up and
+        raising.  Default: `slabs.N_SLABS_MAX`.
+    return_n_slabs : bool, optional
+        Whether to return the subdivision actually used alongside the
+        probabilities.  Default: False.  Worth setting when a tolerance
+        is in play, since a tight one can quietly cost a great deal of
+        refinement.
 
     Returns
     -------
-    tuple of float
+    tuple of float or numpy.ndarray
         The probabilities
-        :math:`P_{ee}, P_{e\mu}, P_{\mu e}, P_{\mu\mu}`.
+        :math:`P_{ee}, P_{e\mu}, P_{\mu e}, P_{\mu\mu}` as a tuple for a
+        scalar energy, or an array of shape ``(..., 4)`` in the same
+        order for an array of energies.
 
     Raises
     ------
     ValueError
         If ``costhz >= 0`` or ``n_slabs_per_segment`` is not positive.
     """
-    h, widths = _earth_hamiltonians(h_vacuum_energy_independent, energy,
-                                    costhz, n_slabs_per_segment,
-                                    electron_fraction, 2)
-
-    return slabs.probabilities_2nu_slabs(h, widths)
+    return _probabilities_earth_tol(
+        h_vacuum_energy_independent, energy, costhz, n_slabs_per_segment,
+        electron_fraction, 2, rtol, atol, n_max, return_n_slabs,
+        'probabilities_2nu_earth')
 
 
 def probabilities_3nu_earth(
     h_vacuum_energy_independent: Union[list, np.ndarray],
-    energy: Union[int, float],
-    costhz: Union[int, float],
+    energy: Union[int, float, list, np.ndarray],
+    costhz: Union[int, float, list, np.ndarray],
     n_slabs_per_segment: int = 8,
-    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST
-) -> Tuple[float, float, float, float, float, float, float, float, float]:
+    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST,
+    rtol: Optional[float] = None,
+    atol: Optional[float] = None,
+    n_max: int = slabs.N_SLABS_MAX,
+    return_n_slabs: bool = False
+) -> Union[Tuple[float, float, float, float, float, float, float, float,
+                 float], np.ndarray]:
     r"""Returns the three-flavor probabilities across the Earth.
 
     Builds the PREM slabs along the chord for the given direction and
@@ -948,16 +1682,28 @@ def probabilities_3nu_earth(
 
     .. versionadded:: 1.8.0
 
+    .. versionchanged:: 1.12.0
+       Accepts an array of energies, returning one row of probabilities
+       per energy.  A scalar energy returns exactly what it returned
+       before.
+
     Parameters
     ----------
     h_vacuum_energy_independent : array_like
         Energy-independent three-flavor vacuum Hamiltonian, as returned
         by `hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent`.
-    energy : int or float
-        Neutrino energy, in units of eV.
-    costhz : int or float
+    energy : int, float or array_like
+        Neutrino energy, in units of eV, or an array of energies.  The
+        whole array crosses the same chord, so the geometry and the
+        matter potentials are built once for the scan rather than once
+        per energy, and the chords are composed in a single pass.
+    costhz : int, float or array_like
         Cosine of the zenith angle of the neutrino direction.  Must be
-        negative.
+        negative.  May be an array, which is how an oscillogram is
+        asked for: index the energies and the angles on different axes,
+        as ``energy[None, :]`` against ``costhz[:, None]``, and they
+        broadcast into a grid.  Each distinct angle costs one pass, so a
+        grid is far cheaper than a loop over its points.
     n_slabs_per_segment : int, optional
         Number of equal sub-slabs per chord segment.  A segment runs
         between consecutive PREM boundary crossings; a chord crosses most
@@ -965,32 +1711,57 @@ def probabilities_3nu_earth(
     electron_fraction : float, optional
         Electrons per nucleon.  Default:
         `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`.
+    rtol : float, optional
+        Relative tolerance on every returned probability.  Default:
+        None, meaning ``n_slabs_per_segment`` is used as given.  When
+        either tolerance is set, the chord is refined until the measured
+        discretisation error meets it, starting from
+        ``n_slabs_per_segment``; see `slabs_for_tolerance`, which does
+        the search and which is the cheaper way to run a scan, since it
+        can be called once and its answer reused.
+    atol : float, optional
+        Absolute tolerance on every returned probability.  Default:
+        None.  When both are given the threshold is
+        ``atol + rtol*abs(P)``, the convention of `numpy.isclose`.
+    n_max : int, optional
+        Largest subdivision the refinement may try before giving up and
+        raising.  Default: `slabs.N_SLABS_MAX`.
+    return_n_slabs : bool, optional
+        Whether to return the subdivision actually used alongside the
+        probabilities.  Default: False.  Worth setting when a tolerance
+        is in play, since a tight one can quietly cost a great deal of
+        refinement.
 
     Returns
     -------
-    tuple of float
-        The nine probabilities, with the initial flavor varying slowest.
+    tuple of float or numpy.ndarray
+        The nine probabilities, with the initial flavor varying slowest,
+        as a tuple for a scalar energy or an array of shape ``(..., 9)``
+        in the same order for an array of energies.
 
     Raises
     ------
     ValueError
         If ``costhz >= 0`` or ``n_slabs_per_segment`` is not positive.
     """
-    h, widths = _earth_hamiltonians(h_vacuum_energy_independent, energy,
-                                    costhz, n_slabs_per_segment,
-                                    electron_fraction, 3)
-
-    return slabs.probabilities_3nu_slabs(h, widths)
+    return _probabilities_earth_tol(
+        h_vacuum_energy_independent, energy, costhz, n_slabs_per_segment,
+        electron_fraction, 3, rtol, atol, n_max, return_n_slabs,
+        'probabilities_3nu_earth')
 
 
 def probabilities_2nu_between_locations(
     h_vacuum_energy_independent: Union[list, np.ndarray],
-    energy: Union[int, float],
+    energy: Union[int, float, list, np.ndarray],
     loc_name_1: str,
     loc_name_2: str,
     n_slabs_per_segment: int = 8,
-    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST
-) -> Tuple[float, float, float, float]:
+    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST,
+    rtol: Optional[float] = None,
+    atol: Optional[float] = None,
+    n_max: int = slabs.N_SLABS_MAX,
+    return_n_slabs: bool = False
+) -> Union[Tuple[float, float, float, float], np.ndarray]:
     r"""Returns the two-flavor probabilities between two named locations.
 
     Convenience wrapper: looks both locations up in `LOC_COORDS_DMS`,
@@ -1003,8 +1774,10 @@ def probabilities_2nu_between_locations(
     ----------
     h_vacuum_energy_independent : array_like
         Energy-independent two-flavor vacuum Hamiltonian.
-    energy : int or float
-        Neutrino energy, in units of eV.
+    energy : int, float or array_like
+        Neutrino energy, in units of eV, or an array of energies, which
+        `probabilities_3nu_earth` and its siblings evaluate as a single
+        scan across the shared chord.
     loc_name_1 : str
         Name of the source location, e.g. ``'fermilab'``.
     loc_name_2 : str
@@ -1016,12 +1789,34 @@ def probabilities_2nu_between_locations(
     electron_fraction : float, optional
         Electrons per nucleon.  Default:
         `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`.
+    rtol : float, optional
+        Relative tolerance on every returned probability.  Default:
+        None, meaning ``n_slabs_per_segment`` is used as given.  When
+        either tolerance is set, the chord is refined until the measured
+        discretisation error meets it, starting from
+        ``n_slabs_per_segment``; see `slabs_for_tolerance`, which does
+        the search and which is the cheaper way to run a scan, since it
+        can be called once and its answer reused.
+    atol : float, optional
+        Absolute tolerance on every returned probability.  Default:
+        None.  When both are given the threshold is
+        ``atol + rtol*abs(P)``, the convention of `numpy.isclose`.
+    n_max : int, optional
+        Largest subdivision the refinement may try before giving up and
+        raising.  Default: `slabs.N_SLABS_MAX`.
+    return_n_slabs : bool, optional
+        Whether to return the subdivision actually used alongside the
+        probabilities.  Default: False.  Worth setting when a tolerance
+        is in play, since a tight one can quietly cost a great deal of
+        refinement.
 
     Returns
     -------
-    tuple of float
+    tuple of float or numpy.ndarray
         The probabilities
-        :math:`P_{ee}, P_{e\mu}, P_{\mu e}, P_{\mu\mu}`.
+        :math:`P_{ee}, P_{e\mu}, P_{\mu e}, P_{\mu\mu}` as a tuple for
+        a scalar energy, or an array of shape ``(..., 4)`` for an array
+        of them.
 
     Raises
     ------
@@ -1033,17 +1828,23 @@ def probabilities_2nu_between_locations(
 
     return probabilities_2nu_earth(h_vacuum_energy_independent, energy,
                                    costhz, n_slabs_per_segment,
-                                   electron_fraction)
+                                   electron_fraction, rtol, atol, n_max,
+                                   return_n_slabs)
 
 
 def probabilities_3nu_between_locations(
     h_vacuum_energy_independent: Union[list, np.ndarray],
-    energy: Union[int, float],
+    energy: Union[int, float, list, np.ndarray],
     loc_name_1: str,
     loc_name_2: str,
     n_slabs_per_segment: int = 8,
-    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST
-) -> Tuple[float, float, float, float, float, float, float, float, float]:
+    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST,
+    rtol: Optional[float] = None,
+    atol: Optional[float] = None,
+    n_max: int = slabs.N_SLABS_MAX,
+    return_n_slabs: bool = False
+) -> Union[Tuple[float, float, float, float, float, float, float, float,
+                 float], np.ndarray]:
     r"""Returns the three-flavor probabilities between two named locations.
 
     Convenience wrapper: looks both locations up in `LOC_COORDS_DMS`,
@@ -1056,8 +1857,10 @@ def probabilities_3nu_between_locations(
     ----------
     h_vacuum_energy_independent : array_like
         Energy-independent three-flavor vacuum Hamiltonian.
-    energy : int or float
-        Neutrino energy, in units of eV.
+    energy : int, float or array_like
+        Neutrino energy, in units of eV, or an array of energies, which
+        `probabilities_3nu_earth` and its siblings evaluate as a single
+        scan across the shared chord.
     loc_name_1 : str
         Name of the source location, e.g. ``'cern'``.
     loc_name_2 : str
@@ -1069,11 +1872,33 @@ def probabilities_3nu_between_locations(
     electron_fraction : float, optional
         Electrons per nucleon.  Default:
         `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`.
+    rtol : float, optional
+        Relative tolerance on every returned probability.  Default:
+        None, meaning ``n_slabs_per_segment`` is used as given.  When
+        either tolerance is set, the chord is refined until the measured
+        discretisation error meets it, starting from
+        ``n_slabs_per_segment``; see `slabs_for_tolerance`, which does
+        the search and which is the cheaper way to run a scan, since it
+        can be called once and its answer reused.
+    atol : float, optional
+        Absolute tolerance on every returned probability.  Default:
+        None.  When both are given the threshold is
+        ``atol + rtol*abs(P)``, the convention of `numpy.isclose`.
+    n_max : int, optional
+        Largest subdivision the refinement may try before giving up and
+        raising.  Default: `slabs.N_SLABS_MAX`.
+    return_n_slabs : bool, optional
+        Whether to return the subdivision actually used alongside the
+        probabilities.  Default: False.  Worth setting when a tolerance
+        is in play, since a tight one can quietly cost a great deal of
+        refinement.
 
     Returns
     -------
-    tuple of float
-        The nine probabilities, with the initial flavor varying slowest.
+    tuple of float or numpy.ndarray
+        The nine probabilities, with the initial flavor varying slowest,
+        as a tuple for a scalar energy or an array of shape ``(..., 9)``
+        for an array of them.
 
     Raises
     ------
@@ -1085,7 +1910,8 @@ def probabilities_3nu_between_locations(
 
     return probabilities_3nu_earth(h_vacuum_energy_independent, energy,
                                    costhz, n_slabs_per_segment,
-                                   electron_fraction)
+                                   electron_fraction, rtol, atol, n_max,
+                                   return_n_slabs)
 
 
 def _costhz_of_named_pair(loc_name_1: str, loc_name_2: str) -> float:
@@ -1122,11 +1948,15 @@ def _costhz_of_named_pair(loc_name_1: str, loc_name_2: str) -> float:
 
 def probabilities_4nu_earth(
     h_vacuum_energy_independent: Union[list, np.ndarray],
-    energy: Union[int, float],
-    costhz: Union[int, float],
+    energy: Union[int, float, list, np.ndarray],
+    costhz: Union[int, float, list, np.ndarray],
     n_slabs_per_segment: int = 8,
-    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST
-) -> Tuple[float, ...]:
+    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST,
+    rtol: Optional[float] = None,
+    atol: Optional[float] = None,
+    n_max: int = slabs.N_SLABS_MAX,
+    return_n_slabs: bool = False
+) -> Union[Tuple[float, ...], np.ndarray]:
     r"""Returns the four-flavor probabilities across the Earth.
 
     Builds the PREM slabs along the chord for the given direction and
@@ -1140,17 +1970,29 @@ def probabilities_4nu_earth(
 
     .. versionadded:: 1.11.0
 
+    .. versionchanged:: 1.12.0
+       Accepts an array of energies, returning one row of probabilities
+       per energy.  A scalar energy returns exactly what it returned
+       before.
+
     Parameters
     ----------
     h_vacuum_energy_independent : array_like
         Energy-independent four-flavor vacuum Hamiltonian, as returned
         by
         `hamiltonians4nu.hamiltonian_4nu_vacuum_energy_independent`.
-    energy : int or float
-        Neutrino energy, in units of eV.
-    costhz : int or float
+    energy : int, float or array_like
+        Neutrino energy, in units of eV, or an array of energies.  The
+        whole array crosses the same chord, so the geometry and both
+        matter potentials are built once for the scan rather than once
+        per energy.
+    costhz : int, float or array_like
         Cosine of the zenith angle of the neutrino direction.  Must be
-        negative.
+        negative.  May be an array, which is how an oscillogram is
+        asked for: index the energies and the angles on different axes,
+        as ``energy[None, :]`` against ``costhz[:, None]``, and they
+        broadcast into a grid.  Each distinct angle costs one pass, so a
+        grid is far cheaper than a loop over its points.
     n_slabs_per_segment : int, optional
         Number of equal sub-slabs per chord segment.  A segment runs
         between consecutive PREM boundary crossings; a chord crosses most
@@ -1159,34 +2001,59 @@ def probabilities_4nu_earth(
         Electrons per nucleon.  The neutron fraction is taken as its
         complement, which is what sets :math:`V_{NC}`.  Default:
         `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`.
+    rtol : float, optional
+        Relative tolerance on every returned probability.  Default:
+        None, meaning ``n_slabs_per_segment`` is used as given.  When
+        either tolerance is set, the chord is refined until the measured
+        discretisation error meets it, starting from
+        ``n_slabs_per_segment``; see `slabs_for_tolerance`, which does
+        the search and which is the cheaper way to run a scan, since it
+        can be called once and its answer reused.
+    atol : float, optional
+        Absolute tolerance on every returned probability.  Default:
+        None.  When both are given the threshold is
+        ``atol + rtol*abs(P)``, the convention of `numpy.isclose`.
+    n_max : int, optional
+        Largest subdivision the refinement may try before giving up and
+        raising.  Default: `slabs.N_SLABS_MAX`.
+    return_n_slabs : bool, optional
+        Whether to return the subdivision actually used alongside the
+        probabilities.  Default: False.  Worth setting when a tolerance
+        is in play, since a tight one can quietly cost a great deal of
+        refinement.
 
     Returns
     -------
-    tuple of float
+    tuple of float or numpy.ndarray
         The sixteen probabilities, with the initial flavor varying
-        slowest.  With the fourth state read as sterile, the flavor
-        order is :math:`(\nu_e, \nu_\mu, \nu_\tau, \nu_s)`.
+        slowest, as a tuple for a scalar energy or an array of shape
+        ``(..., 16)`` in the same order for an array of energies.  With
+        the fourth state read as sterile, the flavor order is
+        :math:`(\nu_e, \nu_\mu, \nu_\tau, \nu_s)`.
 
     Raises
     ------
     ValueError
         If ``costhz >= 0`` or ``n_slabs_per_segment`` is not positive.
     """
-    h, widths = _earth_hamiltonians(h_vacuum_energy_independent, energy,
-                                    costhz, n_slabs_per_segment,
-                                    electron_fraction, 4)
-
-    return slabs.probabilities_4nu_slabs(h, widths)
+    return _probabilities_earth_tol(
+        h_vacuum_energy_independent, energy, costhz, n_slabs_per_segment,
+        electron_fraction, 4, rtol, atol, n_max, return_n_slabs,
+        'probabilities_4nu_earth')
 
 
 def probabilities_4nu_between_locations(
     h_vacuum_energy_independent: Union[list, np.ndarray],
-    energy: Union[int, float],
+    energy: Union[int, float, list, np.ndarray],
     loc_name_1: str,
     loc_name_2: str,
     n_slabs_per_segment: int = 8,
-    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST
-) -> Tuple[float, ...]:
+    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST,
+    rtol: Optional[float] = None,
+    atol: Optional[float] = None,
+    n_max: int = slabs.N_SLABS_MAX,
+    return_n_slabs: bool = False
+) -> Union[Tuple[float, ...], np.ndarray]:
     r"""Returns the four-flavor probabilities between two named locations.
 
     Convenience wrapper: looks both locations up in `LOC_COORDS_DMS`,
@@ -1199,8 +2066,10 @@ def probabilities_4nu_between_locations(
     ----------
     h_vacuum_energy_independent : array_like
         Energy-independent four-flavor vacuum Hamiltonian.
-    energy : int or float
-        Neutrino energy, in units of eV.
+    energy : int, float or array_like
+        Neutrino energy, in units of eV, or an array of energies, which
+        `probabilities_3nu_earth` and its siblings evaluate as a single
+        scan across the shared chord.
     loc_name_1 : str
         Name of the source location, e.g. ``'cern'``.
     loc_name_2 : str
@@ -1212,12 +2081,33 @@ def probabilities_4nu_between_locations(
     electron_fraction : float, optional
         Electrons per nucleon.  Default:
         `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`.
+    rtol : float, optional
+        Relative tolerance on every returned probability.  Default:
+        None, meaning ``n_slabs_per_segment`` is used as given.  When
+        either tolerance is set, the chord is refined until the measured
+        discretisation error meets it, starting from
+        ``n_slabs_per_segment``; see `slabs_for_tolerance`, which does
+        the search and which is the cheaper way to run a scan, since it
+        can be called once and its answer reused.
+    atol : float, optional
+        Absolute tolerance on every returned probability.  Default:
+        None.  When both are given the threshold is
+        ``atol + rtol*abs(P)``, the convention of `numpy.isclose`.
+    n_max : int, optional
+        Largest subdivision the refinement may try before giving up and
+        raising.  Default: `slabs.N_SLABS_MAX`.
+    return_n_slabs : bool, optional
+        Whether to return the subdivision actually used alongside the
+        probabilities.  Default: False.  Worth setting when a tolerance
+        is in play, since a tight one can quietly cost a great deal of
+        refinement.
 
     Returns
     -------
-    tuple of float
+    tuple of float or numpy.ndarray
         The sixteen probabilities, with the initial flavor varying
-        slowest.
+        slowest, as a tuple for a scalar energy or an array of shape
+        ``(..., 16)`` for an array of them.
 
     Raises
     ------
@@ -1229,4 +2119,5 @@ def probabilities_4nu_between_locations(
 
     return probabilities_4nu_earth(h_vacuum_energy_independent, energy,
                                    costhz, n_slabs_per_segment,
-                                   electron_fraction)
+                                   electron_fraction, rtol, atol, n_max,
+                                   return_n_slabs)

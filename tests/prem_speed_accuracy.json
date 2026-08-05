@@ -1,0 +1,567 @@
+{
+ "generated_by": "tests/prem_scan.py",
+ "note": "Speed-accuracy comparison through the Earth on the PREM profile at cos(theta_z) = -0.9, channel P(nu_mu -> nu_mu). Accuracy is max |P - P_ref| over twelve energies against a second-order Richardson extrapolation, (4*P(256)-P(128))/3, of a 30-digit mpmath slab product; that referee is itself checked against an adaptive DOP853 integration of the continuous profile. The y-axis is therefore error against a CONVERGED PREM solution, not an exact one, and each code sits where its treatment of the profile puts it rather than where the accuracy of its probability formula would. See the module docstring of tests/prem_scan.py for every convention matched.",
+ "costhz": -0.9,
+ "baseline_km": 11467.800000000001,
+ "electron_fraction": 0.5,
+ "mpmath_dps": 30,
+ "density_scale_nusquids": 0.99209238370534,
+ "density_scale_nucraft": 0.992673678640166,
+ "costhz_handed_to_nusquids": -0.8999998728147187,
+ "nusquids_version": "1.13.3",
+ "nucraft_version": "r22",
+ "three_flavor": {
+  "energy_gev": [
+   3.0,
+   3.796543782323049,
+   4.804581563698601,
+   6.080268087441293,
+   7.694668000744167,
+   9.737714651755129,
+   12.323220005052333,
+   15.59521476279348,
+   19.735971880558743,
+   24.97616044374594,
+   31.607695546335506,
+   40.000000000000014
+  ],
+  "reference": [
+   0.7854042765130703,
+   0.025840212612905287,
+   0.5710884288305977,
+   0.6816700607909918,
+   0.02168834417765105,
+   0.7275770132010045,
+   0.8518319621521501,
+   0.38643235841577445,
+   0.06526976759083994,
+   0.05574250938669343,
+   0.22098069778045357,
+   0.4251920513723558
+  ],
+  "reference_ode_crosscheck": [
+   0.7854042764896669,
+   0.02584021262294352,
+   0.5710884288142168,
+   0.6816700607891978,
+   0.02168834417843704,
+   0.7275770132039455,
+   0.8518319621614491,
+   0.38643235841923435,
+   0.06526976759129993,
+   0.05574250938616747,
+   0.22098069777976137,
+   0.4251920513717023
+  ],
+  "reference_vs_ode_max_abs": 2.3403390336795837e-11,
+  "series": [
+   {
+    "name": "NuOscProbExact",
+    "points": [
+     {
+      "label": "1",
+      "n_slabs_per_segment": 1,
+      "max_abs_error": 0.0240252210069688,
+      "us_per_probability": 511.0627510778917
+     },
+     {
+      "label": "2",
+      "n_slabs_per_segment": 2,
+      "max_abs_error": 0.008464856615559735,
+      "us_per_probability": 543.1226648700734
+     },
+     {
+      "label": "4",
+      "n_slabs_per_segment": 4,
+      "max_abs_error": 0.0024544979264800038,
+      "us_per_probability": 613.368252137055
+     },
+     {
+      "label": "8",
+      "n_slabs_per_segment": 8,
+      "max_abs_error": 0.0006382378427204349,
+      "us_per_probability": 746.6341679294904
+     },
+     {
+      "label": "16",
+      "n_slabs_per_segment": 16,
+      "max_abs_error": 0.00016110830712579016,
+      "us_per_probability": 990.8471668798786
+     },
+     {
+      "label": "32",
+      "n_slabs_per_segment": 32,
+      "max_abs_error": 4.03739771395184e-05,
+      "us_per_probability": 1461.955417956536
+     },
+     {
+      "label": "64",
+      "n_slabs_per_segment": 64,
+      "max_abs_error": 1.0099529864748824e-05,
+      "us_per_probability": 2406.3892487902194
+     },
+     {
+      "label": "128",
+      "n_slabs_per_segment": 128,
+      "max_abs_error": 2.525237189354712e-06,
+      "us_per_probability": 4862.570999345432
+     },
+     {
+      "label": "256",
+      "n_slabs_per_segment": 256,
+      "max_abs_error": 6.313085448850231e-07,
+      "us_per_probability": 9010.543583523637
+     }
+    ]
+   },
+   {
+    "name": "nuSQuIDS",
+    "points": [
+     {
+      "label": "1e-03",
+      "tolerance": 0.001,
+      "max_abs_error": 0.020669967431509506,
+      "us_per_probability": 46.410083693141736
+     },
+     {
+      "label": "1e-04",
+      "tolerance": 0.0001,
+      "max_abs_error": 0.004818686937075212,
+      "us_per_probability": 75.8266663372827
+     },
+     {
+      "label": "1e-05",
+      "tolerance": 1e-05,
+      "max_abs_error": 0.0004429508184968789,
+      "us_per_probability": 135.72141809466606
+     },
+     {
+      "label": "1e-06",
+      "tolerance": 1e-06,
+      "max_abs_error": 0.00010728239634916203,
+      "us_per_probability": 247.4063342864004
+     },
+     {
+      "label": "1e-07",
+      "tolerance": 1e-07,
+      "max_abs_error": 3.4091156778326415e-05,
+      "us_per_probability": 424.78458150678006
+     },
+     {
+      "label": "1e-08",
+      "tolerance": 1e-08,
+      "max_abs_error": 1.195642661655505e-06,
+      "us_per_probability": 642.8753331420012
+     },
+     {
+      "label": "1e-09",
+      "tolerance": 1e-09,
+      "max_abs_error": 1.1266944399679346e-06,
+      "us_per_probability": 873.4205014964876
+     },
+     {
+      "label": "1e-10",
+      "tolerance": 1e-10,
+      "max_abs_error": 1.011973588704862e-06,
+      "us_per_probability": 1089.734168393382
+     },
+     {
+      "label": "1e-12",
+      "tolerance": 1e-12,
+      "max_abs_error": 1.0313941767314816e-06,
+      "us_per_probability": 1826.845749747008
+     }
+    ]
+   },
+   {
+    "name": "nuCraft",
+    "points": [
+     {
+      "label": "1e-02",
+      "num_prec": 0.01,
+      "max_abs_error": 0.0009752920370696971,
+      "us_per_probability": 3414.18008126008
+     },
+     {
+      "label": "1e-03",
+      "num_prec": 0.001,
+      "max_abs_error": 0.0001516186894293739,
+      "us_per_probability": 5766.254500485957
+     },
+     {
+      "label": "1e-04",
+      "num_prec": 0.0001,
+      "max_abs_error": 6.746086245790206e-05,
+      "us_per_probability": 8876.071415822176
+     },
+     {
+      "label": "1e-05",
+      "num_prec": 1e-05,
+      "max_abs_error": 3.921085228508758e-06,
+      "us_per_probability": 12547.176166359955
+     },
+     {
+      "label": "1e-06",
+      "num_prec": 1e-06,
+      "max_abs_error": 2.468744740968809e-06,
+      "us_per_probability": 16950.544583475374
+     },
+     {
+      "label": "1e-08",
+      "num_prec": 1e-08,
+      "max_abs_error": 2.5576817299644006e-06,
+      "us_per_probability": 28150.736000194836
+     },
+     {
+      "label": "1e-10",
+      "num_prec": 1e-10,
+      "max_abs_error": 2.5466972272125687e-06,
+      "us_per_probability": 45973.7121661116
+     }
+    ]
+   },
+   {
+    "name": "NuFast-Earth",
+    "points": [
+     {
+      "label": "1",
+      "n_shells_per_layer": 1,
+      "max_abs_error": 0.09924356628393372,
+      "us_per_probability": 1.216167
+     },
+     {
+      "label": "2",
+      "n_shells_per_layer": 2,
+      "max_abs_error": 0.011495215847016849,
+      "us_per_probability": 1.96625
+     },
+     {
+      "label": "4",
+      "n_shells_per_layer": 4,
+      "max_abs_error": 0.00878267827852175,
+      "us_per_probability": 3.733667
+     },
+     {
+      "label": "8",
+      "n_shells_per_layer": 8,
+      "max_abs_error": 0.002273590633526723,
+      "us_per_probability": 7.029417
+     },
+     {
+      "label": "16",
+      "n_shells_per_layer": 16,
+      "max_abs_error": 0.0022464994128043037,
+      "us_per_probability": 14.553083
+     },
+     {
+      "label": "32",
+      "n_shells_per_layer": 32,
+      "max_abs_error": 0.0007512410614832765,
+      "us_per_probability": 33.2735
+     },
+     {
+      "label": "64",
+      "n_shells_per_layer": 64,
+      "max_abs_error": 0.00023148840698228312,
+      "us_per_probability": 81.89025
+     },
+     {
+      "label": "128",
+      "n_shells_per_layer": 128,
+      "max_abs_error": 5.8748691750709625e-05,
+      "us_per_probability": 218.074333
+     },
+     {
+      "label": "256",
+      "n_shells_per_layer": 256,
+      "max_abs_error": 2.0564246312471113e-06,
+      "us_per_probability": 403.571417
+     }
+    ]
+   },
+   {
+    "name": "GLoBES",
+    "points": [
+     {
+      "label": "1",
+      "n_shells_per_layer": 1,
+      "max_abs_error": 0.09924630539782475,
+      "us_per_probability": 2.55925
+     },
+     {
+      "label": "2",
+      "n_shells_per_layer": 2,
+      "max_abs_error": 0.01149686180705578,
+      "us_per_probability": 4.549333
+     },
+     {
+      "label": "4",
+      "n_shells_per_layer": 4,
+      "max_abs_error": 0.008784232787338753,
+      "us_per_probability": 9.5335
+     },
+     {
+      "label": "8",
+      "n_shells_per_layer": 8,
+      "max_abs_error": 0.0022750270110957205,
+      "us_per_probability": 18.34575
+     },
+     {
+      "label": "16",
+      "n_shells_per_layer": 16,
+      "max_abs_error": 0.002245136602451292,
+      "us_per_probability": 36.035667
+     },
+     {
+      "label": "32",
+      "n_shells_per_layer": 32,
+      "max_abs_error": 0.0007498562533002628,
+      "us_per_probability": 70.877333
+     },
+     {
+      "label": "64",
+      "n_shells_per_layer": 64,
+      "max_abs_error": 0.0002300961161242343,
+      "us_per_probability": 143.466417
+     },
+     {
+      "label": "128",
+      "n_shells_per_layer": 128,
+      "max_abs_error": 5.8585771820718335e-05,
+      "us_per_probability": 295.4525
+     },
+     {
+      "label": "256",
+      "n_shells_per_layer": 256,
+      "max_abs_error": 6.610983902533007e-07,
+      "us_per_probability": 637.378667
+     }
+    ]
+   },
+   {
+    "name": "Prob3++",
+    "points": [
+     {
+      "label": "1",
+      "n_shells_per_layer": 1,
+      "max_abs_error": 0.09965050219687571,
+      "us_per_probability": 7.716167
+     },
+     {
+      "label": "2",
+      "n_shells_per_layer": 2,
+      "max_abs_error": 0.01131869397522478,
+      "us_per_probability": 12.9405
+     },
+     {
+      "label": "4",
+      "n_shells_per_layer": 4,
+      "max_abs_error": 0.009136166696537718,
+      "us_per_probability": 25.381333
+     },
+     {
+      "label": "8",
+      "n_shells_per_layer": 8,
+      "max_abs_error": 0.002620231773163728,
+      "us_per_probability": 46.221833
+     },
+     {
+      "label": "16",
+      "n_shells_per_layer": 16,
+      "max_abs_error": 0.0021545623614086518,
+      "us_per_probability": 89.867417
+     },
+     {
+      "label": "32",
+      "n_shells_per_layer": 32,
+      "max_abs_error": 0.0007855083597176904,
+      "us_per_probability": 179.64025
+     },
+     {
+      "label": "64",
+      "n_shells_per_layer": 64,
+      "max_abs_error": 0.0003016515502266559,
+      "us_per_probability": 364.853833
+     },
+     {
+      "label": "128",
+      "n_shells_per_layer": 128,
+      "max_abs_error": 0.00028827360322269957,
+      "us_per_probability": 369.248083
+     },
+     {
+      "label": "256",
+      "n_shells_per_layer": 256,
+      "max_abs_error": 0.0003421040912217066,
+      "us_per_probability": 782.756417
+     }
+    ]
+   }
+  ]
+ },
+ "sterile_3plus1": {
+  "energy_gev": [
+   300.0000000000001,
+   455.9733248858801,
+   693.0389100249483,
+   1053.3575202645397,
+   1601.0097693618943,
+   2433.3924923690624,
+   3698.540218326199,
+   5621.452268581151,
+   8544.107605307408,
+   12986.28384324919,
+   19737.996739727056,
+   30000.00000000001
+  ],
+  "reference": [
+   0.701672268547235,
+   0.8021836117857185,
+   0.9313347187180732,
+   0.7190819027579295,
+   0.9318534541017102,
+   0.8838493027454888,
+   0.9781701894927148,
+   0.9604470769870984,
+   0.933736328630339,
+   0.9510658466103111,
+   0.973890080651541,
+   0.9877700687562819
+  ],
+  "reference_ode_crosscheck": [
+   0.7016722697164469,
+   0.8021836114011076,
+   0.9313347188845132,
+   0.7190819026432692,
+   0.9318534541228904,
+   0.8838493027613672,
+   0.9781701894838849,
+   0.9604470769884741,
+   0.9337363286318621,
+   0.9510658466100373,
+   0.9738900806507567,
+   0.9877700687554527
+  ],
+  "reference_vs_ode_max_abs": 1.1692119494810527e-09,
+  "series": [
+   {
+    "name": "NuOscProbExact",
+    "points": [
+     {
+      "label": "1",
+      "n_slabs_per_segment": 1,
+      "max_abs_error": 0.03081239374004685,
+      "us_per_probability": 749.0588347233521
+     },
+     {
+      "label": "2",
+      "n_slabs_per_segment": 2,
+      "max_abs_error": 0.009893255837579495,
+      "us_per_probability": 810.3344177167552
+     },
+     {
+      "label": "4",
+      "n_slabs_per_segment": 4,
+      "max_abs_error": 0.007325970340897436,
+      "us_per_probability": 988.470834272448
+     },
+     {
+      "label": "8",
+      "n_slabs_per_segment": 8,
+      "max_abs_error": 0.0015000185602392913,
+      "us_per_probability": 1336.0848339895408
+     },
+     {
+      "label": "16",
+      "n_slabs_per_segment": 16,
+      "max_abs_error": 0.00020833536582409717,
+      "us_per_probability": 1957.8188342469125
+     },
+     {
+      "label": "32",
+      "n_slabs_per_segment": 32,
+      "max_abs_error": 5.0791313887188494e-05,
+      "us_per_probability": 3190.1445812157667
+     },
+     {
+      "label": "64",
+      "n_slabs_per_segment": 64,
+      "max_abs_error": 1.2623482929075003e-05,
+      "us_per_probability": 6199.240582645871
+     },
+     {
+      "label": "128",
+      "n_slabs_per_segment": 128,
+      "max_abs_error": 3.1515794911562978e-06,
+      "us_per_probability": 14026.190333728058
+     },
+     {
+      "label": "256",
+      "n_slabs_per_segment": 256,
+      "max_abs_error": 7.878949001005608e-07,
+      "us_per_probability": 24738.48683439428
+     }
+    ]
+   },
+   {
+    "name": "nuSQuIDS",
+    "points": [
+     {
+      "label": "1e-03",
+      "tolerance": 0.001,
+      "max_abs_error": 0.01956251356424188,
+      "us_per_probability": 67.44141622524087
+     },
+     {
+      "label": "1e-04",
+      "tolerance": 0.0001,
+      "max_abs_error": 0.011504792287497012,
+      "us_per_probability": 105.32891853169228
+     },
+     {
+      "label": "1e-05",
+      "tolerance": 1e-05,
+      "max_abs_error": 0.0012886126333293557,
+      "us_per_probability": 179.90608224257207
+     },
+     {
+      "label": "1e-06",
+      "tolerance": 1e-06,
+      "max_abs_error": 0.00012961432405489415,
+      "us_per_probability": 350.9298330754973
+     },
+     {
+      "label": "1e-07",
+      "tolerance": 1e-07,
+      "max_abs_error": 3.493467321846744e-05,
+      "us_per_probability": 609.4434162757049
+     },
+     {
+      "label": "1e-08",
+      "tolerance": 1e-08,
+      "max_abs_error": 2.894978189393882e-06,
+      "us_per_probability": 957.0442513601544
+     },
+     {
+      "label": "1e-09",
+      "tolerance": 1e-09,
+      "max_abs_error": 1.3027635313855868e-06,
+      "us_per_probability": 1295.1480845610301
+     },
+     {
+      "label": "1e-10",
+      "tolerance": 1e-10,
+      "max_abs_error": 1.0871191024053317e-06,
+      "us_per_probability": 2884.435001760721
+     },
+     {
+      "label": "1e-12",
+      "tolerance": 1e-12,
+      "max_abs_error": 1.0795397542562313e-06,
+      "us_per_probability": 3087.7208337187767
+     }
+    ]
+   }
+  ]
+ }
+}

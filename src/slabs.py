@@ -29,6 +29,17 @@ The per-slab operators are evaluated in a single batched call, so the
 cost of :math:`n` slabs is one vectorised evaluation plus :math:`n-1`
 small matrix products rather than :math:`n` separate evaluations.
 
+With the optional compiled backend installed this goes further: the
+whole trajectory is one pass, each slab's operator computed and
+multiplied into the running product in registers, so the stack is never
+materialised and the :math:`n-1` products are never dispatched.  That is
+worth between seven and two hundred times the NumPy path depending on
+the flavor count and the number of slabs --- see
+:data:`fastkernels.MIN_SLAB_BATCH`, which is why the threshold here is
+one rather than `fastkernels.MIN_BATCH`.  Until 1.12.0 there was no
+compiled path at all for this module: the backend had probability
+kernels only, and composing operators cannot use one.
+
 One thing carries over from the single-slab case and is easier to
 overlook here.  The expansions return :math:`e^{-i H_0 L}`, with
 :math:`H_0` the *traceless* part of the Hamiltonian, dropping the phase
@@ -52,19 +63,26 @@ Routine listings
     * probabilities_2nu_slabs - Two-flavor probabilities
     * probabilities_3nu_slabs - Three-flavor probabilities
     * probabilities_4nu_slabs - Four-flavor probabilities
+    * probabilities_2nu_profile - Two flavors, across a varying profile
+    * probabilities_3nu_profile - Three flavors, across a varying profile
+    * probabilities_4nu_profile - Four flavors, across a varying profile
 """
 
 __author__ = "Mauricio Bustamante"
 __email__ = "mbustamante@gmail.com"
 
-__all__ = ['evolution_operator_2nu_slabs', 'evolution_operator_3nu_slabs',
+__all__ = ['N_SLABS_MAX',
+           'evolution_operator_2nu_slabs', 'evolution_operator_3nu_slabs',
            'evolution_operator_4nu_slabs', 'probabilities_2nu_slabs',
-           'probabilities_3nu_slabs', 'probabilities_4nu_slabs']
+           'probabilities_3nu_slabs', 'probabilities_4nu_slabs',
+           'probabilities_2nu_profile', 'probabilities_3nu_profile',
+           'probabilities_4nu_profile']
 
-from typing import Tuple, Union
+from typing import Callable, Optional, Tuple, Union
 
 import numpy as np
 
+import fastkernels
 import oscprob2nu
 import oscprob3nu
 import oscprob4nu
@@ -124,6 +142,339 @@ def _check_slabs(
     return h, w
 
 
+def _check_slabs_batch(
+    hamiltonian_matrices: Union[list, np.ndarray],
+    widths: Union[list, np.ndarray],
+    n_flavors: int,
+    caller: str
+) -> Tuple[np.ndarray, np.ndarray]:
+    r"""Validates a batch of chords sharing one set of slab widths.
+
+    The batched counterpart of `_check_slabs`.  Every chord in the batch
+    crosses the same geometry --- that is what an energy scan at fixed
+    zenith angle is --- so there is one width per slab rather than one
+    per slab per chord.
+
+    Parameters
+    ----------
+    hamiltonian_matrices : array_like
+        Stack of Hamiltonians, of shape
+        ``(..., n_slabs, n_flavors, n_flavors)``, with at least one
+        leading batch axis.
+    widths : array_like
+        Slab widths, of shape ``(n_slabs,)``.
+    n_flavors : int
+        Number of neutrino flavors, 2, 3, or 4.
+    caller : str
+        Name of the calling routine, used in error messages.
+
+    Returns
+    -------
+    tuple of numpy.ndarray
+        The Hamiltonians and widths as arrays.
+
+    Raises
+    ------
+    ValueError
+        If the shapes disagree, if either is empty, if the Hamiltonians
+        are not square of the expected size, or if any width is
+        negative.
+    """
+    h = np.asarray(hamiltonian_matrices, dtype=complex)
+    w = np.asarray(widths, dtype=float)
+
+    if h.ndim < 4 or h.shape[-2:] != (n_flavors, n_flavors):
+        raise ValueError(
+            '%s: hamiltonian_matrices must have shape (..., n, %d, %d) with '
+            'at least one leading batch axis, got %s'
+            % (caller, n_flavors, n_flavors, (h.shape,)))
+    if w.ndim != 1:
+        raise ValueError(
+            '%s: widths must be one-dimensional, got shape %s'
+            % (caller, (w.shape,)))
+    if h.shape[-3] != w.shape[0]:
+        raise ValueError(
+            '%s: got %d Hamiltonians per chord but %d widths; there must be '
+            'one width per slab' % (caller, h.shape[-3], w.shape[0]))
+    if w.shape[0] == 0:
+        raise ValueError('%s: at least one slab is required' % caller)
+    if np.any(w < 0.0):
+        raise ValueError('%s: slab widths cannot be negative' % caller)
+
+    return h, w
+
+
+def _evolution_operator_slabs_batch(
+    hamiltonian_matrices: Union[list, np.ndarray],
+    widths: Union[list, np.ndarray],
+    n_flavors: int,
+    caller: str
+) -> np.ndarray:
+    r"""Returns one evolution operator per chord in a batch.
+
+    The batched counterpart of `_evolution_operator_slabs`.  The chords
+    are independent of one another, so the compiled path spreads them
+    over the available cores --- an axis the per-chord kernel does not
+    have, since the product *along* a chord cannot be reordered.
+
+    Parameters
+    ----------
+    hamiltonian_matrices : array_like
+        Hamiltonians, of shape ``(..., n_slabs, n_flavors, n_flavors)``.
+    widths : array_like
+        Slab widths, of shape ``(n_slabs,)``, shared by every chord.
+    n_flavors : int
+        Number of neutrino flavors, 2, 3, or 4.
+    caller : str
+        Name of the calling routine, used in error messages.
+
+    Returns
+    -------
+    numpy.ndarray
+        The evolution operators, of shape
+        ``(..., n_flavors, n_flavors)``.
+    """
+    h, w = _check_slabs_batch(hamiltonian_matrices, widths, n_flavors, caller)
+
+    n_chords = int(np.prod(h.shape[:-3])) if h.shape[:-3] else 1
+    if fastkernels.worthwhile_slabs(n_flavors, n_chords*w.shape[0]):
+        if n_flavors == 2:
+            return fastkernels.slab_product_2nu_batch_kernel(h, w)
+        if n_flavors == 3:
+            return fastkernels.slab_product_3nu_batch_kernel(h, w)
+        # As in the per-chord path, the expansion acts on the traceless
+        # part and the dropped per-slab phase cancels in every probability
+        return fastkernels.slab_product_4nu_batch_kernel(
+            oscprob4nu._traceless_part(h), w, oscprob4nu.POLISH_ROOTS)
+
+    # One batched call for every slab of every chord at once: the widths
+    # broadcast along the chord axes, since the geometry is shared.
+    w_b = np.broadcast_to(w, h.shape[:-2])
+    if n_flavors == 2:
+        u_slabs = np.asarray(oscprob2nu.evolution_operator_2nu(h, w_b))
+    elif n_flavors == 3:
+        u_slabs = np.asarray(oscprob3nu.evolution_operator_3nu(h, w_b))
+    else:
+        u_slabs = np.asarray(oscprob4nu.evolution_operator_4nu(h, w_b))
+
+    # U = U_n ... U_1 along the slab axis, for every chord at once.  The
+    # slab axis is -3, so each step is one batched matrix product.
+    u_total = u_slabs[..., 0, :, :]
+    for k in range(1, u_slabs.shape[-3]):
+        u_total = u_slabs[..., k, :, :] @ u_total
+
+    return u_total
+
+
+def _probabilities_slabs_batch(
+    hamiltonian_matrices: Union[list, np.ndarray],
+    widths: Union[list, np.ndarray],
+    n_flavors: int,
+    caller: str
+) -> np.ndarray:
+    r"""Returns the probabilities for a batch of chords.
+
+    Parameters
+    ----------
+    hamiltonian_matrices : array_like
+        Hamiltonians, of shape ``(..., n_slabs, n_flavors, n_flavors)``.
+    widths : array_like
+        Slab widths, of shape ``(n_slabs,)``, shared by every chord.
+    n_flavors : int
+        Number of neutrino flavors, 2, 3, or 4.
+    caller : str
+        Name of the calling routine, used in error messages.
+
+    Returns
+    -------
+    numpy.ndarray
+        The probabilities, of shape ``(..., n_flavors*n_flavors)``, with
+        the initial flavor varying slowest --- the same ordering the
+        per-chord routines return as a tuple.
+    """
+    u = _evolution_operator_slabs_batch(hamiltonian_matrices, widths,
+                                        n_flavors, caller)
+
+    # P_ab = |U_ba|^2, and the returned ordering runs over the initial
+    # flavor slowest, so the transpose comes before the flattening
+    p = np.abs(np.swapaxes(u, -1, -2))**2.0
+
+    return p.reshape(p.shape[:-2] + (n_flavors*n_flavors,))
+
+
+N_SLABS_MAX = 1024
+r"""int: Module-level constant.
+
+Default ceiling on the refinement a tolerance request may ask for.
+
+A tolerance is a statement about the answer, not about the cost, so
+without a ceiling a tolerance the discretisation cannot reach --- one
+below the round-off of the arithmetic itself, say --- would refine until
+it ran out of memory.  Refinement past a thousand sub-slabs per segment
+is in practice a sign that the tolerance was mis-stated rather than that
+the answer is nearly in reach, so that is where the routines stop and
+raise.  Pass ``n_max`` to move it.
+
+.. versionadded:: 1.12.0
+"""
+
+
+def _check_tolerances(
+    rtol: Optional[float],
+    atol: Optional[float],
+    caller: str
+) -> Tuple[float, float]:
+    r"""Validates a tolerance pair and fills in the unset one with zero.
+
+    Parameters
+    ----------
+    rtol : float or None
+        Relative tolerance, or None if not given.
+    atol : float or None
+        Absolute tolerance, or None if not given.
+    caller : str
+        Name of the calling routine, used in error messages.
+
+    Returns
+    -------
+    tuple of float
+        The two tolerances, with an unset one returned as zero.
+
+    Raises
+    ------
+    ValueError
+        If either is negative, or if both are zero or unset, which asks
+        for an exact answer from an approximation.
+    """
+    r = 0.0 if rtol is None else float(rtol)
+    a = 0.0 if atol is None else float(atol)
+
+    if r < 0.0 or a < 0.0:
+        raise ValueError(
+            '%s: tolerances cannot be negative; got rtol=%s, atol=%s'
+            % (caller, rtol, atol))
+    if r == 0.0 and a == 0.0:
+        raise ValueError(
+            '%s: a tolerance of zero cannot be met by a discretisation; '
+            'give a positive rtol or atol, or pass neither to use '
+            'n_slabs_per_segment as given' % caller)
+
+    return r, a
+
+
+def _n_for_tolerance(
+    evaluate: Callable[[int], np.ndarray],
+    rtol: Optional[float],
+    atol: Optional[float],
+    n_start: int,
+    n_max: int,
+    caller: str
+) -> Tuple[int, np.ndarray]:
+    r"""Returns the smallest tried subdivision meeting a tolerance.
+
+    The discretisation is second-order accurate --- midpoint sampling
+    within each segment --- so halving the sub-slab width quarters the
+    error.  That is what makes the error *measurable* without knowing
+    the exact answer: with :math:`e(n) = 4 e(2n)`, two evaluations
+    differ by
+
+    .. math::
+
+       P(2n) - P(n) = e(n) - e(2n) = 3 e(2n) ,
+
+    so a third of the gap between consecutive refinements estimates the
+    error of the finer one, and four thirds of it estimates the error of
+    the coarser.  Both are used: the coarser test is what lets a loose
+    tolerance be met by ``n_start`` itself rather than by twice it.
+
+    The subdivision doubles until the estimate passes, rather than
+    solving the second-order law for the required :math:`n` in one jump.
+    Doubling costs little --- the evaluations form a geometric series,
+    so reaching :math:`n` costs about twice what evaluating at
+    :math:`n` costs on its own --- and it means every returned value has
+    had its error *measured* rather than extrapolated.  That matters
+    here because the caller asked to be told when the tolerance cannot
+    be met, and an extrapolated error cannot tell anyone that.
+    Extrapolating downwards would be worse still: the law is asymptotic,
+    and at one sub-slab per segment the observed errors depart from it
+    by an order of magnitude.
+
+    Parameters
+    ----------
+    evaluate : callable
+        Takes a subdivision count and returns the probabilities at it,
+        as an array.  Every entry must be comparable across calls.
+    rtol : float or None
+        Relative tolerance, against the finer evaluation.
+    atol : float or None
+        Absolute tolerance.
+    n_start : int
+        Coarsest subdivision to try, and the smallest that can be
+        returned.
+    n_max : int
+        Largest subdivision to try.
+    caller : str
+        Name of the calling routine, used in error messages.
+
+    Returns
+    -------
+    tuple
+        The subdivision met, and the probabilities evaluated at it.
+
+    Raises
+    ------
+    ValueError
+        If the tolerances are invalid, if ``n_start`` is not positive,
+        or if the tolerance is not met by ``n_max``.
+    """
+    r, a = _check_tolerances(rtol, atol, caller)
+
+    n_start = int(n_start)
+    n_max = int(n_max)
+    if n_start < 1:
+        raise ValueError('%s: n_start must be at least 1, got %d'
+                         % (caller, n_start))
+    # Two evaluations are what an error estimate costs, so a budget that
+    # cannot afford the pair cannot answer the question at all
+    if n_max < 2*n_start:
+        raise ValueError(
+            '%s: n_max (%d) must be at least twice n_start (%d); the error '
+            'is estimated by comparing consecutive refinements, so there is '
+            'nothing to compare below that' % (caller, n_max, n_start))
+
+    n = n_start
+    p_coarse = np.asarray(evaluate(n), dtype=float)
+    coarse_untested = True
+    worst = np.inf
+
+    while 2*n <= n_max:
+        p_fine = np.asarray(evaluate(2*n), dtype=float)
+        gap = np.abs(p_fine - p_coarse)
+
+        # Four thirds of the gap is the error of the coarser evaluation,
+        # so a tolerance loose enough to be met by n_start is met by it
+        # rather than by twice it.  Only worth asking on the first pass:
+        # every later coarse value is one this loop has already refused.
+        if coarse_untested and np.all(4.0*gap/3.0 <= a + r*np.abs(p_coarse)):
+            return n, p_coarse
+        coarse_untested = False
+
+        if np.all(gap/3.0 <= a + r*np.abs(p_fine)):
+            return 2*n, p_fine
+
+        # The error of the finest evaluation made, kept for the message
+        # below: once the loop ends, the coarse and fine values are the
+        # same array and the gap can no longer be recovered from them.
+        worst = float(np.max(gap/3.0))
+        n, p_coarse = 2*n, p_fine
+
+    raise ValueError(
+        '%s: could not meet rtol=%s, atol=%s with at most %d slabs per '
+        'segment; the largest error estimate at %d was %.3e.  Raise n_max '
+        'if the tolerance is genuinely wanted, or loosen the tolerance'
+        % (caller, rtol, atol, n_max, n, worst))
+
+
 def _evolution_operator_slabs(
     hamiltonian_matrices: Union[list, np.ndarray],
     widths: Union[list, np.ndarray],
@@ -150,6 +501,21 @@ def _evolution_operator_slabs(
         ``(n_flavors, n_flavors)``.
     """
     h, w = _check_slabs(hamiltonian_matrices, widths, n_flavors, caller)
+
+    # The compiled path computes the operators *and* composes them in one
+    # pass, so the stack is never materialised and the products never
+    # leave registers.  Composing in Python was the largest single cost of
+    # an Earth crossing once the operators themselves were compiled.
+    if n_flavors == 2 and fastkernels.worthwhile_slabs(2, w.shape[0]):
+        return fastkernels.slab_product_2nu_kernel(h, w)
+    if n_flavors == 3 and fastkernels.worthwhile_slabs(3, w.shape[0]):
+        return fastkernels.slab_product_3nu_kernel(h, w)
+    if n_flavors == 4 and fastkernels.worthwhile_slabs(4, w.shape[0]):
+        # The traceless part is what the expansion acts on, and what
+        # `oscprob4nu` hands its own kernel; the dropped phase is per slab
+        # and cancels in every probability, as the module docstring says.
+        return fastkernels.slab_product_4nu_kernel(
+            oscprob4nu._traceless_part(h), w, oscprob4nu.POLISH_ROOTS)
 
     # One batched call for all the slabs, rather than one call per slab:
     # the per-slab operators are independent of each other, and only their
@@ -488,3 +854,300 @@ def probabilities_4nu_slabs(
     # P_ab = |U_ba|^2: the evolution operator is indexed (final, initial)
     return tuple(abs(u[beta][alpha])**2.0
                  for alpha in range(4) for beta in range(4))
+
+
+def _probabilities_profile(
+    hamiltonian_of: Callable,
+    baseline: Union[int, float],
+    n_flavors: int,
+    n_slabs: int,
+    rtol: Optional[float],
+    atol: Optional[float],
+    n_max: int,
+    return_n_slabs: bool,
+    caller: str
+) -> Union[Tuple[float, ...], tuple]:
+    r"""Returns the probabilities across a continuously varying profile.
+
+    The common body of the three public profile routines.
+
+    Parameters
+    ----------
+    hamiltonian_of : callable
+        Takes an array of positions and returns one Hamiltonian per
+        position.
+    baseline : int or float
+        Total length of the trajectory, in units of eV\ :sup:`-1`.
+    n_flavors : int
+        Number of neutrino flavors, 2, 3, or 4.
+    n_slabs : int
+        Number of equal slabs, or the coarsest to try when refining.
+    rtol : float or None
+        Relative tolerance, or None.
+    atol : float or None
+        Absolute tolerance, or None.
+    n_max : int
+        Largest number of slabs to try when refining.
+    return_n_slabs : bool
+        Whether to return the number of slabs used.
+    caller : str
+        Name of the calling routine, used in error messages.
+
+    Returns
+    -------
+    tuple
+        The probabilities, paired with the slab count when
+        `return_n_slabs` is set.
+    """
+    if not callable(hamiltonian_of):
+        raise ValueError('%s: hamiltonian_of must be callable, got %s'
+                         % (caller, type(hamiltonian_of).__name__))
+    baseline = float(baseline)
+    if not baseline > 0.0:
+        raise ValueError('%s: baseline must be positive, got %s'
+                         % (caller, baseline))
+    if int(n_slabs) < 1:
+        raise ValueError('%s: n_slabs must be at least 1, got %s'
+                         % (caller, n_slabs))
+
+    routine = {2: probabilities_2nu_slabs,
+               3: probabilities_3nu_slabs,
+               4: probabilities_4nu_slabs}[n_flavors]
+
+    def evaluate(n: int) -> np.ndarray:
+        # Equal slabs sampled at their midpoints, which is second-order
+        # accurate and so refines by the law `_n_for_tolerance` assumes.
+        # Sampling at an end would be first-order and would make the
+        # error estimate there wrong rather than merely pessimistic.
+        edges = np.linspace(0.0, baseline, n+1)
+        midpoints = (edges[:-1] + edges[1:])/2.0
+        h = np.asarray(hamiltonian_of(midpoints), dtype=complex)
+        if h.shape != (n, n_flavors, n_flavors):
+            raise ValueError(
+                '%s: hamiltonian_of returned shape %s for %d positions; it '
+                'must return one %dx%d Hamiltonian per position, of shape '
+                '(%d, %d, %d)' % (caller, (h.shape,), n, n_flavors,
+                                  n_flavors, n, n_flavors, n_flavors))
+        return np.asarray(routine(h, np.diff(edges)), dtype=float)
+
+    if rtol is None and atol is None:
+        p = evaluate(int(n_slabs))
+        n_used = int(n_slabs)
+    else:
+        n_used, p = _n_for_tolerance(evaluate, rtol, atol, int(n_slabs),
+                                     n_max, caller)
+
+    probabilities = tuple(float(x) for x in p)
+
+    return (probabilities, n_used) if return_n_slabs else probabilities
+
+
+def probabilities_2nu_profile(
+    hamiltonian_of: Callable,
+    baseline: Union[int, float],
+    n_slabs: int = 8,
+    rtol: Optional[float] = None,
+    atol: Optional[float] = None,
+    n_max: int = N_SLABS_MAX,
+    return_n_slabs: bool = False
+) -> Union[Tuple[float, ...], tuple]:
+    r"""Returns the two-flavor probabilities across a varying profile.
+
+    .. versionadded:: 1.12.0
+
+    See `probabilities_3nu_profile`, of which this is the two-flavor
+    counterpart in every respect.
+
+    Parameters
+    ----------
+    hamiltonian_of : callable
+        Takes an array of positions along the trajectory, in units of
+        eV\ :sup:`-1`, and returns the Hamiltonian at each, as an array
+        of shape ``(len(positions), 2, 2)`` in units of eV.
+    baseline : int or float
+        Total length of the trajectory, in units of eV\ :sup:`-1`.
+    n_slabs : int, optional
+        Number of equal slabs.  Default: 8.
+    rtol : float, optional
+        Relative tolerance on every returned probability.  Default:
+        None.
+    atol : float, optional
+        Absolute tolerance on every returned probability.  Default:
+        None.
+    n_max : int, optional
+        Largest number of slabs the refinement may try.  Default:
+        `N_SLABS_MAX`.
+    return_n_slabs : bool, optional
+        Whether to return the number of slabs used.  Default: False.
+
+    Returns
+    -------
+    tuple of float
+        The probabilities
+        :math:`P_{ee}, P_{e\mu}, P_{\mu e}, P_{\mu\mu}`, paired with the
+        number of slabs used when `return_n_slabs` is set.
+
+    Raises
+    ------
+    ValueError
+        As `probabilities_3nu_profile`.
+    """
+    return _probabilities_profile(hamiltonian_of, baseline, 2, n_slabs,
+                                  rtol, atol, n_max, return_n_slabs,
+                                  'probabilities_2nu_profile')
+
+
+def probabilities_3nu_profile(
+    hamiltonian_of: Callable,
+    baseline: Union[int, float],
+    n_slabs: int = 8,
+    rtol: Optional[float] = None,
+    atol: Optional[float] = None,
+    n_max: int = N_SLABS_MAX,
+    return_n_slabs: bool = False
+) -> Union[Tuple[float, ...], tuple]:
+    r"""Returns the three-flavor probabilities across a varying profile.
+
+    The general counterpart of `earth.probabilities_3nu_earth`: where
+    that one knows about PREM, this one takes the profile as a callable
+    and so serves any continuously varying Hamiltonian --- a hand-built
+    density profile, a castle wall, a solar model, a matter potential
+    that varies for a reason other than density.
+
+    The trajectory is cut into equal slabs, the Hamiltonian is sampled
+    at the midpoint of each, and the slabs are solved exactly and
+    composed.  Midpoint sampling makes that second-order accurate, so
+    the answer converges as the slabs are refined, and `rtol` and `atol`
+    let the routine do the refining: it doubles the slab count until the
+    measured error meets the tolerance.
+
+    Where a profile has *discontinuities* --- a wall, a shell boundary
+    --- equal slabs are the wrong tool, because no amount of refinement
+    recovers a jump that straddles a slab.  Split the trajectory at the
+    discontinuities yourself and call this once per piece, or hand the
+    pieces to `probabilities_3nu_slabs` directly; that is exactly what
+    :mod:`earth` does with the PREM shells.
+
+    .. versionadded:: 1.12.0
+
+    Parameters
+    ----------
+    hamiltonian_of : callable
+        Takes an array of positions along the trajectory, in units of
+        eV\ :sup:`-1`, measured from the start, and returns the
+        Hamiltonian at each, as an array of shape
+        ``(len(positions), 3, 3)`` in units of eV.  It is called once
+        per refinement, with all the midpoints at once, so it should be
+        vectorised rather than called in a loop.
+    baseline : int or float
+        Total length of the trajectory, in units of eV\ :sup:`-1`.  Use
+        `globaldefs.CONV_KM_TO_INV_EV` to convert from km.
+    n_slabs : int, optional
+        Number of equal slabs, or the coarsest to try when a tolerance
+        is given.  Default: 8.
+    rtol : float, optional
+        Relative tolerance on every returned probability.  Default:
+        None, meaning `n_slabs` is used as given.
+    atol : float, optional
+        Absolute tolerance on every returned probability.  Default:
+        None.  When both are given the threshold is
+        ``atol + rtol*abs(P)``, the convention of `numpy.isclose`.
+    n_max : int, optional
+        Largest number of slabs the refinement may try before giving up
+        and raising.  Default: `N_SLABS_MAX`.
+    return_n_slabs : bool, optional
+        Whether to return the number of slabs used alongside the
+        probabilities.  Default: False.
+
+    Returns
+    -------
+    tuple of float
+        The nine probabilities, with the initial flavor varying slowest,
+        paired with the number of slabs used when `return_n_slabs` is
+        set.
+
+    Raises
+    ------
+    ValueError
+        If `hamiltonian_of` is not callable or does not return one
+        Hamiltonian of the right size per position, if `baseline` is not
+        positive, if `n_slabs` is not positive, if the tolerances are
+        invalid, or if the tolerance is not met by `n_max`.
+
+    Examples
+    --------
+    .. jupyter-execute::
+
+        import numpy as np
+        import slabs
+
+        H0 = np.diag([1.0e-13, 0.0, -1.0e-13])
+
+        def H_of(x):
+            # A potential that rises linearly along the trajectory
+            h = np.broadcast_to(H0, (len(x), 3, 3)).copy()
+            h[:, 0, 0] += 1.0e-13*x/x[-1]
+            return h
+
+        prob, n = slabs.probabilities_3nu_profile(
+            H_of, 1.0e14, atol=1.0e-8, return_n_slabs=True)
+        print(n, '%.6f' % prob[0])
+    """
+    return _probabilities_profile(hamiltonian_of, baseline, 3, n_slabs,
+                                  rtol, atol, n_max, return_n_slabs,
+                                  'probabilities_3nu_profile')
+
+
+def probabilities_4nu_profile(
+    hamiltonian_of: Callable,
+    baseline: Union[int, float],
+    n_slabs: int = 8,
+    rtol: Optional[float] = None,
+    atol: Optional[float] = None,
+    n_max: int = N_SLABS_MAX,
+    return_n_slabs: bool = False
+) -> Union[Tuple[float, ...], tuple]:
+    r"""Returns the four-flavor probabilities across a varying profile.
+
+    .. versionadded:: 1.12.0
+
+    See `probabilities_3nu_profile`, of which this is the four-flavor
+    counterpart in every respect.
+
+    Parameters
+    ----------
+    hamiltonian_of : callable
+        Takes an array of positions along the trajectory, in units of
+        eV\ :sup:`-1`, and returns the Hamiltonian at each, as an array
+        of shape ``(len(positions), 4, 4)`` in units of eV.
+    baseline : int or float
+        Total length of the trajectory, in units of eV\ :sup:`-1`.
+    n_slabs : int, optional
+        Number of equal slabs.  Default: 8.
+    rtol : float, optional
+        Relative tolerance on every returned probability.  Default:
+        None.
+    atol : float, optional
+        Absolute tolerance on every returned probability.  Default:
+        None.
+    n_max : int, optional
+        Largest number of slabs the refinement may try.  Default:
+        `N_SLABS_MAX`.
+    return_n_slabs : bool, optional
+        Whether to return the number of slabs used.  Default: False.
+
+    Returns
+    -------
+    tuple of float
+        The sixteen probabilities, with the initial flavor varying
+        slowest, paired with the number of slabs used when
+        `return_n_slabs` is set.
+
+    Raises
+    ------
+    ValueError
+        As `probabilities_3nu_profile`.
+    """
+    return _probabilities_profile(hamiltonian_of, baseline, 4, n_slabs,
+                                  rtol, atol, n_max, return_n_slabs,
+                                  'probabilities_4nu_profile')

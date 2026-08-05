@@ -165,6 +165,7 @@ File tree
    │       └── publish.yml              # Publishes to PyPI on a GitHub Release
    ├── .gitignore                       # Build, cache, and generated-output artefacts
    ├── CHANGELOG.md                     # Notable changes, rendered as a docs page
+   ├── RELEASE_NOTES.md                 # What changed since the published version
    ├── LICENSE                          # MIT license
    ├── README.md                        # Project overview and worked examples
    ├── pyproject.toml                   # Packaging metadata and pytest configuration
@@ -229,7 +230,8 @@ File tree
    │   ├── 16_four_neutrinos.ipynb      # A 3+1 sterile state, through the SU(4) expansion
    │   ├── 17_cross_checks.ipynb        # Corroboration from nuSQuIDS and Zaglauer-Schwarzer
    │   ├── 18_evolution_operator.ipynb  # The operator, and the SU(n) coefficients
-   │   └── make_notebooks.py            # Generates and executes all of the above
+   │   ├── make_notebooks.py            # Generates and executes all of the above
+   │   └── coastlines_crude.json        # Coastlines for the Earth cutaway, from GSHHS
    ├── src/                             # The library
    │   ├── oscprob2nu.py                # Two-flavor probabilities, SU(2) expansion
    │   ├── oscprob3nu.py                # Three-flavor probabilities, SU(3) expansion
@@ -259,9 +261,28 @@ File tree
        ├── test_physical_scales.py      # Both backends at the scales actually used
        ├── test_slabs.py                # Slab composition, against expm
        ├── test_earth.py                # PREM, geometry, and Earth probabilities
+       ├── test_batching_and_tolerance.py  # Energy batching, and the rtol/atol refinement
+       ├── bit_capture.py               # Exact-bit capture, for refactors meant to be invisible
+       ├── bit_compare.py               # Compares two captures, in ulps
        ├── test_documented_figures.py   # Keeps the quoted performance figures agreeing
        ├── test_version_consistency.py  # Keeps the version agreeing wherever it is implied
        ├── test_nusquids_comparison.py  # Against nuSQuIDS, an independent external code
        ├── nusquids_reference.py        # Regenerates the frozen nuSQuIDS reference data
        ├── nusquids_reference.json      # Those reference values, with their provenance
+       ├── nusquids_scan.py             # Regenerates the frozen nuSQuIDS energy scan
+       ├── nusquids_scan.json           # That scan, for the paper's figures
+       ├── nufast_scan.json             # NuFast-LBL at two Newton settings
+       ├── speed_accuracy.json          # The six-code constant-density speed-accuracy plane
+       ├── timing_other_codes.json      # Timings behind the performance figure
+       ├── prem_scan.py                 # Regenerates the two Earth speed-accuracy planes
+       ├── prem_speed_accuracy.json     # Those planes, at three flavors and at 3+1
+       ├── external_drivers/            # Drivers for the codes that cannot be called from Python
+       │   ├── README.md                # Every convention each one had to be told, and why
+       │   ├── gen_prem_header.py       # Emits this library's PREM as a C header
+       │   ├── nufast_drv.cpp           # NuFast-Earth on the PREM chord
+       │   ├── nufast_earth_prem.txt
+       │   ├── globes_drv.c             # GLoBES on the PREM chord
+       │   ├── globes_prem.txt
+       │   ├── prob3_drv.cpp            # Prob3++ on the PREM chord
+       │   └── prob3_prem.txt
        └── test_file_tree.py            # Keeps this tree in step with the repository

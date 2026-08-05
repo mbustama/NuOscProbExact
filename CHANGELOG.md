@@ -5,6 +5,399 @@ All notable changes to **NuOscProbExact** are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.12.0] - 2026-08-02
+
+### Added
+
+- **`probabilities_{2,3,4}nu_earth` take an array of energies.**  They took a
+  scalar, so an energy scan was N separate Python calls, each rebuilding the
+  matter potentials, re-validating slabs the library had just built itself,
+  and launching its own kernel.  Passing an array now evaluates the whole
+  scan in one pass and returns `(..., 4)`, `(..., 9)` or `(..., 16)`; a
+  scalar energy still returns a tuple, bit-for-bit what it returned before.
+  The three `_between_locations` wrappers inherit it.
+
+  Two things made this worth more than the bookkeeping it saves.  The matter
+  potential depends on the geometry alone, so a scan at fixed zenith angle
+  was recomputing the identical array once per energy — measured at 11% of a
+  hundred-energy scan, alongside 9% spent re-validating.  And the chords are
+  independent of one another, which the per-chord kernel could not exploit
+  because the product *along* a chord does not commute: the new
+  `slab_product_{2,3,4}nu_batch_kernel` spreads them over the cores instead,
+  above a threshold on `n_chords*n_slabs` rather than on the chord count,
+  since a chord costs in proportion to its slabs.
+
+  A hundred-energy scan is **6.7x, 4.8x and 3.5x** quicker at two, three and
+  four flavors than the loop it replaces; a thousand-energy scan is 9.6x,
+  4.6x and 1.9x.  Against the uncompiled per-energy loop, a thousand-energy
+  scan is 121x, 49x and 17x.
+
+  Two limits worth stating.  Four flavors gains least and falls off with
+  length because the Hamiltonian stack, and the traceless copy the expansion
+  needs, dominate: this is memory, not arithmetic.  And the stack is
+  proportional to the scan — a hundred thousand energies across a 120-slab
+  chord would be 1.6 GB at three flavors and nearly 6 GB at four, which is an
+  ordinary oscillogram rather than an abusive input — so long scans are
+  evaluated in chunks of `earth.MAX_CHUNK_BYTES`, bit-identically and at no
+  measurable cost.
+
+  That chunk turned out to matter for a second reason, and it is the more
+  interesting one: **the batched kernel is memory-bound, not compute-bound.**
+  The stack is written by the Hamiltonian builder and then streamed by the
+  kernel, which does little arithmetic per byte.  Cost per probability
+  measured 7.9 µs with an 8 MB working set and 16.4 µs with a 540 MB one — a
+  factor of two paid for traffic alone — and thread scaling flattens at eight
+  threads and regresses at twelve, which is the same story from the other
+  side.  `MAX_CHUNK_BYTES` therefore defaults to the **detected last-level
+  cache** rather than to a fixed 64 MB, worth 1.3x to 1.8x on long scans
+  across both chord lengths and all three flavor counts, and never slower.
+
+  Detection tries `os.sysconf`, Linux's `sysfs` and macOS's `sysctl` (through
+  `ctypes`, not a subprocess), and falls back to `CHUNK_BYTES_FALLBACK` where
+  none answers — Windows, notably, which is not probed because doing it means
+  untested `kernel32` calls at import time.  Every probe is wrapped broadly
+  and deliberately: the value only tunes how a scan is cut up, so no failure
+  of it should be able to stop the module importing.  It is a plain module
+  attribute, and the default is a guess at the right order of magnitude
+  rather than a tuned constant — the optimum is broad, and any value near the
+  cache beats one far above it.
+
+  What is *not* done: building the per-slab Hamiltonians inside the kernel.
+  That is the largest remaining item, worth about 19% of a scan, and it was
+  left alone deliberately because it would couple `fastkernels` to the
+  matter-Hamiltonian convention that lives in `hamiltonians*nu`.  Batching
+  captured the larger share without that.
+
+- **`tests/bit_capture.py` and `tests/bit_compare.py`**, the harness for a
+  change that is meant to leave every number alone.  Neither is collected by
+  pytest; they are run in pairs, before and after, and the comparison
+  demands `numpy.array_equal` rather than `allclose`, reporting any
+  disagreement in ulps as well as absolutely.
+
+  No golden file is committed with them, deliberately: `acos`, `cos` and
+  `sin` come from the platform's libm and are not guaranteed bit-identical
+  between implementations, so a stored baseline would fail somewhere in CI
+  while saying nothing about the change under test.  Two captures taken on
+  the same machine in the same session remove that variable.
+
+  The harness was validated before being trusted, by mutating a kernel
+  rather than by inspection: re-associating one expression in `_entries_3nu`
+  from `(x*SQRT3)/6.0` to `x*(SQRT3/6.0)` moved 133 of 870 arrays, by up to
+  17000 ulps — and moved *only* the three-flavor compiled arrays, leaving
+  the other 725 untouched.  It captures evolution operators as well as
+  probabilities for the same reason: `|U|^2` discards phase, and on that
+  mutant the operators showed 17000 ulps where the probabilities showed
+  1800.
+
+  Its first use was to **decline** a change rather than certify one, which
+  is worth recording.  A set of loop-invariant hoists and temporary
+  removals in the per-slab arithmetic — bit-identical in principle, and
+  estimated at six to ten per cent — turned out to be unmeasurable here:
+  the run-to-run spread of the *same build* on this machine is 27% to 56%,
+  and an untouched two-flavor control showed an apparent 0.906x "effect".
+  Every candidate sat inside that.  They are left undone rather than
+  committed on a claim this hardware cannot check; the earlier wins in this
+  release are all far above that floor and stand.  The harness is committed
+  so that whoever revisits them on a quieter machine does not rebuild it.
+
+- **A chord is a palindrome, and half its operators were being computed
+  twice.**  A neutrino crossing a spherically symmetric Earth meets every
+  radius on the way in and again on the way out, so slab `j` and slab
+  `n-1-j` carry the same density, the same width, and therefore the *same*
+  evolution operator.  Every Earth probability was computing each of them
+  twice.
+
+  Writing `U = U_{n-1} ... U_0` and splitting at the centre gives
+  `U = (U_0 U_1 ... U_{m-1})(U_{m-1} ... U_0) = A B` for even `n`, and
+  `U = A U_m B` for odd `n`, with the middle slab its own mirror.  Both
+  products accumulate in one pass over the first half, so each expansion is
+  computed once and used twice.  Only the expansions halve — the matrix
+  products still number `n`, since two running products are carried instead
+  of one — and the expansion is about two thirds of a slab's cost, which is
+  why this is worth about 1.5x rather than 2x.
+
+  Measured end to end, interleaved: **1.34x to 1.50x at two flavors, 1.55x
+  to 1.72x at three, and 1.78x to 1.80x at four**, the last being largest
+  because `_operator_4nu` is the heaviest thing a slab does.  A three-flavor
+  scan now costs 2.65 microseconds per probability, against 4.8 before and
+  about 38 when this release opened.  An oscillogram is 1.47x, at 4.3
+  microseconds per point; a single Earth call is 1.19x.
+
+  **It is not restricted to PREM.**  `fastkernels.palindromic` decides, and
+  `slabs` asks it of any slab sequence it is handed, so a symmetric castle
+  wall or any hand-built profile that reads the same from either end is
+  composed at the same discount.  The Earth is simply the case that always
+  qualifies.
+
+  Three things this cost, all worth recording.
+
+  The test is **exact equality, never a tolerance**.  The saving relies on
+  the mirrored operators being identical, which follows from identical
+  inputs and from nothing weaker; a tolerance would hand a
+  nearly-symmetric profile the answer for a symmetric one, silently, which
+  is the one thing an optimisation must not do.
+
+  For that test to succeed, `earth_slabs` now emits **exactly** palindromic
+  widths.  It did not before: each segment was cut by its own `linspace`
+  and the two halves rounded differently, by about 1e-12 km on a 100 km
+  slab.  Averaging each width with its mirror makes both bitwise equal.
+  This release's results are therefore **not** bit-identical to 1.11.0 on
+  any Earth call, which is stated here rather than discovered later.
+  Measured over 4640 values across four angles, four subdivisions and five
+  energies, the shift is **6e-15 at two flavors, 7e-14 at three, and 4e-10
+  at four**.
+
+  The four-flavor figure is much the largest and is not this change's
+  doing: that path polishes quartic latent roots, and its conditioning
+  already separates the two *backends* by 4.0e-10 on code this release
+  never touched.  A 1e-12 km perturbation lands in the same place.  For
+  scale, the discretisation error at the default subdivision is 1e-4 to
+  1e-5 — five orders of magnitude larger than even the four-flavor shift,
+  and eleven larger than the three-flavor one.
+
+  And the check has to be compiled.  Comparing a materialised `(n, 3, 3)`
+  complex stack against its reverse through NumPy costs about 6
+  microseconds — reversed views, temporaries, and a full pass whatever the
+  answer — against the 6 microseconds the halved composition saves on a
+  120-slab chord.  Measured, that turned a 1.55x win into a 0.98x loss.
+  `_palindromic_stack` walks the first half and returns at the first
+  disagreement, and is 8x cheaper.
+
+  `fastkernels.USE_PALINDROME` switches it, and is True by default.  It is
+  not a correctness switch --- the two orderings agree to a few times
+  1e-15 --- but the plain left-to-right product is what a comparison needs
+  when the question is whether a discrepancy is the palindrome's doing.
+
+  Composition ordering is regrouped, so results move by 2e-15 to 5e-15
+  against composing the whole chord.  Unitarity is unchanged — measured
+  identical at three flavors and at four, marginally better for the
+  mirrored composer at two of three angles.
+
+- **The Earth kernels build their own Hamiltonians.**  `earth_chords_{2,3,4}nu_kernel`
+  take the energy-independent vacuum Hamiltonian, the per-slab potentials and
+  the widths, and construct each slab's matter Hamiltonian in registers.  The
+  batch kernels they replace on this path were handed a stack — one matrix per
+  slab per energy, 17 KB per chord, written by the builder and then streamed
+  back — and that stack was what made a scan memory-bound.  What the fused
+  kernels read instead is one potential and one width per slab, shared by every
+  energy in the scan.
+
+  Worth being plain about what this is and is not: **it is a memory layout, not
+  a scheme.**  The Hamiltonian is the same midpoint Hamiltonian
+  `hamiltonians3nu.hamiltonian_3nu_matter` builds, and the fused output is
+  bit-for-bit the batch kernel's at all three flavor counts, which is what the
+  tests assert.  The cost is that `fastkernels` now knows the
+  matter-Hamiltonian convention, which is a real coupling and was weighed
+  rather than assumed.
+
+  On top of batching: **1.9x to 2.4x at three and four flavors**, more at two.
+  Per probability, a three-flavor scan went from about 8.5 to 4.8 microseconds.
+  The general batched composer in `slabs` stays — it takes an arbitrary stack
+  of Hamiltonians, which the fused kernels cannot, knowing only
+  ``H_vac/E + V P`` — and is now tested directly rather than through `earth`.
+
+- **An array of zenith angles, which is to say oscillograms.**  The energies
+  and angles broadcast against each other, so a grid is asked for as
+  ``probabilities_3nu_earth(h, energies[None, :], costhz[:, None])`` — the
+  idiom `oscprob3nu.probabilities_3nu` already uses for Hamiltonians against
+  baselines.  Measured **8x** against the loop over grid points it replaces,
+  at 4.8 microseconds per point for a 60 x 200 grid.
+
+  The angles are evaluated one at a time, and that is not a shortcut: the chord
+  geometry is what the angle changes, so two angles share neither their slab
+  widths nor even how many slabs they have, and there is nothing for a single
+  kernel call to share.  What they do share is every energy at a given angle,
+  which is the axis the fused kernel already spreads over — so the work drops
+  from one call per grid point to one call per distinct angle.  A broadcast
+  grid repeats each angle many times, and `numpy.unique` means it is cut once.
+
+  `earth_slabs` deliberately stays scalar in the angle: it returns *a* chord's
+  widths and densities, and there is no array shape that holds two chords of
+  different lengths.
+
+- **`rtol` and `atol` on the Earth probability routines**, and
+  `earth.slabs_for_tolerance`, which is what they call.  The discretisation
+  error is strongly energy- and angle-dependent — at the default eight
+  sub-slabs per segment it spans more than an order of magnitude between 3
+  and 40 GeV — so a fixed `n_slabs_per_segment` does not give a fixed
+  accuracy.  Either tolerance being set refines the chord until the measured
+  error meets it; both unset leaves the result bit-identical to before, which
+  is the regression that matters most here.
+
+  The threshold is `atol + rtol*abs(P)`, the convention of `numpy.isclose`,
+  and it binds on **every** returned probability, so the subdivision is set
+  by the worst-converging entry and no channel in the tuple is quietly
+  less converged than was asked for.  For an array of energies one
+  subdivision covers the whole scan, chosen from the worst energy in it.
+
+  The search doubles the subdivision until the error estimate passes, rather
+  than solving the second-order law for the required `n` in one jump.  It
+  costs about twice a single evaluation at the subdivision it returns —
+  measured at 2.2x, the geometric series being dominated by its last term —
+  and in exchange every value it returns has had its error *measured* rather
+  than extrapolated, which is what makes it able to say when a tolerance
+  cannot be met.  It raises then, rather than clamping and warning: a
+  warning Python prints once and thereafter suppresses is a poor way to tell
+  someone their stated accuracy was not honoured.
+
+  Because the error of the coarser evaluation is four thirds of the gap, a
+  tolerance the default already meets is met by `n_slabs_per_segment` itself
+  rather than by twice it, so a loose tolerance costs nothing afterwards.
+  `return_n_slabs=True` reports what was chosen; a tight tolerance can
+  quietly cost a great deal of refinement and should be discoverable.
+
+  Verified against second-order Richardson references at three zenith angles
+  and three energies: the subdivision returned meets the tolerance in every
+  case, and it ranges from 8 to 256 across them.  The helper is meant to be
+  called **once** per scan and its answer reused — passing `rtol` to every
+  point of a loop repeats the search at every point.
+
+- **`slabs.probabilities_{2,3,4}nu_profile`**, the general counterpart of the
+  Earth routines: they take the profile as a callable rather than knowing
+  about PREM, so the same tolerance machinery serves a hand-built density
+  profile, a castle wall, or a solar model.  `rtol` and `atol` do not appear
+  in `oscprob{2,3,4}nu`, and deliberately: those compute an exact closed form
+  for a single Hamiltonian, with no discretisation to refine, so a tolerance
+  there would be a parameter that could not be honoured.
+
+  Equal slabs sampled at their midpoints, which is second order and so
+  refines by the law the search assumes — verified at a ratio of 4.00.
+  Where a profile is *discontinuous* this is the wrong tool, since no
+  refinement recovers a jump that straddles a slab; the docstring says so and
+  says to split the trajectory at the discontinuities instead, which is what
+  `earth` does with the PREM shells.
+
+- **A compiled path for `slabs` and `earth`, which had none.**  The backend
+  offered probability kernels only, so composing evolution operators across
+  slabs — which is what layered matter and the Earth do, and they never call
+  `probabilities_3nu` — ran the NumPy path however the `fast` extra was
+  installed.  Measured before the fix: `probabilities_3nu_earth` took 2.11 ms
+  with Numba and 2.09 ms without, entered a kernel zero times, and never even
+  consulted `worthwhile()`.
+
+  Six new kernels: `evolution_operator_{2,3,4}nu_kernel` and
+  `slab_product_{2,3,4}nu_kernel`, with `MIN_SLAB_BATCH` and
+  `worthwhile_slabs` governing the second set.  An Earth crossing is now
+  **13.9x, 9.6x and 6.6x** quicker at two, three and four flavors, unchanged
+  to 1e-14 or better.
+
+  Three things are worth recording about how that number was reached.
+
+  The operators were never the bottleneck.  Compiling them alone bought
+  1.33x.  At 10 GeV and cos θz = −0.8, 120 slabs, the 396 µs divided as
+  176 µs of PREM chord geometry, 126 µs composing the product in a Python
+  loop, 55 µs of evolution operators and 10 µs building the Hamiltonians.
+
+  `earth_slabs` depends on the zenith angle alone — not the energy, not the
+  flavor count, not the Hamiltonian — yet an energy scan recomputed the
+  identical chord for every point.  It is now cached; a hundred-energy scan
+  reports 899 hits and one miss.  The public function still returns arrays
+  the caller owns, because it copies; the cached originals are read-only so
+  a stray write raises rather than poisoning the cache.
+
+  And the slab product needed its own threshold.  `MIN_BATCH` weighs
+  compiled arithmetic against NumPy arithmetic, which is why two flavors
+  sits at fifty thousand; the slab product instead replaces a *Python loop
+  of dispatched matrix products*, so it is ahead at every length.  Measured
+  over 1 to 256 slabs it leads by 137x, 225x and 187x at one slab and 59x,
+  13x and 7x at 256 — the margin narrowing with length, the reverse of the
+  probability kernels, because the fixed cost being avoided is the
+  caller's.  Reusing `MIN_BATCH` would have left two flavors on the NumPy
+  path for every Earth crossing.
+
+- **`fastkernels.evolution_operator_3nu_kernel`**, and the dispatch in
+  `oscprob3nu` that reaches it.  The compiled backend had no
+  evolution-operator kernel at all, only probability ones — so `slabs` and
+  `earth`, which compose *operators* across adjacent slabs and never call
+  `probabilities_3nu`, ran the NumPy path however the backend was
+  configured.  Installing the `fast` extra bought an Earth crossing exactly
+  nothing: measured before the fix, `probabilities_3nu_earth` took 2.11 ms
+  with Numba and 2.09 ms without, and the kernel was entered zero times —
+  `worthwhile()` was never even consulted.
+
+  The arithmetic was already there.  `_one_3nu` built all nine entries of
+  `U_3` and squared them on the next line, so the operator kernel is that
+  computation stopping one step earlier; the shared part is factored into
+  `_entries_3nu` and inlined into both, leaving the probability path
+  unchanged.  Agreement with the NumPy path is 8.9e-15 over 200 random
+  Hamiltonians plus the degenerate branches, which match exactly.
+
+  **This is three flavors only.**  Four is the same shape of change —
+  `_one_4nu` already materialises the operator in scratch — but two is not:
+  `_one_2nu` never forms `U` at all, going straight to the closed-form
+  `P_eμ`, so a two-flavor operator kernel is new code rather than a
+  refactor.
+
+  Worth stating plainly: **the win is smaller than the gap suggested.**  An
+  Earth call is 1.33x faster, not an order of magnitude, because computing
+  the operators was never the bottleneck.  At 10 GeV and cos θz = −0.8, 120
+  slabs, the 396 µs breaks down as 176 µs of PREM chord geometry (44%),
+  126 µs composing the product in a Python loop (32%), 55 µs of evolution
+  operators (14%, now compiled) and 10 µs building the Hamiltonians.  The
+  remaining levers are the composition loop, which could be folded into the
+  kernel, and `earth_slabs`, which is purely geometric and recomputed for
+  every energy in a scan even though it depends only on the zenith angle.
+
+- **`tests/prem_scan.py` and `tests/prem_speed_accuracy.json`**, the frozen
+  data behind the paper's two Earth speed–accuracy figures, at three flavors
+  and at 3+1.  The module docstring carries the full provenance: the referee,
+  the check on the referee, and every convention that had to be matched
+  before six codes were propagating through the same Earth as this one.
+
+- **`tests/external_drivers/`**, the C and C++ drivers for `NuFast-Earth`,
+  `GLoBES` and `Prob3++`, with the raw output of each and a README recording
+  what every one of them had to be told.  The previous round of this
+  comparison built its drivers in a session scratchpad and lost them.
+  `gen_prem_header.py` emits this library's PREM as a C header from
+  `earth._PREM_COEFFS`, rather than anyone transcribing forty coefficients;
+  it reproduces `earth.density_prem` to 5e-14 over 6372 radii.
+
+### Fixed
+
+- **`test_root_polishing_is_what_makes_a_stiff_spectrum_accurate` measured
+  whichever backend happened to be dispatched.**  When the compiled path
+  took over `probabilities_4nu` earlier in this release, the gain it
+  measured at 1 GeV fell from 418x to 10.6x — close enough to its threshold
+  of ten that it passed on one machine and failed on another.  It now runs
+  per backend.
+
+  Investigating that turned up no bug to fix, which is the useful part.
+  The two paths round the closed-form roots differently, and in a cluster
+  where the closest pair is 2.6e-4 of the spectrum apart, that decides
+  which Newton steps the halfway guard in `_polish_roots` admits.  Neither
+  path is better: swept over energy, the compiled one leads at 0.5 and
+  10 GeV and trails at 1 and 2.
+
+  The larger point is that the gain from refining is a function of how
+  degenerate the spectrum is, not a constant to assert.  At 0.5 GeV, with
+  the closest pair 1.4e-4 apart, refining is worth some three thousand
+  times on both paths; by 25 GeV, at 3.3e-3, it is worth nothing on either
+  and is very slightly harmful — the guard's guarantee being about the
+  roots, not about phases accumulated over a long baseline.  The test now
+  measures at the degenerate end, where the margin is four orders of
+  magnitude wide, rather than where it happened to be written.
+
+- **The convergence order of the slab product was being quoted as first.**
+  It is second: the density is sampled at slab *midpoints* and the PREM shell
+  boundaries are cut exactly, so the leading error is O(h^2).  Measured
+  exponents are 2.000 at 3, 10 and 40 GeV.  The consequence is practical — a
+  Richardson reference built for first order, `2*P(32) - P(16)`, is worse
+  than plain `P(32)`, while `[4*P(256) - P(128)]/3` reaches 1e-11 and is
+  confirmed there by an independent integration of the continuous profile.
+
+- **Three external codes carry three different roundings of the same
+  constant.**  `NuFast-Earth`'s 1.526493231029146e-4, `GLoBES`'
+  7.63247e-14 and `Prob3++`'s 1.52588e-4 are all sqrt(2) G_F over the atomic
+  mass unit, and no two agree, so each needs its own factor against this
+  library's 1.514423e-4 — 0.9920938, 0.992093 and 0.9924922.  Scanning for
+  the residual minimum returns 1.000000 for the first two.
+
+- **The star-product deviation in `methodology.rst` quoted a sample
+  extremum.**  "Between 30% and 230%" is the largest and smallest of one
+  finite draw and grows with the sample; at two thousand Hamiltonians the
+  same measurement gives 27% to 263%.  The median, 56%, is stable and is what
+  the text now leans on, with the central 90% of draws quoted beside it.
+
 ## [1.11.0] - 2026-08-02
 
 **The pre-publishing audit of `src/`.**  Two passes over all ten modules,

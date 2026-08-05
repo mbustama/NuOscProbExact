@@ -285,6 +285,17 @@ NumPy already does about as well as compiled code can.  Below fifty thousand
 elements the NumPy path is kept; above it the kernel leads by about 1.3 to
 1.8 times.  The library chooses without being asked.
 
+**Layered matter has its own kernel.**  :mod:`slabs` and :mod:`earth`
+compose evolution operators rather than computing probabilities, so they
+could not use the backend at all before 1.12.0 --- it offered probability
+kernels only, and an Earth crossing quietly ran the NumPy path however the
+extra was installed.  They now compose a whole trajectory in one compiled
+pass, never materialising the stack of operators and never dispatching a
+product per slab, which is worth 13.9x, 9.6x and 6.6x on an Earth crossing
+at two, three and four flavors.  The threshold there is one slab rather
+than the fifty thousand above: the comparison is against a Python loop, so
+the kernel is ahead at every length.
+
 **One cost runs the other way.**  Every entry point verifies that the
 Hamiltonian is Hermitian, because one that is not returns probabilities that
 still sum to one and so betrays nothing.  Validating a stack is a pass over

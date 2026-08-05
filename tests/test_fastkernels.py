@@ -23,6 +23,7 @@ import fastkernels
 import oscprob2nu
 import oscprob3nu
 import oscprob4nu
+import slabs
 
 from conftest import ATOL, as_nested_list, random_hermitian
 
@@ -189,6 +190,135 @@ def test_4nu_kernel_polishes_its_roots(monkeypatch, kernel_spy):
 
 
 @needs_numba
+def test_evolution_operator_matches_between_the_paths(backend, rng):
+    r"""The batched evolution operator agrees on both backends.
+
+    The counterpart of the probability checks above, and the one that
+    was missing: `slabs` and `earth` compose *operators* across adjacent
+    slabs, so they never call `probabilities_3nu`.  Until
+    `fastkernels.evolution_operator_3nu_kernel` existed they had no
+    compiled path at all, and installing the optional extra bought an
+    Earth crossing nothing.
+
+    Running under the `backend` fixture is the point: with Numba present
+    `worthwhile(3, size)` is true at every size, so the NumPy branch of
+    `_evolution_operator_3nu_batch` is unreachable in that configuration
+    and would otherwise be covered by nothing.
+    """
+    h_stack = np.stack([random_hermitian(rng, 3) for _ in range(64)])
+    l_stack = rng.uniform(0.1, 5.0, size=64)
+
+    u = np.asarray(oscprob3nu.evolution_operator_3nu(h_stack, l_stack))
+    assert u.shape == (64, 3, 3)
+
+    # Against the scalar path, element by element.
+    for k in range(64):
+        one = np.asarray(oscprob3nu.evolution_operator_3nu(
+            as_nested_list(h_stack[k]), float(l_stack[k])))
+        assert np.allclose(u[k], one, atol=ATOL)
+
+    # And unitary, on whichever backend ran.
+    assert np.allclose(np.einsum('nij,nkj->nik', u, u.conj()),
+                       np.eye(3), atol=1.0e-10)
+
+
+def test_each_compiled_path_is_actually_reached(monkeypatch, kernel_spy):
+    r"""Each kernel is entered by the route that is supposed to use it.
+
+    Guards the wiring rather than the arithmetic, because a kernel that
+    exists and is never called is precisely the bug this replaced: the
+    backend had probability kernels only, so `slabs` and `earth` --- which
+    compose operators --- ran the NumPy path however it was configured.
+
+    The two routes are distinct and must stay so.  A bare batched
+    `evolution_operator_3nu` wants the per-slab operators and reaches
+    `evolution_operator_3nu_kernel`; a slab composition wants only their
+    product and reaches `slab_product_3nu_kernel`, which never
+    materialises the stack.  An earlier version of this test asserted the
+    first for the slab path and had to fail when the second arrived,
+    which is the test working.
+    """
+    if not fastkernels.HAVE_NUMBA:
+        pytest.skip('needs the optional Numba backend')
+    monkeypatch.setattr(fastkernels, 'USE_NUMBA', True)
+
+    h = np.stack([np.diag([1.0, 2.0, -3.0]).astype(complex)]*12)
+    widths = np.full(12, 0.3)
+
+    oscprob3nu.evolution_operator_3nu(h, widths)
+    assert kernel_spy['evolution_operator_3nu_kernel'] == 1, (
+        'a batched evolution_operator_3nu did not reach its kernel')
+
+    slabs.probabilities_3nu_slabs(h, widths)
+    assert kernel_spy['slab_product_3nu_kernel'] == 1, (
+        'the slab path did not reach the compiled product kernel')
+    assert kernel_spy['evolution_operator_3nu_kernel'] == 1, (
+        'the slab path materialised the operator stack instead of '
+        'composing it in the kernel')
+
+
+@pytest.mark.parametrize('n_flavors', [2, 3, 4])
+def test_slab_composition_matches_between_the_paths(backend, rng, n_flavors):
+    r"""The composed operator agrees on both backends, at every flavor.
+
+    Covers the NumPy composition loop, which is unreachable whenever
+    Numba is present: `worthwhile_slabs` is true at every size and every
+    flavor count, so the compiled product takes every slab sequence.
+    This is the third branch in this release to be orphaned by a kernel
+    landing above it, so the `backend` fixture is load-bearing here
+    rather than decorative.
+    """
+    module = {2: oscprob2nu, 3: oscprob3nu, 4: oscprob4nu}[n_flavors]
+    one = getattr(module, 'evolution_operator_%dnu' % n_flavors)
+    compose = getattr(slabs, 'evolution_operator_%dnu_slabs' % n_flavors)
+
+    for n in (1, 2, 17, 64):
+        h = np.stack([random_hermitian(rng, n_flavors) for _ in range(n)])
+        w = rng.uniform(0.05, 2.0, size=n)
+
+        u = np.asarray(compose(h, w))
+        assert u.shape == (n_flavors, n_flavors)
+        assert np.allclose(u.conj().T @ u, np.eye(n_flavors), atol=1.0e-10)
+
+        # Against the product built one slab at a time, in the order the
+        # neutrino meets them: first crossed, rightmost.
+        expected = np.asarray(one(as_nested_list(h[0]), float(w[0])))
+        for k in range(1, n):
+            expected = np.asarray(
+                one(as_nested_list(h[k]), float(w[k]))) @ expected
+        assert np.allclose(u, expected, atol=1.0e-10)
+
+
+def test_2nu_operator_kernel_above_its_threshold(monkeypatch, kernel_spy, rng):
+    r"""A two-flavor stack past MIN_BATCH reaches the operator kernel.
+
+    Two flavors is the awkward one.  `MIN_BATCH[2]` is fifty thousand,
+    because for *probabilities* NumPy's closed form is competitive that
+    far out, so nothing smaller exercises the dispatch in
+    `_evolution_operator_2nu_batch` at all --- and a slab sequence never
+    will, since it takes the product kernel instead.  Without a stack
+    this size the branch and the kernel behind it are covered by
+    nothing.
+    """
+    if not fastkernels.HAVE_NUMBA:
+        pytest.skip('needs the optional Numba backend')
+    monkeypatch.setattr(fastkernels, 'USE_NUMBA', True)
+
+    size = fastkernels.MIN_BATCH[2]
+    h = np.broadcast_to(random_hermitian(rng, 2), (size, 2, 2))
+    L = rng.uniform(0.1, 5.0, size=size)
+
+    u = np.asarray(oscprob2nu.evolution_operator_2nu(h, L))
+    assert u.shape == (size, 2, 2)
+    assert kernel_spy['evolution_operator_2nu_kernel'] == 1
+
+    # Spot-check a few against the scalar path.
+    for k in (0, size//2, size-1):
+        one = np.asarray(oscprob2nu.evolution_operator_2nu(
+            as_nested_list(h[k]), float(L[k])))
+        assert np.allclose(u[k], one, atol=ATOL)
+
+
 def test_kernel_matches_the_scalar_path(rng, monkeypatch):
     r"""The compiled kernel agrees with the scalar routine element by
     element, which is the reference both batched paths answer to."""

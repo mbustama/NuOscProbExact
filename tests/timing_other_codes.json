@@ -1,0 +1,55 @@
+{
+ "note": "Frozen timings of two independent codes, for the paper performance figure. Measured on one desktop machine; absolute values are machine-dependent, the ratios much less so. Both solve the same problem: P(nu_mu -> nu_e) at L = 1300 km in constant matter of 3 g/cm^3, three flavors.",
+ "nufast_lbl": {
+  "version": "github.com/PeterDenton/NuFast-LBL, arXiv:2405.02400",
+  "how": "timed inside C++, best of five runs, N_Newton = 0 (its default); no Python involved",
+  "sizes": [
+   1,
+   3,
+   10,
+   30,
+   100,
+   300,
+   1000,
+   3000,
+   10000,
+   30000
+  ],
+  "seconds": [
+   1.04e-07,
+   2.32e-07,
+   7.43e-07,
+   2.181e-06,
+   7.313e-06,
+   2.1834e-05,
+   7.2919e-05,
+   0.000114027,
+   0.000377788,
+   0.001076496
+  ]
+ },
+ "nusquids": {
+  "version": "1.13.3",
+  "how": "timed through the Python interface, best of three runs, multiple-energy mode, rel and abs error 1e-12; includes constructing the solver and reading the results back",
+  "sizes": [
+   1,
+   3,
+   10,
+   30,
+   100,
+   300,
+   1000,
+   3000
+  ],
+  "seconds": [
+   7.497001206502318e-05,
+   0.001005235011689365,
+   0.0030623130151070654,
+   0.009482021006988361,
+   0.03199317498365417,
+   0.09260351199191064,
+   0.3181910210114438,
+   0.9768224750005174
+  ]
+ }
+}
