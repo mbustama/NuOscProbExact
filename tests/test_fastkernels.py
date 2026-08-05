@@ -23,6 +23,7 @@ import fastkernels
 import oscprob2nu
 import oscprob3nu
 import oscprob4nu
+import slabs
 
 from conftest import ATOL, as_nested_list, random_hermitian
 
@@ -189,6 +190,58 @@ def test_4nu_kernel_polishes_its_roots(monkeypatch, kernel_spy):
 
 
 @needs_numba
+def test_evolution_operator_matches_between_the_paths(backend, rng):
+    r"""The batched evolution operator agrees on both backends.
+
+    The counterpart of the probability checks above, and the one that
+    was missing: `slabs` and `earth` compose *operators* across adjacent
+    slabs, so they never call `probabilities_3nu`.  Until
+    `fastkernels.evolution_operator_3nu_kernel` existed they had no
+    compiled path at all, and installing the optional extra bought an
+    Earth crossing nothing.
+
+    Running under the `backend` fixture is the point: with Numba present
+    `worthwhile(3, size)` is true at every size, so the NumPy branch of
+    `_evolution_operator_3nu_batch` is unreachable in that configuration
+    and would otherwise be covered by nothing.
+    """
+    h_stack = np.stack([random_hermitian(rng, 3) for _ in range(64)])
+    l_stack = rng.uniform(0.1, 5.0, size=64)
+
+    u = np.asarray(oscprob3nu.evolution_operator_3nu(h_stack, l_stack))
+    assert u.shape == (64, 3, 3)
+
+    # Against the scalar path, element by element.
+    for k in range(64):
+        one = np.asarray(oscprob3nu.evolution_operator_3nu(
+            as_nested_list(h_stack[k]), float(l_stack[k])))
+        assert np.allclose(u[k], one, atol=ATOL)
+
+    # And unitary, on whichever backend ran.
+    assert np.allclose(np.einsum('nij,nkj->nik', u, u.conj()),
+                       np.eye(3), atol=1.0e-10)
+
+
+def test_evolution_operator_kernel_is_what_slabs_reaches(monkeypatch,
+                                                         kernel_spy):
+    r"""A slab composition enters the compiled operator kernel.
+
+    Guards the wiring rather than the arithmetic: it is the dispatch in
+    `_evolution_operator_3nu_batch` that was missing, and a kernel that
+    exists but is never called is the bug this replaced.
+    """
+    if not fastkernels.HAVE_NUMBA:
+        pytest.skip('needs the optional Numba backend')
+    monkeypatch.setattr(fastkernels, 'USE_NUMBA', True)
+
+    h = np.stack([np.diag([1.0, 2.0, -3.0]).astype(complex)]*12)
+    widths = np.full(12, 0.3)
+    slabs.probabilities_3nu_slabs(h, widths)
+
+    assert kernel_spy['evolution_operator_3nu_kernel'] == 1, (
+        'the slab path did not reach the compiled evolution-operator kernel')
+
+
 def test_kernel_matches_the_scalar_path(rng, monkeypatch):
     r"""The compiled kernel agrees with the scalar routine element by
     element, which is the reference both batched paths answer to."""

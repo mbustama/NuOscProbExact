@@ -1152,10 +1152,20 @@ def _evolution_operator_3nu_batch(
 
     # Check that the two broadcast against each other, and fail here with
     # a clear message rather than deep inside the expansion
-    np.broadcast_shapes(h_matrix.shape[:-2], L.shape)
+    batch = np.broadcast_shapes(h_matrix.shape[:-2], L.shape)
+    size = int(np.prod(batch, dtype=np.int64))
 
     if CHECK_HERMITICITY:
         _check_hermitian(h_matrix, 'evolution_operator_3nu')
+
+    # The compiled path, where there is one.  This is what `slabs` and
+    # `earth` reach: they compose operators across adjacent slabs, so
+    # they never call `probabilities_3nu` and never saw a kernel until
+    # `evolution_operator_3nu_kernel` existed.
+    if size > 0 and fastkernels.worthwhile(3, size):
+        return fastkernels.evolution_operator_3nu_kernel(
+            np.broadcast_to(h_matrix, batch+(3, 3)),
+            np.broadcast_to(L, batch))
 
     h = _hamiltonian_3nu_coefficients_batch(h_matrix)
     entries = _u_to_entries_batch(*_u_coefficients_3nu_batch(h, L))

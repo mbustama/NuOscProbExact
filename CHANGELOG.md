@@ -9,6 +9,39 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **`fastkernels.evolution_operator_3nu_kernel`**, and the dispatch in
+  `oscprob3nu` that reaches it.  The compiled backend had no
+  evolution-operator kernel at all, only probability ones — so `slabs` and
+  `earth`, which compose *operators* across adjacent slabs and never call
+  `probabilities_3nu`, ran the NumPy path however the backend was
+  configured.  Installing the `fast` extra bought an Earth crossing exactly
+  nothing: measured before the fix, `probabilities_3nu_earth` took 2.11 ms
+  with Numba and 2.09 ms without, and the kernel was entered zero times —
+  `worthwhile()` was never even consulted.
+
+  The arithmetic was already there.  `_one_3nu` built all nine entries of
+  `U_3` and squared them on the next line, so the operator kernel is that
+  computation stopping one step earlier; the shared part is factored into
+  `_entries_3nu` and inlined into both, leaving the probability path
+  unchanged.  Agreement with the NumPy path is 8.9e-15 over 200 random
+  Hamiltonians plus the degenerate branches, which match exactly.
+
+  **This is three flavors only.**  Four is the same shape of change —
+  `_one_4nu` already materialises the operator in scratch — but two is not:
+  `_one_2nu` never forms `U` at all, going straight to the closed-form
+  `P_eμ`, so a two-flavor operator kernel is new code rather than a
+  refactor.
+
+  Worth stating plainly: **the win is smaller than the gap suggested.**  An
+  Earth call is 1.33x faster, not an order of magnitude, because computing
+  the operators was never the bottleneck.  At 10 GeV and cos θz = −0.8, 120
+  slabs, the 396 µs breaks down as 176 µs of PREM chord geometry (44%),
+  126 µs composing the product in a Python loop (32%), 55 µs of evolution
+  operators (14%, now compiled) and 10 µs building the Hamiltonians.  The
+  remaining levers are the composition loop, which could be folded into the
+  kernel, and `earth_slabs`, which is purely geometric and recomputed for
+  every energy in a scan even though it depends only on the zenith angle.
+
 - **`tests/prem_scan.py` and `tests/prem_speed_accuracy.json`**, the frozen
   data behind the paper's two Earth speed–accuracy figures, at three flavors
   and at 3+1.  The module docstring carries the full provenance: the referee,

@@ -79,6 +79,7 @@ Routine listings
     * probabilities_2nu_kernel - Two-flavor probabilities for a stack
     * probabilities_3nu_kernel - Three-flavor probabilities for a stack
     * probabilities_4nu_kernel - Four-flavor probabilities for a stack
+    * evolution_operator_3nu_kernel - Three-flavor U_3 for a stack
 """
 
 __author__ = "Mauricio Bustamante"
@@ -87,7 +88,7 @@ __email__ = "mbustamante@gmail.com"
 __all__ = ['HAVE_NUMBA', 'USE_NUMBA', 'MIN_BATCH', 'PARALLEL_THRESHOLD',
            'available', 'worthwhile',
            'probabilities_2nu_kernel', 'probabilities_3nu_kernel',
-           'probabilities_4nu_kernel']
+           'probabilities_4nu_kernel', 'evolution_operator_3nu_kernel']
 
 from typing import Callable
 
@@ -203,14 +204,25 @@ if HAVE_NUMBA:                                          # pragma: no branch
     DEGENERACY_TOL = 1.0e-12
 
     @njit(cache=True, inline='always')
-    def _one_3nu(h_matrix, L, out, n):
-        r"""Writes the nine probabilities for one Hamiltonian into
-        ``out[n]``.
+    def _entries_3nu(h_matrix, L):
+        r"""Returns the nine entries of :math:`U_3(L)`, row by row.
 
         A transcription of the scalar path in :mod:`oscprob3nu`: the
         SU(3) coefficients, the sparse star product, the two invariants,
         the latent roots with the same degeneracy handling, and the nine
-        moduli squared.
+        entries of the evolution operator.
+
+        Factored out of `_one_3nu` so that the probability kernel and the
+        evolution-operator kernel share it.  The probability kernel used
+        to compute these entries and square them on the next line, which
+        meant `slabs` and `earth` --- which need the *operators*, to
+        multiply them --- had no compiled path at all and silently ran
+        the NumPy one.  The arithmetic here is unchanged; only its last
+        step now has two callers.
+
+        Returned as a tuple rather than written into an array because
+        ``inline='always'`` folds it into both call sites, so nothing is
+        materialised and the probability path costs exactly what it did.
         """
         h0 = h_matrix[0, 1].real
         h1 = -h_matrix[0, 1].imag
@@ -322,6 +334,17 @@ if HAVE_NUMBA:                                          # pragma: no branch
         u_tm = 1.0j*c6 - c7
         u_tt = u0 - 2.0j*eighth
 
+        return (u_ee, u_em, u_et, u_me, u_mm, u_mt, u_te, u_tm, u_tt)
+
+    @njit(cache=True, inline='always')
+    def _one_3nu(h_matrix, L, out, n):
+        r"""Writes the nine probabilities for one Hamiltonian into
+        ``out[n]``.
+        """
+        (u_ee, u_em, u_et,
+         u_me, u_mm, u_mt,
+         u_te, u_tm, u_tt) = _entries_3nu(h_matrix, L)
+
         # P_ab = |U_ba|^2, initial flavor slowest
         out[n, 0] = u_ee.real*u_ee.real + u_ee.imag*u_ee.imag
         out[n, 1] = u_me.real*u_me.real + u_me.imag*u_me.imag
@@ -332,6 +355,30 @@ if HAVE_NUMBA:                                          # pragma: no branch
         out[n, 6] = u_et.real*u_et.real + u_et.imag*u_et.imag
         out[n, 7] = u_mt.real*u_mt.real + u_mt.imag*u_mt.imag
         out[n, 8] = u_tt.real*u_tt.real + u_tt.imag*u_tt.imag
+
+    @njit(cache=True, inline='always')
+    def _one_3nu_u(h_matrix, L, out, n):
+        r"""Writes the nine entries of :math:`U_3(L)` into ``out[n]``.
+
+        Row-major and indexed ``(final, initial)``, so that reshaping to
+        ``(3, 3)`` gives the same matrix `oscprob3nu` returns --- *not*
+        the flavor order the probabilities use, which runs the initial
+        index slowest.  The two orderings differ by a transpose, and
+        conflating them is the obvious way to get this wrong.
+        """
+        (u_ee, u_em, u_et,
+         u_me, u_mm, u_mt,
+         u_te, u_tm, u_tt) = _entries_3nu(h_matrix, L)
+
+        out[n, 0] = u_ee
+        out[n, 1] = u_em
+        out[n, 2] = u_et
+        out[n, 3] = u_me
+        out[n, 4] = u_mm
+        out[n, 5] = u_mt
+        out[n, 6] = u_te
+        out[n, 7] = u_tm
+        out[n, 8] = u_tt
 
     @njit(cache=True, inline='always')
     def _one_2nu(h_matrix, L, out, n):
@@ -717,6 +764,16 @@ if HAVE_NUMBA:                                          # pragma: no branch
             _one_3nu(h_stack[n], l_stack[n], out, n)
 
     @njit(cache=True)
+    def _run_3nu_u_serial(h_stack, l_stack, out):
+        for n in range(l_stack.shape[0]):
+            _one_3nu_u(h_stack[n], l_stack[n], out, n)
+
+    @njit(cache=True, parallel=True)
+    def _run_3nu_u_parallel(h_stack, l_stack, out):
+        for n in prange(l_stack.shape[0]):
+            _one_3nu_u(h_stack[n], l_stack[n], out, n)
+
+    @njit(cache=True)
     def _run_2nu_serial(h_stack, l_stack, out):
         for n in range(h_stack.shape[0]):
             _one_2nu(h_stack[n], l_stack[n], out, n)
@@ -744,7 +801,8 @@ if HAVE_NUMBA:                                          # pragma: no branch
         width: int,
         serial: Callable,
         parallel: Callable,
-        extra: tuple = ()
+        extra: tuple = (),
+        dtype: type = float
     ) -> np.ndarray:
         r"""Flattens, dispatches, and restores the batch shape.
 
@@ -765,6 +823,9 @@ if HAVE_NUMBA:                                          # pragma: no branch
             array.  Empty at two and three flavors; at four it carries
             the root-polishing switch, which an ``@njit`` function cannot
             read from module state at call time.
+        dtype : type, optional
+            Element type of the output.  ``float`` for probabilities,
+            ``complex`` for evolution operators.
 
         Returns
         -------
@@ -774,7 +835,7 @@ if HAVE_NUMBA:                                          # pragma: no branch
         batch = l_stack.shape
         flat_h = np.ascontiguousarray(h_stack).reshape(-1, width, width)
         flat_l = np.ascontiguousarray(l_stack).reshape(-1)
-        out = np.empty((flat_l.shape[0], width*width))
+        out = np.empty((flat_l.shape[0], width*width), dtype=dtype)
         if flat_l.shape[0] >= PARALLEL_THRESHOLD:
             parallel(flat_h, flat_l, out, *extra)
         else:
@@ -805,6 +866,39 @@ if HAVE_NUMBA:                                          # pragma: no branch
             the same values to round-off, as the NumPy path.
         """
         return _run(h_stack, l_stack, 3, _run_3nu_serial, _run_3nu_parallel)
+
+    def evolution_operator_3nu_kernel(
+        h_stack: np.ndarray,
+        l_stack: np.ndarray
+    ) -> np.ndarray:
+        r"""Returns :math:`U_3(L)` for a stack of Hamiltonians.
+
+        The companion to `probabilities_3nu_kernel`, and the reason it
+        exists: :mod:`slabs` and :mod:`earth` compose *operators* across
+        adjacent slabs, so they cannot use a kernel that returns
+        probabilities.  Without this they ran the NumPy path however the
+        backend was configured --- installing the optional extra bought
+        an Earth crossing nothing at all.
+
+        Parameters
+        ----------
+        h_stack : numpy.ndarray
+            Hamiltonians, of shape ``(..., 3, 3)``, already broadcast
+            against `l_stack`.
+        l_stack : numpy.ndarray
+            Baselines, of shape ``(...)``.
+
+        Returns
+        -------
+        numpy.ndarray
+            The evolution operators, of shape ``(..., 3, 3)``, indexed
+            ``(final, initial)`` --- the same convention, and the same
+            values to round-off, as the NumPy path.
+        """
+        flat = _run(h_stack, l_stack, 3,
+                    _run_3nu_u_serial, _run_3nu_u_parallel,
+                    dtype=complex)
+        return flat.reshape(flat.shape[:-1] + (3, 3))
 
     def probabilities_2nu_kernel(
         h_stack: np.ndarray,

@@ -99,7 +99,8 @@ def kernel_spy(monkeypatch):
     counts = _CountingDict()
 
     for name in ('probabilities_2nu_kernel', 'probabilities_3nu_kernel',
-                 'probabilities_4nu_kernel'):
+                 'probabilities_4nu_kernel',
+                 'evolution_operator_3nu_kernel'):
         original = getattr(fastkernels, name, None)
         if original is None:
             continue
