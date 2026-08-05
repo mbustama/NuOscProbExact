@@ -4701,11 +4701,66 @@ books['19_animations.ipynb'] = notebook(
              "                      % (n, '' if n == 1 else 's', "
              'ramp_values[i]))\n'
              '        return stair, trace, dot\n\n'
-             "    write(fig, update_slabs, len(ramp), 'anim_slabs.gif')\n"
+             "    write(fig, update_slabs, len(ramp), 'anim_slabs.gif')\n\n"
+             '    # Pillow writes a colour table per frame, so what it '
+             'just wrote is\n'
+             '    # some twenty times larger than it needs to be.  The '
+             'same two-pass\n'
+             '    # palette the command line uses brings it down; '
+             'skipped without\n'
+             '    # ffmpeg, since the GIFs are already usable.\n'
+             '    import shutil\n\n'
+             "    sys.path.insert(0, os.path.abspath(os.path.join('..', "
+             "'tools')))\n"
+             '    import make_demo_video\n\n'
+             "    if shutil.which('ffmpeg') is None:\n"
+             "        print('\\nffmpeg not found: the GIFs above are "
+             "Pillow-sized.')\n"
+             '    else:\n'
+             "        for name in ('cp', 'sterile', 'earth', 'slabs'):\n"
+             "            path = os.path.join(OUT, 'anim_%s.gif' % "
+             'name)\n'
+             '            before = os.path.getsize(path)/1024.0/1024.0\n'
+             '            make_demo_video.shrink(path, path, fps=12,\n'
+             '                                   width=860, colors=128)\n'
+             '            after = os.path.getsize(path)/1024.0/1024.0\n'
+             "            print('  %-16s %5.1f MB -> %4.1f MB' % (name, "
+             'before, after))\n'
              'else:\n'
              "    print('RENDER is False: the stills above are the "
              "output,')\n"
              "    print('and img/anim_*.gif are the rendered scenes.')"),
+        md('### After rendering\n\n'
+           'The cell above writes the four GIFs and then shrinks them '
+           'in place, through `tools/make_demo_video.py` — the same code '
+           'the command line runs, so there is one implementation of the '
+           'encoding rather than two.\n\n'
+           'To do either step by hand:\n\n'
+           '```shell\n'
+           '# Join the four scenes into one reel\n'
+           'python tools/make_demo_video.py --join img/anim_cp.gif \\\n'
+           '    img/anim_sterile.gif img/anim_earth.gif '
+           'img/anim_slabs.gif \\\n'
+           '    --out ~/reel.mp4\n\n'
+           '# Shrink any clip, which is what makes a GIF publishable\n'
+           'python tools/make_demo_video.py --shrink ~/reel.mp4 '
+           '--out ~/reel.gif\n'
+           '```\n\n'
+           'Both go through a **shared palette**: one pass computes a '
+           'colour table for the whole clip, the second applies it. '
+           'Writing a GIF directly gives every frame its own table, '
+           'which is where the twenty-fold difference comes from. The '
+           'knobs are `--fps`, `--width` and `--colors`, in that order '
+           'of effect on size.\n\n'
+           '**Two traps, both hit while writing this.** A GIF stores its '
+           'frame delays in hundredths of a second, so ffmpeg reads a '
+           '90 ms frame as roughly 100 fps and, without an explicit '
+           'output rate, writes every frame nine times over — a '
+           'four-hundred-frame reel became ninety megabytes and climbing '
+           'before it was noticed. And `ffmpeg` installed as a **snap** '
+           'has a private `/tmp` and cannot read or write under the real '
+           'one; it fails naming a path that plainly exists. Work under '
+           '`$HOME`.'),
     ])
 
 

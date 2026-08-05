@@ -272,6 +272,8 @@ NuOscProbExact/
 │   ├── fastkernels.py               # Optional Numba kernels, with a NumPy fallback
 │   ├── slabs.py                     # Propagation across adjacent slabs
 │   └── earth.py                     # PREM, chord geometry, and Earth crossings
+├── tools/                           # Scripts that are not part of the package
+│   └── make_demo_video.py           # Joins and shrinks the clips notebook 19 renders
 └── tests/                           # Regression suite, run with pytest
     ├── conftest.py                  # Shared fixtures and path setup
     ├── test_su3_algebra.py          # d tensor, star product, SU(3) invariants
