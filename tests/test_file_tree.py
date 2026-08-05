@@ -180,6 +180,8 @@ TREE = [
      'Both backends at the scales actually used'),
     ('tests/test_slabs.py', 'Slab composition, against expm'),
     ('tests/test_earth.py', 'PREM, geometry, and Earth probabilities'),
+    ('tests/test_batching_and_tolerance.py',
+     'Energy batching, and the rtol/atol refinement'),
     ('tests/test_documented_figures.py',
      'Keeps the quoted performance figures agreeing'),
     ('tests/test_version_consistency.py',

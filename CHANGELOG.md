@@ -9,6 +9,96 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **`probabilities_{2,3,4}nu_earth` take an array of energies.**  They took a
+  scalar, so an energy scan was N separate Python calls, each rebuilding the
+  matter potentials, re-validating slabs the library had just built itself,
+  and launching its own kernel.  Passing an array now evaluates the whole
+  scan in one pass and returns `(..., 4)`, `(..., 9)` or `(..., 16)`; a
+  scalar energy still returns a tuple, bit-for-bit what it returned before.
+  The three `_between_locations` wrappers inherit it.
+
+  Two things made this worth more than the bookkeeping it saves.  The matter
+  potential depends on the geometry alone, so a scan at fixed zenith angle
+  was recomputing the identical array once per energy — measured at 11% of a
+  hundred-energy scan, alongside 9% spent re-validating.  And the chords are
+  independent of one another, which the per-chord kernel could not exploit
+  because the product *along* a chord does not commute: the new
+  `slab_product_{2,3,4}nu_batch_kernel` spreads them over the cores instead,
+  above a threshold on `n_chords*n_slabs` rather than on the chord count,
+  since a chord costs in proportion to its slabs.
+
+  A hundred-energy scan is **6.7x, 4.8x and 3.5x** quicker at two, three and
+  four flavors than the loop it replaces; a thousand-energy scan is 9.6x,
+  4.6x and 1.9x.  Against the uncompiled per-energy loop, a thousand-energy
+  scan is 121x, 49x and 17x.
+
+  Two limits worth stating.  Four flavors gains least and falls off with
+  length because the Hamiltonian stack, and the traceless copy the expansion
+  needs, dominate: this is memory, not arithmetic.  And the stack is
+  proportional to the scan — a hundred thousand energies across a 120-slab
+  chord would be 1.6 GB at three flavors and nearly 6 GB at four, which is an
+  ordinary oscillogram rather than an abusive input — so long scans are
+  evaluated in chunks of `earth.MAX_CHUNK_BYTES`, bit-identically and at no
+  measurable cost.
+
+  What is *not* done: building the per-slab Hamiltonians inside the kernel.
+  That is the largest remaining item, worth about 19% of a scan, and it was
+  left alone deliberately because it would couple `fastkernels` to the
+  matter-Hamiltonian convention that lives in `hamiltonians*nu`.  Batching
+  captured the larger share without that.
+
+- **`rtol` and `atol` on the Earth probability routines**, and
+  `earth.slabs_for_tolerance`, which is what they call.  The discretisation
+  error is strongly energy- and angle-dependent — at the default eight
+  sub-slabs per segment it spans more than an order of magnitude between 3
+  and 40 GeV — so a fixed `n_slabs_per_segment` does not give a fixed
+  accuracy.  Either tolerance being set refines the chord until the measured
+  error meets it; both unset leaves the result bit-identical to before, which
+  is the regression that matters most here.
+
+  The threshold is `atol + rtol*abs(P)`, the convention of `numpy.isclose`,
+  and it binds on **every** returned probability, so the subdivision is set
+  by the worst-converging entry and no channel in the tuple is quietly
+  less converged than was asked for.  For an array of energies one
+  subdivision covers the whole scan, chosen from the worst energy in it.
+
+  The search doubles the subdivision until the error estimate passes, rather
+  than solving the second-order law for the required `n` in one jump.  It
+  costs about twice a single evaluation at the subdivision it returns —
+  measured at 2.2x, the geometric series being dominated by its last term —
+  and in exchange every value it returns has had its error *measured* rather
+  than extrapolated, which is what makes it able to say when a tolerance
+  cannot be met.  It raises then, rather than clamping and warning: a
+  warning Python prints once and thereafter suppresses is a poor way to tell
+  someone their stated accuracy was not honoured.
+
+  Because the error of the coarser evaluation is four thirds of the gap, a
+  tolerance the default already meets is met by `n_slabs_per_segment` itself
+  rather than by twice it, so a loose tolerance costs nothing afterwards.
+  `return_n_slabs=True` reports what was chosen; a tight tolerance can
+  quietly cost a great deal of refinement and should be discoverable.
+
+  Verified against second-order Richardson references at three zenith angles
+  and three energies: the subdivision returned meets the tolerance in every
+  case, and it ranges from 8 to 256 across them.  The helper is meant to be
+  called **once** per scan and its answer reused — passing `rtol` to every
+  point of a loop repeats the search at every point.
+
+- **`slabs.probabilities_{2,3,4}nu_profile`**, the general counterpart of the
+  Earth routines: they take the profile as a callable rather than knowing
+  about PREM, so the same tolerance machinery serves a hand-built density
+  profile, a castle wall, or a solar model.  `rtol` and `atol` do not appear
+  in `oscprob{2,3,4}nu`, and deliberately: those compute an exact closed form
+  for a single Hamiltonian, with no discretisation to refine, so a tolerance
+  there would be a parameter that could not be honoured.
+
+  Equal slabs sampled at their midpoints, which is second order and so
+  refines by the law the search assumes — verified at a ratio of 4.00.
+  Where a profile is *discontinuous* this is the wrong tool, since no
+  refinement recovers a jump that straddles a slab; the docstring says so and
+  says to split the trajectory at the discontinuities instead, which is what
+  `earth` does with the PREM shells.
+
 - **A compiled path for `slabs` and `earth`, which had none.**  The backend
   offered probability kernels only, so composing evolution operators across
   slabs — which is what layered matter and the Earth do, and they never call

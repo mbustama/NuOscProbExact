@@ -105,7 +105,10 @@ def kernel_spy(monkeypatch):
                  'evolution_operator_2nu_kernel',
                  'evolution_operator_4nu_kernel',
                  'slab_product_2nu_kernel',
-                 'slab_product_4nu_kernel'):
+                 'slab_product_4nu_kernel',
+                 'slab_product_2nu_batch_kernel',
+                 'slab_product_3nu_batch_kernel',
+                 'slab_product_4nu_batch_kernel'):
         original = getattr(fastkernels, name, None)
         if original is None:
             continue

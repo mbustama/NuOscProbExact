@@ -281,6 +281,7 @@ NuOscProbExact/
     ├── test_physical_scales.py      # Both backends at the scales actually used
     ├── test_slabs.py                # Slab composition, against expm
     ├── test_earth.py                # PREM, geometry, and Earth probabilities
+    ├── test_batching_and_tolerance.py  # Energy batching, and the rtol/atol refinement
     ├── test_documented_figures.py   # Keeps the quoted performance figures agreeing
     ├── test_version_consistency.py  # Keeps the version agreeing wherever it is implied
     ├── test_nusquids_comparison.py  # Against nuSQuIDS, an independent external code

@@ -1026,6 +1026,45 @@ if HAVE_NUMBA:                                          # pragma: no branch
                 out[i, j] = acc[i, j]
 
     @njit(cache=True)
+    def _slab_product_2nu_batch_serial(h_stack, widths, out):
+        for c in range(h_stack.shape[0]):
+            _slab_product_2nu(h_stack[c], widths, out[c])
+
+    @njit(cache=True, parallel=True)
+    def _slab_product_2nu_batch_parallel(h_stack, widths, out):
+        for c in prange(h_stack.shape[0]):
+            _slab_product_2nu(h_stack[c], widths, out[c])
+
+    @njit(cache=True)
+    def _slab_product_3nu_batch_serial(h_stack, widths, out):
+        r"""Composes one chord per leading index, sequentially.
+
+        The product *along* a chord does not commute and so stays
+        serial, but the chords themselves are independent: an energy
+        scan at fixed zenith angle is the same geometry evaluated at
+        many energies, and nothing couples one energy to another.  That
+        is the axis the parallel counterpart spreads over, and it is why
+        batching buys threads that the per-chord kernel could not use.
+        """
+        for c in range(h_stack.shape[0]):
+            _slab_product_3nu(h_stack[c], widths, out[c])
+
+    @njit(cache=True, parallel=True)
+    def _slab_product_3nu_batch_parallel(h_stack, widths, out):
+        for c in prange(h_stack.shape[0]):
+            _slab_product_3nu(h_stack[c], widths, out[c])
+
+    @njit(cache=True)
+    def _slab_product_4nu_batch_serial(h_stack, widths, polish, out):
+        for c in range(h_stack.shape[0]):
+            _slab_product_4nu(h_stack[c], widths, polish, out[c])
+
+    @njit(cache=True, parallel=True)
+    def _slab_product_4nu_batch_parallel(h_stack, widths, polish, out):
+        for c in prange(h_stack.shape[0]):
+            _slab_product_4nu(h_stack[c], widths, polish, out[c])
+
+    @njit(cache=True)
     def _run_2nu_serial(h_stack, l_stack, out):
         for n in range(h_stack.shape[0]):
             _one_2nu(h_stack[n], l_stack[n], out, n)
@@ -1343,6 +1382,143 @@ if HAVE_NUMBA:                                          # pragma: no branch
         _slab_product_3nu(np.ascontiguousarray(h_stack, dtype=complex),
                           np.ascontiguousarray(widths, dtype=float), out)
         return out
+
+    def _run_slab_batch(
+        h_stack: np.ndarray,
+        widths: np.ndarray,
+        width: int,
+        serial: Callable,
+        parallel: Callable,
+        extra: tuple = ()
+    ) -> np.ndarray:
+        r"""Flattens, dispatches, and restores the chord batch shape.
+
+        The parallel decision is made on ``n_chords*n_slabs`` rather than
+        on the number of chords, because the work a chord costs is
+        proportional to how many slabs it has: sixteen chords of
+        nineteen slabs and four of a hundred and twenty are the same
+        amount of arithmetic, and measurement puts the crossover at the
+        same place for both.  Using the chord count alone would have put
+        it in three different places for three geometries.
+
+        Parameters
+        ----------
+        h_stack : numpy.ndarray
+            Hamiltonians, of shape ``(..., n_slabs, width, width)``.
+        widths : numpy.ndarray
+            Slab widths, of shape ``(n_slabs,)``, shared by every chord.
+        width : int
+            Number of flavors, 2, 3, or 4.
+        serial : Callable
+            Kernel to use below `PARALLEL_THRESHOLD`.
+        parallel : Callable
+            Kernel to use at or above it.
+        extra : tuple, optional
+            Further arguments passed on before the output array; at four
+            flavors it carries the root-polishing switch.
+
+        Returns
+        -------
+        numpy.ndarray
+            The composed operators, of shape ``(..., width, width)``.
+        """
+        batch = h_stack.shape[:-3]
+        n_slabs = h_stack.shape[-3]
+        flat_h = np.ascontiguousarray(h_stack, dtype=complex).reshape(
+            -1, n_slabs, width, width)
+        flat_w = np.ascontiguousarray(widths, dtype=float)
+        out = np.empty((flat_h.shape[0], width, width), dtype=complex)
+        if flat_h.shape[0]*n_slabs >= PARALLEL_THRESHOLD:
+            parallel(flat_h, flat_w, *extra, out)
+        else:
+            serial(flat_h, flat_w, *extra, out)
+        return out.reshape(batch + (width, width))
+
+    def slab_product_2nu_batch_kernel(
+        h_stack: np.ndarray,
+        widths: np.ndarray
+    ) -> np.ndarray:
+        r"""Returns one composed :math:`U_2` per chord.
+
+        .. versionadded:: 1.12.0
+
+        Parameters
+        ----------
+        h_stack : numpy.ndarray
+            Hamiltonians, of shape ``(..., n_slabs, 2, 2)``.
+        widths : numpy.ndarray
+            Slab widths, of shape ``(n_slabs,)``, shared by every chord.
+
+        Returns
+        -------
+        numpy.ndarray
+            The products, of shape ``(..., 2, 2)``.
+        """
+        return _run_slab_batch(h_stack, widths, 2,
+                               _slab_product_2nu_batch_serial,
+                               _slab_product_2nu_batch_parallel)
+
+    def slab_product_3nu_batch_kernel(
+        h_stack: np.ndarray,
+        widths: np.ndarray
+    ) -> np.ndarray:
+        r"""Returns one composed :math:`U_3` per chord.
+
+        .. versionadded:: 1.12.0
+
+        What an energy scan across the Earth wants.  `earth` calls this
+        once for a whole array of energies, where before it made one
+        `slab_product_3nu_kernel` call per energy from Python and
+        rebuilt the energy-independent matter potentials every time.
+
+        Parameters
+        ----------
+        h_stack : numpy.ndarray
+            Hamiltonians, of shape ``(..., n_slabs, 3, 3)``, one chord
+            per leading index and one Hamiltonian per slab along it.
+        widths : numpy.ndarray
+            Slab widths, of shape ``(n_slabs,)``, shared by every chord.
+            A scan over energy at fixed zenith angle crosses the same
+            geometry every time, which is what makes one array of widths
+            enough.
+
+        Returns
+        -------
+        numpy.ndarray
+            The products ``U_n ... U_1``, of shape ``(..., 3, 3)``.
+        """
+        return _run_slab_batch(h_stack, widths, 3,
+                               _slab_product_3nu_batch_serial,
+                               _slab_product_3nu_batch_parallel)
+
+    def slab_product_4nu_batch_kernel(
+        h_stack: np.ndarray,
+        widths: np.ndarray,
+        polish: bool = True
+    ) -> np.ndarray:
+        r"""Returns one composed :math:`U_4` per chord.
+
+        .. versionadded:: 1.12.0
+
+        Parameters
+        ----------
+        h_stack : numpy.ndarray
+            Traceless Hamiltonians, of shape ``(..., n_slabs, 4, 4)``,
+            as `slab_product_4nu_kernel` also expects.
+        widths : numpy.ndarray
+            Slab widths, of shape ``(n_slabs,)``, shared by every chord.
+        polish : bool, optional
+            Whether to refine the latent roots against the Hamiltonian.
+
+        Returns
+        -------
+        numpy.ndarray
+            The products, of shape ``(..., 4, 4)``.
+        """
+        return _run_slab_batch(h_stack, widths, 4,
+                               _slab_product_4nu_batch_serial,
+                               _slab_product_4nu_batch_parallel,
+                               (bool(polish),))
 
     def probabilities_2nu_kernel(
         h_stack: np.ndarray,
