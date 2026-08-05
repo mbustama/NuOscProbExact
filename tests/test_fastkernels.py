@@ -257,32 +257,66 @@ def test_each_compiled_path_is_actually_reached(monkeypatch, kernel_spy):
         'composing it in the kernel')
 
 
-def test_slab_composition_matches_between_the_paths(backend, rng):
-    r"""The composed operator agrees on both backends.
+@pytest.mark.parametrize('n_flavors', [2, 3, 4])
+def test_slab_composition_matches_between_the_paths(backend, rng, n_flavors):
+    r"""The composed operator agrees on both backends, at every flavor.
 
     Covers the NumPy composition loop, which is unreachable whenever
-    Numba is present --- `worthwhile(3, n)` is true at every size, so the
-    compiled product takes every three-flavor slab sequence.  This is the
-    third branch in this release to be orphaned by a kernel landing
-    above it, so it is worth saying why the `backend` fixture is not
-    decoration here.
+    Numba is present: `worthwhile_slabs` is true at every size and every
+    flavor count, so the compiled product takes every slab sequence.
+    This is the third branch in this release to be orphaned by a kernel
+    landing above it, so the `backend` fixture is load-bearing here
+    rather than decorative.
     """
+    module = {2: oscprob2nu, 3: oscprob3nu, 4: oscprob4nu}[n_flavors]
+    one = getattr(module, 'evolution_operator_%dnu' % n_flavors)
+    compose = getattr(slabs, 'evolution_operator_%dnu_slabs' % n_flavors)
+
     for n in (1, 2, 17, 64):
-        h = np.stack([random_hermitian(rng, 3) for _ in range(n)])
+        h = np.stack([random_hermitian(rng, n_flavors) for _ in range(n)])
         w = rng.uniform(0.05, 2.0, size=n)
 
-        u = np.asarray(slabs.evolution_operator_3nu_slabs(h, w))
-        assert u.shape == (3, 3)
-        assert np.allclose(u.conj().T @ u, np.eye(3), atol=1.0e-10)
+        u = np.asarray(compose(h, w))
+        assert u.shape == (n_flavors, n_flavors)
+        assert np.allclose(u.conj().T @ u, np.eye(n_flavors), atol=1.0e-10)
 
         # Against the product built one slab at a time, in the order the
         # neutrino meets them: first crossed, rightmost.
-        expected = np.asarray(oscprob3nu.evolution_operator_3nu(
-            as_nested_list(h[0]), float(w[0])))
+        expected = np.asarray(one(as_nested_list(h[0]), float(w[0])))
         for k in range(1, n):
-            expected = np.asarray(oscprob3nu.evolution_operator_3nu(
-                as_nested_list(h[k]), float(w[k]))) @ expected
-        assert np.allclose(u, expected, atol=ATOL)
+            expected = np.asarray(
+                one(as_nested_list(h[k]), float(w[k]))) @ expected
+        assert np.allclose(u, expected, atol=1.0e-10)
+
+
+def test_2nu_operator_kernel_above_its_threshold(monkeypatch, kernel_spy, rng):
+    r"""A two-flavor stack past MIN_BATCH reaches the operator kernel.
+
+    Two flavors is the awkward one.  `MIN_BATCH[2]` is fifty thousand,
+    because for *probabilities* NumPy's closed form is competitive that
+    far out, so nothing smaller exercises the dispatch in
+    `_evolution_operator_2nu_batch` at all --- and a slab sequence never
+    will, since it takes the product kernel instead.  Without a stack
+    this size the branch and the kernel behind it are covered by
+    nothing.
+    """
+    if not fastkernels.HAVE_NUMBA:
+        pytest.skip('needs the optional Numba backend')
+    monkeypatch.setattr(fastkernels, 'USE_NUMBA', True)
+
+    size = fastkernels.MIN_BATCH[2]
+    h = np.broadcast_to(random_hermitian(rng, 2), (size, 2, 2))
+    L = rng.uniform(0.1, 5.0, size=size)
+
+    u = np.asarray(oscprob2nu.evolution_operator_2nu(h, L))
+    assert u.shape == (size, 2, 2)
+    assert kernel_spy['evolution_operator_2nu_kernel'] == 1
+
+    # Spot-check a few against the scalar path.
+    for k in (0, size//2, size-1):
+        one = np.asarray(oscprob2nu.evolution_operator_2nu(
+            as_nested_list(h[k]), float(L[k])))
+        assert np.allclose(u[k], one, atol=ATOL)
 
 
 def test_kernel_matches_the_scalar_path(rng, monkeypatch):

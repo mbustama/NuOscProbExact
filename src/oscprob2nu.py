@@ -500,6 +500,16 @@ def _evolution_operator_2nu_batch(
     if CHECK_HERMITICITY:
         _check_hermitian(h_matrix, 'evolution_operator_2nu')
 
+    # The compiled path, where there is one.  `slabs` and `earth` compose
+    # operators and never call `probabilities_2nu`, so this is the only
+    # kernel they can reach at two flavors.
+    batch = np.broadcast_shapes(h_matrix.shape[:-2], L.shape)
+    size = int(np.prod(batch, dtype=np.int64))
+    if size > 0 and fastkernels.worthwhile(2, size):
+        return fastkernels.evolution_operator_2nu_kernel(
+            np.broadcast_to(h_matrix, batch+(2, 2)),
+            np.broadcast_to(L, batch))
+
     u0, u1, u2, u3 = _u_coefficients_2nu_batch(
         _hamiltonian_2nu_coefficients_batch(h_matrix), L)
 

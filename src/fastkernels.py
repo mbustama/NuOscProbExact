@@ -76,21 +76,31 @@ Routine listings
 
     * available - Whether the compiled kernels can be used at all
     * worthwhile - Whether a stack is large enough to be worth compiling
+    * worthwhile_slabs - The same question for a slab sequence
     * probabilities_2nu_kernel - Two-flavor probabilities for a stack
     * probabilities_3nu_kernel - Three-flavor probabilities for a stack
     * probabilities_4nu_kernel - Four-flavor probabilities for a stack
     * evolution_operator_3nu_kernel - Three-flavor U_3 for a stack
     * slab_product_3nu_kernel - U_3 composed across slabs
+    * evolution_operator_4nu_kernel - Four-flavor U_4 for a stack
+    * slab_product_4nu_kernel - U_4 composed across slabs
+    * evolution_operator_2nu_kernel - Two-flavor U_2 for a stack
+    * slab_product_2nu_kernel - U_2 composed across slabs
 """
 
 __author__ = "Mauricio Bustamante"
 __email__ = "mbustamante@gmail.com"
 
-__all__ = ['HAVE_NUMBA', 'USE_NUMBA', 'MIN_BATCH', 'PARALLEL_THRESHOLD',
-           'available', 'worthwhile',
+__all__ = ['HAVE_NUMBA', 'USE_NUMBA', 'MIN_BATCH', 'MIN_SLAB_BATCH',
+           'PARALLEL_THRESHOLD',
+           'available', 'worthwhile', 'worthwhile_slabs',
            'probabilities_2nu_kernel', 'probabilities_3nu_kernel',
            'probabilities_4nu_kernel', 'evolution_operator_3nu_kernel',
-           'slab_product_3nu_kernel']
+           'slab_product_3nu_kernel',
+           'evolution_operator_4nu_kernel',
+           'slab_product_4nu_kernel',
+           'evolution_operator_2nu_kernel',
+           'slab_product_2nu_kernel']
 
 from typing import Callable
 
@@ -146,6 +156,34 @@ size where the kernel is unambiguously ahead, since the region around
 the crossover is broad and varies between machines.
 """
 
+MIN_SLAB_BATCH = {2: 1, 3: 1, 4: 1}
+r"""dict: Module-level constant.
+
+The smallest slab sequence for which the compiled *product* kernel is
+worth using --- one, at every flavor count, which is to say always.
+
+This is deliberately not `MIN_BATCH`, and the difference is the point.
+`MIN_BATCH` weighs compiled arithmetic against NumPy arithmetic, which
+is why two flavors sits at fifty thousand: that expansion reduces to a
+square root and a sine per element, and NumPy does those about as well as
+compiled code can.  The slab product is not that comparison.  It replaces
+compiled arithmetic *and a Python loop of dispatched matrix products*
+over a stack that had to be materialised first, so the alternative
+carries a cost per slab that has nothing to do with the flavor count.
+
+Measured by alternating the two paths, best of five rounds each, at
+sequences of 1 to 256 slabs: the kernel leads by 137x, 225x and 187x at
+a single slab, and by 59x, 13x and 7x at 256, at two, three and four
+flavors.  It is never behind anywhere in that range, and the margin
+*narrows* with length --- the opposite of `MIN_BATCH`'s kernels, because
+here the fixed cost being avoided is the caller's rather than the
+kernel's.
+
+Reusing `MIN_BATCH` here would have left two flavors on the NumPy path
+for every Earth crossing, since a chord is a hundred-odd slabs and the
+threshold is fifty thousand.
+"""
+
 PARALLEL_THRESHOLD = 256
 r"""int: Module-level constant.
 
@@ -171,6 +209,29 @@ def available() -> bool:
         and `probabilities_4nu_kernel` may be called.
     """
     return HAVE_NUMBA and USE_NUMBA
+
+
+def worthwhile_slabs(n_flavors: int, size: int) -> bool:
+    r"""Returns whether the compiled product kernel should be used.
+
+    The slab counterpart of `worthwhile`, against `MIN_SLAB_BATCH`
+    rather than `MIN_BATCH`.  The two thresholds answer different
+    questions and one is not a good default for the other; see
+    `MIN_SLAB_BATCH`.
+
+    Parameters
+    ----------
+    n_flavors : int
+        Number of neutrino flavors, 2, 3, or 4.
+    size : int
+        Number of slabs in the sequence.
+
+    Returns
+    -------
+    bool
+        Whether `slab_product_2nu_kernel` and its siblings may be used.
+    """
+    return available() and size >= MIN_SLAB_BATCH.get(n_flavors, 1)
 
 
 def worthwhile(n_flavors: int, size: int) -> bool:
@@ -494,9 +555,14 @@ if HAVE_NUMBA:                                          # pragma: no branch
                      * scratch[2, 2]*scratch[3, 3]).real
 
     @njit(cache=True, inline='always')
-    def _one_4nu(h_matrix, L, out, n, polish, work):
-        r"""Writes the sixteen probabilities for one Hamiltonian into
-        ``out[n]``.
+    def _operator_4nu(h_matrix, L, polish, work):
+        r"""Builds :math:`U_4(L)` for one Hamiltonian in ``work[1]``.
+
+        Factored out of `_one_4nu`, which computed the operator and
+        then squared it, so that the probability kernel and the
+        evolution-operator kernel share the expensive part.  Unlike
+        three flavors the operator is already materialised here, in
+        the caller's scratch, so the split costs nothing at all.
 
         A transcription of :func:`oscprob4nu._evolution_operator_4nu_array`
         for a single element: the traceless part, the three invariants
@@ -748,12 +814,35 @@ if HAVE_NUMBA:                                          # pragma: no branch
                     entry += second[i, k]*shifted[k, j]
                 operator[i, j] += coeff_3rd*entry
 
+
+    @njit(cache=True, inline='always')
+    def _one_4nu(h_matrix, L, out, n, polish, work):
+        r"""Writes the sixteen probabilities into ``out[n]``."""
+        _operator_4nu(h_matrix, L, polish, work)
+        operator = work[1]
+
         # P_ab = |U_ba|^2, initial flavor slowest
         for alpha in range(4):
             for beta in range(4):
                 entry = operator[beta, alpha]
                 out[n, 4*alpha + beta] = (entry.real*entry.real
                                           + entry.imag*entry.imag)
+
+    @njit(cache=True, inline='always')
+    def _one_4nu_u(h_matrix, L, out, n, polish, work):
+        r"""Writes the sixteen entries of :math:`U_4(L)` into ``out[n]``.
+
+        Row-major and indexed ``(final, initial)``, so reshaping to
+        ``(4, 4)`` gives the matrix `oscprob4nu` returns --- not the
+        flavor order the probabilities use, which runs the initial index
+        slowest.  The two differ by a transpose.
+        """
+        _operator_4nu(h_matrix, L, polish, work)
+        operator = work[1]
+
+        for i in range(4):
+            for j in range(4):
+                out[n, 4*i + j] = operator[i, j]
 
     @njit(cache=True)
     def _run_3nu_serial(h_stack, l_stack, out):
@@ -764,6 +853,89 @@ if HAVE_NUMBA:                                          # pragma: no branch
     def _run_3nu_parallel(h_stack, l_stack, out):
         for n in prange(h_stack.shape[0]):
             _one_3nu(h_stack[n], l_stack[n], out, n)
+
+    @njit(cache=True, inline='always')
+    def _entries_2nu(h_matrix, L):
+        r"""Returns the four entries of :math:`U_2(L)`, row by row.
+
+        Unlike three and four flavors this is *not* a refactor of the
+        probability kernel.  `_one_2nu` never forms the operator: at two
+        flavors :math:`P_{e\mu}` has a closed form in the coefficients
+        alone, so the kernel goes straight to it and the survival
+        probability is its complement.  That shortcut is worth keeping,
+        so the operator is written here separately rather than factored
+        out of it.
+
+        The expansion is :math:`U_2 = u_0 \mathbb{1} + i u_k \sigma^k`
+        with :math:`u_0 = \cos(|h|L)` and
+        :math:`u_k = -h_k \sin(|h|L)/|h|`, transcribed from the scalar
+        path in :mod:`oscprob2nu`.  When :math:`|h| = 0` the Hamiltonian
+        is proportional to the identity and the limit
+        :math:`\sin(|h|L)/|h| \to L` is taken, which is the difference
+        between an exact identity and a NaN.
+        """
+        h0 = h_matrix[0, 1].real
+        h1 = -h_matrix[0, 1].imag
+        h2 = (h_matrix[0, 0] - h_matrix[1, 1]).real/2.0
+
+        hsq = h0*h0 + h1*h1 + h2*h2
+        h_abs = math.sqrt(hsq)
+        u0 = math.cos(h_abs*L)
+        if h_abs == 0.0:
+            ss = -L
+        else:
+            ss = -math.sin(h_abs*L)/h_abs
+
+        u1 = h0*ss
+        u2 = h1*ss
+        u3 = h2*ss
+
+        return (u0 + 1.0j*u3, 1.0j*u1 + u2,
+                1.0j*u1 - u2, u0 - 1.0j*u3)
+
+    @njit(cache=True, inline='always')
+    def _one_2nu_u(h_matrix, L, out, n):
+        r"""Writes the four entries of :math:`U_2(L)` into ``out[n]``."""
+        u_ee, u_em, u_me, u_mm = _entries_2nu(h_matrix, L)
+        out[n, 0] = u_ee
+        out[n, 1] = u_em
+        out[n, 2] = u_me
+        out[n, 3] = u_mm
+
+    @njit(cache=True)
+    def _run_2nu_u_serial(h_stack, l_stack, out):
+        for n in range(l_stack.shape[0]):
+            _one_2nu_u(h_stack[n], l_stack[n], out, n)
+
+    @njit(cache=True, parallel=True)
+    def _run_2nu_u_parallel(h_stack, l_stack, out):
+        for n in prange(l_stack.shape[0]):
+            _one_2nu_u(h_stack[n], l_stack[n], out, n)
+
+    @njit(cache=True)
+    def _slab_product_2nu(h_stack, widths, out):
+        r"""Multiplies the per-slab two-flavor operators into ``out``.
+
+        ``U = U_n ... U_1``, first slab crossed rightmost, as at three
+        and four flavors.
+        """
+        a00, a01, a10, a11 = _entries_2nu(h_stack[0], widths[0])
+
+        for k in range(1, widths.shape[0]):
+            u00, u01, u10, u11 = _entries_2nu(h_stack[k], widths[k])
+            b00 = u00*a00 + u01*a10
+            b01 = u00*a01 + u01*a11
+            b10 = u10*a00 + u11*a10
+            b11 = u10*a01 + u11*a11
+            a00 = b00
+            a01 = b01
+            a10 = b10
+            a11 = b11
+
+        out[0, 0] = a00
+        out[0, 1] = a01
+        out[1, 0] = a10
+        out[1, 1] = a11
 
     @njit(cache=True)
     def _run_3nu_u_serial(h_stack, l_stack, out):
@@ -849,6 +1021,50 @@ if HAVE_NUMBA:                                          # pragma: no branch
         for n in prange(h_stack.shape[0]):
             work = np.empty((5, 4, 4), dtype=np.complex128)
             _one_4nu(h_stack[n], l_stack[n], out, n, polish, work)
+
+    @njit(cache=True)
+    def _run_4nu_u_serial(h_stack, l_stack, out, polish):
+        work = np.empty((5, 4, 4), dtype=np.complex128)
+        for n in range(h_stack.shape[0]):
+            _one_4nu_u(h_stack[n], l_stack[n], out, n, polish, work)
+
+    @njit(cache=True, parallel=True)
+    def _run_4nu_u_parallel(h_stack, l_stack, out, polish):
+        for n in prange(h_stack.shape[0]):
+            work = np.empty((5, 4, 4), dtype=np.complex128)
+            _one_4nu_u(h_stack[n], l_stack[n], out, n, polish, work)
+
+    @njit(cache=True)
+    def _slab_product_4nu(h_stack, widths, polish, out):
+        r"""Multiplies the per-slab four-flavor operators into ``out``.
+
+        The four-flavor counterpart of `_slab_product_3nu`, and the same
+        ordering: ``U = U_n ... U_1``, first slab crossed rightmost.
+        """
+        work = np.empty((5, 4, 4), dtype=np.complex128)
+        acc = np.empty((4, 4), dtype=np.complex128)
+        tmp = np.empty((4, 4), dtype=np.complex128)
+
+        _operator_4nu(h_stack[0], widths[0], polish, work)
+        for i in range(4):
+            for j in range(4):
+                acc[i, j] = work[1][i, j]
+
+        for k in range(1, widths.shape[0]):
+            _operator_4nu(h_stack[k], widths[k], polish, work)
+            for i in range(4):
+                for j in range(4):
+                    total = 0.0 + 0.0j
+                    for m in range(4):
+                        total += work[1][i, m]*acc[m, j]
+                    tmp[i, j] = total
+            for i in range(4):
+                for j in range(4):
+                    acc[i, j] = tmp[i, j]
+
+        for i in range(4):
+            for j in range(4):
+                out[i, j] = acc[i, j]
 
     def _run(
         h_stack: np.ndarray,
@@ -954,6 +1170,112 @@ if HAVE_NUMBA:                                          # pragma: no branch
                     _run_3nu_u_serial, _run_3nu_u_parallel,
                     dtype=complex)
         return flat.reshape(flat.shape[:-1] + (3, 3))
+
+    def evolution_operator_2nu_kernel(
+        h_stack: np.ndarray,
+        l_stack: np.ndarray
+    ) -> np.ndarray:
+        r"""Returns :math:`U_2(L)` for a stack of Hamiltonians.
+
+        Parameters
+        ----------
+        h_stack : numpy.ndarray
+            Hamiltonians, of shape ``(..., 2, 2)``, already broadcast
+            against `l_stack`.
+        l_stack : numpy.ndarray
+            Baselines, of shape ``(...)``.
+
+        Returns
+        -------
+        numpy.ndarray
+            The evolution operators, of shape ``(..., 2, 2)``, indexed
+            ``(final, initial)``.
+        """
+        flat = _run(h_stack, l_stack, 2,
+                    _run_2nu_u_serial, _run_2nu_u_parallel,
+                    dtype=complex)
+        return flat.reshape(flat.shape[:-1] + (2, 2))
+
+    def slab_product_2nu_kernel(
+        h_stack: np.ndarray,
+        widths: np.ndarray
+    ) -> np.ndarray:
+        r"""Returns the composed :math:`U_2` across a sequence of slabs.
+
+        Parameters
+        ----------
+        h_stack : numpy.ndarray
+            One Hamiltonian per slab, of shape ``(n, 2, 2)``, ordered
+            along the trajectory.
+        widths : numpy.ndarray
+            Slab widths, of shape ``(n,)``.
+
+        Returns
+        -------
+        numpy.ndarray
+            The product ``U_n ... U_1``, of shape ``(2, 2)``.
+        """
+        out = np.empty((2, 2), dtype=complex)
+        _slab_product_2nu(np.ascontiguousarray(h_stack, dtype=complex),
+                          np.ascontiguousarray(widths, dtype=float), out)
+        return out
+
+    def evolution_operator_4nu_kernel(
+        h_stack: np.ndarray,
+        l_stack: np.ndarray,
+        polish: bool = True
+    ) -> np.ndarray:
+        r"""Returns :math:`U_4(L)` for a stack of Hamiltonians.
+
+        Parameters
+        ----------
+        h_stack : numpy.ndarray
+            Hamiltonians, of shape ``(..., 4, 4)``, already broadcast
+            against `l_stack`.
+        l_stack : numpy.ndarray
+            Baselines, of shape ``(...)``.
+        polish : bool, optional
+            Whether to refine the latent roots against the Hamiltonian,
+            as :data:`oscprob4nu.POLISH_ROOTS` does on the NumPy path.
+
+        Returns
+        -------
+        numpy.ndarray
+            The evolution operators, of shape ``(..., 4, 4)``, indexed
+            ``(final, initial)``.
+        """
+        flat = _run(h_stack, l_stack, 4,
+                    _run_4nu_u_serial, _run_4nu_u_parallel,
+                    (bool(polish),), dtype=complex)
+        return flat.reshape(flat.shape[:-1] + (4, 4))
+
+    def slab_product_4nu_kernel(
+        h_stack: np.ndarray,
+        widths: np.ndarray,
+        polish: bool = True
+    ) -> np.ndarray:
+        r"""Returns the composed :math:`U_4` across a sequence of slabs.
+
+        Parameters
+        ----------
+        h_stack : numpy.ndarray
+            One Hamiltonian per slab, of shape ``(n, 4, 4)``, ordered
+            along the trajectory.
+        widths : numpy.ndarray
+            Slab widths, of shape ``(n,)``.
+        polish : bool, optional
+            Whether to refine the latent roots against the Hamiltonian.
+
+        Returns
+        -------
+        numpy.ndarray
+            The product ``U_n ... U_1``, of shape ``(4, 4)``.
+        """
+        out = np.empty((4, 4), dtype=complex)
+        _slab_product_4nu(np.ascontiguousarray(h_stack, dtype=complex),
+                          np.ascontiguousarray(widths, dtype=float),
+                          bool(polish), out)
+        return out
 
     def slab_product_3nu_kernel(
         h_stack: np.ndarray,

@@ -156,8 +156,16 @@ def _evolution_operator_slabs(
     # pass, so the stack is never materialised and the products never
     # leave registers.  Composing in Python was the largest single cost of
     # an Earth crossing once the operators themselves were compiled.
-    if n_flavors == 3 and fastkernels.worthwhile(3, w.shape[0]):
+    if n_flavors == 2 and fastkernels.worthwhile_slabs(2, w.shape[0]):
+        return fastkernels.slab_product_2nu_kernel(h, w)
+    if n_flavors == 3 and fastkernels.worthwhile_slabs(3, w.shape[0]):
         return fastkernels.slab_product_3nu_kernel(h, w)
+    if n_flavors == 4 and fastkernels.worthwhile_slabs(4, w.shape[0]):
+        # The traceless part is what the expansion acts on, and what
+        # `oscprob4nu` hands its own kernel; the dropped phase is per slab
+        # and cancels in every probability, as the module docstring says.
+        return fastkernels.slab_product_4nu_kernel(
+            oscprob4nu._traceless_part(h), w, oscprob4nu.POLISH_ROOTS)
 
     # One batched call for all the slabs, rather than one call per slab:
     # the per-slab operators are independent of each other, and only their
