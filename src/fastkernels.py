@@ -112,16 +112,23 @@ Routine listings
 __author__ = "Mauricio Bustamante"
 __email__ = "mbustamante@gmail.com"
 
-__all__ = ['HAVE_NUMBA', 'USE_NUMBA', 'MIN_BATCH', 'MIN_SLAB_BATCH',
+__all__ = ['HAVE_NUMBA', 'USE_NUMBA', 'USE_PALINDROME',
+           'MIN_BATCH', 'MIN_SLAB_BATCH', 'MIN_MIRROR_SLABS',
            'PARALLEL_THRESHOLD',
            'available', 'worthwhile', 'worthwhile_slabs',
+           'worthwhile_mirror', 'palindromic',
            'probabilities_2nu_kernel', 'probabilities_3nu_kernel',
            'probabilities_4nu_kernel', 'evolution_operator_3nu_kernel',
            'slab_product_3nu_kernel',
            'evolution_operator_4nu_kernel',
            'slab_product_4nu_kernel',
            'evolution_operator_2nu_kernel',
-           'slab_product_2nu_kernel']
+           'slab_product_2nu_kernel',
+           'slab_product_2nu_batch_kernel',
+           'slab_product_3nu_batch_kernel',
+           'slab_product_4nu_batch_kernel',
+           'earth_chords_2nu_kernel', 'earth_chords_3nu_kernel',
+           'earth_chords_4nu_kernel']
 
 from typing import Callable
 

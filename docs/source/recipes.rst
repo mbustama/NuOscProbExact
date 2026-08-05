@@ -200,6 +200,96 @@ Earth Model :cite:`Dziewonski:1981xy`.
    Code: `notebook 07 <https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/07_earth_probabilities.ipynb>`_.
 
 
+An Earth scan, and an Earth oscillogram
+---------------------------------------
+
+The energy may be an array, and so may the zenith angle.  Index them on
+different axes and they broadcast into a grid, which is an oscillogram in one
+call rather than a loop over its points.
+
+.. jupyter-execute::
+
+    import numpy as np
+
+    energies = np.logspace(0.0, 2.0, 200)*GEV
+    costhz = np.linspace(-1.0, -0.05, 60)
+
+    scan = earth.probabilities_3nu_earth(h_vacuum, energies, -0.8)
+    grid = earth.probabilities_3nu_earth(
+        h_vacuum, energies[None, :], costhz[:, None])
+
+    print('scan:', scan.shape, ' grid:', grid.shape)
+    print('P_mumu at the first grid point: %.6f' % grid[0, 0, 4])
+
+The geometry, the matter potentials and the slab widths depend on the angle
+alone, so a scan builds them once instead of once per energy, and a grid once
+per *distinct* angle.  A scalar energy still returns a tuple of nine floats,
+exactly as before.
+
+Asking for an accuracy instead of a slab count
+----------------------------------------------
+
+``n_slabs_per_segment`` fixes the *discretisation*, not the *error*, and the
+two are not the same thing: the error is strongly energy- and
+angle-dependent, spanning more than an order of magnitude across a few
+decades in energy at the default of eight.  Give ``rtol`` or ``atol`` instead
+and the chord is refined until the measured error meets it.
+
+.. jupyter-execute::
+
+    probabilities, n_used = earth.probabilities_3nu_earth(
+        h_vacuum, 10.0*GEV, -0.8, atol=1.0e-5, return_n_slabs=True)
+
+    print('sub-slabs needed for atol=1e-5: %d' % n_used)
+    print('P_mumu: %.8f' % probabilities[4])
+
+The tolerance binds on **every** returned probability, so no channel is
+quietly less converged than was asked for, and a tolerance that cannot be met
+raises rather than silently returning a coarser answer.
+
+The search costs about twice one evaluation at the subdivision it settles on,
+so for a scan it is worth calling once and reusing the answer, rather than
+passing ``atol`` to every point:
+
+.. jupyter-execute::
+
+    n = earth.slabs_for_tolerance(h_vacuum, energies, -0.8, atol=1.0e-4)
+    print('one subdivision for the whole scan: %d' % n)
+    fast = earth.probabilities_3nu_earth(h_vacuum, energies, -0.8, n)
+    print('shape:', fast.shape)
+
+With an array of energies the answer covers all of them, being set by the
+worst-converging one.
+
+A profile that is not the Earth
+-------------------------------
+
+The same refinement works on any continuously varying Hamiltonian, given as a
+callable rather than as PREM: a hand-built density profile, a castle wall, a
+solar model.
+
+.. jupyter-execute::
+
+    import slabs
+
+    baseline = 1.0e4*gd.CONV_KM_TO_INV_EV
+
+    def hamiltonian_of(x):
+        # A matter potential that varies smoothly along the trajectory
+        h = np.broadcast_to(np.asarray(h_vacuum, dtype=complex)/(10.0*GEV),
+                            (len(x), 3, 3)).copy()
+        h[:, 0, 0] += 1.0e-13*(1.0 + 0.5*np.sin(3.0*np.pi*x/baseline))
+        return h
+
+    prob, n = slabs.probabilities_3nu_profile(
+        hamiltonian_of, baseline, atol=1.0e-6, return_n_slabs=True)
+    print('slabs needed: %d   P_ee = %.8f' % (n, prob[0]))
+
+Where a profile is *discontinuous* — a wall, a shell boundary — equal slabs
+are the wrong tool, since no refinement recovers a jump that straddles a
+slab.  Split the trajectory at the discontinuities and call once per piece,
+which is what :mod:`earth` does with the PREM shells.
+
 Between two places on the Earth
 -------------------------------
 
