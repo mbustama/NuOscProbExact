@@ -198,6 +198,10 @@ File tree
    │           ├── nuoscprobexact_logo.png
    │           └── slabs_composition.svg  # How slabs compose, drawn for quickstart.rst
    ├── img/                             # Figures from earlier versions of README.md
+   │   ├── anim_cp.gif                  # The demonstration reel, one scene per file
+   │   ├── anim_earth.gif
+   │   ├── anim_slabs.gif
+   │   ├── anim_sterile.gif
    │   ├── prob_3nu_vacuum_vs_baseline_ee_em_et.png
    │   ├── prob_3nu_vacuum_vs_energy_ee_em_et.png
    │   └── gallery/                     # Figures lifted from the notebooks, shown in README.md
