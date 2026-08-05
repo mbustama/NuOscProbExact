@@ -207,6 +207,30 @@ threshold is fifty thousand.
 .. versionadded:: 1.12.0
 """
 
+MIN_MIRROR_SLABS = {2: 16, 3: 16, 4: 16}
+r"""dict: Module-level constant.
+
+The shortest chord for which composing a palindrome at half cost is
+worth it, by number of flavors.
+
+The mirrored composer computes each distinct operator once and uses it
+twice, which halves the expansions --- about two thirds of a slab's
+work --- but it accumulates two running products rather than one, so the
+matrix multiplications stay at one per slab rather than falling with
+them.  That is a good trade only once there are enough slabs for the
+expansions to dominate the fixed cost of carrying the second product.
+
+Measured over chords of 7 to 960 slabs at three flavors, interleaved
+against the ordinary composer: behind or level at 7, ahead by 1.10x at
+15, and between 1.43x and 1.79x from 56 slabs upwards.  The threshold is
+set at sixteen, the first length where it is clearly ahead rather than
+within noise.  An Earth chord has at least 7 slabs at the coarsest
+subdivision and 120 at the default, so this is about protecting the
+shallow, coarse corner rather than the common case.
+
+.. versionadded:: 1.12.0
+"""
+
 PARALLEL_THRESHOLD = 256
 r"""int: Module-level constant.
 
@@ -257,6 +281,89 @@ def worthwhile_slabs(n_flavors: int, size: int) -> bool:
         Whether `slab_product_2nu_kernel` and its siblings may be used.
     """
     return available() and size >= MIN_SLAB_BATCH.get(n_flavors, 1)
+
+
+def palindromic(*arrays: np.ndarray) -> bool:
+    r"""Returns whether every array given reads the same both ways.
+
+    .. versionadded:: 1.12.0
+
+    A sequence of slabs whose Hamiltonians and widths are both
+    palindromic has ``U_j = U_{n-1-j}``, so half its operators are
+    recomputations of the other half and the product can be composed at
+    roughly two thirds of the cost --- see
+    `earth_chords_3nu_kernel`.  A chord through a spherically symmetric
+    Earth is always such a sequence, because it meets every radius
+    twice, but nothing here is specific to the Earth: a castle wall
+    built symmetrically, or any hand-built profile that reads the same
+    from either end, qualifies too.
+
+    The comparison is exact, deliberately.  The saving relies on the two
+    mirrored operators being *identical*, which follows from identical
+    inputs and from nothing weaker; a tolerance here would silently
+    return a different answer for a nearly-symmetric profile, which is
+    the one thing an optimisation must never do.  It is
+    `earth._earth_slabs_cached`'s business to make the Earth's chords
+    exactly symmetric rather than nearly so, and it does.
+
+    Parameters
+    ----------
+    arrays : numpy.ndarray
+        Arrays to test, given as separate arguments and each reversed
+        along its first axis.  An empty call, or any array shorter than
+        two entries, is trivially palindromic.
+
+    Returns
+    -------
+    bool
+        Whether every array equals its own reverse exactly.
+
+    Examples
+    --------
+    .. jupyter-execute::
+
+        import numpy as np
+        import fastkernels
+
+        print(fastkernels.palindromic(np.array([1.0, 2.0, 1.0])))
+        print(fastkernels.palindromic(np.array([1.0, 2.0, 3.0])))
+    """
+    for array in arrays:
+        a = np.asarray(array)
+        if a.shape[0] > 1 and not np.array_equal(a, a[::-1]):
+            return False
+
+    return True
+
+
+def worthwhile_mirror(n_flavors: int, size: int) -> bool:
+    r"""Returns whether the palindromic composer should be used.
+
+    .. versionadded:: 1.12.0
+
+    Whether the chord *is* a palindrome is a separate question, and
+    `palindromic` answers it; this one asks only whether the saving is
+    worth having at this length.  It is not below a handful of slabs:
+    the mirrored composer accumulates two running products instead of
+    one, so it trades a matrix multiplication per slab against half an
+    expansion, and that trade only pays once there are enough slabs for
+    the expansions to dominate.  Measured across 7 to 960 slabs, it
+    leads from about fifteen slabs upwards, by 1.4x to 1.8x, and is
+    within noise below that.
+
+    Parameters
+    ----------
+    n_flavors : int
+        Number of neutrino flavors, 2, 3, or 4.
+    size : int
+        Number of slabs in the chord.
+
+    Returns
+    -------
+    bool
+        Whether to use the mirrored composer.
+    """
+    return available() and size >= MIN_MIRROR_SLABS.get(n_flavors, 1)
 
 
 def worthwhile(n_flavors: int, size: int) -> bool:
@@ -1216,6 +1323,428 @@ if HAVE_NUMBA:                                          # pragma: no branch
                 out[i, j] = acc[i, j]
 
     @njit(cache=True)
+    def _palindromic_stack(h_stack, widths):
+        r"""Returns whether a supplied slab sequence is a palindrome.
+
+        The compiled counterpart of `palindromic`, and it exists because
+        the NumPy one is too slow to be worth calling here.  Comparing a
+        materialised ``(n, 3, 3)`` complex stack against its reverse
+        costs about 6 microseconds through NumPy --- reversed views,
+        temporaries, and a full pass whatever the answer --- against the
+        6 microseconds the halved composition saves on a 120-slab chord.
+        Measured, that check turned a 1.55x win into a 0.98x loss.
+
+        This walks only the first half, compares each slab against its
+        mirror, and returns at the first disagreement, which is the
+        common case for a sequence that is not symmetric.
+        """
+        n = widths.shape[0]
+        for k in range(n//2):
+            j = n - 1 - k
+            if widths[k] != widths[j]:
+                return False
+            for a in range(h_stack.shape[1]):
+                for b in range(h_stack.shape[2]):
+                    if h_stack[k, a, b] != h_stack[j, a, b]:
+                        return False
+
+        return True
+
+    @njit(cache=True)
+    def _slab_product_2nu_mirrored(h_stack, widths, out):
+        r"""Composes a palindromic two-flavor slab sequence at half cost."""
+        n = widths.shape[0]
+        m = n//2
+        a00 = 1.0 + 0.0j
+        a01 = 0.0 + 0.0j
+        a10 = 0.0 + 0.0j
+        a11 = 1.0 + 0.0j
+        b00 = 1.0 + 0.0j
+        b01 = 0.0 + 0.0j
+        b10 = 0.0 + 0.0j
+        b11 = 1.0 + 0.0j
+
+        for k in range(m):
+            u00, u01, u10, u11 = _entries_2nu(h_stack[k], widths[k])
+            t00 = u00*b00 + u01*b10
+            t01 = u00*b01 + u01*b11
+            t10 = u10*b00 + u11*b10
+            t11 = u10*b01 + u11*b11
+            b00 = t00
+            b01 = t01
+            b10 = t10
+            b11 = t11
+            t00 = a00*u00 + a01*u10
+            t01 = a00*u01 + a01*u11
+            t10 = a10*u00 + a11*u10
+            t11 = a10*u01 + a11*u11
+            a00 = t00
+            a01 = t01
+            a10 = t10
+            a11 = t11
+
+        if n % 2 == 1:
+            u00, u01, u10, u11 = _entries_2nu(h_stack[m], widths[m])
+            t00 = u00*b00 + u01*b10
+            t01 = u00*b01 + u01*b11
+            t10 = u10*b00 + u11*b10
+            t11 = u10*b01 + u11*b11
+            b00 = t00
+            b01 = t01
+            b10 = t10
+            b11 = t11
+
+        out[0, 0] = a00*b00 + a01*b10
+        out[0, 1] = a00*b01 + a01*b11
+        out[1, 0] = a10*b00 + a11*b10
+        out[1, 1] = a10*b01 + a11*b11
+
+    @njit(cache=True)
+    def _slab_product_3nu_mirrored(h_stack, widths, out):
+        r"""Composes a palindromic three-flavor slab sequence at half cost.
+
+        The counterpart of `_earth_chord_3nu_mirrored` for a sequence
+        whose Hamiltonians are supplied rather than built, which is what
+        `slabs` composes: a single Earth crossing, a symmetric castle
+        wall, any profile that reads the same from either end.
+        """
+        acc_a = np.empty((3, 3), dtype=np.complex128)
+        acc_b = np.empty((3, 3), dtype=np.complex128)
+        tmp_a = np.empty((3, 3), dtype=np.complex128)
+        tmp_b = np.empty((3, 3), dtype=np.complex128)
+        u = np.empty((3, 3), dtype=np.complex128)
+
+        for i in range(3):
+            for j in range(3):
+                acc_a[i, j] = 1.0 + 0.0j if i == j else 0.0 + 0.0j
+                acc_b[i, j] = 1.0 + 0.0j if i == j else 0.0 + 0.0j
+
+        n = widths.shape[0]
+        m = n//2
+        for k in range(m):
+            (u[0, 0], u[0, 1], u[0, 2],
+             u[1, 0], u[1, 1], u[1, 2],
+             u[2, 0], u[2, 1], u[2, 2]) = _entries_3nu(h_stack[k], widths[k])
+            for i in range(3):
+                for j in range(3):
+                    sb = 0.0 + 0.0j
+                    sa = 0.0 + 0.0j
+                    for t in range(3):
+                        sb += u[i, t]*acc_b[t, j]
+                        sa += acc_a[i, t]*u[t, j]
+                    tmp_b[i, j] = sb
+                    tmp_a[i, j] = sa
+            for i in range(3):
+                for j in range(3):
+                    acc_b[i, j] = tmp_b[i, j]
+                    acc_a[i, j] = tmp_a[i, j]
+
+        if n % 2 == 1:
+            (u[0, 0], u[0, 1], u[0, 2],
+             u[1, 0], u[1, 1], u[1, 2],
+             u[2, 0], u[2, 1], u[2, 2]) = _entries_3nu(h_stack[m], widths[m])
+            for i in range(3):
+                for j in range(3):
+                    s = 0.0 + 0.0j
+                    for t in range(3):
+                        s += u[i, t]*acc_b[t, j]
+                    tmp_b[i, j] = s
+            for i in range(3):
+                for j in range(3):
+                    acc_b[i, j] = tmp_b[i, j]
+
+        for i in range(3):
+            for j in range(3):
+                s = 0.0 + 0.0j
+                for t in range(3):
+                    s += acc_a[i, t]*acc_b[t, j]
+                out[i, j] = s
+
+    @njit(cache=True)
+    def _slab_product_4nu_mirrored(h_stack, widths, polish, out):
+        r"""Composes a palindromic four-flavor slab sequence at half cost."""
+        work = np.empty((5, 4, 4), dtype=np.complex128)
+        acc_a = np.empty((4, 4), dtype=np.complex128)
+        acc_b = np.empty((4, 4), dtype=np.complex128)
+        tmp_a = np.empty((4, 4), dtype=np.complex128)
+        tmp_b = np.empty((4, 4), dtype=np.complex128)
+
+        for i in range(4):
+            for j in range(4):
+                acc_a[i, j] = 1.0 + 0.0j if i == j else 0.0 + 0.0j
+                acc_b[i, j] = 1.0 + 0.0j if i == j else 0.0 + 0.0j
+
+        n = widths.shape[0]
+        m = n//2
+        for k in range(m):
+            _operator_4nu(h_stack[k], widths[k], polish, work)
+            for i in range(4):
+                for j in range(4):
+                    sb = 0.0 + 0.0j
+                    sa = 0.0 + 0.0j
+                    for t in range(4):
+                        sb += work[1][i, t]*acc_b[t, j]
+                        sa += acc_a[i, t]*work[1][t, j]
+                    tmp_b[i, j] = sb
+                    tmp_a[i, j] = sa
+            for i in range(4):
+                for j in range(4):
+                    acc_b[i, j] = tmp_b[i, j]
+                    acc_a[i, j] = tmp_a[i, j]
+
+        if n % 2 == 1:
+            _operator_4nu(h_stack[m], widths[m], polish, work)
+            for i in range(4):
+                for j in range(4):
+                    s = 0.0 + 0.0j
+                    for t in range(4):
+                        s += work[1][i, t]*acc_b[t, j]
+                    tmp_b[i, j] = s
+            for i in range(4):
+                for j in range(4):
+                    acc_b[i, j] = tmp_b[i, j]
+
+        for i in range(4):
+            for j in range(4):
+                s = 0.0 + 0.0j
+                for t in range(4):
+                    s += acc_a[i, t]*acc_b[t, j]
+                out[i, j] = s
+
+    @njit(cache=True)
+    def _earth_chord_2nu_mirrored(h_vac, inv_e, potentials, widths, out):
+        r"""Composes one two-flavor chord, using its palindrome."""
+        n = widths.shape[0]
+        m = n//2
+        h_work = np.empty((2, 2), dtype=np.complex128)
+        a00 = 1.0 + 0.0j
+        a01 = 0.0 + 0.0j
+        a10 = 0.0 + 0.0j
+        a11 = 1.0 + 0.0j
+        b00 = 1.0 + 0.0j
+        b01 = 0.0 + 0.0j
+        b10 = 0.0 + 0.0j
+        b11 = 1.0 + 0.0j
+
+        for k in range(m):
+            _build_h_2nu(h_vac, inv_e, potentials, k, h_work)
+            u00, u01, u10, u11 = _entries_2nu(h_work, widths[k])
+            # B <- U B
+            t00 = u00*b00 + u01*b10
+            t01 = u00*b01 + u01*b11
+            t10 = u10*b00 + u11*b10
+            t11 = u10*b01 + u11*b11
+            b00 = t00
+            b01 = t01
+            b10 = t10
+            b11 = t11
+            # A <- A U
+            t00 = a00*u00 + a01*u10
+            t01 = a00*u01 + a01*u11
+            t10 = a10*u00 + a11*u10
+            t11 = a10*u01 + a11*u11
+            a00 = t00
+            a01 = t01
+            a10 = t10
+            a11 = t11
+
+        if n % 2 == 1:
+            _build_h_2nu(h_vac, inv_e, potentials, m, h_work)
+            u00, u01, u10, u11 = _entries_2nu(h_work, widths[m])
+            t00 = u00*b00 + u01*b10
+            t01 = u00*b01 + u01*b11
+            t10 = u10*b00 + u11*b10
+            t11 = u10*b01 + u11*b11
+            b00 = t00
+            b01 = t01
+            b10 = t10
+            b11 = t11
+
+        out[0, 0] = a00*b00 + a01*b10
+        out[0, 1] = a00*b01 + a01*b11
+        out[1, 0] = a10*b00 + a11*b10
+        out[1, 1] = a10*b01 + a11*b11
+
+    @njit(cache=True)
+    def _earth_chord_3nu_mirrored(h_vac, inv_e, potentials, widths, out):
+        r"""Composes one three-flavor chord, using its palindrome.
+
+        A chord through a spherically symmetric Earth meets every radius
+        twice, so slab ``j`` and slab ``n-1-j`` carry the same
+        Hamiltonian and the same width and therefore the *same*
+        operator.  Half the SU(3) expansions in a chord are recomputing
+        the other half.
+
+        Writing ``U = U_{n-1} ... U_0`` and splitting at the centre,
+
+        ``U = (U_0 U_1 ... U_{m-1}) (U_{m-1} ... U_0) = A B``
+
+        for even ``n = 2m``, and ``U = A U_m B`` for odd ``n = 2m+1``.
+        Both products accumulate in one pass over the first half, so each
+        expansion is computed once and used twice; only the matrix
+        products still number ``n``.  The expansion is about two thirds
+        of a slab's cost, which is why this is worth roughly 1.5x rather
+        than 2x.
+
+        The caller decides whether the chord is a palindrome, by exact
+        equality --- see `worthwhile_mirror`.  Nothing here checks, so
+        nothing here may be called on a chord that is not one.
+        """
+        acc_a = np.empty((3, 3), dtype=np.complex128)
+        acc_b = np.empty((3, 3), dtype=np.complex128)
+        tmp_a = np.empty((3, 3), dtype=np.complex128)
+        tmp_b = np.empty((3, 3), dtype=np.complex128)
+        h_work = np.empty((3, 3), dtype=np.complex128)
+        u = np.empty((3, 3), dtype=np.complex128)
+
+        for i in range(3):
+            for j in range(3):
+                acc_a[i, j] = 1.0 + 0.0j if i == j else 0.0 + 0.0j
+                acc_b[i, j] = 1.0 + 0.0j if i == j else 0.0 + 0.0j
+
+        n = widths.shape[0]
+        m = n//2
+        for k in range(m):
+            _build_h_3nu(h_vac, inv_e, potentials, k, h_work)
+            (u[0, 0], u[0, 1], u[0, 2],
+             u[1, 0], u[1, 1], u[1, 2],
+             u[2, 0], u[2, 1], u[2, 2]) = _entries_3nu(h_work, widths[k])
+            for i in range(3):
+                for j in range(3):
+                    sb = 0.0 + 0.0j
+                    sa = 0.0 + 0.0j
+                    for t in range(3):
+                        sb += u[i, t]*acc_b[t, j]
+                        sa += acc_a[i, t]*u[t, j]
+                    tmp_b[i, j] = sb
+                    tmp_a[i, j] = sa
+            for i in range(3):
+                for j in range(3):
+                    acc_b[i, j] = tmp_b[i, j]
+                    acc_a[i, j] = tmp_a[i, j]
+
+        if n % 2 == 1:
+            # The middle slab is its own mirror and so is applied once
+            _build_h_3nu(h_vac, inv_e, potentials, m, h_work)
+            (u[0, 0], u[0, 1], u[0, 2],
+             u[1, 0], u[1, 1], u[1, 2],
+             u[2, 0], u[2, 1], u[2, 2]) = _entries_3nu(h_work, widths[m])
+            for i in range(3):
+                for j in range(3):
+                    s = 0.0 + 0.0j
+                    for t in range(3):
+                        s += u[i, t]*acc_b[t, j]
+                    tmp_b[i, j] = s
+            for i in range(3):
+                for j in range(3):
+                    acc_b[i, j] = tmp_b[i, j]
+
+        for i in range(3):
+            for j in range(3):
+                s = 0.0 + 0.0j
+                for t in range(3):
+                    s += acc_a[i, t]*acc_b[t, j]
+                out[i, j] = s
+
+    @njit(cache=True)
+    def _earth_chord_4nu_mirrored(h_vac, inv_e, potentials, potentials_nc,
+                                  widths, polish, out):
+        r"""Composes one four-flavor chord, using its palindrome."""
+        work = np.empty((5, 4, 4), dtype=np.complex128)
+        acc_a = np.empty((4, 4), dtype=np.complex128)
+        acc_b = np.empty((4, 4), dtype=np.complex128)
+        tmp_a = np.empty((4, 4), dtype=np.complex128)
+        tmp_b = np.empty((4, 4), dtype=np.complex128)
+        h_work = np.empty((4, 4), dtype=np.complex128)
+
+        for i in range(4):
+            for j in range(4):
+                acc_a[i, j] = 1.0 + 0.0j if i == j else 0.0 + 0.0j
+                acc_b[i, j] = 1.0 + 0.0j if i == j else 0.0 + 0.0j
+
+        n = widths.shape[0]
+        m = n//2
+        for k in range(m):
+            _build_h_4nu(h_vac, inv_e, potentials, potentials_nc, k, h_work)
+            _operator_4nu(h_work, widths[k], polish, work)
+            for i in range(4):
+                for j in range(4):
+                    sb = 0.0 + 0.0j
+                    sa = 0.0 + 0.0j
+                    for t in range(4):
+                        sb += work[1][i, t]*acc_b[t, j]
+                        sa += acc_a[i, t]*work[1][t, j]
+                    tmp_b[i, j] = sb
+                    tmp_a[i, j] = sa
+            for i in range(4):
+                for j in range(4):
+                    acc_b[i, j] = tmp_b[i, j]
+                    acc_a[i, j] = tmp_a[i, j]
+
+        if n % 2 == 1:
+            _build_h_4nu(h_vac, inv_e, potentials, potentials_nc, m, h_work)
+            _operator_4nu(h_work, widths[m], polish, work)
+            for i in range(4):
+                for j in range(4):
+                    s = 0.0 + 0.0j
+                    for t in range(4):
+                        s += work[1][i, t]*acc_b[t, j]
+                    tmp_b[i, j] = s
+            for i in range(4):
+                for j in range(4):
+                    acc_b[i, j] = tmp_b[i, j]
+
+        for i in range(4):
+            for j in range(4):
+                s = 0.0 + 0.0j
+                for t in range(4):
+                    s += acc_a[i, t]*acc_b[t, j]
+                out[i, j] = s
+
+    @njit(cache=True)
+    def _earth_chords_2nu_mirrored_serial(h_vac, inv_energies, potentials,
+                                          widths, out):
+        for c in range(inv_energies.shape[0]):
+            _earth_chord_2nu_mirrored(h_vac, inv_energies[c], potentials,
+                                      widths, out[c])
+
+    @njit(cache=True, parallel=True)
+    def _earth_chords_2nu_mirrored_parallel(h_vac, inv_energies, potentials,
+                                            widths, out):
+        for c in prange(inv_energies.shape[0]):
+            _earth_chord_2nu_mirrored(h_vac, inv_energies[c], potentials,
+                                      widths, out[c])
+
+    @njit(cache=True)
+    def _earth_chords_3nu_mirrored_serial(h_vac, inv_energies, potentials,
+                                          widths, out):
+        for c in range(inv_energies.shape[0]):
+            _earth_chord_3nu_mirrored(h_vac, inv_energies[c], potentials,
+                                      widths, out[c])
+
+    @njit(cache=True, parallel=True)
+    def _earth_chords_3nu_mirrored_parallel(h_vac, inv_energies, potentials,
+                                            widths, out):
+        for c in prange(inv_energies.shape[0]):
+            _earth_chord_3nu_mirrored(h_vac, inv_energies[c], potentials,
+                                      widths, out[c])
+
+    @njit(cache=True)
+    def _earth_chords_4nu_mirrored_serial(h_vac, inv_energies, potentials,
+                                          widths, potentials_nc, polish, out):
+        for c in range(inv_energies.shape[0]):
+            _earth_chord_4nu_mirrored(h_vac, inv_energies[c], potentials,
+                                      potentials_nc, widths, polish, out[c])
+
+    @njit(cache=True, parallel=True)
+    def _earth_chords_4nu_mirrored_parallel(h_vac, inv_energies, potentials,
+                                            widths, potentials_nc, polish,
+                                            out):
+        for c in prange(inv_energies.shape[0]):
+            _earth_chord_4nu_mirrored(h_vac, inv_energies[c], potentials,
+                                      potentials_nc, widths, polish, out[c])
+
+    @njit(cache=True)
     def _earth_chords_2nu_serial(h_vac, inv_energies, potentials, widths, out):
         for c in range(inv_energies.shape[0]):
             _earth_chord_2nu(h_vac, inv_energies[c], potentials, widths,
@@ -1480,8 +2009,12 @@ if HAVE_NUMBA:                                          # pragma: no branch
             The product ``U_n ... U_1``, of shape ``(2, 2)``.
         """
         out = np.empty((2, 2), dtype=complex)
-        _slab_product_2nu(np.ascontiguousarray(h_stack, dtype=complex),
-                          np.ascontiguousarray(widths, dtype=float), out)
+        h = np.ascontiguousarray(h_stack, dtype=complex)
+        w = np.ascontiguousarray(widths, dtype=float)
+        if worthwhile_mirror(2, w.shape[0]) and _palindromic_stack(h, w):
+            _slab_product_2nu_mirrored(h, w, out)
+        else:
+            _slab_product_2nu(h, w, out)
         return out
 
     def evolution_operator_4nu_kernel(
@@ -1540,9 +2073,12 @@ if HAVE_NUMBA:                                          # pragma: no branch
             The product ``U_n ... U_1``, of shape ``(4, 4)``.
         """
         out = np.empty((4, 4), dtype=complex)
-        _slab_product_4nu(np.ascontiguousarray(h_stack, dtype=complex),
-                          np.ascontiguousarray(widths, dtype=float),
-                          bool(polish), out)
+        h = np.ascontiguousarray(h_stack, dtype=complex)
+        w = np.ascontiguousarray(widths, dtype=float)
+        if worthwhile_mirror(4, w.shape[0]) and _palindromic_stack(h, w):
+            _slab_product_4nu_mirrored(h, w, bool(polish), out)
+        else:
+            _slab_product_4nu(h, w, bool(polish), out)
         return out
 
     def slab_product_3nu_kernel(
@@ -1573,8 +2109,14 @@ if HAVE_NUMBA:                                          # pragma: no branch
             The product ``U_n ... U_1``, of shape ``(3, 3)``.
         """
         out = np.empty((3, 3), dtype=complex)
-        _slab_product_3nu(np.ascontiguousarray(h_stack, dtype=complex),
-                          np.ascontiguousarray(widths, dtype=float), out)
+        h = np.ascontiguousarray(h_stack, dtype=complex)
+        w = np.ascontiguousarray(widths, dtype=float)
+        # A sequence that reads the same from either end has every
+        # operator twice over; see `palindromic`.
+        if worthwhile_mirror(3, w.shape[0]) and _palindromic_stack(h, w):
+            _slab_product_3nu_mirrored(h, w, out)
+        else:
+            _slab_product_3nu(h, w, out)
         return out
 
     def _run_slab_batch(
@@ -1636,7 +2178,8 @@ if HAVE_NUMBA:                                          # pragma: no branch
         width: int,
         serial: Callable,
         parallel: Callable,
-        extra: tuple = ()
+        extra: tuple = (),
+        mirrored: tuple = ()
     ) -> np.ndarray:
         r"""Dispatches a fused chord kernel and restores the batch shape.
 
@@ -1659,6 +2202,10 @@ if HAVE_NUMBA:                                          # pragma: no branch
             Kernel to use at or above it.
         extra : tuple, optional
             Further arguments passed on before the output array.
+        mirrored : tuple, optional
+            The serial and parallel composers to use when the chord is a
+            palindrome and long enough to be worth it.  Empty to always
+            compose the whole chord.
 
         Returns
         -------
@@ -1675,6 +2222,13 @@ if HAVE_NUMBA:                                          # pragma: no branch
         pot = np.ascontiguousarray(potentials, dtype=float)
         wid = np.ascontiguousarray(widths, dtype=float)
         out = np.empty((flat_e.shape[0], width, width), dtype=complex)
+
+        # A palindromic chord costs about two thirds as much, and every
+        # Earth chord is one; the check is a pass over two small arrays
+        # against a per-slab expansion, so it is free at this scale.
+        if (mirrored and worthwhile_mirror(width, wid.shape[0])
+                and palindromic(pot, wid, *extra[:1])):
+            serial, parallel = mirrored
 
         if flat_e.shape[0]*wid.shape[0] >= PARALLEL_THRESHOLD:
             parallel(h_vac, inv_e, pot, wid, *extra, out)
@@ -1712,7 +2266,9 @@ if HAVE_NUMBA:                                          # pragma: no branch
         """
         return _run_earth_chords(h_vacuum, energies, potentials, widths, 2,
                                  _earth_chords_2nu_serial,
-                                 _earth_chords_2nu_parallel)
+                                 _earth_chords_2nu_parallel,
+                                 mirrored=(_earth_chords_2nu_mirrored_serial,
+                                           _earth_chords_2nu_mirrored_parallel))
 
     def earth_chords_3nu_kernel(
         h_vacuum: np.ndarray,
@@ -1756,7 +2312,9 @@ if HAVE_NUMBA:                                          # pragma: no branch
         """
         return _run_earth_chords(h_vacuum, energies, potentials, widths, 3,
                                  _earth_chords_3nu_serial,
-                                 _earth_chords_3nu_parallel)
+                                 _earth_chords_3nu_parallel,
+                                 mirrored=(_earth_chords_3nu_mirrored_serial,
+                                           _earth_chords_3nu_mirrored_parallel))
 
     def earth_chords_4nu_kernel(
         h_vacuum: np.ndarray,
@@ -1795,7 +2353,9 @@ if HAVE_NUMBA:                                          # pragma: no branch
             h_vacuum, energies, potentials, widths, 4,
             _earth_chords_4nu_serial, _earth_chords_4nu_parallel,
             (np.ascontiguousarray(potentials_nc, dtype=float),
-             bool(polish)))
+             bool(polish)),
+            mirrored=(_earth_chords_4nu_mirrored_serial,
+                      _earth_chords_4nu_mirrored_parallel))
 
     def slab_product_2nu_batch_kernel(
         h_stack: np.ndarray,

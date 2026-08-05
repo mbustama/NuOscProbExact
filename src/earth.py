@@ -807,6 +807,21 @@ def _earth_slabs_cached(
     densities = density_prem(
         earth_radial_distance_from_depth(costhz, midpoints))
 
+    # A chord through a spherically symmetric Earth meets every radius
+    # twice, symmetrically about its closest approach, so both of these
+    # are palindromes.  The densities come out exactly palindromic
+    # already; the widths do not, because each segment is cut by its own
+    # `linspace` and the two halves round differently --- by about
+    # 1e-12 km on a 100 km slab.  Averaging each element with its mirror
+    # makes both exact, since floating-point addition is commutative and
+    # so the two ends of a pair get bitwise identical results.
+    #
+    # This is not housekeeping.  `_palindromic` decides on exact equality
+    # whether a chord can be composed at half cost, and a difference in
+    # the last bit is the difference between taking that path and not.
+    widths = (widths + widths[::-1])/2.0
+    densities = (densities + densities[::-1])/2.0
+
     widths.flags.writeable = False
     densities.flags.writeable = False
 

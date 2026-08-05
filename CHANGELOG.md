@@ -68,6 +68,74 @@ and the project uses [Semantic Versioning](https://semver.org/).
   matter-Hamiltonian convention that lives in `hamiltonians*nu`.  Batching
   captured the larger share without that.
 
+- **A chord is a palindrome, and half its operators were being computed
+  twice.**  A neutrino crossing a spherically symmetric Earth meets every
+  radius on the way in and again on the way out, so slab `j` and slab
+  `n-1-j` carry the same density, the same width, and therefore the *same*
+  evolution operator.  Every Earth probability was computing each of them
+  twice.
+
+  Writing `U = U_{n-1} ... U_0` and splitting at the centre gives
+  `U = (U_0 U_1 ... U_{m-1})(U_{m-1} ... U_0) = A B` for even `n`, and
+  `U = A U_m B` for odd `n`, with the middle slab its own mirror.  Both
+  products accumulate in one pass over the first half, so each expansion is
+  computed once and used twice.  Only the expansions halve — the matrix
+  products still number `n`, since two running products are carried instead
+  of one — and the expansion is about two thirds of a slab's cost, which is
+  why this is worth about 1.5x rather than 2x.
+
+  Measured end to end, interleaved: **1.34x to 1.50x at two flavors, 1.55x
+  to 1.72x at three, and 1.78x to 1.80x at four**, the last being largest
+  because `_operator_4nu` is the heaviest thing a slab does.  A three-flavor
+  scan now costs 2.65 microseconds per probability, against 4.8 before and
+  about 38 when this release opened.  An oscillogram is 1.47x, at 4.3
+  microseconds per point; a single Earth call is 1.19x.
+
+  **It is not restricted to PREM.**  `fastkernels.palindromic` decides, and
+  `slabs` asks it of any slab sequence it is handed, so a symmetric castle
+  wall or any hand-built profile that reads the same from either end is
+  composed at the same discount.  The Earth is simply the case that always
+  qualifies.
+
+  Three things this cost, all worth recording.
+
+  The test is **exact equality, never a tolerance**.  The saving relies on
+  the mirrored operators being identical, which follows from identical
+  inputs and from nothing weaker; a tolerance would hand a
+  nearly-symmetric profile the answer for a symmetric one, silently, which
+  is the one thing an optimisation must not do.
+
+  For that test to succeed, `earth_slabs` now emits **exactly** palindromic
+  widths.  It did not before: each segment was cut by its own `linspace`
+  and the two halves rounded differently, by about 1e-12 km on a 100 km
+  slab.  Averaging each width with its mirror makes both bitwise equal.
+  This release's results are therefore **not** bit-identical to 1.11.0 on
+  any Earth call, which is stated here rather than discovered later.
+  Measured over 4640 values across four angles, four subdivisions and five
+  energies, the shift is **6e-15 at two flavors, 7e-14 at three, and 4e-10
+  at four**.
+
+  The four-flavor figure is much the largest and is not this change's
+  doing: that path polishes quartic latent roots, and its conditioning
+  already separates the two *backends* by 4.0e-10 on code this release
+  never touched.  A 1e-12 km perturbation lands in the same place.  For
+  scale, the discretisation error at the default subdivision is 1e-4 to
+  1e-5 — five orders of magnitude larger than even the four-flavor shift,
+  and eleven larger than the three-flavor one.
+
+  And the check has to be compiled.  Comparing a materialised `(n, 3, 3)`
+  complex stack against its reverse through NumPy costs about 6
+  microseconds — reversed views, temporaries, and a full pass whatever the
+  answer — against the 6 microseconds the halved composition saves on a
+  120-slab chord.  Measured, that turned a 1.55x win into a 0.98x loss.
+  `_palindromic_stack` walks the first half and returns at the first
+  disagreement, and is 8x cheaper.
+
+  Composition ordering is regrouped, so results move by 2e-15 to 5e-15
+  against composing the whole chord.  Unitarity is unchanged — measured
+  identical at three flavors and at four, marginally better for the
+  mirrored composer at two of three angles.
+
 - **The Earth kernels build their own Hamiltonians.**  `earth_chords_{2,3,4}nu_kernel`
   take the energy-independent vacuum Hamiltonian, the per-slab potentials and
   the widths, and construct each slab's matter Hamiltonian in registers.  The

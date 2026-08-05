@@ -935,7 +935,8 @@ def test_the_sysctl_probe_declines_without_the_symbol(monkeypatch):
 
 
 @pytest.mark.parametrize('n_flavors', [2, 3, 4])
-def test_the_fused_kernel_matches_the_materialised_one(n_flavors):
+def test_the_fused_kernel_matches_the_materialised_one(n_flavors,
+                                                       monkeypatch):
     r"""Building Hamiltonians inline is a memory layout, not a scheme.
 
     The fused kernel exists to avoid materialising one matrix per slab
@@ -943,10 +944,18 @@ def test_the_fused_kernel_matches_the_materialised_one(n_flavors):
     batch kernel is handed, so the two must agree exactly rather than
     closely.  Anything less would mean the fused path had quietly become
     a different approximation.
+
+    The palindromic composer is disabled here, and only here: it
+    multiplies the same operators in a different grouping and so rounds
+    differently, which would mask exactly the disagreement this test
+    exists to catch.  That it *does* round differently, and by how
+    much, is asserted separately.
     """
     if not fastkernels.HAVE_NUMBA:
         pytest.skip('Numba is not installed')
 
+    monkeypatch.setattr(fastkernels, 'MIN_MIRROR_SLABS',
+                        {2: 1 << 30, 3: 1 << 30, 4: 1 << 30})
     energies = np.logspace(9.0, 11.0, 24)
     widths_km, densities = earth._earth_slabs_cached(COSTHZ, 8)
     widths = widths_km*gd.CONV_KM_TO_INV_EV
@@ -1155,3 +1164,274 @@ def test_the_general_batch_path_still_reaches_its_kernel(n_flavors,
 
     assert kernel_spy['slab_product_%dnu_batch_kernel' % n_flavors] == 1
     assert np.allclose(batched, looped, rtol=0.0, atol=ATOL)
+
+
+# ----------------------------------------------------------- the palindrome
+
+
+def test_the_prem_chord_is_exactly_palindromic():
+    r"""A chord meets every radius twice, and the arrays say so exactly.
+
+    Exactly, not nearly: `fastkernels.palindromic` decides on bitwise
+    equality, so a chord whose widths differ from their mirror in the
+    last bit --- which is what independent `linspace` calls per segment
+    produce --- would silently never take the halved path.
+    """
+    for costhz in (-0.15, -0.55, -0.8, -1.0):
+        for n_per in (1, 3, 8):
+            widths, densities = earth._earth_slabs_cached(costhz, n_per)
+            assert np.array_equal(widths, widths[::-1]), (costhz, n_per)
+            assert np.array_equal(densities, densities[::-1]), (costhz, n_per)
+            assert fastkernels.palindromic(widths, densities)
+
+
+def test_symmetrising_the_chord_preserves_its_length():
+    r"""Mirroring the widths moves them by round-off, not by physics."""
+    for costhz in (-0.3, -1.0):
+        widths, _ = earth._earth_slabs_cached(costhz, 8)
+        assert np.isclose(widths.sum(),
+                          earth.distance_traveled_inside_earth(costhz),
+                          rtol=1.0e-12, atol=0.0)
+
+
+@pytest.mark.parametrize('values, expected', [
+    (np.array([1.0, 2.0, 1.0]), True),
+    (np.array([1.0, 2.0, 2.0, 1.0]), True),
+    (np.array([1.0, 2.0, 3.0]), False),
+    (np.array([1.0]), True),
+    (np.array([]), True),
+])
+def test_palindromic_decides_on_exact_equality(values, expected):
+    r"""One array at a time, including the degenerate lengths."""
+    assert fastkernels.palindromic(values) is expected
+
+
+def test_palindromic_requires_every_array_to_agree():
+    r"""Symmetric densities across asymmetric widths is not a palindrome.
+
+    Both have to mirror for the operators to, and it is the conjunction
+    that the composer relies on.
+    """
+    symmetric = np.array([1.0, 2.0, 1.0])
+    asymmetric = np.array([1.0, 2.0, 3.0])
+
+    assert fastkernels.palindromic(symmetric, symmetric)
+    assert not fastkernels.palindromic(symmetric, asymmetric)
+    assert not fastkernels.palindromic(asymmetric, symmetric)
+    assert fastkernels.palindromic()
+
+
+def test_a_last_bit_difference_defeats_the_palindrome():
+    r"""The check is exact, and that is the point.
+
+    A tolerance here would hand a nearly-symmetric profile the answer
+    for a symmetric one, silently.  The saving is worth having only
+    where the mirrored operators are genuinely identical.
+    """
+    widths = np.array([1.0, 2.0, 1.0])
+    nudged = widths.copy()
+    nudged[-1] = np.nextafter(nudged[-1], 2.0)
+
+    assert fastkernels.palindromic(widths)
+    assert not fastkernels.palindromic(nudged)
+
+
+@pytest.mark.parametrize('n_flavors', [2, 3, 4])
+@pytest.mark.parametrize('costhz', [-0.15, -0.8, -1.0])
+def test_the_mirrored_composer_agrees_with_the_whole_chord(n_flavors, costhz):
+    r"""Half the expansions, the same answer.
+
+    The mirrored composer multiplies the same operators in a different
+    grouping, so it agrees to round-off rather than bitwise.  What must
+    not happen is a difference larger than that, which would mean the
+    split or the ordering is wrong --- and getting the order backwards
+    still returns something that looks like a probability.
+    """
+    if not fastkernels.HAVE_NUMBA:
+        pytest.skip('Numba is not installed')
+
+    energies = np.logspace(9.0, 11.0, 32)
+    hv = h_vacuum(n_flavors)
+    fn = probabilities_earth(n_flavors)
+
+    mirrored = fn(hv, energies, costhz)
+    original = fastkernels.MIN_MIRROR_SLABS
+    try:
+        fastkernels.MIN_MIRROR_SLABS = {2: 1 << 30, 3: 1 << 30, 4: 1 << 30}
+        whole = fn(hv, energies, costhz)
+    finally:
+        fastkernels.MIN_MIRROR_SLABS = original
+
+    assert np.allclose(mirrored, whole, rtol=0.0, atol=1.0e-11)
+
+    # Unitarity, as a comparison rather than against a fixed number.
+    # Four flavors sits at 1e-10 rather than round-off because of the
+    # root polishing, and has done since before this optimisation; what
+    # matters is that halving the composition does not make it worse.
+    def worst_unitarity(p):
+        return np.max(np.abs(np.sum(p.reshape(-1, n_flavors, n_flavors),
+                                    axis=-1) - 1.0))
+
+    assert worst_unitarity(mirrored) <= 2.0*worst_unitarity(whole) + 1.0e-15
+
+
+@pytest.mark.parametrize('n_per, parity', [(8, 'even'), (1, 'odd')])
+def test_the_mirrored_composer_handles_both_parities(n_per, parity):
+    r"""An odd chord has a middle slab that is its own mirror.
+
+    A chord crosses an odd number of segments, so the slab count is odd
+    whenever the subdivision is, and the centre slab must be applied
+    once rather than twice or not at all.  Both mistakes leave a
+    plausible-looking unitary answer.
+    """
+    if not fastkernels.HAVE_NUMBA:
+        pytest.skip('Numba is not installed')
+
+    widths, _ = earth._earth_slabs_cached(-1.0, n_per)
+    assert (len(widths) % 2 == 0) == (parity == 'even'), len(widths)
+
+    energies = np.logspace(9.0, 11.0, 16)
+    mirrored = earth.probabilities_3nu_earth(h_vacuum(3), energies, -1.0,
+                                             n_per)
+    original = fastkernels.MIN_MIRROR_SLABS
+    try:
+        fastkernels.MIN_MIRROR_SLABS = {2: 1 << 30, 3: 1 << 30, 4: 1 << 30}
+        whole = earth.probabilities_3nu_earth(h_vacuum(3), energies, -1.0,
+                                              n_per)
+    finally:
+        fastkernels.MIN_MIRROR_SLABS = original
+
+    assert np.allclose(mirrored, whole, rtol=0.0, atol=1.0e-11)
+
+
+def test_an_asymmetric_chord_is_composed_whole():
+    r"""The halved path is not taken on a profile that is not a
+    palindrome.
+
+    This is the assertion that keeps the optimisation honest: the fused
+    kernels are public, and handing them an asymmetric profile must give
+    the asymmetric answer rather than the symmetric one.
+    """
+    if not fastkernels.HAVE_NUMBA:
+        pytest.skip('Numba is not installed')
+
+    widths_km, densities = earth._earth_slabs_cached(-0.8, 8)
+    widths = widths_km*gd.CONV_KM_TO_INV_EV
+    potentials = earth.matter_potential(densities,
+                                        gd.ELECTRON_FRACTION_EARTH_CRUST)
+    # Break the symmetry in one slab only, and in the potential alone
+    lopsided = potentials.copy()
+    lopsided[0] *= 1.5
+    energies = np.logspace(9.0, 11.0, 8)
+
+    assert not fastkernels.palindromic(lopsided, widths)
+    got = fastkernels.earth_chords_3nu_kernel(h_vacuum(3), energies,
+                                              lopsided, widths)
+
+    # Against the general composer, which knows nothing of palindromes
+    stack = hamiltonians3nu.hamiltonian_3nu_matter(
+        h_vacuum(3), energies[:, None], lopsided[None, :])
+    reference = fastkernels.slab_product_3nu_batch_kernel(stack, widths)
+
+    assert np.array_equal(got, reference)
+
+
+def test_a_short_chord_is_composed_whole():
+    r"""Below the threshold the mirrored composer is not worth it.
+
+    It carries two running products instead of one, so it only pays
+    once there are enough slabs for the halved expansions to dominate
+    that.  Correctness is unaffected either way, which is what this
+    checks.
+    """
+    if not fastkernels.HAVE_NUMBA:
+        pytest.skip('Numba is not installed')
+
+    assert not fastkernels.worthwhile_mirror(3, 7)
+    assert fastkernels.worthwhile_mirror(3, fastkernels.MIN_MIRROR_SLABS[3])
+
+    energies = np.logspace(9.0, 11.0, 8)
+    short = earth.probabilities_3nu_earth(h_vacuum(3), energies, -0.15, 1)
+    loop = np.array([earth.probabilities_3nu_earth(h_vacuum(3), e, -0.15, 1)
+                     for e in energies])
+
+    assert np.allclose(short, loop, rtol=0.0, atol=ATOL)
+
+
+def test_the_compiled_palindrome_check_agrees_with_the_numpy_one():
+    r"""Two implementations of one predicate must not disagree.
+
+    The compiled one exists only because the NumPy one is too slow to
+    call on a materialised stack --- 6 microseconds against the 6 the
+    halved composition saves, which measured as a net loss.  Being
+    quicker is no use if it answers differently.
+    """
+    if not fastkernels.HAVE_NUMBA:
+        pytest.skip('Numba is not installed')
+
+    rng = np.random.default_rng(20260809)
+    widths = rng.uniform(0.1, 2.0, size=8)
+    a = rng.normal(size=(8, 3, 3)) + 1.0j*rng.normal(size=(8, 3, 3))
+
+    symmetric_h = np.concatenate([a[:4], a[:4][::-1]])
+    symmetric_w = np.concatenate([widths[:4], widths[:4][::-1]])
+
+    for h, w in ((symmetric_h, symmetric_w), (a, symmetric_w),
+                 (symmetric_h, widths), (a, widths)):
+        h = np.ascontiguousarray(h, dtype=complex)
+        w = np.ascontiguousarray(w, dtype=float)
+        assert (fastkernels._palindromic_stack(h, w)
+                == fastkernels.palindromic(h, w))
+
+
+def test_the_compiled_check_rejects_on_either_array():
+    r"""A width mismatch and a Hamiltonian mismatch are both fatal.
+
+    They are separate early exits, and a sequence can fail on one while
+    passing the other.
+    """
+    if not fastkernels.HAVE_NUMBA:
+        pytest.skip('Numba is not installed')
+
+    h = np.zeros((4, 3, 3), dtype=complex)
+    w = np.array([1.0, 2.0, 2.0, 1.0])
+    assert fastkernels._palindromic_stack(h, w)
+
+    bad_width = w.copy()
+    bad_width[0] = 1.5
+    assert not fastkernels._palindromic_stack(h, bad_width)
+
+    bad_h = h.copy()
+    bad_h[0, 1, 2] = 1.0 + 0.0j
+    assert not fastkernels._palindromic_stack(bad_h, w)
+
+
+def test_a_symmetric_slab_sequence_is_composed_at_half_cost():
+    r"""The saving is not Earth-specific, which is the point.
+
+    A hand-built profile that reads the same from either end --- a
+    symmetric castle wall, say --- has the same redundancy a chord does,
+    and `slabs` finds it without knowing anything about the Earth.
+    """
+    if not fastkernels.HAVE_NUMBA:
+        pytest.skip('Numba is not installed')
+
+    rng = np.random.default_rng(20260810)
+    half = rng.normal(size=(20, 3, 3)) + 1.0j*rng.normal(size=(20, 3, 3))
+    half = (half + np.conj(np.swapaxes(half, -1, -2)))/2.0
+    h = np.concatenate([half, half[::-1]])
+    w_half = rng.uniform(0.1, 1.5, size=20)
+    w = np.concatenate([w_half, w_half[::-1]])
+
+    assert fastkernels.palindromic(h, w)
+    mirrored = slabs.probabilities_3nu_slabs(h, w)
+
+    original = fastkernels.MIN_MIRROR_SLABS
+    try:
+        fastkernels.MIN_MIRROR_SLABS = {2: 1 << 30, 3: 1 << 30, 4: 1 << 30}
+        whole = slabs.probabilities_3nu_slabs(h, w)
+    finally:
+        fastkernels.MIN_MIRROR_SLABS = original
+
+    assert np.allclose(mirrored, whole, rtol=0.0, atol=1.0e-11)
+    assert np.isclose(sum(mirrored), 3.0, rtol=0.0, atol=1.0e-10)
