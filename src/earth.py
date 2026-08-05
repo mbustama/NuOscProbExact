@@ -85,6 +85,7 @@ __all__ = ['LOC_COORDS_DMS', 'PREM_BOUNDARIES',
            'probabilities_3nu_between_locations',
            'probabilities_4nu_between_locations']
 
+import os
 from functools import lru_cache
 from typing import Optional, Tuple, Union
 
@@ -931,21 +932,221 @@ def _earth_hamiltonians(
     return h, widths_km*gd.CONV_KM_TO_INV_EV
 
 
-MAX_CHUNK_BYTES = 64*1024*1024
+CHUNK_BYTES_FALLBACK = 16*1024*1024
+r"""int: Module-level constant.
+
+Chunk size assumed when the cache size cannot be read, in bytes.  A
+middling last-level cache for a machine of the era; see
+`MAX_CHUNK_BYTES`.
+
+.. versionadded:: 1.12.0
+"""
+
+CHUNK_BYTES_MIN = 4*1024*1024
+r"""int: Module-level constant.
+
+Smallest chunk the detected cache size may produce, in bytes.  Below
+roughly this the per-chunk overhead starts to cost more than the cache
+residency buys.
+
+.. versionadded:: 1.12.0
+"""
+
+CHUNK_BYTES_MAX = 64*1024*1024
+r"""int: Module-level constant.
+
+Largest chunk the detected cache size may produce, in bytes.  A server
+with a very large last-level cache should not turn that into a very
+large allocation.
+
+.. versionadded:: 1.12.0
+"""
+
+MIN_CHUNK_ENERGIES = 32
+r"""int: Module-level constant.
+
+Fewest energies a chunk may hold, whatever the byte budget says.  A
+four-flavor chord with a thousand slabs costs a quarter of a megabyte
+per energy, and cutting that into chunks of one or two would spend more
+time re-entering the kernel than it saved.
+
+.. versionadded:: 1.12.0
+"""
+
+
+_SYSFS_CACHE = '/sys/devices/system/cpu/cpu0/cache'
+
+
+def _cache_bytes_from_sysconf() -> Optional[int]:
+    r"""Returns the largest cache size :func:`os.sysconf` reports, or None.
+
+    Some POSIX builds carry ``SC_LEVEL*_CACHE_SIZE`` names and some do
+    not; the ones that do not raise `ValueError` when asked, which is
+    why each name is tried separately rather than in one block.
+
+    Returns
+    -------
+    int or None
+        The largest cache size in bytes, or None if none is reported.
+    """
+    largest = None
+    for name in ('SC_LEVEL4_CACHE_SIZE', 'SC_LEVEL3_CACHE_SIZE',
+                 'SC_LEVEL2_CACHE_SIZE'):
+        try:
+            size = os.sysconf(name)
+        except (ValueError, OSError, AttributeError):
+            continue
+        if isinstance(size, int) and size > 0:
+            largest = size if largest is None else max(largest, size)
+
+    return largest
+
+
+def _cache_bytes_from_sysfs() -> Optional[int]:
+    r"""Returns the largest cache size ``sysfs`` reports, or None.
+
+    Linux only, and the most reliable of the three where it exists.
+
+    Returns
+    -------
+    int or None
+        The largest cache size in bytes, or None if it cannot be read.
+    """
+    scale = {'K': 1024, 'M': 1024*1024, 'G': 1024*1024*1024}
+    largest = None
+
+    for entry in os.listdir(_SYSFS_CACHE):
+        try:
+            with open(os.path.join(_SYSFS_CACHE, entry, 'size')) as handle:
+                text = handle.read().strip()
+        except OSError:
+            continue
+        if not text:
+            continue
+        unit = scale.get(text[-1].upper(), 1)
+        try:
+            size = int(text[:-1] if unit > 1 else text)*unit
+        except ValueError:
+            continue
+        if largest is None or size > largest:
+            largest = size
+
+    return largest
+
+
+def _cache_bytes_from_sysctl() -> Optional[int]:
+    r"""Returns the largest cache size ``sysctl`` reports, or None.
+
+    macOS, through :mod:`ctypes` rather than the ``sysctl`` command:
+    spawning a subprocess while a module is still being imported is a
+    great deal more to go wrong than this is worth.  Apple Silicon
+    reports no ``hw.l3cachesize``, so the per-performance-level L2 is
+    asked for as well, that being the largest cache those machines have.
+
+    Returns
+    -------
+    int or None
+        The largest cache size in bytes, or None if none is reported.
+    """
+    import ctypes
+    import ctypes.util
+
+    path = ctypes.util.find_library('c')
+    if path is None:
+        return None
+    libc = ctypes.CDLL(path)
+    if not hasattr(libc, 'sysctlbyname'):
+        return None
+
+    largest = None
+    for name in (b'hw.l3cachesize', b'hw.perflevel0.l2cachesize',
+                 b'hw.l2cachesize'):
+        value = ctypes.c_uint64(0)
+        length = ctypes.c_size_t(ctypes.sizeof(value))
+        # `pointer` rather than `byref`: the extra object it builds costs
+        # nothing at import time, and it is writable from Python, so the
+        # parsing below can be tested on a machine with no `sysctl` at
+        # all rather than only asserted about.
+        if libc.sysctlbyname(name, ctypes.pointer(value),
+                             ctypes.pointer(length), None, 0) != 0:
+            continue
+        if value.value > 0:
+            largest = (value.value if largest is None
+                       else max(largest, value.value))
+
+    return largest
+
+
+def _last_level_cache_bytes() -> Optional[int]:
+    r"""Returns the size of the largest CPU cache, in bytes, or None.
+
+    There is no portable way to ask, so three ways are tried and the
+    first that answers wins: :func:`os.sysconf`, which some POSIX builds
+    carry; Linux's ``sysfs``; and macOS's ``sysctl``.  Windows is not
+    probed --- doing it means untested :mod:`ctypes` calls into
+    ``kernel32`` running at import time on machines this was never run
+    on, which is a poor trade for a hint.
+
+    Every probe is wrapped, and broadly.  This value only tunes how a
+    long scan is cut into pieces: being wrong costs some speed and
+    nothing else, so no failure of it should be able to stop
+    :mod:`earth` from importing.  `CHUNK_BYTES_FALLBACK` is deliberately
+    a plausible answer rather than a degenerate one.
+
+    Returns
+    -------
+    int or None
+        The largest cache size in bytes, or None if nothing answered.
+    """
+    for probe in (_cache_bytes_from_sysconf, _cache_bytes_from_sysfs,
+                  _cache_bytes_from_sysctl):
+        try:
+            size = probe()
+        except Exception:                       # noqa: BLE001
+            continue
+        if size:
+            return size
+
+    return None
+
+
+MAX_CHUNK_BYTES = min(CHUNK_BYTES_MAX,
+                      max(CHUNK_BYTES_MIN,
+                          _last_level_cache_bytes() or CHUNK_BYTES_FALLBACK))
 r"""int: Module-level constant.
 
 Rough ceiling on the Hamiltonian stack an array of energies may build at
 once, in bytes.  Longer scans are evaluated in chunks of that size.
+Set it to retune; nothing caches the value.
 
-Batching is what makes an energy scan quick, but the stack it builds is
-proportional to the scan length: a hundred thousand energies across a
-120-slab chord is 1.6 GB at three flavors and, counting the traceless
-copy the expansion needs, nearly 6 GB at four.  That is an ordinary
-oscillogram, not an abusive input, and the whole point of the batched
-path is to serve it.  Chunking keeps the peak bounded without the caller
-having to know any of this; the chunks are large enough that the
-per-call overhead is amortised many times over, so the speed is the same
-as an unbounded batch.
+There are two reasons to chunk, and the second is the one that sets the
+number.
+
+The first is memory.  The stack is proportional to the scan length: a
+hundred thousand energies across a 120-slab chord is 1.6 GB at three
+flavors and, counting the traceless copy the expansion needs, nearly
+6 GB at four.  That is an ordinary oscillogram, not an abusive input.
+
+The second is that **the batched kernel is memory-bound, not
+compute-bound**, and this is what makes the chunk size worth choosing
+rather than merely bounding.  The stack is written by the Hamiltonian
+builder and then streamed by the kernel, which does little arithmetic
+per byte; if it fits in the last-level cache the second pass is nearly
+free, and if it does not, every slab is fetched from memory.  Measured
+on one machine, cost per probability was 7.9 microseconds with an
+8 MB working set and 16.4 with a 540 MB one --- a factor of two paid for
+nothing but traffic.  Interleaved against a 64 MB chunk, a cache-sized
+one was 1.3x to 1.8x quicker across both chord lengths and all three
+flavor counts, and never slower.
+
+So the default is the detected last-level cache, clamped into
+``[CHUNK_BYTES_MIN, CHUNK_BYTES_MAX]``, falling back to
+`CHUNK_BYTES_FALLBACK` where it cannot be read.  That is a *guess at the
+right order of magnitude*, not a tuned constant: it was measured on one
+12 MB machine, the optimum is broad, and any value near the cache beats
+one far above it.  A machine whose cache is shared between busy cores
+may do better with less.  It is a plain module attribute for that
+reason.
 
 .. versionadded:: 1.12.0
 """
@@ -991,7 +1192,7 @@ def _probabilities_earth_batch(
     widths_km, _ = _earth_slabs_cached(float(costhz),
                                        int(n_slabs_per_segment))
     per_energy = widths_km.shape[0]*n_flavors*n_flavors*16
-    chunk = max(1, MAX_CHUNK_BYTES//per_energy)
+    chunk = max(MIN_CHUNK_ENERGIES, MAX_CHUNK_BYTES//per_energy)
 
     flat = energy.reshape(-1)
     if flat.shape[0] <= chunk:

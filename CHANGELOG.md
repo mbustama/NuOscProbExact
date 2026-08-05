@@ -41,6 +41,27 @@ and the project uses [Semantic Versioning](https://semver.org/).
   evaluated in chunks of `earth.MAX_CHUNK_BYTES`, bit-identically and at no
   measurable cost.
 
+  That chunk turned out to matter for a second reason, and it is the more
+  interesting one: **the batched kernel is memory-bound, not compute-bound.**
+  The stack is written by the Hamiltonian builder and then streamed by the
+  kernel, which does little arithmetic per byte.  Cost per probability
+  measured 7.9 µs with an 8 MB working set and 16.4 µs with a 540 MB one — a
+  factor of two paid for traffic alone — and thread scaling flattens at eight
+  threads and regresses at twelve, which is the same story from the other
+  side.  `MAX_CHUNK_BYTES` therefore defaults to the **detected last-level
+  cache** rather than to a fixed 64 MB, worth 1.3x to 1.8x on long scans
+  across both chord lengths and all three flavor counts, and never slower.
+
+  Detection tries `os.sysconf`, Linux's `sysfs` and macOS's `sysctl` (through
+  `ctypes`, not a subprocess), and falls back to `CHUNK_BYTES_FALLBACK` where
+  none answers — Windows, notably, which is not probed because doing it means
+  untested `kernel32` calls at import time.  Every probe is wrapped broadly
+  and deliberately: the value only tunes how a scan is cut up, so no failure
+  of it should be able to stop the module importing.  It is a plain module
+  attribute, and the default is a guess at the right order of magnitude
+  rather than a tuned constant — the optimum is broad, and any value near the
+  cache beats one far above it.
+
   What is *not* done: building the per-slab Hamiltonians inside the kernel.
   That is the largest remaining item, worth about 19% of a scan, and it was
   left alone deliberately because it would couple `fastkernels` to the

@@ -688,3 +688,238 @@ def test_the_profile_routine_checks_what_the_callable_returned():
 
     with pytest.raises(ValueError, match='must return one 3x3 Hamiltonian'):
         slabs.probabilities_3nu_profile(wrong_shape, 1.0)
+
+
+# ------------------------------------------------------- chunk-size probing
+
+
+def test_the_chunk_size_lands_in_the_permitted_range():
+    r"""Whatever was detected, the chunk is clamped and usable.
+
+    The detected cache is a hint, and a hint from an unfamiliar machine
+    should not be able to produce a chunk of four bytes or of four
+    gigabytes.
+    """
+    assert earth.CHUNK_BYTES_MIN <= earth.MAX_CHUNK_BYTES
+    assert earth.MAX_CHUNK_BYTES <= earth.CHUNK_BYTES_MAX
+
+
+def test_sysconf_probe_reports_a_size_or_nothing():
+    r"""``os.sysconf`` carries the cache names on some builds only."""
+    got = earth._cache_bytes_from_sysconf()
+
+    assert got is None or got > 0
+
+
+def test_sysconf_probe_survives_a_build_without_the_names(monkeypatch):
+    r"""A build that refuses every name gives None, not an exception.
+
+    This is the common case away from glibc, and it is reached on the
+    machine this was written on, where every name raises `ValueError`.
+    """
+    def refuse(name):
+        raise ValueError(name)
+
+    monkeypatch.setattr(earth.os, 'sysconf', refuse)
+
+    assert earth._cache_bytes_from_sysconf() is None
+
+
+def test_sysconf_probe_takes_the_largest_reported(monkeypatch):
+    r"""The last level is wanted, and it is not always the one asked
+    for first."""
+    monkeypatch.setattr(earth.os, 'sysconf',
+                        lambda name: {'SC_LEVEL4_CACHE_SIZE': 0,
+                                      'SC_LEVEL3_CACHE_SIZE': 8*1024*1024,
+                                      'SC_LEVEL2_CACHE_SIZE': 1024*1024}[name])
+
+    assert earth._cache_bytes_from_sysconf() == 8*1024*1024
+
+
+def test_the_sysfs_probe_parses_the_units(tmp_path, monkeypatch):
+    r"""``sysfs`` writes sizes as ``32K``, ``12288K``, sometimes ``2M``.
+
+    Parsed rather than assumed, and the largest wins, since the
+    directories are not ordered by level.
+    """
+    for name, text in (('index0', '48K'), ('index1', '2M'),
+                       ('index2', '12288K'), ('index3', '')):
+        (tmp_path/name).mkdir()
+        (tmp_path/name/'size').write_text(text)
+    # A directory with no size file at all, which sysfs does produce
+    (tmp_path/'index4').mkdir()
+
+    monkeypatch.setattr(earth, '_SYSFS_CACHE', str(tmp_path))
+
+    assert earth._cache_bytes_from_sysfs() == 12288*1024
+
+
+def test_the_sysfs_probe_ignores_an_unparseable_size(tmp_path, monkeypatch):
+    r"""A size that is not a number is skipped, not fatal."""
+    for name, text in (('index0', 'unknown'), ('index1', '4M')):
+        (tmp_path/name).mkdir()
+        (tmp_path/name/'size').write_text(text)
+
+    monkeypatch.setattr(earth, '_SYSFS_CACHE', str(tmp_path))
+
+    assert earth._cache_bytes_from_sysfs() == 4*1024*1024
+
+
+def test_the_sysfs_probe_declines_where_there_is_no_sysfs(monkeypatch):
+    r"""Off Linux the directory is simply absent."""
+    monkeypatch.setattr(earth, '_SYSFS_CACHE', '/nonexistent/cache/path')
+
+    with pytest.raises(OSError):
+        earth._cache_bytes_from_sysfs()
+
+    # ...which `_last_level_cache_bytes` is required to absorb
+    monkeypatch.setattr(earth, '_cache_bytes_from_sysconf', lambda: None)
+    monkeypatch.setattr(earth, '_cache_bytes_from_sysctl', lambda: None)
+    assert earth._last_level_cache_bytes() is None
+
+
+def test_the_sysctl_probe_reports_a_size_or_nothing():
+    r"""Answers on macOS, declines elsewhere, raises nowhere."""
+    got = earth._cache_bytes_from_sysctl()
+
+    assert got is None or got > 0
+
+
+def test_the_sysctl_probe_declines_without_a_c_library(monkeypatch):
+    r"""No libc to find means no answer, rather than an exception."""
+    import ctypes.util
+    monkeypatch.setattr(ctypes.util, 'find_library', lambda _: None)
+
+    assert earth._cache_bytes_from_sysctl() is None
+
+
+def test_a_probe_that_raises_is_skipped(monkeypatch):
+    r"""A hint must never be able to stop the module importing.
+
+    Every probe touches something platform-specific, and the point of
+    catching broadly is that an unfamiliar machine costs some speed on
+    long scans rather than an ImportError.
+    """
+    def explode():
+        raise RuntimeError('an unfamiliar machine')
+
+    monkeypatch.setattr(earth, '_cache_bytes_from_sysconf', explode)
+    monkeypatch.setattr(earth, '_cache_bytes_from_sysfs', explode)
+    monkeypatch.setattr(earth, '_cache_bytes_from_sysctl', explode)
+
+    assert earth._last_level_cache_bytes() is None
+
+
+def test_nothing_detected_falls_back_to_a_plausible_chunk(monkeypatch):
+    r"""The fallback is a real cache size, not a degenerate one."""
+    monkeypatch.setattr(earth, '_cache_bytes_from_sysconf', lambda: None)
+    monkeypatch.setattr(earth, '_cache_bytes_from_sysfs', lambda: None)
+    monkeypatch.setattr(earth, '_cache_bytes_from_sysctl', lambda: None)
+
+    assert earth._last_level_cache_bytes() is None
+    assert earth.CHUNK_BYTES_MIN <= earth.CHUNK_BYTES_FALLBACK
+    assert earth.CHUNK_BYTES_FALLBACK <= earth.CHUNK_BYTES_MAX
+
+
+def test_a_chunk_always_holds_several_energies(backend):
+    r"""The byte budget cannot cut a chunk down to a single energy.
+
+    A four-flavor chord with many slabs costs a quarter of a megabyte
+    per energy; without a floor, a small budget would re-enter the
+    kernel once per energy and undo the batching entirely.
+    """
+    energies = np.logspace(9.0, 10.0, 80)
+    original = earth.MAX_CHUNK_BYTES
+    try:
+        earth.MAX_CHUNK_BYTES = 1
+        got = earth.probabilities_3nu_earth(h_vacuum(3), energies, COSTHZ)
+    finally:
+        earth.MAX_CHUNK_BYTES = original
+
+    assert got.shape == (80, 9)
+    assert np.allclose(
+        got, earth.probabilities_3nu_earth(h_vacuum(3), energies, COSTHZ),
+        rtol=0.0, atol=0.0)
+
+
+class _FakeLibc:
+    r"""Stands in for a macOS libc, answering a fixed set of names.
+
+    The real call cannot run on the machine this suite runs on, so the
+    parsing around it would otherwise be asserted about rather than
+    exercised.  Writes through the pointer exactly as ``sysctlbyname``
+    does, and returns non-zero for a name it does not know, which is how
+    Apple Silicon reports having no L3.
+    """
+
+    def __init__(self, answers):
+        self.answers = answers
+        self.asked = []
+
+    def sysctlbyname(self, name, value_ptr, length_ptr, _new, _newlen):
+        self.asked.append(name)
+        if name not in self.answers:
+            return -1
+        value_ptr.contents.value = self.answers[name]
+        return 0
+
+
+def _install_fake_libc(monkeypatch, answers):
+    r"""Points the sysctl probe at a `_FakeLibc`."""
+    import ctypes
+    import ctypes.util
+
+    libc = _FakeLibc(answers)
+    monkeypatch.setattr(ctypes.util, 'find_library', lambda _: 'libc.dylib')
+    monkeypatch.setattr(ctypes, 'CDLL', lambda _: libc)
+    return libc
+
+
+def test_the_sysctl_probe_reads_an_l3(monkeypatch):
+    r"""An Intel Mac reports ``hw.l3cachesize`` and that is the answer."""
+    _install_fake_libc(monkeypatch, {b'hw.l3cachesize': 16*1024*1024,
+                                     b'hw.l2cachesize': 256*1024})
+
+    assert earth._cache_bytes_from_sysctl() == 16*1024*1024
+
+
+def test_the_sysctl_probe_falls_back_to_l2_on_apple_silicon(monkeypatch):
+    r"""Apple Silicon has no L3, so its L2 is the last level.
+
+    Returning nothing there would send those machines to the fallback
+    when the real number was available one name away.
+    """
+    libc = _install_fake_libc(
+        monkeypatch, {b'hw.perflevel0.l2cachesize': 32*1024*1024})
+
+    assert earth._cache_bytes_from_sysctl() == 32*1024*1024
+    assert b'hw.l3cachesize' in libc.asked
+
+
+def test_the_sysctl_probe_declines_when_nothing_answers(monkeypatch):
+    r"""A libc with the symbol but no cache names gives None."""
+    _install_fake_libc(monkeypatch, {})
+
+    assert earth._cache_bytes_from_sysctl() is None
+
+
+def test_the_sysctl_probe_ignores_a_zero(monkeypatch):
+    r"""A name that answers zero is not a cache size."""
+    _install_fake_libc(monkeypatch, {b'hw.l3cachesize': 0,
+                                     b'hw.l2cachesize': 4*1024*1024})
+
+    assert earth._cache_bytes_from_sysctl() == 4*1024*1024
+
+
+def test_the_sysctl_probe_declines_without_the_symbol(monkeypatch):
+    r"""Linux's libc has no ``sysctlbyname``, which is not an error."""
+    import ctypes
+    import ctypes.util
+
+    class _NoSymbol:
+        pass
+
+    monkeypatch.setattr(ctypes.util, 'find_library', lambda _: 'libc.so.6')
+    monkeypatch.setattr(ctypes, 'CDLL', lambda _: _NoSymbol())
+
+    assert earth._cache_bytes_from_sysctl() is None
