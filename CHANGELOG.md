@@ -89,6 +89,17 @@ and the project uses [Semantic Versioning](https://semver.org/).
   mutant the operators showed 17000 ulps where the probabilities showed
   1800.
 
+  Its first use was to **decline** a change rather than certify one, which
+  is worth recording.  A set of loop-invariant hoists and temporary
+  removals in the per-slab arithmetic — bit-identical in principle, and
+  estimated at six to ten per cent — turned out to be unmeasurable here:
+  the run-to-run spread of the *same build* on this machine is 27% to 56%,
+  and an untouched two-flavor control showed an apparent 0.906x "effect".
+  Every candidate sat inside that.  They are left undone rather than
+  committed on a claim this hardware cannot check; the earlier wins in this
+  release are all far above that floor and stand.  The harness is committed
+  so that whoever revisits them on a quieter machine does not rebuild it.
+
 - **A chord is a palindrome, and half its operators were being computed
   twice.**  A neutrino crossing a spherically symmetric Earth meets every
   radius on the way in and again on the way out, so slab `j` and slab
@@ -335,31 +346,6 @@ and the project uses [Semantic Versioning](https://semver.org/).
   `gen_prem_header.py` emits this library's PREM as a C header from
   `earth._PREM_COEFFS`, rather than anyone transcribing forty coefficients;
   it reproduces `earth.density_prem` to 5e-14 over 6372 radii.
-
-### Changed
-
-- **One temporary removed from the three-flavor composers**, verified
-  bit-identical over 870 arrays and 24012 values.  The column being
-  multiplied is already read into scalars before anything is written, and
-  only that column is written, so the result goes straight back into the
-  accumulator and a nine-element copy per slab disappears.
-
-  Three larger changes were tried alongside it and **rejected on
-  measurement**, which is the part worth recording.  The same temporary in
-  the four-flavor and mirrored composers cannot simply be deleted — those
-  read a whole row or column, so an in-place write would clobber a value
-  still needed — and buffering one first is not a simplification.  It
-  measured no quicker.
-
-  More usefully: on the machine this was written on, the run-to-run spread
-  of the *same build* is 27% to 56%, and an untouched two-flavor control
-  showed an apparent 0.906x "effect".  Changes of the six-to-ten per cent
-  this class of edit is worth are **below the resolution of this hardware**,
-  so the remaining candidates — hoisting the chord-constant part of the
-  Hamiltonian build and of the SU(3) coefficient extraction out of the
-  per-slab loop — are deliberately left undone rather than committed on an
-  unmeasurable claim.  They are real, and they are bit-identical in
-  principle; they want a quiet machine.
 
 ### Fixed
 
