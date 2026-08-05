@@ -1065,6 +1065,200 @@ if HAVE_NUMBA:                                          # pragma: no branch
             _slab_product_4nu(h_stack[c], widths, polish, out[c])
 
     @njit(cache=True)
+    def _build_h_2nu(h_vac, inv_e, potentials, k, h_work):
+        r"""Builds slab ``k``'s two-flavor Hamiltonian into ``h_work``."""
+        for i in range(2):
+            for j in range(2):
+                h_work[i, j] = h_vac[i, j]*inv_e
+        h_work[0, 0] += potentials[k]
+
+    @njit(cache=True)
+    def _build_h_3nu(h_vac, inv_e, potentials, k, h_work):
+        r"""Builds slab ``k``'s three-flavor Hamiltonian into ``h_work``.
+
+        The whole point of the fused path, and it computes exactly what
+        `hamiltonians3nu.hamiltonian_3nu_matter` computes --- this is a
+        compiled mirror of that, not a different scheme.
+        ``H = H_vac/E + V P_ee``, so the only thing that varies from
+        slab to slab is one real number, and materialising a stack of
+        3x3 matrices to carry it was what made the batched scan
+        memory-bound.
+        """
+        for i in range(3):
+            for j in range(3):
+                h_work[i, j] = h_vac[i, j]*inv_e
+        h_work[0, 0] += potentials[k]
+
+    @njit(cache=True)
+    def _build_h_4nu(h_vac, inv_e, potentials, potentials_nc, k, h_work):
+        r"""Builds slab ``k``'s four-flavor Hamiltonian into ``h_work``.
+
+        Two potentials rather than one: a sterile state does not feel
+        the neutral current, so ``V_NC`` no longer cancels between the
+        flavors.  The mirror of
+        `hamiltonians4nu.hamiltonian_4nu_matter`.
+
+        The result is made traceless here, because that is what
+        `_operator_4nu` expects; the dropped phase is per slab and
+        cancels in every probability.
+        """
+        for i in range(4):
+            for j in range(4):
+                h_work[i, j] = h_vac[i, j]*inv_e
+        h_work[0, 0] += potentials[k]
+        h_work[3, 3] -= potentials_nc[k]
+
+        trace = (h_work[0, 0] + h_work[1, 1]
+                 + h_work[2, 2] + h_work[3, 3])/4.0
+        for i in range(4):
+            h_work[i, i] -= trace
+
+    @njit(cache=True)
+    def _earth_chord_2nu(h_vac, inv_e, potentials, widths, out):
+        r"""Composes one two-flavor chord, Hamiltonians built inline."""
+        h_work = np.empty((2, 2), dtype=np.complex128)
+
+        _build_h_2nu(h_vac, inv_e, potentials, 0, h_work)
+        a00, a01, a10, a11 = _entries_2nu(h_work, widths[0])
+
+        for k in range(1, widths.shape[0]):
+            _build_h_2nu(h_vac, inv_e, potentials, k, h_work)
+            u00, u01, u10, u11 = _entries_2nu(h_work, widths[k])
+            b00 = u00*a00 + u01*a10
+            b01 = u00*a01 + u01*a11
+            b10 = u10*a00 + u11*a10
+            b11 = u10*a01 + u11*a11
+            a00 = b00
+            a01 = b01
+            a10 = b10
+            a11 = b11
+
+        out[0, 0] = a00
+        out[0, 1] = a01
+        out[1, 0] = a10
+        out[1, 1] = a11
+
+    @njit(cache=True)
+    def _earth_chord_3nu(h_vac, inv_e, potentials, widths, out):
+        r"""Composes one three-flavor chord, Hamiltonians built inline.
+
+        ``U = U_n ... U_1``, the slab crossed first applied first and so
+        standing rightmost, exactly as `_slab_product_3nu` orders it.
+        """
+        acc = np.empty((3, 3), dtype=np.complex128)
+        tmp = np.empty((3, 3), dtype=np.complex128)
+        h_work = np.empty((3, 3), dtype=np.complex128)
+
+        _build_h_3nu(h_vac, inv_e, potentials, 0, h_work)
+        (u_ee, u_em, u_et,
+         u_me, u_mm, u_mt,
+         u_te, u_tm, u_tt) = _entries_3nu(h_work, widths[0])
+        acc[0, 0] = u_ee
+        acc[0, 1] = u_em
+        acc[0, 2] = u_et
+        acc[1, 0] = u_me
+        acc[1, 1] = u_mm
+        acc[1, 2] = u_mt
+        acc[2, 0] = u_te
+        acc[2, 1] = u_tm
+        acc[2, 2] = u_tt
+
+        for k in range(1, widths.shape[0]):
+            _build_h_3nu(h_vac, inv_e, potentials, k, h_work)
+            (u_ee, u_em, u_et,
+             u_me, u_mm, u_mt,
+             u_te, u_tm, u_tt) = _entries_3nu(h_work, widths[k])
+            for j in range(3):
+                a0 = acc[0, j]
+                a1 = acc[1, j]
+                a2 = acc[2, j]
+                tmp[0, j] = u_ee*a0 + u_em*a1 + u_et*a2
+                tmp[1, j] = u_me*a0 + u_mm*a1 + u_mt*a2
+                tmp[2, j] = u_te*a0 + u_tm*a1 + u_tt*a2
+            for i in range(3):
+                for j in range(3):
+                    acc[i, j] = tmp[i, j]
+
+        for i in range(3):
+            for j in range(3):
+                out[i, j] = acc[i, j]
+
+    @njit(cache=True)
+    def _earth_chord_4nu(h_vac, inv_e, potentials, potentials_nc, widths,
+                         polish, out):
+        r"""Composes one four-flavor chord, Hamiltonians built inline."""
+        work = np.empty((5, 4, 4), dtype=np.complex128)
+        acc = np.empty((4, 4), dtype=np.complex128)
+        tmp = np.empty((4, 4), dtype=np.complex128)
+        h_work = np.empty((4, 4), dtype=np.complex128)
+
+        _build_h_4nu(h_vac, inv_e, potentials, potentials_nc, 0, h_work)
+        _operator_4nu(h_work, widths[0], polish, work)
+        for i in range(4):
+            for j in range(4):
+                acc[i, j] = work[1][i, j]
+
+        for k in range(1, widths.shape[0]):
+            _build_h_4nu(h_vac, inv_e, potentials, potentials_nc, k, h_work)
+            _operator_4nu(h_work, widths[k], polish, work)
+            for i in range(4):
+                for j in range(4):
+                    total = 0.0 + 0.0j
+                    for m in range(4):
+                        total += work[1][i, m]*acc[m, j]
+                    tmp[i, j] = total
+            for i in range(4):
+                for j in range(4):
+                    acc[i, j] = tmp[i, j]
+
+        for i in range(4):
+            for j in range(4):
+                out[i, j] = acc[i, j]
+
+    @njit(cache=True)
+    def _earth_chords_2nu_serial(h_vac, inv_energies, potentials, widths, out):
+        for c in range(inv_energies.shape[0]):
+            _earth_chord_2nu(h_vac, inv_energies[c], potentials, widths,
+                             out[c])
+
+    @njit(cache=True, parallel=True)
+    def _earth_chords_2nu_parallel(h_vac, inv_energies, potentials, widths,
+                                   out):
+        for c in prange(inv_energies.shape[0]):
+            _earth_chord_2nu(h_vac, inv_energies[c], potentials, widths,
+                             out[c])
+
+    @njit(cache=True)
+    def _earth_chords_3nu_serial(h_vac, inv_energies, potentials, widths, out):
+        for c in range(inv_energies.shape[0]):
+            _earth_chord_3nu(h_vac, inv_energies[c], potentials, widths,
+                             out[c])
+
+    @njit(cache=True, parallel=True)
+    def _earth_chords_3nu_parallel(h_vac, inv_energies, potentials, widths,
+                                   out):
+        for c in prange(inv_energies.shape[0]):
+            _earth_chord_3nu(h_vac, inv_energies[c], potentials, widths,
+                             out[c])
+
+    # The widths come before the four-flavor extras so that every chord
+    # kernel takes the same first four arguments, which is what lets
+    # `_run_earth_chords` dispatch all three through one call site.
+    @njit(cache=True)
+    def _earth_chords_4nu_serial(h_vac, inv_energies, potentials, widths,
+                                 potentials_nc, polish, out):
+        for c in range(inv_energies.shape[0]):
+            _earth_chord_4nu(h_vac, inv_energies[c], potentials,
+                             potentials_nc, widths, polish, out[c])
+
+    @njit(cache=True, parallel=True)
+    def _earth_chords_4nu_parallel(h_vac, inv_energies, potentials, widths,
+                                   potentials_nc, polish, out):
+        for c in prange(inv_energies.shape[0]):
+            _earth_chord_4nu(h_vac, inv_energies[c], potentials,
+                             potentials_nc, widths, polish, out[c])
+
+    @njit(cache=True)
     def _run_2nu_serial(h_stack, l_stack, out):
         for n in range(h_stack.shape[0]):
             _one_2nu(h_stack[n], l_stack[n], out, n)
@@ -1433,6 +1627,175 @@ if HAVE_NUMBA:                                          # pragma: no branch
         else:
             serial(flat_h, flat_w, *extra, out)
         return out.reshape(batch + (width, width))
+
+    def _run_earth_chords(
+        h_vacuum: np.ndarray,
+        energies: np.ndarray,
+        potentials: np.ndarray,
+        widths: np.ndarray,
+        width: int,
+        serial: Callable,
+        parallel: Callable,
+        extra: tuple = ()
+    ) -> np.ndarray:
+        r"""Dispatches a fused chord kernel and restores the batch shape.
+
+        Parameters
+        ----------
+        h_vacuum : numpy.ndarray
+            Energy-independent vacuum Hamiltonian, of shape
+            ``(width, width)``.
+        energies : numpy.ndarray
+            Neutrino energies, of any shape.
+        potentials : numpy.ndarray
+            Matter potentials, of shape ``(n_slabs,)``, one per slab.
+        widths : numpy.ndarray
+            Slab widths, of shape ``(n_slabs,)``.
+        width : int
+            Number of flavors, 2, 3, or 4.
+        serial : Callable
+            Kernel to use below `PARALLEL_THRESHOLD`.
+        parallel : Callable
+            Kernel to use at or above it.
+        extra : tuple, optional
+            Further arguments passed on before the output array.
+
+        Returns
+        -------
+        numpy.ndarray
+            The evolution operators, of shape
+            ``(..., width, width)``.
+        """
+        batch = np.shape(energies)
+        flat_e = np.ascontiguousarray(energies, dtype=float).reshape(-1)
+        # The kernel wants a reciprocal per chord, and computing it here
+        # keeps a division out of the innermost loop.
+        inv_e = 1.0/flat_e
+        h_vac = np.ascontiguousarray(h_vacuum, dtype=complex)
+        pot = np.ascontiguousarray(potentials, dtype=float)
+        wid = np.ascontiguousarray(widths, dtype=float)
+        out = np.empty((flat_e.shape[0], width, width), dtype=complex)
+
+        if flat_e.shape[0]*wid.shape[0] >= PARALLEL_THRESHOLD:
+            parallel(h_vac, inv_e, pot, wid, *extra, out)
+        else:
+            serial(h_vac, inv_e, pot, wid, *extra, out)
+
+        return out.reshape(batch + (width, width))
+
+    def earth_chords_2nu_kernel(
+        h_vacuum: np.ndarray,
+        energies: np.ndarray,
+        potentials: np.ndarray,
+        widths: np.ndarray
+    ) -> np.ndarray:
+        r"""Returns one composed :math:`U_2` per energy, Hamiltonians
+        built inline.
+
+        .. versionadded:: 1.12.0
+
+        Parameters
+        ----------
+        h_vacuum : numpy.ndarray
+            Energy-independent vacuum Hamiltonian, of shape ``(2, 2)``.
+        energies : numpy.ndarray
+            Neutrino energies, in units of eV.
+        potentials : numpy.ndarray
+            Charged-current potentials, of shape ``(n_slabs,)``.
+        widths : numpy.ndarray
+            Slab widths, of shape ``(n_slabs,)``.
+
+        Returns
+        -------
+        numpy.ndarray
+            The products, of shape ``(..., 2, 2)``.
+        """
+        return _run_earth_chords(h_vacuum, energies, potentials, widths, 2,
+                                 _earth_chords_2nu_serial,
+                                 _earth_chords_2nu_parallel)
+
+    def earth_chords_3nu_kernel(
+        h_vacuum: np.ndarray,
+        energies: np.ndarray,
+        potentials: np.ndarray,
+        widths: np.ndarray
+    ) -> np.ndarray:
+        r"""Returns one composed :math:`U_3` per energy, Hamiltonians
+        built inline.
+
+        .. versionadded:: 1.12.0
+
+        The fused counterpart of `slab_product_3nu_batch_kernel`, and
+        what an Earth energy scan actually calls.  The batch kernel
+        takes a stack of Hamiltonians, which for a scan means
+        materialising one 3x3 matrix per slab per energy and streaming
+        it back --- 17 KB per chord, against the two kilobyte-scale
+        arrays this reads, shared by every chord.  That is the
+        difference between a memory-bound kernel and a compute-bound
+        one.
+
+        Parameters
+        ----------
+        h_vacuum : numpy.ndarray
+            Energy-independent vacuum Hamiltonian, of shape ``(3, 3)``,
+            in units of eV\ :sup:`2`.
+        energies : numpy.ndarray
+            Neutrino energies, in units of eV, of any shape.
+        potentials : numpy.ndarray
+            Charged-current potentials at the slab midpoints, of shape
+            ``(n_slabs,)``.  Shared by every energy, the potential
+            depending on the geometry alone.
+        widths : numpy.ndarray
+            Slab widths, of shape ``(n_slabs,)``, in units of
+            eV\ :sup:`-1`.
+
+        Returns
+        -------
+        numpy.ndarray
+            The products ``U_n ... U_1``, of shape ``(..., 3, 3)``.
+        """
+        return _run_earth_chords(h_vacuum, energies, potentials, widths, 3,
+                                 _earth_chords_3nu_serial,
+                                 _earth_chords_3nu_parallel)
+
+    def earth_chords_4nu_kernel(
+        h_vacuum: np.ndarray,
+        energies: np.ndarray,
+        potentials: np.ndarray,
+        potentials_nc: np.ndarray,
+        widths: np.ndarray,
+        polish: bool = True
+    ) -> np.ndarray:
+        r"""Returns one composed :math:`U_4` per energy, Hamiltonians
+        built inline.
+
+        .. versionadded:: 1.12.0
+
+        Parameters
+        ----------
+        h_vacuum : numpy.ndarray
+            Energy-independent vacuum Hamiltonian, of shape ``(4, 4)``.
+        energies : numpy.ndarray
+            Neutrino energies, in units of eV.
+        potentials : numpy.ndarray
+            Charged-current potentials, of shape ``(n_slabs,)``.
+        potentials_nc : numpy.ndarray
+            Neutral-current potentials, of the same shape.
+        widths : numpy.ndarray
+            Slab widths, of shape ``(n_slabs,)``.
+        polish : bool, optional
+            Whether to refine the latent roots against the Hamiltonian.
+
+        Returns
+        -------
+        numpy.ndarray
+            The products, of shape ``(..., 4, 4)``.
+        """
+        return _run_earth_chords(
+            h_vacuum, energies, potentials, widths, 4,
+            _earth_chords_4nu_serial, _earth_chords_4nu_parallel,
+            (np.ascontiguousarray(potentials_nc, dtype=float),
+             bool(polish)))
 
     def slab_product_2nu_batch_kernel(
         h_stack: np.ndarray,

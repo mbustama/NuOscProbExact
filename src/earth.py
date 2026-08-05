@@ -91,10 +91,12 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 
+import fastkernels
 import globaldefs as gd
 import hamiltonians2nu
 import hamiltonians3nu
 import hamiltonians4nu
+import oscprob4nu
 import slabs
 
 
@@ -867,7 +869,7 @@ def earth_slabs(
 def _earth_hamiltonians(
     h_vacuum_energy_independent: Union[list, np.ndarray],
     energy: Union[int, float, list, np.ndarray],
-    costhz: Union[int, float],
+    costhz: Union[int, float, list, np.ndarray],
     n_slabs_per_segment: int,
     electron_fraction: float,
     n_flavors: int
@@ -1155,7 +1157,7 @@ reason.
 def _probabilities_earth_batch(
     h_vacuum_energy_independent: Union[list, np.ndarray],
     energy: np.ndarray,
-    costhz: Union[int, float],
+    costhz: Union[int, float, list, np.ndarray],
     n_slabs_per_segment: int,
     electron_fraction: float,
     n_flavors: int,
@@ -1189,12 +1191,38 @@ def _probabilities_earth_batch(
 
     # The chord is the same for every energy, so one look at the geometry
     # says how much a single energy costs and therefore how many fit.
-    widths_km, _ = _earth_slabs_cached(float(costhz),
-                                       int(n_slabs_per_segment))
+    widths_km, densities = _earth_slabs_cached(float(costhz),
+                                               int(n_slabs_per_segment))
     per_energy = widths_km.shape[0]*n_flavors*n_flavors*16
     chunk = max(MIN_CHUNK_ENERGIES, MAX_CHUNK_BYTES//per_energy)
 
     flat = energy.reshape(-1)
+
+    # The fused kernels build each slab's Hamiltonian as they go, so the
+    # stack that the chunking below exists to bound is never allocated at
+    # all: what they read is one potential and one width per slab, shared
+    # by every energy in the scan.  Nothing about the physics differs ---
+    # this is the same midpoint Hamiltonian, and agrees bit for bit.
+    if fastkernels.worthwhile_slabs(n_flavors,
+                                    flat.shape[0]*widths_km.shape[0]):
+        widths = widths_km*gd.CONV_KM_TO_INV_EV
+        potentials = matter_potential(densities, electron_fraction)
+        if n_flavors == 2:
+            u = fastkernels.earth_chords_2nu_kernel(
+                h_vacuum_energy_independent, flat, potentials, widths)
+        elif n_flavors == 3:
+            u = fastkernels.earth_chords_3nu_kernel(
+                h_vacuum_energy_independent, flat, potentials, widths)
+        else:
+            u = fastkernels.earth_chords_4nu_kernel(
+                h_vacuum_energy_independent, flat, potentials,
+                matter_potential_nc(densities,
+                                    electron_fraction=electron_fraction),
+                widths, oscprob4nu.POLISH_ROOTS)
+        # P_ab = |U_ba|^2, initial flavor varying slowest
+        p = np.abs(np.swapaxes(u, -1, -2))**2.0
+        return p.reshape(energy.shape + (n_flavors*n_flavors,))
+
     if flat.shape[0] <= chunk:
         h, widths = _earth_hamiltonians(h_vacuum_energy_independent, flat,
                                         costhz, n_slabs_per_segment,
@@ -1217,7 +1245,7 @@ def _probabilities_earth_batch(
 def slabs_for_tolerance(
     h_vacuum_energy_independent: Union[list, np.ndarray],
     energy: Union[int, float, list, np.ndarray],
-    costhz: Union[int, float],
+    costhz: Union[int, float, list, np.ndarray],
     n_flavors: int = 3,
     rtol: Optional[float] = None,
     atol: Optional[float] = None,
@@ -1250,9 +1278,13 @@ def slabs_for_tolerance(
     energy : int, float or array_like
         Neutrino energy, in units of eV, or an array of energies, in
         which case the answer meets the tolerance at every one of them.
-    costhz : int or float
+    costhz : int, float or array_like
         Cosine of the zenith angle of the neutrino direction.  Must be
-        negative.
+        negative.  May be an array, which is how an oscillogram is
+        asked for: index the energies and the angles on different axes,
+        as ``energy[None, :]`` against ``costhz[:, None]``, and they
+        broadcast into a grid.  Each distinct angle costs one pass, so a
+        grid is far cheaper than a loop over its points.
     n_flavors : int, optional
         Number of neutrino flavors, 2, 3, or 4.  Default: 3.
     rtol : float, optional
@@ -1319,7 +1351,7 @@ def slabs_for_tolerance(
 def _probabilities_earth(
     h_vacuum_energy_independent: Union[list, np.ndarray],
     energy: Union[int, float, list, np.ndarray],
-    costhz: Union[int, float],
+    costhz: Union[int, float, list, np.ndarray],
     n_slabs_per_segment: int,
     electron_fraction: float,
     n_flavors: int,
@@ -1353,6 +1385,12 @@ def _probabilities_earth(
         The probabilities, as a tuple for a scalar energy and an array
         of shape ``(..., n_flavors*n_flavors)`` for an array of them.
     """
+    # An array of angles is a grid, however the energies are shaped
+    if np.ndim(costhz) != 0:
+        return _probabilities_earth_grid(
+            h_vacuum_energy_independent, energy, costhz, n_slabs_per_segment,
+            electron_fraction, n_flavors, caller)
+
     if np.ndim(energy) == 0:
         h, widths = _earth_hamiltonians(h_vacuum_energy_independent, energy,
                                         costhz, n_slabs_per_segment,
@@ -1368,10 +1406,89 @@ def _probabilities_earth(
                                       electron_fraction, n_flavors, caller)
 
 
+def _probabilities_earth_grid(
+    h_vacuum_energy_independent: Union[list, np.ndarray],
+    energy: Union[int, float, list, np.ndarray],
+    costhz: Union[list, np.ndarray],
+    n_slabs_per_segment: int,
+    electron_fraction: float,
+    n_flavors: int,
+    caller: str
+) -> np.ndarray:
+    r"""Returns the probabilities over a grid of energies and angles.
+
+    An oscillogram, in other words.  The energies and angles broadcast
+    against each other in the usual way, so a grid is asked for as
+    ``probabilities_3nu_earth(h, energies[None, :], costhz[:, None])``
+    --- the same idiom `oscprob3nu.probabilities_3nu` uses for a stack
+    of Hamiltonians against a stack of baselines.
+
+    The angles are handled one at a time rather than all at once, and
+    that is not a compromise: the chord geometry is what changes with
+    the angle, so two angles share neither their slab widths nor their
+    number of slabs, and there is nothing for a single kernel call to
+    share.  What *is* shared is every energy at a given angle, which is
+    the axis the fused kernel already spreads over, so the work goes
+    from one call per grid point to one call per distinct angle.
+
+    Parameters
+    ----------
+    h_vacuum_energy_independent : array_like
+        Energy-independent vacuum Hamiltonian.
+    energy : int, float or array_like
+        Neutrino energies, in units of eV.
+    costhz : array_like
+        Cosines of the zenith angle, broadcastable against `energy`.
+    n_slabs_per_segment : int
+        Number of equal sub-slabs per chord segment.
+    electron_fraction : float
+        Electrons per nucleon.
+    n_flavors : int
+        Number of neutrino flavors, 2, 3, or 4.
+    caller : str
+        Name of the calling routine, used in error messages.
+
+    Returns
+    -------
+    numpy.ndarray
+        The probabilities, of shape ``(..., n_flavors*n_flavors)``,
+        on the broadcast grid.
+
+    Raises
+    ------
+    ValueError
+        If the energies and angles do not broadcast together.
+    """
+    try:
+        energy_b, costhz_b = np.broadcast_arrays(
+            np.asarray(energy, dtype=float), np.asarray(costhz, dtype=float))
+    except ValueError:
+        raise ValueError(
+            '%s: energy of shape %s and costhz of shape %s do not broadcast '
+            'together; for a grid, index them on different axes, as '
+            'energy[None, :] and costhz[:, None]'
+            % (caller, (np.shape(energy),), (np.shape(costhz),))) from None
+
+    flat_energy = energy_b.reshape(-1)
+    flat_costhz = costhz_b.reshape(-1)
+    out = np.empty((flat_energy.shape[0], n_flavors*n_flavors), dtype=float)
+
+    # One pass per distinct angle, each carrying all of that angle's
+    # energies.  np.unique also means a grid that repeats an angle --- a
+    # broadcast one always does --- pays for its geometry once.
+    for angle in np.unique(flat_costhz):
+        at_angle = flat_costhz == angle
+        out[at_angle] = _probabilities_earth_batch(
+            h_vacuum_energy_independent, flat_energy[at_angle], float(angle),
+            n_slabs_per_segment, electron_fraction, n_flavors, caller)
+
+    return out.reshape(energy_b.shape + (n_flavors*n_flavors,))
+
+
 def _probabilities_earth_tol(
     h_vacuum_energy_independent: Union[list, np.ndarray],
     energy: Union[int, float, list, np.ndarray],
-    costhz: Union[int, float],
+    costhz: Union[int, float, list, np.ndarray],
     n_slabs_per_segment: int,
     electron_fraction: float,
     n_flavors: int,
@@ -1444,7 +1561,7 @@ def _probabilities_earth_tol(
 def probabilities_2nu_earth(
     h_vacuum_energy_independent: Union[list, np.ndarray],
     energy: Union[int, float, list, np.ndarray],
-    costhz: Union[int, float],
+    costhz: Union[int, float, list, np.ndarray],
     n_slabs_per_segment: int = 8,
     electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST,
     rtol: Optional[float] = None,
@@ -1474,9 +1591,13 @@ def probabilities_2nu_earth(
         whole array crosses the same chord, so the geometry and the
         matter potentials are built once for the scan rather than once
         per energy.
-    costhz : int or float
+    costhz : int, float or array_like
         Cosine of the zenith angle of the neutrino direction.  Must be
-        negative.
+        negative.  May be an array, which is how an oscillogram is
+        asked for: index the energies and the angles on different axes,
+        as ``energy[None, :]`` against ``costhz[:, None]``, and they
+        broadcast into a grid.  Each distinct angle costs one pass, so a
+        grid is far cheaper than a loop over its points.
     n_slabs_per_segment : int, optional
         Number of equal sub-slabs per chord segment.  A segment runs
         between consecutive PREM boundary crossings; a chord crosses most
@@ -1527,7 +1648,7 @@ def probabilities_2nu_earth(
 def probabilities_3nu_earth(
     h_vacuum_energy_independent: Union[list, np.ndarray],
     energy: Union[int, float, list, np.ndarray],
-    costhz: Union[int, float],
+    costhz: Union[int, float, list, np.ndarray],
     n_slabs_per_segment: int = 8,
     electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST,
     rtol: Optional[float] = None,
@@ -1561,9 +1682,13 @@ def probabilities_3nu_earth(
         whole array crosses the same chord, so the geometry and the
         matter potentials are built once for the scan rather than once
         per energy, and the chords are composed in a single pass.
-    costhz : int or float
+    costhz : int, float or array_like
         Cosine of the zenith angle of the neutrino direction.  Must be
-        negative.
+        negative.  May be an array, which is how an oscillogram is
+        asked for: index the energies and the angles on different axes,
+        as ``energy[None, :]`` against ``costhz[:, None]``, and they
+        broadcast into a grid.  Each distinct angle costs one pass, so a
+        grid is far cheaper than a loop over its points.
     n_slabs_per_segment : int, optional
         Number of equal sub-slabs per chord segment.  A segment runs
         between consecutive PREM boundary crossings; a chord crosses most
@@ -1809,7 +1934,7 @@ def _costhz_of_named_pair(loc_name_1: str, loc_name_2: str) -> float:
 def probabilities_4nu_earth(
     h_vacuum_energy_independent: Union[list, np.ndarray],
     energy: Union[int, float, list, np.ndarray],
-    costhz: Union[int, float],
+    costhz: Union[int, float, list, np.ndarray],
     n_slabs_per_segment: int = 8,
     electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST,
     rtol: Optional[float] = None,
@@ -1846,9 +1971,13 @@ def probabilities_4nu_earth(
         whole array crosses the same chord, so the geometry and both
         matter potentials are built once for the scan rather than once
         per energy.
-    costhz : int or float
+    costhz : int, float or array_like
         Cosine of the zenith angle of the neutrino direction.  Must be
-        negative.
+        negative.  May be an array, which is how an oscillogram is
+        asked for: index the energies and the angles on different axes,
+        as ``energy[None, :]`` against ``costhz[:, None]``, and they
+        broadcast into a grid.  Each distinct angle costs one pass, so a
+        grid is far cheaper than a loop over its points.
     n_slabs_per_segment : int, optional
         Number of equal sub-slabs per chord segment.  A segment runs
         between consecutive PREM boundary crossings; a chord crosses most

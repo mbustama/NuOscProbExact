@@ -28,6 +28,7 @@ import hamiltonians2nu
 import hamiltonians3nu
 import hamiltonians4nu
 import oscprob3nu
+import oscprob4nu
 import slabs
 
 from conftest import ATOL
@@ -116,15 +117,20 @@ def test_a_scalar_energy_still_returns_a_tuple(backend, n_flavors):
 
 
 def test_the_batched_path_reaches_the_compiled_kernel(kernel_spy):
-    r"""The batch kernel is what a scan actually calls.
+    r"""The fused chord kernel is what a scan actually calls.
 
     Without this the comparison above passes by running the NumPy path
-    twice, which is how a threshold change goes unnoticed.
+    twice, which is how a threshold change goes unnoticed.  The
+    assertion is on the *fused* kernel specifically: an Earth scan that
+    fell back to `slab_product_3nu_batch_kernel` would still be correct,
+    and still be batched, and would quietly have given up the reason the
+    fused one exists.
     """
     earth.probabilities_3nu_earth(h_vacuum(3), np.logspace(9.0, 11.0, 32),
                                   COSTHZ)
 
-    assert kernel_spy['slab_product_3nu_batch_kernel'] == 1
+    assert kernel_spy['earth_chords_3nu_kernel'] == 1
+    assert kernel_spy['slab_product_3nu_batch_kernel'] == 0
     assert kernel_spy['slab_product_3nu_kernel'] == 0
 
 
@@ -923,3 +929,229 @@ def test_the_sysctl_probe_declines_without_the_symbol(monkeypatch):
     monkeypatch.setattr(ctypes, 'CDLL', lambda _: _NoSymbol())
 
     assert earth._cache_bytes_from_sysctl() is None
+
+
+# ------------------------------------------- fused kernels and angle grids
+
+
+@pytest.mark.parametrize('n_flavors', [2, 3, 4])
+def test_the_fused_kernel_matches_the_materialised_one(n_flavors):
+    r"""Building Hamiltonians inline is a memory layout, not a scheme.
+
+    The fused kernel exists to avoid materialising one matrix per slab
+    per energy; what it computes is the same midpoint Hamiltonian the
+    batch kernel is handed, so the two must agree exactly rather than
+    closely.  Anything less would mean the fused path had quietly become
+    a different approximation.
+    """
+    if not fastkernels.HAVE_NUMBA:
+        pytest.skip('Numba is not installed')
+
+    energies = np.logspace(9.0, 11.0, 24)
+    widths_km, densities = earth._earth_slabs_cached(COSTHZ, 8)
+    widths = widths_km*gd.CONV_KM_TO_INV_EV
+    potentials = earth.matter_potential(densities,
+                                        gd.ELECTRON_FRACTION_EARTH_CRUST)
+    hv = h_vacuum(n_flavors)
+
+    if n_flavors == 2:
+        fused = fastkernels.earth_chords_2nu_kernel(hv, energies, potentials,
+                                                    widths)
+        stack = hamiltonians2nu.hamiltonian_2nu_matter(
+            hv, energies[:, None], potentials[None, :])
+        materialised = fastkernels.slab_product_2nu_batch_kernel(stack, widths)
+    elif n_flavors == 3:
+        fused = fastkernels.earth_chords_3nu_kernel(hv, energies, potentials,
+                                                    widths)
+        stack = hamiltonians3nu.hamiltonian_3nu_matter(
+            hv, energies[:, None], potentials[None, :])
+        materialised = fastkernels.slab_product_3nu_batch_kernel(stack, widths)
+    else:
+        nc = earth.matter_potential_nc(
+            densities, electron_fraction=gd.ELECTRON_FRACTION_EARTH_CRUST)
+        fused = fastkernels.earth_chords_4nu_kernel(
+            hv, energies, potentials, nc, widths, oscprob4nu.POLISH_ROOTS)
+        stack = hamiltonians4nu.hamiltonian_4nu_matter(
+            hv, energies[:, None], potentials[None, :], nc[None, :])
+        materialised = fastkernels.slab_product_4nu_batch_kernel(
+            oscprob4nu._traceless_part(stack), widths, oscprob4nu.POLISH_ROOTS)
+
+    assert np.array_equal(fused, materialised)
+
+
+def test_the_fused_kernel_takes_a_scalar_energy():
+    r"""A batch of one still comes back as a single operator."""
+    if not fastkernels.HAVE_NUMBA:
+        pytest.skip('Numba is not installed')
+
+    widths_km, densities = earth._earth_slabs_cached(COSTHZ, 8)
+    widths = widths_km*gd.CONV_KM_TO_INV_EV
+    potentials = earth.matter_potential(densities,
+                                        gd.ELECTRON_FRACTION_EARTH_CRUST)
+
+    got = fastkernels.earth_chords_3nu_kernel(h_vacuum(3), np.float64(1.0e10),
+                                              potentials, widths)
+
+    assert got.shape == (3, 3)
+    assert np.allclose(got.conj().T @ got, np.eye(3), atol=1.0e-10)
+
+
+def test_the_fused_kernel_spreads_wide_work_over_threads():
+    r"""Both sides of the parallel threshold give the same answer."""
+    if not fastkernels.HAVE_NUMBA:
+        pytest.skip('Numba is not installed')
+
+    widths_km, densities = earth._earth_slabs_cached(COSTHZ, 8)
+    widths = widths_km*gd.CONV_KM_TO_INV_EV
+    potentials = earth.matter_potential(densities,
+                                        gd.ELECTRON_FRACTION_EARTH_CRUST)
+    n_wide = 2*fastkernels.PARALLEL_THRESHOLD//widths.shape[0] + 2
+    energies = np.logspace(9.0, 11.0, n_wide)
+
+    wide = fastkernels.earth_chords_3nu_kernel(h_vacuum(3), energies,
+                                               potentials, widths)
+    one_by_one = np.array([
+        fastkernels.earth_chords_3nu_kernel(h_vacuum(3), energies[i:i+1],
+                                            potentials, widths)[0]
+        for i in range(n_wide)])
+
+    assert n_wide*widths.shape[0] >= fastkernels.PARALLEL_THRESHOLD
+    assert np.array_equal(wide, one_by_one)
+
+
+@pytest.mark.parametrize('n_flavors', [2, 3, 4])
+def test_an_angle_grid_equals_a_loop_over_it(backend, n_flavors):
+    r"""An oscillogram is its points, evaluated together.
+
+    Both backends, because the grid path reaches the fused kernel on one
+    and the chunked NumPy path on the other, and the two must land on
+    the same numbers.
+    """
+    energies = np.logspace(9.0, 11.0, 6)
+    angles = np.linspace(-1.0, -0.1, 4)
+    fn = probabilities_earth(n_flavors)
+    hv = h_vacuum(n_flavors)
+
+    grid = fn(hv, energies[None, :], angles[:, None])
+    loop = np.array([[fn(hv, e, c) for e in energies] for c in angles])
+
+    assert grid.shape == (4, 6, n_flavors*n_flavors)
+    assert np.allclose(grid, loop, rtol=0.0, atol=ATOL)
+
+
+def test_an_angle_grid_broadcasts_like_numpy(backend):
+    r"""Scalar against array, and array against array of one shape.
+
+    The broadcasting is the caller's handle on what the grid means, so
+    the degenerate shapes have to behave as `numpy` would.
+    """
+    hv = h_vacuum(3)
+    energies = np.logspace(9.0, 11.0, 5)
+    angles = np.linspace(-1.0, -0.2, 5)
+
+    assert earth.probabilities_3nu_earth(hv, 1.0e10, angles).shape == (5, 9)
+    assert earth.probabilities_3nu_earth(hv, energies, -0.8).shape == (5, 9)
+    # Two 1-D arrays of equal length pair up element by element
+    paired = earth.probabilities_3nu_earth(hv, energies, angles)
+    assert paired.shape == (5, 9)
+    assert np.allclose(
+        paired[2],
+        earth.probabilities_3nu_earth(hv, energies[2], angles[2]),
+        rtol=0.0, atol=ATOL)
+
+
+def test_a_repeated_angle_is_evaluated_once(backend):
+    r"""A broadcast grid repeats every angle, and must not re-cut it.
+
+    The geometry is the expensive part of a new angle, so the grid
+    groups by distinct angle rather than walking the points.
+    """
+    hv = h_vacuum(3)
+    energies = np.logspace(9.0, 11.0, 4)
+    repeated = np.array([-0.8, -0.8, -0.8])
+
+    got = earth.probabilities_3nu_earth(hv, energies[None, :],
+                                        repeated[:, None])
+
+    assert got.shape == (3, 4, 9)
+    # Every row is the same angle, so every row is the same numbers
+    assert np.array_equal(got[0], got[1])
+    assert np.array_equal(got[0], got[2])
+
+
+def test_a_grid_that_does_not_broadcast_says_so(backend):
+    r"""The error names both shapes and how to index for a grid.
+
+    Handing two flat arrays of different lengths is the natural mistake,
+    and numpy's own message does not mention the axes to use.
+    """
+    hv = h_vacuum(3)
+
+    with pytest.raises(ValueError, match='do not broadcast together'):
+        earth.probabilities_3nu_earth(hv, np.logspace(9.0, 11.0, 7),
+                                      np.linspace(-1.0, -0.2, 5))
+
+
+def test_an_angle_grid_accepts_a_tolerance(backend):
+    r"""Refinement over a grid binds on every point of it."""
+    hv = h_vacuum(3)
+    energies = np.logspace(9.0, 10.0, 3)
+    angles = np.array([-0.9, -0.4])
+
+    got, n = earth.probabilities_3nu_earth(hv, energies[None, :],
+                                           angles[:, None], atol=1.0e-4,
+                                           return_n_slabs=True)
+
+    assert got.shape == (2, 3, 9)
+    assert np.allclose(
+        got, earth.probabilities_3nu_earth(hv, energies[None, :],
+                                           angles[:, None], n),
+        rtol=0.0, atol=0.0)
+
+
+def test_earth_slabs_stays_scalar_in_the_angle():
+    r"""Two angles have different slab counts, so a chord is one angle.
+
+    `earth_slabs` returns the widths and densities of *a* chord; there
+    is no array shape that holds two chords of different lengths, which
+    is why the grid path groups by angle instead of broadcasting here.
+    """
+    short = earth.earth_slabs(-0.1)[0]
+    long_chord = earth.earth_slabs(-1.0)[0]
+
+    assert short.shape != long_chord.shape
+    with pytest.raises((TypeError, ValueError)):
+        earth.earth_slabs(np.array([-0.5, -0.9]))
+
+
+@pytest.mark.parametrize('n_flavors', [2, 3, 4])
+def test_the_general_batch_path_still_reaches_its_kernel(n_flavors,
+                                                         kernel_spy):
+    r"""The general batched composer is not dead code.
+
+    `earth` reaches the *fused* kernel now, so nothing on the Earth path
+    exercises the compiled branch of `_probabilities_slabs_batch` any
+    more.  That branch is still the batched composer for an arbitrary
+    stack of Hamiltonians --- which the fused kernel cannot do, knowing
+    only matter Hamiltonians of the form ``H_vac/E + V P`` --- so it is
+    tested here directly rather than left to rot behind a dispatch that
+    stopped choosing it.
+    """
+    if not fastkernels.HAVE_NUMBA:
+        pytest.skip('Numba is not installed')
+
+    rng = np.random.default_rng(20260808 + n_flavors)
+    n_chords, n_slabs = 4, 6
+    a = (rng.normal(size=(n_chords, n_slabs, n_flavors, n_flavors))
+         + 1.0j*rng.normal(size=(n_chords, n_slabs, n_flavors, n_flavors)))
+    h = (a + np.conj(np.swapaxes(a, -1, -2)))/2.0
+    widths = rng.uniform(0.1, 2.0, size=n_slabs)
+
+    batched = slabs._probabilities_slabs_batch(h, widths, n_flavors, 'caller')
+    per_chord = {2: slabs.probabilities_2nu_slabs,
+                 3: slabs.probabilities_3nu_slabs,
+                 4: slabs.probabilities_4nu_slabs}[n_flavors]
+    looped = np.array([per_chord(h[i], widths) for i in range(n_chords)])
+
+    assert kernel_spy['slab_product_%dnu_batch_kernel' % n_flavors] == 1
+    assert np.allclose(batched, looped, rtol=0.0, atol=ATOL)

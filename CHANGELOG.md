@@ -68,6 +68,48 @@ and the project uses [Semantic Versioning](https://semver.org/).
   matter-Hamiltonian convention that lives in `hamiltonians*nu`.  Batching
   captured the larger share without that.
 
+- **The Earth kernels build their own Hamiltonians.**  `earth_chords_{2,3,4}nu_kernel`
+  take the energy-independent vacuum Hamiltonian, the per-slab potentials and
+  the widths, and construct each slab's matter Hamiltonian in registers.  The
+  batch kernels they replace on this path were handed a stack — one matrix per
+  slab per energy, 17 KB per chord, written by the builder and then streamed
+  back — and that stack was what made a scan memory-bound.  What the fused
+  kernels read instead is one potential and one width per slab, shared by every
+  energy in the scan.
+
+  Worth being plain about what this is and is not: **it is a memory layout, not
+  a scheme.**  The Hamiltonian is the same midpoint Hamiltonian
+  `hamiltonians3nu.hamiltonian_3nu_matter` builds, and the fused output is
+  bit-for-bit the batch kernel's at all three flavor counts, which is what the
+  tests assert.  The cost is that `fastkernels` now knows the
+  matter-Hamiltonian convention, which is a real coupling and was weighed
+  rather than assumed.
+
+  On top of batching: **1.9x to 2.4x at three and four flavors**, more at two.
+  Per probability, a three-flavor scan went from about 8.5 to 4.8 microseconds.
+  The general batched composer in `slabs` stays — it takes an arbitrary stack
+  of Hamiltonians, which the fused kernels cannot, knowing only
+  ``H_vac/E + V P`` — and is now tested directly rather than through `earth`.
+
+- **An array of zenith angles, which is to say oscillograms.**  The energies
+  and angles broadcast against each other, so a grid is asked for as
+  ``probabilities_3nu_earth(h, energies[None, :], costhz[:, None])`` — the
+  idiom `oscprob3nu.probabilities_3nu` already uses for Hamiltonians against
+  baselines.  Measured **8x** against the loop over grid points it replaces,
+  at 4.8 microseconds per point for a 60 x 200 grid.
+
+  The angles are evaluated one at a time, and that is not a shortcut: the chord
+  geometry is what the angle changes, so two angles share neither their slab
+  widths nor even how many slabs they have, and there is nothing for a single
+  kernel call to share.  What they do share is every energy at a given angle,
+  which is the axis the fused kernel already spreads over — so the work drops
+  from one call per grid point to one call per distinct angle.  A broadcast
+  grid repeats each angle many times, and `numpy.unique` means it is cut once.
+
+  `earth_slabs` deliberately stays scalar in the angle: it returns *a* chord's
+  widths and densities, and there is no array shape that holds two chords of
+  different lengths.
+
 - **`rtol` and `atol` on the Earth probability routines**, and
   `earth.slabs_for_tolerance`, which is what they call.  The discretisation
   error is strongly energy- and angle-dependent — at the default eight
