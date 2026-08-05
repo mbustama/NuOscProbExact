@@ -26,6 +26,7 @@ Every figure below is produced by a notebook in [`notebooks/`](https://github.co
 | <img src="https://raw.githubusercontent.com/mbustama/NuOscProbExact/main/img/gallery/gallery_prem.png" width="380"/><br/>**The Earth's density**, from the Preliminary Reference Earth Model.<br/>[notebook 06](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/06_earth_and_prem.ipynb) | <img src="https://raw.githubusercontent.com/mbustama/NuOscProbExact/main/img/gallery/gallery_earth.png" width="380"/><br/>**Neutrinos through the Earth**, in energy and zenith angle, or between two named sites.<br/>[notebook 07](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/07_earth_probabilities.ipynb) |
 | <img src="https://raw.githubusercontent.com/mbustama/NuOscProbExact/main/img/gallery/gallery_profiles.png" width="380"/><br/>**Arbitrary matter profiles** — castle walls and worse, exactly.<br/>[notebook 08](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/08_unusual_density_profiles.ipynb) | <img src="https://raw.githubusercontent.com/mbustama/NuOscProbExact/main/img/gallery/gallery_ordering.png" width="380"/><br/>**Mass ordering and the θ₂₃ octant**, separated by matter through the Earth.<br/>[notebook 12](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/12_ordering_and_octant.ipynb) |
 | <img src="https://raw.githubusercontent.com/mbustama/NuOscProbExact/main/img/gallery/gallery_sterile.png" width="380"/><br/>**Four flavors: a 3+1 sterile state**, resolved at a short baseline.<br/>[notebook 16](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/16_four_neutrinos.ipynb) | <img src="https://raw.githubusercontent.com/mbustama/NuOscProbExact/main/img/gallery/gallery_sterile_earth.png" width="380"/><br/>**The sterile matter resonance** through the Earth, in energy and zenith angle.<br/>[notebook 16](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/16_four_neutrinos.ipynb) |
+| <img src="https://raw.githubusercontent.com/mbustama/NuOscProbExact/main/img/gallery/gallery_long_range.png" width="380"/><br/>**A Hamiltonian of your own**, carried through a varying profile — here a long-range force through the Earth.<br/>[notebook 20](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/20_arbitrary_hamiltonian.ipynb) | |
 
 ## Contents
 
@@ -231,6 +232,7 @@ NuOscProbExact/
 │       ├── gallery_anim_sterile.png
 │       ├── gallery_biprobability.png
 │       ├── gallery_earth.png
+│       ├── gallery_long_range.png
 │       ├── gallery_matter.png
 │       ├── gallery_ordering.png
 │       ├── gallery_oscillogram.png
@@ -259,6 +261,7 @@ NuOscProbExact/
 │   ├── 17_cross_checks.ipynb        # Corroboration from nuSQuIDS and Zaglauer-Schwarzer
 │   ├── 18_evolution_operator.ipynb  # The operator, and the SU(n) coefficients
 │   ├── 19_animations.ipynb          # Four animated scenes, as stills; the reel they came from
+│   ├── 20_arbitrary_hamiltonian.ipynb  # A long-range force, carried through three profiles
 │   ├── make_notebooks.py            # Generates and executes all of the above
 │   └── coastlines_crude.json        # Coastlines for the Earth cutaway, from GSHHS
 ├── src/                             # The library
@@ -354,7 +357,7 @@ import oscprob3nu
    pip install -e ".[notebooks]"
    jupyter lab notebooks/
    ```
-   Eighteen worked notebooks, numbered in reading order, covering the probabilities against baseline and against energy, matter and new physics, oscillograms, bi-probability plots, the Earth, arbitrary matter profiles, performance, the paper's own figures, the textbook approximations, mass ordering and the octant, antineutrinos, solar neutrinos, numerical edge cases, four-neutrino 3+1 scenarios, cross-checks with other public codes, and the evolution operator itself.  They carry their figures inline, so they can also just be read on GitHub.
+   Twenty worked notebooks, numbered in reading order, covering the probabilities against baseline and against energy, matter and new physics, oscillograms, bi-probability plots, the Earth, arbitrary matter profiles, performance, the paper's own figures, the textbook approximations, mass ordering and the octant, antineutrinos, solar neutrinos, numerical edge cases, four-neutrino 3+1 scenarios, cross-checks with other public codes, the evolution operator itself, animated parameter sweeps, and a Hamiltonian of your own carried through a varying profile.  They carry their figures inline, so they can also just be read on GitHub.
 
 ## Performance
 
@@ -625,7 +628,7 @@ The [numerical recipes](https://mbustama.github.io/NuOscProbExact/recipes.html) 
 
 ## Notebooks
 
-Eighteen worked notebooks live in [`notebooks/`](https://github.com/mbustama/NuOscProbExact/tree/main/notebooks/), numbered in reading order.  They carry their figures inline, so they render on GitHub without being run:
+Twenty worked notebooks live in [`notebooks/`](https://github.com/mbustama/NuOscProbExact/tree/main/notebooks/), numbered in reading order.  They carry their figures inline, so they render on GitHub without being run:
 
 | Notebook | What it covers |
 |---|---|
@@ -647,6 +650,8 @@ Eighteen worked notebooks live in [`notebooks/`](https://github.com/mbustama/NuO
 | [16 Four neutrinos](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/16_four_neutrinos.ipynb) | A 3+1 sterile state through SU(4), and why the method stops at four |
 | [17 Cross-checks with other codes](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/17_cross_checks.ipynb) | Corroboration from nuSQuIDS and from Zaglauer–Schwarzer, and the conventions that had to be matched |
 | [18 The evolution operator](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/18_evolution_operator.ipynb) | The operator itself, the group property, and the SU(*n*) coefficients underneath |
+| [19 Animated scenes](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/19_animations.ipynb) | Four parameter sweeps drawn as stills, and the reel they came from |
+| [20 An arbitrary Hamiltonian](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/20_arbitrary_hamiltonian.ipynb) | A Hamiltonian of your own carried through three varying profiles, and how to put one through the Earth |
 
 Run them with `pip install -e ".[notebooks]"` and `jupyter lab notebooks/`.  Every one of them is executed by CI, so an example that stops working fails the build.
 

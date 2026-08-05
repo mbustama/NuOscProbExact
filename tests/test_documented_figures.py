@@ -30,6 +30,7 @@ the sentences beside them.  These derive both the count and the range
 from the data itself.
 """
 
+import glob
 import json
 import os
 import re
@@ -555,3 +556,49 @@ def test_every_document_names_the_palindrome_switch():
         assert re.search(r'\bUSE_PALINDROME\b', read_flowed(path)), (
             '%s claims the palindrome speedup without naming the switch '
             'that turns it off' % os.path.relpath(path, ROOT))
+
+
+# Words for counts a notebook collection plausibly reaches.  Separate from
+# `COUNT_WORDS` above, which stops at twelve because the frozen set is
+# unlikely to grow past it.
+NOTEBOOK_COUNT_WORDS = {
+    15: 'fifteen', 16: 'sixteen', 17: 'seventeen', 18: 'eighteen',
+    19: 'nineteen', 20: 'twenty', 21: 'twenty-one', 22: 'twenty-two',
+    23: 'twenty-three', 24: 'twenty-four', 25: 'twenty-five',
+}
+
+# Files whose prose says how many notebooks there are.
+NOTEBOOK_COUNT_FILES = [README, MAKE_NOTEBOOKS]
+
+
+def test_the_notebook_count_is_described_correctly():
+    r"""Prose saying how many notebooks there are agrees with the tree.
+
+    Nothing guarded this, and it duly rotted: `README.md` said
+    "Eighteen worked notebooks" in two places, and the generator's own
+    docstring said "fifteen", while nineteen were shipping.  Both were
+    found by reading, which is the failure mode the rest of this module
+    exists to prevent.
+
+    The count is derived from the directory rather than restated, so
+    adding a notebook fails this until the sentences catch up.
+    """
+    count = len(glob.glob(os.path.join(ROOT, 'notebooks', '*.ipynb')))
+    assert count in NOTEBOOK_COUNT_WORDS, (
+        'no spelling on file for %d notebooks; extend '
+        'NOTEBOOK_COUNT_WORDS' % count)
+
+    for path in NOTEBOOK_COUNT_FILES:
+        text = read_flowed(path)
+        for number, word in NOTEBOOK_COUNT_WORDS.items():
+            if number == count:
+                continue
+            # Bounded on both sides, and requiring the noun: an
+            # unanchored search for "twenty" matches "twenty-two", and a
+            # bare number word matches any unrelated sentence.
+            stale = re.search(r'\b%s (worked )?notebooks\b' % word, text,
+                              re.IGNORECASE)
+            assert not stale, (
+                '%s says "%s notebooks"; there are %d, so it should say '
+                '"%s"' % (os.path.relpath(path, ROOT), word, count,
+                          NOTEBOOK_COUNT_WORDS[count]))

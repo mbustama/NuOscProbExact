@@ -352,7 +352,57 @@ and the project uses [Semantic Versioning](https://semver.org/).
   `earth._PREM_COEFFS`, rather than anyone transcribing forty coefficients;
   it reproduces `earth.density_prem` to 5e-14 over 6372 radii.
 
+- **Notebook 20, `20_arbitrary_hamiltonian.ipynb`**, the case the other
+  nineteen leave out.  `03` puts a non-standard Hamiltonian through matter of
+  constant density; `08` and `14` put the standard one through profiles that
+  vary; `01` evaluates an arbitrary Hermitian matrix once.  None of them
+  carries a user's own Hamiltonian through a profile that changes under it,
+  which is what `probabilities_{2,3,4}nu_profile` was added for.
+
+  The worked case is a long-range force from a gauged `L_e - L_mu` symmetry
+  (arXiv:1808.02042), whose potential is a Yukawa integral over the electrons
+  of the whole body rather than a reading of the local density.  It is carried
+  through three profiles: an invented body, an exponential solar-like one, and
+  the Earth.
+
+  It also documents the one thing about `earth` that is not obvious from the
+  API.  `probabilities_3nu_earth` builds `H = H_vac/E + V_CC*P_ee` itself, so a
+  Hamiltonian not of that form cannot go through it at all; the way through is
+  `earth_slabs` to `matter_potential` to your own construction to
+  `probabilities_3nu_slabs`, and with the extra term switched off that path
+  reproduces `probabilities_3nu_earth` to **zero difference** over sixteen
+  (angle, energy) pairs, because it is the same arithmetic.  The same recipe is
+  now on the numerical recipes page.
+
+  Three checks run inside the notebook rather than being asserted by it: the
+  potential against the closed form for a uniform ball, which holds at any
+  mediator mass, to 1e-9 at `mR = 1`; second-order convergence of the
+  midpoint sampling, measured at 2.01; and the energy-averaged solar `P_ee`
+  against the analytic adiabatic MSW result with the `cos^4(theta13)`
+  correction, agreeing to the sampling floor of the energy band.  Two traps
+  are recorded in the code where they were hit: the exterior part of the
+  Yukawa integral has to be accumulated inward from the surface, since taking
+  it as (total - interior) loses the whole tail to cancellation once
+  `exp(-mR)` is small; and every PREM shell boundary needs a quadrature node
+  carrying the density on each side, or the potential converges at first order
+  instead of second.
+
 ### Fixed
+
+- **The documented notebook count had rotted, and nothing was guarding it.**
+  `README.md` said "Eighteen worked notebooks" in two places and the
+  generator's own docstring said "fifteen", while nineteen were shipping; the
+  README's own table of notebooks stopped at 18, so `19_animations` was absent
+  from the one list meant to be complete.  All corrected to twenty, the table
+  completed, and `test_documented_figures.py` now derives the count from
+  `notebooks/` and fails on any stale spelling of it.
+
+  The guard was probed at four sites before being trusted, on the evidence of
+  the last round that two of four new guards did not work when first written.
+  It caught one stale phrase that had been missed by hand, and one of the
+  four perturbations did *not* trip it — "all twenty share a setup cell" has
+  no noun for the pattern to anchor to — so that sentence now names the noun
+  rather than the pattern being loosened into false positives.
 
 - **The Earth performance figures had drifted, and nothing was guarding them.**
   `13.9x, 9.6x and 6.6x` was stated in `README.md`, `index.rst` and

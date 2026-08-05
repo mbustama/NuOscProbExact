@@ -211,6 +211,7 @@ File tree
    │       ├── gallery_anim_sterile.png
    │       ├── gallery_biprobability.png
    │       ├── gallery_earth.png
+   │       ├── gallery_long_range.png
    │       ├── gallery_matter.png
    │       ├── gallery_ordering.png
    │       ├── gallery_oscillogram.png
@@ -239,6 +240,7 @@ File tree
    │   ├── 17_cross_checks.ipynb        # Corroboration from nuSQuIDS and Zaglauer-Schwarzer
    │   ├── 18_evolution_operator.ipynb  # The operator, and the SU(n) coefficients
    │   ├── 19_animations.ipynb          # Four animated scenes, as stills; the reel they came from
+   │   ├── 20_arbitrary_hamiltonian.ipynb  # A long-range force, carried through three profiles
    │   ├── make_notebooks.py            # Generates and executes all of the above
    │   └── coastlines_crude.json        # Coastlines for the Earth cutaway, from GSHHS
    ├── src/                             # The library
