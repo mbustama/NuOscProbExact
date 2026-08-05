@@ -404,6 +404,21 @@ and the project uses [Semantic Versioning](https://semver.org/).
   no noun for the pattern to anchor to — so that sentence now names the noun
   rather than the pattern being loosened into false positives.
 
+- **`RELEASE_NOTES.md` still described 1.11.0.**  The file the tree calls
+  "what changed since the published version" was the v1.11.0 announcement in
+  full — every section framed "since 1.0.0" — while 1.11.0 *is* the published
+  version, so it described the past rather than the delta.  Rewritten for
+  1.12.0, leading with the one thing an upgrader needs: Earth results are no
+  longer bit-identical, by 6e-15, 7e-14 and 4e-10, against a discretisation
+  error five orders of magnitude larger.
+
+  It had also gone stale in the way everything here does when unguarded,
+  claiming eighteen notebooks and 596 tests.  Because it now quotes the Earth
+  crossing and palindrome figures, it joins the documents those two guards
+  check, so it can no longer drift away from them; the test count is stated as
+  a bound rather than a figure, since that is the one number in it certain to
+  grow.
+
 - **The Earth performance figures had drifted, and nothing was guarding them.**
   `13.9x, 9.6x and 6.6x` was stated in `README.md`, `index.rst` and
   `fastkernels`, agreed with itself in all three, and was wrong in two by the

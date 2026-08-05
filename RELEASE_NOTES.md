@@ -1,50 +1,126 @@
-The first release since **v1.0.0** (April 2019) — the version described in
-[arXiv:1904.12391](https://arxiv.org/abs/1904.12391). Ten releases of work are folded in, and
-this is the first to reach PyPI. The full history is in
-[CHANGELOG.md](https://github.com/mbustama/NuOscProbExact/blob/main/CHANGELOG.md).
+This release is about the **Earth**. It had no compiled path at all, took one energy at a
+time, and asked for a slab count where it should have asked for an accuracy. All three are
+fixed here. The full history is in
+[CHANGELOG.md](https://github.com/mbustama/NuOscProbExact/blob/main/CHANGELOG.md), which
+records how every figure below was measured.
 
-## Upgrading from 1.0.0: two fixes change numbers
+## Upgrading from 1.11.0: Earth results move in the last digits
 
-Both are two-flavor. If you have results from 1.0.0, these are the ones to check.
+**Results are not bit-identical to 1.11.0 on any Earth call.** This is stated here rather
+than left to be discovered.
 
-- **`probabilities_2nu` dropped the h₂ contribution.** It computed
-  P<sub>eμ</sub> = |h₁|²/|h|² sin²(|h|L), where the transition probability is
-  |U<sub>μe</sub>|² = u₁² + u₂², so the h₂ term is needed as well. Since h₂ = −Im(H₁₂), it
-  vanishes whenever the off-diagonal entry is real — so vacuum and constant-density matter
-  were unaffected, and a CP-violating two-flavor Hamiltonian was not.
-- **The two-flavor vacuum Hamiltonian used the opposite sign convention.** Built from
-  M² = diag(Δm², −Δm²), it returned the negative of the textbook Hamiltonian. Invisible in
-  vacuum; it matters as soon as a matter potential is added.
+The chord palindrome below requires that a chord's slab widths be *exactly* symmetric. They
+were not: each segment was cut by its own `linspace` and the two halves rounded differently,
+by about 1e-12 km on a 100 km slab. Averaging each width with its mirror makes them bitwise
+equal, and shifts the probabilities. Measured over 4640 values across four angles, four
+subdivisions and five energies, the shift is **6e-15 at two flavors, 7e-14 at three, and
+4e-10 at four**.
 
-Three-flavor results from 1.0.0 are unaffected by both.
+The four-flavor figure is much the largest and is not this change's doing: that path polishes
+quartic latent roots, and its conditioning already separated the two backends by 4.0e-10 on
+code this release never touched.
 
-## What is new since 1.0.0
+For scale, the discretisation error at the default subdivision is **1e-4 to 1e-5** — five
+orders of magnitude larger than even the four-flavor shift, and eleven larger than the
+three-flavor one. Nothing outside the Earth routines changes numbers, and a scalar energy
+still returns a tuple, bit-for-bit what it returned before.
 
-**Four flavors** *(1.9.0)* — `oscprob4nu` and `hamiltonians4nu` carry the closed form to
-SU(4), bringing 3+1 sterile scenarios in as *closed* four-state systems rather than a leak
-out of the three-flavor block. Four is where the method ends: at five flavors the eigenvalues
-stop being expressible in radicals, which is a theorem rather than a missing feature.
+## What is new since 1.11.0
 
-**The Earth, and layered matter** *(1.8.0)* — `slabs` propagates across a sequence of
-adjacent slabs of arbitrary width and density, solving each exactly and multiplying the
-operators. `earth` builds those slabs from the Preliminary Reference Earth Model, along a
-zenith angle or between two of fifteen named sites.
+**The Earth, compiled.** The backend offered probability kernels only, so composing evolution
+operators across slabs — which is what layered matter and the Earth do — ran the NumPy path
+however the `fast` extra was installed. Measured before the fix, `probabilities_3nu_earth`
+took 2.11 ms with `numba` and 2.09 ms without, and entered a kernel zero times. The new
+`earth_chords_{2,3,4}nu_kernel` build each slab's Hamiltonian in registers rather than
+materialising a stack, and one Earth crossing is now **~12×, ~12× and ~9×** quicker at two,
+three and four flavors.
 
-**Whole scans in one call** *(1.2.0)* — every core routine accepts a stack of Hamiltonians,
-an array of baselines, or both broadcast against each other. Roughly 20× to 90× faster than
-the equivalent Python loop, with no extra dependency.
+**Whole Earth scans in one call.** `probabilities_{2,3,4}nu_earth` take an **array of
+energies**; they took a scalar, so a scan was N separate calls, each rebuilding the matter
+potentials and re-validating slabs the library had just built itself. A hundred-energy scan
+is **6.7×, 4.8× and 3.5×** quicker than the loop it replaces; against the uncompiled
+per-energy loop, a thousand-energy scan is **121×, 49× and 17×**. The three
+`_between_locations` wrappers inherit it.
 
-**An optional compiled backend** *(1.6.0)* — with `numba` installed, the batched paths run as
-compiled kernels. The answers are identical to round-off, and the backend is used only where
-it has been measured to win.
+**Oscillograms, from an array of zenith angles.** Energies and angles broadcast against each
+other, so a grid is asked for as
+`probabilities_3nu_earth(h, energies[None, :], costhz[:, None])` — the idiom
+`oscprob3nu.probabilities_3nu` already uses for Hamiltonians against baselines. Measured
+**8×** against the loop over grid points, at 4.8 µs per point for a 60 × 200 grid. The angles
+are still evaluated one at a time, and that is not a shortcut: the chord geometry is what the
+angle changes, so two angles share neither their slab widths nor even how many slabs they
+have.
 
-**Input validation** *(1.11.0)* — a non-Hermitian Hamiltonian now raises rather than
-returning probabilities that still sum to one, which is what made the mistake invisible.
+**The chord palindrome.** A neutrino crossing a spherically symmetric Earth meets every radius
+on the way in and again on the way out, so slab *j* and slab *n−1−j* carry the same
+Hamiltonian, the same width, and therefore the same operator. Half of them were being computed
+twice. Composing from the centre outwards computes each once, worth **~1.4×, ~1.5× and ~1.8×**
+on top of the figures above. Nothing about it is specific to PREM — a symmetric castle wall is
+composed at the same discount — and `fastkernels.USE_PALINDROME = False` asks for the plain
+left-to-right product instead.
 
-Also since 1.0.0: a [documentation site](https://mbustama.github.io/NuOscProbExact/),
-eighteen worked notebooks, and a regression suite of 596 tests at 100% coverage, cross-checked
-against [nuSQuIDS](https://github.com/arguelles/nuSQuIDS) and against the Zaglauer–Schwarzer
-closed form for the matter spectrum.
+**A tolerance instead of a slab count.** `rtol` and `atol` on every Earth probability routine,
+plus `earth.slabs_for_tolerance` to size the subdivision once for a whole scan. This matters
+because the discretisation error is strongly energy-dependent — at the default eight sub-slabs
+per segment it spans more than an order of magnitude between 3 and 40 GeV — so a fixed
+`n_slabs_per_segment` does not give a fixed accuracy. Both tolerances unset leaves the result
+bit-identical to before.
+
+**Any profile, not just the Earth.** `slabs.probabilities_{2,3,4}nu_profile` take the profile
+as a callable rather than knowing about PREM, so the same tolerance machinery serves a
+hand-built density profile, a castle wall or a solar model. Equal slabs sampled at their
+midpoints, which is second order and so refines by the law the search assumes — verified at a
+ratio of 4.00. Where a profile is *discontinuous* this is the wrong tool, since no refinement
+recovers a jump that straddles a slab; split the trajectory at the discontinuities instead,
+which is what `earth` does with the PREM shells. The tolerances are deliberately absent from
+`oscprob{2,3,4}nu`, which compute an exact closed form with no discretisation to refine.
+
+**Long scans stay inside memory.** The Hamiltonian stack is proportional to the scan, so a
+long one is chunked. The chunking turned out to matter for a second reason: the batched kernel
+is **memory-bound, not compute-bound** — 7.9 µs per probability with an 8 MB working set
+against 16.4 µs with a 540 MB one, a factor of two paid for traffic alone.
+`earth.MAX_CHUNK_BYTES` therefore defaults to the detected last-level cache rather than to a
+fixed size, worth 1.3× to 1.8× on long scans.
+
+**A twentieth notebook.** `20_arbitrary_hamiltonian.ipynb` carries a Hamiltonian of your own
+through three varying profiles — an invented body, an exponential solar-like one, and the
+Earth — using a long-range force from a gauged L<sub>e</sub> − L<sub>μ</sub> symmetry as the
+worked case. It also documents the one thing about `earth` that the API does not reveal:
+`probabilities_3nu_earth` builds *H* = *H*<sub>vac</sub>/*E* + *V*<sub>CC</sub>*P*<sub>ee</sub>
+itself, so a Hamiltonian not of that form cannot go through it at all. The way through is
+`earth_slabs` → `matter_potential` → your own construction → `probabilities_3nu_slabs`, and
+with the extra term switched off that path reproduces `probabilities_3nu_earth` to zero
+difference, because it is the same arithmetic.
+
+**Corroboration against five other codes.** `tests/prem_scan.py` and the frozen
+`tests/prem_speed_accuracy.json` carry the Earth speed–accuracy planes against nuSQuIDS,
+nuCraft, GLoBES, Prob3++ and NuFast, and `tests/external_drivers/` ships the C and C++ drivers
+themselves, with the raw output of each and a README recording what every one of them had to
+be told. `gen_prem_header.py` emits this library's PREM as a C header rather than anyone
+transcribing forty coefficients, reproducing `earth.density_prem` to 5e-14 over 6372 radii.
+
+**A harness for changes that must not move a number.** `tests/bit_capture.py` and
+`tests/bit_compare.py` run in pairs and report in ulps. No golden file is committed,
+deliberately: libm is not bit-identical across platforms. Its first real use was to **decline**
+a change.
+
+## Also fixed
+
+- **The Earth performance figures had drifted, and nothing was guarding them.** `13.9x, 9.6x
+  and 6.6x` was stated in three documents, agreed with itself in all three, and was wrong in
+  two — the palindrome had made the compiled side quicker, so three and four flavors were being
+  understated. Re-measured, and now guarded by tests that fail if one document disagrees.
+- **The documented notebook count had rotted**, and the README's table of notebooks stopped at
+  18. Corrected, completed, and guarded by a test that derives the count from `notebooks/`.
+- **The convergence order of the slab product was being quoted as first.** It is second, which
+  is what the midpoint sampling gives.
+
+## A note on the numbers
+
+Every speedup above was measured on one laptop on one day, and figures like these move by tens
+of per cent between machines. They are quoted because a claim with no number attached cannot
+be checked, not because the third digit means anything. The palindrome is the one figure a
+reader can switch off and re-measure directly, via `fastkernels.USE_PALINDROME`.
 
 ## Install
 
@@ -54,6 +130,10 @@ pip install nuoscprobexact
 
 Python 3.9 or newer, tested on 3.9 through 3.13. `numpy` is the only requirement;
 `pip install "nuoscprobexact[fast]"` adds the optional compiled backend.
+
+Twenty worked notebooks, and a regression suite of more than 750 tests at 100% coverage
+against a 98% floor, cross-checked against [nuSQuIDS](https://github.com/arguelles/nuSQuIDS)
+and against the Zaglauer–Schwarzer closed form for the matter spectrum.
 
 ## Links
 

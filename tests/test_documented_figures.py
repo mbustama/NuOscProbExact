@@ -44,6 +44,7 @@ INDEX_RST = os.path.join(ROOT, 'docs', 'source', 'index.rst')
 QUICKSTART_RST = os.path.join(ROOT, 'docs', 'source', 'quickstart.rst')
 METHODOLOGY_RST = os.path.join(ROOT, 'docs', 'source', 'methodology.rst')
 FASTKERNELS = os.path.join(ROOT, 'src', 'fastkernels.py')
+RELEASE_NOTES = os.path.join(ROOT, 'RELEASE_NOTES.md')
 
 # The scalar cost of one probability, in microseconds.  Re-measured in
 # 1.8.6; see the changelog entry for the method.  Stated in words on the
@@ -156,7 +157,7 @@ def test_no_document_still_carries_a_superseded_scalar_timing():
     r"""The figures replaced in 1.8.6 do not survive anywhere."""
     superseded = [13, 16]
     for path in (README, INDEX_RST, QUICKSTART_RST, METHODOLOGY_RST,
-                 FASTKERNELS):
+                 FASTKERNELS, RELEASE_NOTES):
         text = read(path)
         for value in superseded:
             for spelling in (r'\b%d\s*(?:us|µs|microsecond)' % value,
@@ -517,9 +518,14 @@ def test_the_earth_scan_table_agrees_between_readme_and_index():
 
 
 def test_the_earth_crossing_speedups_agree_everywhere():
-    r"""One Earth crossing, compiled against NumPy, stated in three places."""
+    r"""One Earth crossing, compiled against NumPy, stated in four places.
+
+    `RELEASE_NOTES.md` is one of them: it is the first thing a reader of
+    the GitHub release sees, and it quotes the headline figure of the
+    release, so it is exactly the copy that must not be left behind.
+    """
     for _, speedup in EARTH_CROSSING:
-        for path in (README, INDEX_RST, FASTKERNELS):
+        for path in (README, INDEX_RST, FASTKERNELS, RELEASE_NOTES):
             text = read_flowed(path)
             assert '~%sx' % speedup in text.replace('\u00d7', 'x'), (
                 '%s does not quote ~%sx for one Earth crossing'
@@ -534,7 +540,8 @@ def test_the_palindrome_speedup_agrees_everywhere():
     document that quotes it wrongly is immediately falsifiable.
     """
     for speedup in PALINDROME_SPEEDUP:
-        for path in (README, INDEX_RST, QUICKSTART_RST, FASTKERNELS):
+        for path in (README, INDEX_RST, QUICKSTART_RST, FASTKERNELS,
+                     RELEASE_NOTES):
             text = read_flowed(path).replace('\u00d7', 'x')
             # The bare number would be satisfied by `1.5x to 20x`, the span
             # quoted for the backend as a whole, and would pass without the
@@ -550,7 +557,7 @@ def test_every_document_names_the_palindrome_switch():
     import fastkernels
 
     assert isinstance(fastkernels.USE_PALINDROME, bool)
-    for path in (README, INDEX_RST, QUICKSTART_RST):
+    for path in (README, INDEX_RST, QUICKSTART_RST, RELEASE_NOTES):
         # Bounded, because a plain substring test is satisfied by any
         # misspelling that merely contains the name.
         assert re.search(r'\bUSE_PALINDROME\b', read_flowed(path)), (
@@ -568,7 +575,7 @@ NOTEBOOK_COUNT_WORDS = {
 }
 
 # Files whose prose says how many notebooks there are.
-NOTEBOOK_COUNT_FILES = [README, MAKE_NOTEBOOKS]
+NOTEBOOK_COUNT_FILES = [README, MAKE_NOTEBOOKS, RELEASE_NOTES]
 
 
 def test_the_notebook_count_is_described_correctly():
