@@ -221,6 +221,10 @@ NuOscProbExact/
 │   ├── prob_3nu_vacuum_vs_baseline_ee_em_et.png
 │   ├── prob_3nu_vacuum_vs_energy_ee_em_et.png
 │   └── gallery/                     # Figures lifted from the notebooks, shown in README.md
+│       ├── gallery_anim_cp.png
+│       ├── gallery_anim_earth.png
+│       ├── gallery_anim_slabs.png
+│       ├── gallery_anim_sterile.png
 │       ├── gallery_biprobability.png
 │       ├── gallery_earth.png
 │       ├── gallery_matter.png
@@ -250,6 +254,7 @@ NuOscProbExact/
 │   ├── 16_four_neutrinos.ipynb      # A 3+1 sterile state, through the SU(4) expansion
 │   ├── 17_cross_checks.ipynb        # Corroboration from nuSQuIDS and Zaglauer-Schwarzer
 │   ├── 18_evolution_operator.ipynb  # The operator, and the SU(n) coefficients
+│   ├── 19_animations.ipynb          # Four animated scenes, as stills; the reel they came from
 │   ├── make_notebooks.py            # Generates and executes all of the above
 │   └── coastlines_crude.json        # Coastlines for the Earth cutaway, from GSHHS
 ├── src/                             # The library
