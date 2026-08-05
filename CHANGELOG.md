@@ -5,9 +5,47 @@ All notable changes to **NuOscProbExact** are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project uses [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.12.0] - 2026-08-02
 
 ### Added
+
+- **A compiled path for `slabs` and `earth`, which had none.**  The backend
+  offered probability kernels only, so composing evolution operators across
+  slabs — which is what layered matter and the Earth do, and they never call
+  `probabilities_3nu` — ran the NumPy path however the `fast` extra was
+  installed.  Measured before the fix: `probabilities_3nu_earth` took 2.11 ms
+  with Numba and 2.09 ms without, entered a kernel zero times, and never even
+  consulted `worthwhile()`.
+
+  Six new kernels: `evolution_operator_{2,3,4}nu_kernel` and
+  `slab_product_{2,3,4}nu_kernel`, with `MIN_SLAB_BATCH` and
+  `worthwhile_slabs` governing the second set.  An Earth crossing is now
+  **13.9x, 9.6x and 6.6x** quicker at two, three and four flavors, unchanged
+  to 1e-14 or better.
+
+  Three things are worth recording about how that number was reached.
+
+  The operators were never the bottleneck.  Compiling them alone bought
+  1.33x.  At 10 GeV and cos θz = −0.8, 120 slabs, the 396 µs divided as
+  176 µs of PREM chord geometry, 126 µs composing the product in a Python
+  loop, 55 µs of evolution operators and 10 µs building the Hamiltonians.
+
+  `earth_slabs` depends on the zenith angle alone — not the energy, not the
+  flavor count, not the Hamiltonian — yet an energy scan recomputed the
+  identical chord for every point.  It is now cached; a hundred-energy scan
+  reports 899 hits and one miss.  The public function still returns arrays
+  the caller owns, because it copies; the cached originals are read-only so
+  a stray write raises rather than poisoning the cache.
+
+  And the slab product needed its own threshold.  `MIN_BATCH` weighs
+  compiled arithmetic against NumPy arithmetic, which is why two flavors
+  sits at fifty thousand; the slab product instead replaces a *Python loop
+  of dispatched matrix products*, so it is ahead at every length.  Measured
+  over 1 to 256 slabs it leads by 137x, 225x and 187x at one slab and 59x,
+  13x and 7x at 256 — the margin narrowing with length, the reverse of the
+  probability kernels, because the fixed cost being avoided is the
+  caller's.  Reusing `MIN_BATCH` would have left two flavors on the NumPy
+  path for every Earth crossing.
 
 - **`fastkernels.evolution_operator_3nu_kernel`**, and the dispatch in
   `oscprob3nu` that reaches it.  The compiled backend had no

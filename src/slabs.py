@@ -29,6 +29,17 @@ The per-slab operators are evaluated in a single batched call, so the
 cost of :math:`n` slabs is one vectorised evaluation plus :math:`n-1`
 small matrix products rather than :math:`n` separate evaluations.
 
+With the optional compiled backend installed this goes further: the
+whole trajectory is one pass, each slab's operator computed and
+multiplied into the running product in registers, so the stack is never
+materialised and the :math:`n-1` products are never dispatched.  That is
+worth between seven and two hundred times the NumPy path depending on
+the flavor count and the number of slabs --- see
+:data:`fastkernels.MIN_SLAB_BATCH`, which is why the threshold here is
+one rather than `fastkernels.MIN_BATCH`.  Until 1.12.0 there was no
+compiled path at all for this module: the backend had probability
+kernels only, and composing operators cannot use one.
+
 One thing carries over from the single-slab case and is easier to
 overlook here.  The expansions return :math:`e^{-i H_0 L}`, with
 :math:`H_0` the *traceless* part of the Hamiltonian, dropping the phase

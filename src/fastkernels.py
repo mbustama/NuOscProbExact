@@ -38,6 +38,27 @@ Stack                            Speedup
 200 000 baselines, two flavors   ~1.5x
 ===============================  ==========
 
+Those are the *probability* kernels.  Composing operators across slabs
+is a separate route with its own economics, and until 1.12.0 it had no
+compiled path at all --- the backend offered probability kernels only,
+which :mod:`slabs` and :mod:`earth` cannot use, so an Earth crossing ran
+the NumPy path however this module was configured.  Against that path,
+best of five rounds with the two interleaved:
+
+===============================  ==========  ==========
+Slab sequence                    1 slab      256 slabs
+===============================  ==========  ==========
+Two flavors                      ~137x       ~59x
+Three flavors                    ~225x       ~13x
+Four flavors                     ~187x       ~7x
+===============================  ==========  ==========
+
+The margin narrows with length, which is the reverse of the table above,
+because what is being avoided here is the *caller's* fixed cost --- a
+dispatched matrix product per slab --- rather than the kernel's.  A whole
+Earth crossing at 120 slabs comes out 13.9x, 9.6x and 6.6x quicker at
+two, three and four flavors.
+
 Four flavors gains the most, and not because the kernel is cleverer
 there: the NumPy path has the furthest to fall.  Its expansion needs a
 quartic, a Newton refinement of the four roots against the matrix, and
@@ -182,6 +203,8 @@ kernel's.
 Reusing `MIN_BATCH` here would have left two flavors on the NumPy path
 for every Earth crossing, since a chord is a hundred-odd slabs and the
 threshold is fifty thousand.
+
+.. versionadded:: 1.12.0
 """
 
 PARALLEL_THRESHOLD = 256
@@ -213,6 +236,8 @@ def available() -> bool:
 
 def worthwhile_slabs(n_flavors: int, size: int) -> bool:
     r"""Returns whether the compiled product kernel should be used.
+
+    .. versionadded:: 1.12.0
 
     The slab counterpart of `worthwhile`, against `MIN_SLAB_BATCH`
     rather than `MIN_BATCH`.  The two thresholds answer different
@@ -1144,6 +1169,8 @@ if HAVE_NUMBA:                                          # pragma: no branch
     ) -> np.ndarray:
         r"""Returns :math:`U_3(L)` for a stack of Hamiltonians.
 
+        .. versionadded:: 1.12.0
+
         The companion to `probabilities_3nu_kernel`, and the reason it
         exists: :mod:`slabs` and :mod:`earth` compose *operators* across
         adjacent slabs, so they cannot use a kernel that returns
@@ -1177,6 +1204,8 @@ if HAVE_NUMBA:                                          # pragma: no branch
     ) -> np.ndarray:
         r"""Returns :math:`U_2(L)` for a stack of Hamiltonians.
 
+        .. versionadded:: 1.12.0
+
         Parameters
         ----------
         h_stack : numpy.ndarray
@@ -1202,6 +1231,8 @@ if HAVE_NUMBA:                                          # pragma: no branch
     ) -> np.ndarray:
         r"""Returns the composed :math:`U_2` across a sequence of slabs.
 
+        .. versionadded:: 1.12.0
+
         Parameters
         ----------
         h_stack : numpy.ndarray
@@ -1226,6 +1257,8 @@ if HAVE_NUMBA:                                          # pragma: no branch
         polish: bool = True
     ) -> np.ndarray:
         r"""Returns :math:`U_4(L)` for a stack of Hamiltonians.
+
+        .. versionadded:: 1.12.0
 
         Parameters
         ----------
@@ -1256,6 +1289,8 @@ if HAVE_NUMBA:                                          # pragma: no branch
     ) -> np.ndarray:
         r"""Returns the composed :math:`U_4` across a sequence of slabs.
 
+        .. versionadded:: 1.12.0
+
         Parameters
         ----------
         h_stack : numpy.ndarray
@@ -1282,6 +1317,8 @@ if HAVE_NUMBA:                                          # pragma: no branch
         widths: np.ndarray
     ) -> np.ndarray:
         r"""Returns the composed :math:`U_3` across a sequence of slabs.
+
+        .. versionadded:: 1.12.0
 
         What :mod:`slabs` and :mod:`earth` actually want.  Computing the
         per-slab operators in a kernel and then multiplying them in a
