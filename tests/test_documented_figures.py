@@ -90,6 +90,27 @@ SPEEDUP_KERNEL = [('200 000 energies, four flavors', '19'),
 # summarise it in one sentence rather than tabulating it.
 SPEEDUP_SPAN = '1.5x to 20x'
 
+# The Earth figures, which until 1.12.1 nothing here guarded --- and which
+# duly drifted.  `13.9x, 9.6x and 6.6x` was stated in three places, agreed
+# with itself in all three, and was wrong in two of them by the time the
+# release shipped: the palindrome had made the compiled side quicker, so
+# three and four flavors were being understated.  Consistency between
+# documents is not the same as agreement with the code, and only the first
+# of those can be checked here; what this adds is that a re-measurement has
+# to be carried to every document at once, which is what did not happen.
+#
+# Held as the "~12x" spelling the documents use.
+EARTH_CROSSING = [('two', '12'), ('three', '12'), ('four', '9')]
+
+# The 2000-energy Earth scan, shared by README.md and index.rst:
+# (flavors, NumPy loop, compiled loop, compiled array), in milliseconds.
+EARTH_SCAN = [('Two flavors', '542', '44', '1.2'),
+              ('Three flavors', '895', '77', '7.5'),
+              ('Four flavors', '2224', '272', '25')]
+
+# What the palindrome is worth, at two, three and four flavors.
+PALINDROME_SPEEDUP = ['1.4', '1.5', '1.8']
+
 
 def read(path):
     r"""Returns the text of ``path``."""
@@ -475,3 +496,62 @@ def test_the_documented_switches_are_spelled_correctly():
             % (module_name, attribute))
         assert isinstance(getattr(module, attribute), bool), (
             '%s.%s is not a switch' % (module_name, attribute))
+
+
+def test_the_earth_scan_table_agrees_between_readme_and_index():
+    r"""The 2000-energy Earth table is stated twice, so check both.
+
+    The same shape of guard as the constant-density benchmark table above,
+    and added for the same reason: the Earth figures beside it drifted
+    while nothing was looking.
+    """
+    readme, index = read_flowed(README), read_flowed(INDEX_RST)
+
+    for flavors, loop, compiled_loop, array in EARTH_SCAN:
+        for name, text in (('README.md', readme), ('index.rst', index)):
+            for value in (loop, compiled_loop, array):
+                assert '%s ms' % value in text, (
+                    '%s does not quote "%s ms", from the "%s" row of the '
+                    '2000-energy Earth scan' % (name, value, flavors))
+
+
+def test_the_earth_crossing_speedups_agree_everywhere():
+    r"""One Earth crossing, compiled against NumPy, stated in three places."""
+    for _, speedup in EARTH_CROSSING:
+        for path in (README, INDEX_RST, FASTKERNELS):
+            text = read_flowed(path)
+            assert '~%sx' % speedup in text.replace('\u00d7', 'x'), (
+                '%s does not quote ~%sx for one Earth crossing'
+                % (os.path.relpath(path, ROOT), speedup))
+
+
+def test_the_palindrome_speedup_agrees_everywhere():
+    r"""What the palindrome is worth, stated in four places.
+
+    It is the one figure in this release that a reader can switch off and
+    re-measure for themselves, via `fastkernels.USE_PALINDROME`, so a
+    document that quotes it wrongly is immediately falsifiable.
+    """
+    for speedup in PALINDROME_SPEEDUP:
+        for path in (README, INDEX_RST, QUICKSTART_RST, FASTKERNELS):
+            text = read_flowed(path).replace('\u00d7', 'x')
+            # The bare number would be satisfied by `1.5x to 20x`, the span
+            # quoted for the backend as a whole, and would pass without the
+            # palindrome being mentioned at all.  The quoted form is what
+            # has to be there.
+            assert re.search(r'[~ ]%sx' % re.escape(speedup), text), (
+                '%s does not quote %sx among the palindrome speedups'
+                % (os.path.relpath(path, ROOT), speedup))
+
+
+def test_every_document_names_the_palindrome_switch():
+    r"""The escape hatch is named wherever the gain is claimed."""
+    import fastkernels
+
+    assert isinstance(fastkernels.USE_PALINDROME, bool)
+    for path in (README, INDEX_RST, QUICKSTART_RST):
+        # Bounded, because a plain substring test is satisfied by any
+        # misspelling that merely contains the name.
+        assert re.search(r'\bUSE_PALINDROME\b', read_flowed(path)), (
+            '%s claims the palindrome speedup without naming the switch '
+            'that turns it off' % os.path.relpath(path, ROOT))

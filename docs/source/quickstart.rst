@@ -369,9 +369,53 @@ Nothing in your code changes; :mod:`fastkernels` is picked up
 automatically, and the answers are the same to round-off.  That includes
 :mod:`slabs` and :mod:`earth`, which compose evolution operators rather
 than computing probabilities: they have their own kernel, which does a
-whole trajectory in one pass, and an Earth crossing is between seven and
-fourteen times quicker with it.  If it is not
+whole trajectory in one pass, and a single Earth crossing is between nine
+and twelve times quicker with it.  If it is not
 installed, the NumPy path is used and everything works as before.
+
+For the Earth the larger gain is not that, though, and it costs nothing to
+take.  Both the energy and the zenith angle may be arrays:
+
+.. code-block:: python
+
+    import earth
+    import numpy as np
+
+    # The energy-independent Hamiltonian, as every `earth` routine takes
+    energies = np.logspace(9.0, 11.0, 2000)          # eV
+    scan = earth.probabilities_3nu_earth(
+        h_vacuum_energy_indep, energies, -0.8)
+
+    costhz = np.linspace(-1.0, -0.05, 100)
+    grid = earth.probabilities_3nu_earth(
+        h_vacuum_energy_indep, energies[None, :], costhz[:, None])
+
+The geometry, the matter potentials and the slab widths depend on the
+angle alone, so a scan builds them once rather than once per energy, and a
+grid once per distinct angle.  Over 2000 energies that is about 38, 10 and
+11 times the compiled loop at two, three and four flavors, and 460, 120
+and 87 times a loop on the NumPy path.
+
+Two more things happen without being asked for.  The chord kernels build
+each slab's Hamiltonian as they go, so the stack of operators that would
+otherwise be written and streamed back is never allocated.  And a chord
+through a spherically symmetric Earth meets every radius twice, so half
+its per-slab operators are the same operator: composing from the centre
+outwards computes each once, which is worth ~1.4x, ~1.5x and ~1.8x.  That
+last one applies to any slab sequence that reads the same from either end,
+not only to PREM.  To turn it off --- to compare the two orderings, say
+--- set
+
+.. code-block:: python
+
+   import fastkernels
+   fastkernels.USE_PALINDROME = False
+
+Where the accuracy matters more than the slab count, ``rtol`` and ``atol``
+refine the chord until the measured error meets them, on every returned
+probability; :func:`earth.slabs_for_tolerance` runs the same search on its
+own, which is the cheap way to set one subdivision for a whole scan.  The
+worked examples are in :doc:`recipes`.
 
 It is used only where it is faster.  For three flavors that is every stack
 size, by between two and sixteen times, and for four flavors likewise, by
