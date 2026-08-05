@@ -68,6 +68,27 @@ and the project uses [Semantic Versioning](https://semver.org/).
   matter-Hamiltonian convention that lives in `hamiltonians*nu`.  Batching
   captured the larger share without that.
 
+- **`tests/bit_capture.py` and `tests/bit_compare.py`**, the harness for a
+  change that is meant to leave every number alone.  Neither is collected by
+  pytest; they are run in pairs, before and after, and the comparison
+  demands `numpy.array_equal` rather than `allclose`, reporting any
+  disagreement in ulps as well as absolutely.
+
+  No golden file is committed with them, deliberately: `acos`, `cos` and
+  `sin` come from the platform's libm and are not guaranteed bit-identical
+  between implementations, so a stored baseline would fail somewhere in CI
+  while saying nothing about the change under test.  Two captures taken on
+  the same machine in the same session remove that variable.
+
+  The harness was validated before being trusted, by mutating a kernel
+  rather than by inspection: re-associating one expression in `_entries_3nu`
+  from `(x*SQRT3)/6.0` to `x*(SQRT3/6.0)` moved 133 of 870 arrays, by up to
+  17000 ulps — and moved *only* the three-flavor compiled arrays, leaving
+  the other 725 untouched.  It captures evolution operators as well as
+  probabilities for the same reason: `|U|^2` discards phase, and on that
+  mutant the operators showed 17000 ulps where the probabilities showed
+  1800.
+
 - **A chord is a palindrome, and half its operators were being computed
   twice.**  A neutrino crossing a spherically symmetric Earth meets every
   radius on the way in and again on the way out, so slab `j` and slab
@@ -314,6 +335,31 @@ and the project uses [Semantic Versioning](https://semver.org/).
   `gen_prem_header.py` emits this library's PREM as a C header from
   `earth._PREM_COEFFS`, rather than anyone transcribing forty coefficients;
   it reproduces `earth.density_prem` to 5e-14 over 6372 radii.
+
+### Changed
+
+- **One temporary removed from the three-flavor composers**, verified
+  bit-identical over 870 arrays and 24012 values.  The column being
+  multiplied is already read into scalars before anything is written, and
+  only that column is written, so the result goes straight back into the
+  accumulator and a nine-element copy per slab disappears.
+
+  Three larger changes were tried alongside it and **rejected on
+  measurement**, which is the part worth recording.  The same temporary in
+  the four-flavor and mirrored composers cannot simply be deleted — those
+  read a whole row or column, so an in-place write would clobber a value
+  still needed — and buffering one first is not a simplification.  It
+  measured no quicker.
+
+  More usefully: on the machine this was written on, the run-to-run spread
+  of the *same build* is 27% to 56%, and an untouched two-flavor control
+  showed an apparent 0.906x "effect".  Changes of the six-to-ten per cent
+  this class of edit is worth are **below the resolution of this hardware**,
+  so the remaining candidates — hoisting the chord-constant part of the
+  Hamiltonian build and of the SU(3) coefficient extraction out of the
+  per-slab loop — are deliberately left undone rather than committed on an
+  unmeasurable claim.  They are real, and they are bit-identical in
+  principle; they want a quiet machine.
 
 ### Fixed
 

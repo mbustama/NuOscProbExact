@@ -262,6 +262,8 @@ File tree
        ├── test_slabs.py                # Slab composition, against expm
        ├── test_earth.py                # PREM, geometry, and Earth probabilities
        ├── test_batching_and_tolerance.py  # Energy batching, and the rtol/atol refinement
+       ├── bit_capture.py               # Exact-bit capture, for refactors meant to be invisible
+       ├── bit_compare.py               # Compares two captures, in ulps
        ├── test_documented_figures.py   # Keeps the quoted performance figures agreeing
        ├── test_version_consistency.py  # Keeps the version agreeing wherever it is implied
        ├── test_nusquids_comparison.py  # Against nuSQuIDS, an independent external code

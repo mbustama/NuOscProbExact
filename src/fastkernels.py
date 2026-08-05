@@ -1098,7 +1098,6 @@ if HAVE_NUMBA:                                          # pragma: no branch
         here by something that still looks like a probability.
         """
         acc = np.empty((3, 3), dtype=np.complex128)
-        tmp = np.empty((3, 3), dtype=np.complex128)
 
         (u_ee, u_em, u_et,
          u_me, u_mm, u_mt,
@@ -1117,16 +1116,21 @@ if HAVE_NUMBA:                                          # pragma: no branch
             (u_ee, u_em, u_et,
              u_me, u_mm, u_mt,
              u_te, u_tm, u_tt) = _entries_3nu(h_stack[k], widths[k])
+            # Column j is read into scalars before anything is
+            # written, and only column j is written, so the results go
+            # back into `acc` directly: same operands, same order,
+            # therefore the same bits, with nine loads and nine stores
+            # of a temporary gone.  The four- and mirrored composers
+            # read a whole row or column and cannot do this without
+            # buffering one first, which is not a simplification and
+            # measured no quicker, so they keep their temporary.
             for j in range(3):
                 a0 = acc[0, j]
                 a1 = acc[1, j]
                 a2 = acc[2, j]
-                tmp[0, j] = u_ee*a0 + u_em*a1 + u_et*a2
-                tmp[1, j] = u_me*a0 + u_mm*a1 + u_mt*a2
-                tmp[2, j] = u_te*a0 + u_tm*a1 + u_tt*a2
-            for i in range(3):
-                for j in range(3):
-                    acc[i, j] = tmp[i, j]
+                acc[0, j] = u_ee*a0 + u_em*a1 + u_et*a2
+                acc[1, j] = u_me*a0 + u_mm*a1 + u_mt*a2
+                acc[2, j] = u_te*a0 + u_tm*a1 + u_tt*a2
 
         for i in range(3):
             for j in range(3):
@@ -1253,7 +1257,6 @@ if HAVE_NUMBA:                                          # pragma: no branch
         standing rightmost, exactly as `_slab_product_3nu` orders it.
         """
         acc = np.empty((3, 3), dtype=np.complex128)
-        tmp = np.empty((3, 3), dtype=np.complex128)
         h_work = np.empty((3, 3), dtype=np.complex128)
 
         _build_h_3nu(h_vac, inv_e, potentials, 0, h_work)
@@ -1275,16 +1278,21 @@ if HAVE_NUMBA:                                          # pragma: no branch
             (u_ee, u_em, u_et,
              u_me, u_mm, u_mt,
              u_te, u_tm, u_tt) = _entries_3nu(h_work, widths[k])
+            # Column j is read into scalars before anything is
+            # written, and only column j is written, so the results go
+            # back into `acc` directly: same operands, same order,
+            # therefore the same bits, with nine loads and nine stores
+            # of a temporary gone.  The four- and mirrored composers
+            # read a whole row or column and cannot do this without
+            # buffering one first, which is not a simplification and
+            # measured no quicker, so they keep their temporary.
             for j in range(3):
                 a0 = acc[0, j]
                 a1 = acc[1, j]
                 a2 = acc[2, j]
-                tmp[0, j] = u_ee*a0 + u_em*a1 + u_et*a2
-                tmp[1, j] = u_me*a0 + u_mm*a1 + u_mt*a2
-                tmp[2, j] = u_te*a0 + u_tm*a1 + u_tt*a2
-            for i in range(3):
-                for j in range(3):
-                    acc[i, j] = tmp[i, j]
+                acc[0, j] = u_ee*a0 + u_em*a1 + u_et*a2
+                acc[1, j] = u_me*a0 + u_mm*a1 + u_mt*a2
+                acc[2, j] = u_te*a0 + u_tm*a1 + u_tt*a2
 
         for i in range(3):
             for j in range(3):
