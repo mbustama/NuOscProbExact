@@ -773,6 +773,59 @@ books['06_earth_and_prem.ipynb'] = notebook(
              'ax.set_title("Convergence of the slab approximation")\n'
              'ax.legend()\n'
              'plt.show()'),
+        md('## Asking for an accuracy instead\n\n'
+           'The plot above answers *how does the error fall with `n`?* — '
+           'but not the question a reader actually has, which is *what '
+           '`n` do I need?* Those are different questions, because **the '
+           'error at a fixed `n` is not a fixed number.** It depends '
+           'strongly on the energy, and on the zenith angle through the '
+           'chord length and which shells are crossed.\n\n'
+           'So `rtol` and `atol` invert the relationship: give a '
+           'tolerance instead of a subdivision and the chord is refined '
+           'until the measured error meets it.'),
+        code('atol = 1.0e-5\n'
+             'energies_gev = np.array([1.0, 3.0, 10.0, 20.0, 40.0, 80.0])\n\n'
+             'print("cos(theta_z) = -0.8, atol = %.0e\\n" % atol)\n'
+             'print("%9s %14s %11s" % ("E [GeV]", "error at n=8", '
+             '"n needed"))\n'
+             'for e in energies_gev:\n'
+             '    converged = np.array(earth.probabilities_3nu_earth(\n'
+             '        H_VAC_3NU, e*GEV, -0.8, n_slabs_per_segment=512))\n'
+             '    default = np.array(earth.probabilities_3nu_earth(\n'
+             '        H_VAC_3NU, e*GEV, -0.8))\n'
+             '    n = earth.slabs_for_tolerance(\n'
+             '        H_VAC_3NU, e*GEV, -0.8, atol=atol)\n'
+             '    print("%9.0f %14.2e %11d"\n'
+             '          % (e, np.max(np.abs(default-converged)), n))'),
+        md('The middle column is the point: at the default eight '
+           'sub-slabs the error spans a factor of some four hundred '
+           'across these energies alone — and this is one zenith angle. '
+           'No single `n` gives a single accuracy. The right column is '
+           'what a fixed accuracy actually costs, and it varies '
+           'eightfold over the same range.\n\n'
+           'Passing the tolerance directly does the same search and then '
+           'the evaluation. `return_n_slabs` reports what it settled on, '
+           'which is worth asking for: a tight tolerance can be '
+           'expensive, and that should be visible rather than inferred '
+           'from a slow notebook.'),
+        code('prob, n = earth.probabilities_3nu_earth(\n'
+             '    H_VAC_3NU, 10.0*GEV, -0.8, atol=1.0e-6, '
+             'return_n_slabs=True)\n'
+             'print("atol=1e-6 needed n = %d;  P_mumu = %.8f" % (n, '
+             'prob[4]))\n\n'
+             '# The tolerance binds on *every* returned probability, not '
+             'on one\n'
+             '# channel, so the subdivision is set by the '
+             'worst-converging entry.\n'
+             '# A tolerance that cannot be reached raises rather than '
+             'quietly\n'
+             '# returning less.\n'
+             'try:\n'
+             '    earth.slabs_for_tolerance(H_VAC_3NU, 10.0*GEV, -0.8,\n'
+             '                              atol=1.0e-16, n_max=64)\n'
+             'except ValueError as error:\n'
+             '    print("\\nunreachable tolerance ->", '
+             'str(error).split(";")[0])'),
     ])
 
 # -------------------------------------------------- 07 Earth probabilities
@@ -806,28 +859,32 @@ books['07_earth_probabilities.ipynb'] = notebook(
         md('## An Earth oscillogram\n\n'
            'Energy against zenith angle — the map an atmospheric-neutrino '
            'experiment measures.\n\n'
-           '**A boundary worth stating plainly**, because it runs against '
-           'the advice of every notebook so far. `earth` and `slabs` do '
-           '*not* broadcast over energy: `probabilities_3nu_earth` takes '
-           'one energy and one zenith angle, and '
-           '`slabs.probabilities_3nu_slabs` expects one Hamiltonian per '
-           'slab, not a stack of them per slab. So this grid genuinely '
-           'has to loop, and so do the scans in notebooks 08, 11, 12 and '
-           '13.\n\n'
-           'The reason is that the number and position of the slabs '
-           'depend on the trajectory, so a stack of energies through '
-           'different zenith angles is not a rectangular array of '
-           'Hamiltonians. Inside each slab the batched machinery is still '
-           'doing the work — what loops is the composition across slabs. '
-           'The grid is kept modest for that reason.'),
+           '**This used to have to loop, and no longer does.** Before '
+           '1.12.0 `probabilities_3nu_earth` took one energy and one '
+           'zenith angle, so a grid meant a Python loop over every point '
+           'of it, and this notebook said so. Both arguments may now be '
+           'arrays, and they broadcast: index the energies and the angles '
+           'on different axes and the whole map comes back on the grid, '
+           'in one call.\n\n'
+           'What has *not* changed is `slabs.probabilities_3nu_slabs`, '
+           'which still expects one Hamiltonian per slab rather than a '
+           'stack of them per slab. The number and position of the slabs '
+           'depend on the trajectory, so a set of energies through '
+           '*different* zenith angles is genuinely not a rectangular '
+           'array of Hamiltonians. `earth` deals with that by taking one '
+           'angle at a time internally — every energy at a given angle '
+           'shares the geometry and the matter potentials, which is where '
+           'the saving comes from.'),
         code('n_e, n_c = 60, 60\n'
              'E_gev = np.logspace(0.0, 2.0, n_e)\n'
              'cz = np.linspace(-0.999, -0.05, n_c)\n\n'
-             'grid = np.empty((n_e, n_c))\n'
-             'for i, e in enumerate(E_gev):\n'
-             '    for j, c in enumerate(cz):\n'
-             '        grid[i, j] = earth.probabilities_3nu_earth(\n'
-             '            H_VAC_3NU, e*GEV, c, n_slabs_per_segment=4)[4]\n\n'
+             '# One call: energies down one axis, angles across the '
+             'other.  The\n'
+             '# trailing axis holds the nine probabilities; index 4 is '
+             'P_mumu.\n'
+             'grid = earth.probabilities_3nu_earth(\n'
+             '    H_VAC_3NU, (E_gev*GEV)[:, None], cz[None, :],\n'
+             '    n_slabs_per_segment=4)[..., 4]\n\n'
              'fig, ax = plt.subplots(figsize=(7.6, 4.8))\n'
              'mesh = ax.pcolormesh(cz, E_gev, grid, shading="auto",\n'
              '                     cmap="magma", vmin=0.0, vmax=1.0)\n'
@@ -838,6 +895,35 @@ books['07_earth_probabilities.ipynb'] = notebook(
              'ax.grid(False)\n'
              'fig.colorbar(mesh, ax=ax, label=r"$P_{\\mu\\mu}$")\n'
              'plt.show()'),
+        md('### One subdivision for the whole map\n\n'
+           'The map above fixes `n_slabs_per_segment=4`, chosen the way '
+           'such numbers usually are — by eye. `slabs_for_tolerance` '
+           'chooses it instead, from a stated accuracy. Handed the whole '
+           'grid it returns one subdivision that covers every point of '
+           'it, set by the worst-converging one; and because the search '
+           'costs about twice a single evaluation, it is worth calling '
+           'once for the map rather than per point.'),
+        code('atol = 1.0e-4\n'
+             'n = earth.slabs_for_tolerance(\n'
+             '    H_VAC_3NU, (E_gev*GEV)[:, None], cz[None, :], '
+             'atol=atol)\n'
+             'print("one subdivision for the whole %dx%d map at '
+             'atol=%.0e:  n = %d"\n'
+             '      % (n_e, n_c, atol, n))\n\n'
+             'refined = earth.probabilities_3nu_earth(\n'
+             '    H_VAC_3NU, (E_gev*GEV)[:, None], cz[None, :], '
+             'n)[..., 4]\n'
+             'print("largest change against the n=4 map above:  %.2e"\n'
+             '      % np.max(np.abs(refined-grid)))'),
+        md('That difference is worth reading twice. The map above, drawn '
+           'at `n_slabs_per_segment=4`, differs from the refined one by '
+           'a few times $10^{-2}$ in $P_{\\mu\\mu}$ — visible on the '
+           'colour scale, and far larger than anything an analysis would '
+           'accept. It is fine for a picture of where the resonance '
+           'sits, which is what this notebook wants; it is not fine for '
+           'fitting. Choosing the subdivision from a tolerance rather '
+           'than by eye is how that distinction stops being '
+           'invisible.'),
         md('## Between two places\n\n'
            'The library knows a set of named locations — the same set as the '
            'sibling Magnus package — and will work out the chord between any '
@@ -1229,6 +1315,72 @@ books['09_performance.ipynb'] = notebook(
            'accuracy on a stiff spectrum, which is almost never the right '
            'trade. Notebook 16 measures both figures against an '
            'independent reference.'),
+        md('## What a tolerance costs\n\n'
+           '`rtol` and `atol` are an accuracy feature rather than a '
+           'speed one, but they have a cost worth knowing. The search '
+           'evaluates the chord at a doubling sequence of subdivisions, '
+           'which comes to roughly twice one evaluation at the '
+           'subdivision it settles on — the series being dominated by '
+           'its last term. Called once for a scan that is nothing. '
+           'Called per point, it is paid at every point.'),
+        code('import earth\n\n'
+             'E_scan = np.logspace(0.0, 2.0, 200)*GEV\n'
+             'atol = 1.0e-5\n\n'
+             'n = earth.slabs_for_tolerance(H_VAC_3NU, E_scan, -0.8, '
+             'atol=atol)\n'
+             't_search = best_of(lambda: earth.slabs_for_tolerance(\n'
+             '    H_VAC_3NU, E_scan, -0.8, atol=atol), repeat=3)\n'
+             't_scan = best_of(lambda: earth.probabilities_3nu_earth(\n'
+             '    H_VAC_3NU, E_scan, -0.8, n))\n\n'
+             '# The trap, on a tenth of the points so the notebook '
+             'still finishes.\n'
+             'sample = E_scan[:20]\n'
+             't_each = best_of(lambda: [earth.probabilities_3nu_earth(\n'
+             '    H_VAC_3NU, e, -0.8, atol=atol) for e in sample], '
+             'repeat=2)\n\n'
+             'print("subdivision chosen           : %d" % n)\n'
+             'print("search, once for the scan    : %7.1f ms" '
+             '% (t_search*1e3))\n'
+             'print("the scan itself, at that n   : %7.1f ms" '
+             '% (t_scan*1e3))\n'
+             'print("together                     : %7.1f ms"\n'
+             '      % ((t_search+t_scan)*1e3))\n'
+             'print("per point, scaled to 200     : %7.1f ms"\n'
+             '      % (t_each*1e3*len(E_scan)/len(sample)))'),
+        md('## What the palindrome is worth\n\n'
+           'A neutrino crossing a spherically symmetric Earth meets '
+           'every radius on the way in and again on the way out, so slab '
+           '$j$ and slab $n-1-j$ carry the same Hamiltonian, the same '
+           'width, and therefore the same operator. Composing from the '
+           'centre outwards computes each of them once instead of '
+           'twice.\n\n'
+           'It is on by default and needs nothing from the caller. It is '
+           'switchable because the two orderings round differently — by '
+           'a few times $10^{-15}$ — so turning it off is how to ask for '
+           'the plain left-to-right product when a comparison needs '
+           'one.'),
+        code('E_long = np.logspace(0.0, 2.0, 2000)*GEV\n\n'
+             'fastkernels.USE_PALINDROME = True\n'
+             't_on = best_of(lambda: earth.probabilities_3nu_earth(\n'
+             '    H_VAC_3NU, E_long, -0.8))\n'
+             'with_it = earth.probabilities_3nu_earth(H_VAC_3NU, '
+             'E_long, -0.8)\n\n'
+             'fastkernels.USE_PALINDROME = False\n'
+             't_off = best_of(lambda: earth.probabilities_3nu_earth(\n'
+             '    H_VAC_3NU, E_long, -0.8))\n'
+             'without = earth.probabilities_3nu_earth(H_VAC_3NU, '
+             'E_long, -0.8)\n\n'
+             'fastkernels.USE_PALINDROME = True     # back to the '
+             'default\n\n'
+             'print("2000-energy Earth scan, three flavors")\n'
+             'print("  composing the whole chord : %7.2f ms" '
+             '% (t_off*1e3))\n'
+             'print("  using the palindrome      : %7.2f ms" '
+             '% (t_on*1e3))\n'
+             'print("  speedup                   : %7.2fx" '
+             '% (t_off/t_on))\n'
+             'print("  largest difference        : %.2e"\n'
+             '      % np.max(np.abs(with_it-without)))'),
         md('## What to take away\n\n'
            '1. Replace loops with array arguments. This is the large win, it '
            'needs no extra dependency, and the results agree to round-off.\n'
@@ -1256,6 +1408,7 @@ Running this notebook writes all eight PDFs. Set `NUOSC_PAPER_FIGDIR` to write t
 import slabs
 from scipy.linalg import expm
 import json
+import shutil
 from matplotlib.patches import (Rectangle, FancyArrowPatch,
                                 Wedge, Polygon, Circle)
 import matplotlib.patheffects as pe
@@ -1271,10 +1424,21 @@ COLW = 229.5/72.27
 # with a black border, Type 42 fonts -- but the sizes, which that file chooses
 # for standalone 5-inch figures, are set here for figures included at
 # \columnwidth beside 10 pt body text.
+#
+# Setting the labels through LaTeX needs a TeX installation, and Palatino comes
+# from that installation rather than from matplotlib.  A machine that only wants
+# to check the notebook still runs -- CI, most obviously -- has no reason to
+# carry one, so this asks rather than assumes.  With LaTeX the figures are
+# exactly the paper's; without it the labels fall back to matplotlib's own
+# mathtext, which changes how they are typeset and nothing about what is
+# plotted.  Every construct these figures use, \mathbb included, renders under
+# both.
+HAVE_LATEX = shutil.which('latex') is not None
+
 plt.rcParams.update({
     'font.family': 'serif',
     'font.serif': ['Palatino'],
-    'text.usetex': True,
+    'text.usetex': HAVE_LATEX,
     'font.size': 8,
     'axes.labelsize': 9,
     'xtick.labelsize': 8,
@@ -1305,6 +1469,14 @@ plt.rcParams.update({
     'savefig.bbox': 'tight', 'savefig.pad_inches': 0.02,
     'pdf.fonttype': 42, 'ps.fonttype': 42,
 })
+
+if not HAVE_LATEX:
+    # Palatino is supplied by the TeX installation, so asking for it without
+    # one earns a missing-font warning per figure and DejaVu Serif anyway.
+    plt.rcParams['font.serif'] = plt.rcParamsDefault['font.serif']
+    print('latex not found: labels fall back to mathtext, and the serif face '
+          'to matplotlib default.  The figures are the paper figures; the '
+          'typesetting is not.')
 
 # One-panel figures are square; the stacked ones keep the aspect the paper used.
 FIGSIZE_SQUARE = (COLW, COLW)
@@ -3926,6 +4098,10 @@ GALLERY = {
     ('12_ordering_and_octant.ipynb', 2): 'gallery_ordering.png',
     ('16_four_neutrinos.ipynb', 0): 'gallery_sterile.png',
     ('16_four_neutrinos.ipynb', 1): 'gallery_sterile_earth.png',
+    ('19_animations.ipynb', 0): 'gallery_anim_cp.png',
+    ('19_animations.ipynb', 1): 'gallery_anim_sterile.png',
+    ('19_animations.ipynb', 2): 'gallery_anim_earth.png',
+    ('19_animations.ipynb', 3): 'gallery_anim_slabs.png',
 }
 
 GALLERY_DIR = pathlib.Path('img') / 'gallery'
@@ -3948,6 +4124,644 @@ def extract_gallery():
         (GALLERY_DIR / filename).write_bytes(base64.b64decode(images[index]))
         written += 1
     print('  wrote %d gallery figures to %s' % (written, GALLERY_DIR))
+
+
+# ------------------------------------------------------------ 19 animations
+books['19_animations.ipynb'] = notebook(
+    'Animated scenes',
+    'Four short scenes, each showing one thing the library does while a '
+    'parameter sweeps. They began as the scripts behind a demonstration '
+    'reel; this notebook is the same four, with the sweeps drawn as static '
+    'filmstrips so that reading it costs nothing.\n\n'
+    'Rendering them as animations is expensive — a few hundred frames each, '
+    'most of the time spent in matplotlib rather than in the physics — so '
+    'the stills are what this notebook draws, and the animation is left to '
+    'an opt-in switch at the end.\n\n'
+    'The four are chosen to differ, and the difference is the point: the '
+    'first two recompute a whole map in one broadcast call, the third '
+    're-slabs the Earth at every angle, and the fourth animates the one '
+    'approximation the library makes.',
+    [
+        code('from matplotlib.patches import Circle\n\n'
+             'import earth\n'
+             'import slabs\n\n'
+             '# Indices into the flavor-ordered probability tuples: the '
+             'initial\n'
+             '# flavor varies slowest, so with n flavors P[n*a + b] is '
+             'P(nu_a -> nu_b).\n'
+             'P3_MUE, P3_MUMU, P4_MUS = 3, 4, 7\n\n'
+             "ACCENT, MARK, MUTED = '#1d4ed8', '#dc2626', '#94a3b8'\n\n\n"
+             'def vacuum_3nu(dcp=gd.DCP_NO_BF):\n'
+             '    return '
+             'hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(\n'
+             '        gd.S12_NO_BF, gd.S23_NO_BF, gd.S13_NO_BF, dcp,\n'
+             '        gd.D21_NO_BF, gd.D31_NO_BF)\n\n\n'
+             'def vacuum_4nu(d41):\n'
+             '    return '
+             'hamiltonians4nu.hamiltonian_4nu_vacuum_energy_independent(\n'
+             '        gd.S12_NO_BF, gd.S23_NO_BF, gd.S13_NO_BF,\n'
+             '        np.sqrt(0.10), np.sqrt(0.10), 0.0,\n'
+             '        gd.DCP_NO_BF, gd.D21_NO_BF, gd.D31_NO_BF, d41)'),
+
+        md('## 1. The CP phase\n\n'
+           'An oscillogram of $P_{\\mu e}$ in matter, recomputed at each '
+           'phase, beside the bi-probability ellipse — which is the locus '
+           'traced *by* the phase, so the ellipse is drawn once and the '
+           'marker says where on it the map currently sits.\n\n'
+           'Each map is 200 x 200 = 40 000 probabilities in **one** call: '
+           'the Hamiltonians vary along one axis and the baselines along '
+           'the other, and they broadcast.'),
+        code('grid = 200\n'
+             'energies_cp = np.logspace(-1.0, 1.0, grid)*GEV\n'
+             'baselines_cp = np.linspace(50.0, 12000.0, grid)*KM\n\n\n'
+             'def oscillogram(dcp):\n'
+             '    stack = hamiltonians3nu.hamiltonian_3nu_matter(\n'
+             '        vacuum_3nu(dcp), energies_cp, gd.VCC_EARTH_CRUST)\n'
+             '    return oscprob3nu.probabilities_3nu(\n'
+             '        stack[:, None, :, :], '
+             'baselines_cp[None, :])[:, :, P3_MUE]\n\n\n'
+             'def ellipse_point(dcp, energy=0.8*GEV, baseline=1300.0):\n'
+             '    length = baseline*KM\n'
+             '    # Antineutrinos need *both* changes: conjugate the '
+             'vacuum\n'
+             '    # Hamiltonian and reverse the sign of the matter '
+             'potential.\n'
+             '    h_nu = hamiltonians3nu.hamiltonian_3nu_matter(\n'
+             '        vacuum_3nu(dcp), energy, gd.VCC_EARTH_CRUST)\n'
+             '    h_bar = hamiltonians3nu.hamiltonian_3nu_matter(\n'
+             '        np.conj(vacuum_3nu(dcp)), energy, '
+             '-gd.VCC_EARTH_CRUST)\n'
+             '    return (oscprob3nu.probabilities_3nu(h_nu, '
+             'length)[P3_MUE],\n'
+             '            oscprob3nu.probabilities_3nu(h_bar, '
+             'length)[P3_MUE])\n\n\n'
+             'shown = [0.0, 2.0*np.pi/3.0, 4.0*np.pi/3.0]\n'
+             'locus = np.array([ellipse_point(d)\n'
+             '                  for d in np.linspace(0.0, 2.0*np.pi, '
+             '240)])\n'
+             '# The colour scale is fixed over the whole sweep: taking it '
+             'from\n'
+             '# one frame lets the others clip silently, and clipping '
+             'reads as\n'
+             '# structure rather than as saturation.\n'
+             'ceiling_cp = max(float(oscillogram(d).max())\n'
+             '                 for d in np.linspace(0.0, 2.0*np.pi, 12,\n'
+             '                                      endpoint=False))\n\n'
+             'fig, axes = plt.subplots(1, 4, figsize=(15.0, 3.4),\n'
+             "                         gridspec_kw={'width_ratios': "
+             '[1, 1, 1, 1.05]})\n'
+             'for ax, dcp in zip(axes[:3], shown):\n'
+             "    im = ax.imshow(oscillogram(dcp), origin='lower', "
+             "aspect='auto',\n"
+             "                   cmap='viridis', vmin=0.0, "
+             "vmax=ceiling_cp,\n"
+             '                   extent=[50.0, 12000.0, -1.0, 1.0])\n'
+             "    ax.set_title(r'$\\delta_{CP} = %.2f\\pi$' % "
+             '(dcp/np.pi), fontsize=11)\n'
+             "    ax.set_xlabel('Baseline [km]')\n"
+             '    ax.set_yticks([-1, 0, 1])\n'
+             "    ax.set_yticklabels(['0.1', '1', '10'])\n"
+             "    ax.grid(False)\n"
+             "axes[0].set_ylabel('Energy [GeV]')\n"
+             "fig.colorbar(im, ax=axes[2], "
+             "pad=0.02).set_label(r'$P_{\\mu e}$')\n\n"
+             'ax = axes[3]\n'
+             'ax.plot(locus[:, 0], locus[:, 1], color=ACCENT, lw=1.6)\n'
+             'lo, hi = float(min(locus.min(), 0.0)), '
+             'float(locus.max())*1.10\n'
+             "ax.plot([lo, hi], [lo, hi], ls=':', color='#64748b', "
+             "lw=1.0,\n"
+             "        label='CP symmetric')\n"
+             'for dcp in shown:\n'
+             "    ax.plot(*ellipse_point(dcp), 'o', ms=8, color=MARK, "
+             'zorder=5)\n'
+             'ax.set_xlim(lo, hi)\n'
+             'ax.set_ylim(lo, hi)\n'
+             "ax.set_aspect('equal', adjustable='box')\n"
+             "ax.set_xlabel(r'$P(\\nu_\\mu \\to \\nu_e)$')\n"
+             "ax.set_ylabel(r'$P(\\bar\\nu_\\mu \\to "
+             "\\bar\\nu_e)$')\n"
+             "ax.set_title('Bi-probability, 0.8 GeV, 1300 km', "
+             'fontsize=11)\n'
+             "ax.legend(loc='upper left', fontsize=9)\n\n"
+             "fig.suptitle('The CP phase sweeping through $2\\pi$', "
+             'fontsize=13)\n'
+             'fig.tight_layout(rect=[0, 0, 1, 0.93])\n'
+             'plt.show()'),
+
+        md('## 2. A sterile state\n\n'
+           'Four flavors, in matter of constant density so the whole map '
+           'is again one call. The sterile state feels neither the '
+           'charged- nor the neutral-current potential, so $V_{NC}$ stops '
+           'cancelling between the flavors and sits on the sterile entry '
+           '— which is what places the resonance that moves across the '
+           'frame as $\\Delta m^2_{41}$ sweeps.'),
+        code('grid = 180\n'
+             'energies_s = np.logspace(0.0, 2.0, grid)*GEV\n'
+             'baselines_s = np.linspace(100.0, 12742.0, grid)*KM\n\n\n'
+             'def sterile_map(d41):\n'
+             '    stack = hamiltonians4nu.hamiltonian_4nu_matter(\n'
+             '        vacuum_4nu(d41), energies_s, gd.VCC_EARTH_CRUST,\n'
+             '        gd.VNC_EARTH_CRUST)\n'
+             '    return oscprob4nu.probabilities_4nu(\n'
+             '        stack[:, None, :, :], '
+             'baselines_s[None, :])[:, :, P4_MUS]\n\n\n'
+             'splittings = [0.1, 1.0, 10.0]\n'
+             'maps = [sterile_map(d) for d in splittings]\n'
+             'ceiling_s = max(float(m.max()) for m in maps)\n\n'
+             'fig, axes = plt.subplots(1, 4, figsize=(15.0, 3.4),\n'
+             "                         gridspec_kw={'width_ratios': "
+             '[1, 1, 1, 1.05]})\n'
+             'for ax, d41, m in zip(axes[:3], splittings, maps):\n'
+             "    im = ax.imshow(m, origin='lower', aspect='auto', "
+             "cmap='magma',\n"
+             '                   vmin=0.0, vmax=ceiling_s,\n'
+             '                   extent=[100.0, 12742.0, 0.0, 2.0])\n'
+             "    ax.set_title(r'$\\Delta m^2_{41} = %g$ eV$^2$' % d41, "
+             'fontsize=11)\n'
+             "    ax.set_xlabel('Baseline [km]')\n"
+             '    ax.set_yticks([0, 1, 2])\n'
+             "    ax.set_yticklabels(['1', '10', '100'])\n"
+             "    ax.axvline(12742.0, color='white', lw=1.0, ls='--', "
+             'alpha=0.7)\n'
+             "    ax.grid(False)\n"
+             "axes[0].set_ylabel('Energy [GeV]')\n"
+             'fig.colorbar(im, ax=axes[2], pad=0.02).set_label(\n'
+             "    r'$P(\\nu_\\mu\\to\\nu_s)$')\n\n"
+             'ax = axes[3]\n'
+             'for d41, m in zip(splittings, maps):\n'
+             '    ax.plot(np.log10(energies_s/GEV), m[:, -1],\n'
+             "            lw=1.8, label=r'$%g$ eV$^2$' % d41)\n"
+             'ax.set_xlim(0.0, 2.0)\n'
+             'ax.set_ylim(0.0, ceiling_s*1.05)\n'
+             'ax.set_xticks([0, 1, 2])\n'
+             "ax.set_xticklabels(['1', '10', '100'])\n"
+             "ax.set_xlabel('Energy [GeV]')\n"
+             "ax.set_ylabel(r'$P(\\nu_\\mu \\to \\nu_s)$')\n"
+             "ax.set_title('Through the diameter, 12742 km', "
+             'fontsize=11)\n'
+             'ax.legend(fontsize=9)\n\n'
+             "fig.suptitle('A sterile state appearing as "
+             "$\\Delta m^2_{41}$ sweeps',\n"
+             '             fontsize=13)\n'
+             'fig.tight_layout(rect=[0, 0, 1, 0.93])\n'
+             'plt.show()'),
+
+        md('## 3. Through the Earth\n\n'
+           'The PREM density in cross-section with the neutrino path '
+           'drawn on it, beside the survival probability along that path, '
+           'as the zenith angle swings from diametric to grazing.\n\n'
+           '**This scene used to be the expensive one.** When these '
+           'scripts were written `probabilities_3nu_earth` took a scalar '
+           'energy — the chord, and the slabs cut from it, change with '
+           'the angle — so a curve of a hundred energies was a hundred '
+           'calls, and the scene said so in its own caption. Since 1.12.0 '
+           'the energy may be an array, so each curve below is **one** '
+           'call, with the geometry and the matter potentials built once '
+           'for it rather than once per energy.'),
+        code('angles = [-1.0, -0.6, -0.2]\n'
+             'energies_e = np.logspace(0.0, 2.0, 100)*GEV\n\n'
+             'fig, axes = plt.subplots(1, 4, figsize=(15.0, 3.6),\n'
+             "                         gridspec_kw={'width_ratios': "
+             '[1, 1, 1, 1.35]})\n\n'
+             '# The density disk is the same in each panel: concentric '
+             'circles\n'
+             '# shaded by PREM, outermost first so the inner ones sit on '
+             'top.\n'
+             'radii = np.linspace(gd.EARTH_RADIUS, 0.0, 240)\n'
+             'densities = earth.density_prem(radii)\n'
+             'colours = plt.cm.YlOrBr(0.15 + '
+             '0.75*densities/densities.max())\n\n'
+             'for ax, costhz in zip(axes[:3], angles):\n'
+             '    for radius, colour in zip(radii, colours):\n'
+             '        ax.add_patch(Circle((0.0, 0.0), radius, '
+             'facecolor=colour,\n'
+             "                            edgecolor='none', zorder=1))\n"
+             '    ax.add_patch(Circle((0.0, 0.0), gd.EARTH_RADIUS, '
+             'fill=False,\n'
+             "                        edgecolor='#334155', lw=1.2, "
+             'zorder=3))\n'
+             '    length = earth.distance_traveled_inside_earth(costhz)\n'
+             '    sin_thz = np.sqrt(max(0.0, 1.0 - costhz*costhz))\n'
+             '    ax.plot([length*sin_thz, 0.0],\n'
+             '            [gd.EARTH_RADIUS + length*costhz, '
+             'gd.EARTH_RADIUS],\n'
+             '            color=MARK, lw=2.4, zorder=4)\n'
+             "    ax.plot([0.0], [gd.EARTH_RADIUS], 'v', "
+             "color='#0f172a', ms=9,\n"
+             '            zorder=5)\n'
+             '    span = gd.EARTH_RADIUS*1.08\n'
+             '    ax.set_xlim(-span, span)\n'
+             '    ax.set_ylim(-span, span)\n'
+             "    ax.set_aspect('equal')\n"
+             "    ax.axis('off')\n"
+             "    ax.set_title(r'$\\cos\\theta_z = %+.2f$,  %d km'\n"
+             '                 % (costhz, round(length)), fontsize=11)\n\n'
+             'ax = axes[3]\n'
+             'for costhz in angles:\n'
+             '    # One call per curve: the energies are an array.\n'
+             '    curve = earth.probabilities_3nu_earth(\n'
+             '        H_VAC_3NU, energies_e, costhz)[:, P3_MUMU]\n'
+             '    ax.plot(np.log10(energies_e/GEV), curve, lw=1.8,\n'
+             "            label=r'$\\cos\\theta_z = %+.2f$' % "
+             'costhz)\n'
+             'ax.set_xlim(0.0, 2.0)\n'
+             'ax.set_ylim(0.0, 1.02)\n'
+             'ax.set_xticks([0, 1, 2])\n'
+             "ax.set_xticklabels(['1', '10', '100'])\n"
+             "ax.set_xlabel('Energy [GeV]')\n"
+             "ax.set_ylabel(r'$P(\\nu_\\mu \\to \\nu_\\mu)$')\n"
+             "ax.set_title('Survival along the chord', fontsize=11)\n"
+             'ax.legend(fontsize=9)\n\n'
+             "fig.suptitle('A chord through the Earth, as the zenith "
+             "angle swings',\n"
+             '             fontsize=13)\n'
+             'fig.tight_layout(rect=[0, 0, 1, 0.92])\n'
+             'plt.show()'),
+
+        md('## 4. Cutting a profile into slabs\n\n'
+           'The one approximation the library makes. Within a slab '
+           'nothing is approximated — the expansion is exact for a '
+           'constant Hamiltonian — so the only question is how finely a '
+           'profile that really varies is sliced, and that is the '
+           'caller\'s to answer. The reference here is the same '
+           'calculation at 600 slabs.'),
+        code('baseline_km, energy_s = 4000.0, 1.0*GEV\n'
+             'total = baseline_km*KM\n\n\n'
+             'def profile(x):\n'
+             '    """A smooth, deliberately awkward density profile '
+             '[g/cm^3].\n\n'
+             '    The amplitudes sum to more than the offset, so the '
+             'positivity\n'
+             '    of this is a property of the phase offset and the '
+             'frequency\n'
+             '    ratio rather than of the coefficients: the two sines do '
+             'not\n'
+             '    reach their minima together, and the measured minimum '
+             'is\n'
+             '    0.28 g/cm^3.  A negative density would quietly reverse '
+             'the\n'
+             '    sign of the matter potential --- the antineutrino case, '
+             'and\n'
+             '    not what this is about --- so re-check the minimum '
+             'before\n'
+             '    changing any of the five numbers below.\n'
+             '    """\n'
+             '    return 3.0 + 2.2*np.sin(2.0*np.pi*x/baseline_km) \\\n'
+             '        + 1.1*np.sin(6.0*np.pi*x/baseline_km + 0.7)\n\n\n'
+             'def probability(n):\n'
+             '    edges = np.linspace(0.0, baseline_km, n + 1)\n'
+             '    mid = 0.5*(edges[:-1] + edges[1:])\n'
+             '    h = hamiltonians3nu.hamiltonian_3nu_matter(\n'
+             '        vacuum_3nu(), energy_s, '
+             'earth.matter_potential(profile(mid)))\n'
+             '    return slabs.probabilities_3nu_slabs(\n'
+             '        h, np.full(n, total/n))[P3_MUE]\n\n\n'
+             'counts = np.unique(np.round(\n'
+             '    np.logspace(0.0, np.log10(80.0), 40)).astype(int))\n'
+             'values = [probability(int(n)) for n in counts]\n'
+             'reference = probability(600)\n'
+             '# Snapped to counts that were actually evaluated, so the '
+             'markers\n'
+             '# on the trace are the same three cuts the panels draw.\n'
+             'shown_n = [int(counts[np.argmin(np.abs(counts - n))])\n'
+             '           for n in (2, 8, 40)]\n\n'
+             'fig, axes = plt.subplots(1, 4, figsize=(15.0, 3.4),\n'
+             "                         gridspec_kw={'width_ratios': "
+             '[1, 1, 1, 1.1]})\n'
+             'fine = np.linspace(0.0, baseline_km, 600)\n'
+             'for ax, n in zip(axes[:3], shown_n):\n'
+             '    edges = np.linspace(0.0, baseline_km, n + 1)\n'
+             '    mid = 0.5*(edges[:-1] + edges[1:])\n'
+             '    ax.plot(fine, profile(fine), color=MUTED, lw=1.6,\n'
+             "            label='the true profile')\n"
+             '    ax.step(np.append(edges[:-1], baseline_km),\n'
+             '            np.append(profile(mid), profile(mid[-1])),\n'
+             "            where='post', color=ACCENT, lw=1.8, "
+             "label='what is solved')\n"
+             "    ax.set_title('%d slab%s' % (n, '' if n == 1 else 's'), "
+             'fontsize=11)\n'
+             "    ax.set_xlabel('Distance [km]')\n"
+             "axes[0].set_ylabel(r'Density [g cm$^{-3}$]')\n"
+             "axes[0].legend(loc='upper right', fontsize=8)\n\n"
+             'ax = axes[3]\n'
+             "ax.axhline(reference, color=MUTED, ls='--', lw=1.2, "
+             "label='600 slabs')\n"
+             'ax.plot(counts, values, color=ACCENT, lw=1.6)\n'
+             'for n in shown_n:\n'
+             '    index = int(np.argmin(np.abs(counts - n)))\n'
+             "    ax.plot([counts[index]], [values[index]], 'o', ms=7, "
+             'color=MARK,\n'
+             '            zorder=5)\n'
+             "ax.set_xscale('log')\n"
+             'ax.set_xlim(1, 90)\n'
+             "ax.set_xlabel('Number of slabs')\n"
+             "ax.set_ylabel(r'$P_{\\mu e}$')\n"
+             "ax.set_title('Converging on the answer', fontsize=11)\n"
+             "ax.legend(loc='lower right', fontsize=9)\n\n"
+             "fig.suptitle('Each slab is solved exactly; only the cutting "
+             "is approximate',\n"
+             '             fontsize=13)\n'
+             'fig.tight_layout(rect=[0, 0, 1, 0.93])\n'
+             'plt.show()'),
+
+        md('## Rendering them as animations\n\n'
+           'Each scene is a sweep over one parameter, so each animates '
+           'directly: the panels below are redrawn frame by frame while '
+           '$\\delta_{CP}$, $\\Delta m^2_{41}$, $\\cos\\theta_z$ '
+           'or the slab count moves.\n\n'
+           'The stills above are what this notebook draws by default, '
+           'because rendering is expensive — a few hundred frames each, '
+           'and most of the time goes into matplotlib rather than into '
+           'the physics. Set `RENDER = True` to write all four as GIFs. '
+           'Expect several minutes and a few megabytes each. '
+           '`matplotlib`\'s Pillow writer is used rather than `ffmpeg`, '
+           'so there is nothing to install — though the committed GIFs in '
+           '`img/` went through an ffmpeg palette, which is markedly '
+           'smaller.\n\n'
+           'The scenes are drawn two panels wide here, as the reel has '
+           'them, rather than as the four-panel filmstrips above.'),
+        code('RENDER = False        # set True to write the four GIFs\n'
+             'FPS = 24\n\n'
+             'if RENDER:\n'
+             '    from matplotlib.animation import FuncAnimation, '
+             'PillowWriter\n\n'
+             '    FIGSIZE, DPI = (11.0, 4.6), 120\n'
+             "    OUT = os.path.join('..', 'img')\n\n"
+             '    def caption(fig, note):\n'
+             '        """The standing caption, and the mutable '
+             'heading."""\n'
+             "        fig.patch.set_facecolor('white')\n"
+             '        fig.text(0.5, 0.028, note, ha=\'center\', '
+             "fontsize=9.5,\n"
+             "                 color='#334155')\n"
+             "        heading = fig.suptitle('', fontsize=13)\n"
+             '        fig.tight_layout(rect=[0, 0.06, 1, 0.94])\n'
+             '        return heading\n\n'
+             '    def write(fig, update, frames, name):\n'
+             '        anim = FuncAnimation(fig, update, frames=frames, '
+             'blit=False)\n'
+             '        path = os.path.join(OUT, name)\n'
+             "        anim.save(path, writer=PillowWriter(fps=FPS),\n"
+             "                  savefig_kwargs={'facecolor': 'white'})\n"
+             "        plt.close(fig)\n"
+             "        print('wrote %s (%.1f MB)'\n"
+             "              % (path, os.path.getsize(path)/1024.0/1024.0))\n\n"
+             '    # ---- the CP phase '
+             '-------------------------------------------\n'
+             '    phases = np.linspace(0.0, 2.0*np.pi, 240, '
+             'endpoint=False)\n'
+             '    fig, (ax_map, ax_ell) = plt.subplots(\n'
+             '        1, 2, figsize=FIGSIZE, dpi=DPI,\n'
+             "        gridspec_kw={'width_ratios': [1.35, 1.0]})\n"
+             '    image = ax_map.imshow(oscillogram(phases[0]), '
+             "origin='lower',\n"
+             "                          aspect='auto', cmap='viridis',\n"
+             '                          vmin=0.0, vmax=ceiling_cp,\n'
+             '                          extent=[50.0, 12000.0, -1.0, '
+             '1.0])\n'
+             "    ax_map.set_xlabel('Baseline [km]')\n"
+             "    ax_map.set_ylabel('Energy [GeV]')\n"
+             '    ax_map.set_yticks([-1, 0, 1])\n'
+             "    ax_map.set_yticklabels(['0.1', '1', '10'])\n"
+             '    ax_map.grid(False)\n'
+             '    ax_ell.plot(locus[:, 0], locus[:, 1], color=ACCENT, '
+             'lw=1.6)\n'
+             "    marker, = ax_ell.plot([], [], 'o', ms=9, color=MARK, "
+             'zorder=5)\n'
+             '    ax_ell.set_xlim(lo, hi)\n'
+             '    ax_ell.set_ylim(lo, hi)\n'
+             "    ax_ell.set_aspect('equal', adjustable='box')\n"
+             "    ax_ell.set_xlabel(r'$P(\\nu_\\mu \\to "
+             "\\nu_e)$')\n"
+             "    ax_ell.set_ylabel(r'$P(\\bar\\nu_\\mu \\to "
+             "\\bar\\nu_e)$')\n"
+             "    head = caption(fig, 'One broadcast call a frame  ---  "
+             "40,000 probabilities')\n\n"
+             '    def update_cp(i):\n'
+             '        image.set_data(oscillogram(phases[i]))\n'
+             '        marker.set_data(*[[v] for v in '
+             'ellipse_point(phases[i])])\n'
+             "        head.set_text(r'The CP phase:  $\\delta_{CP} = "
+             "%.2f\\pi$'\n"
+             '                      % (phases[i]/np.pi))\n'
+             '        return image, marker\n\n'
+             "    write(fig, update_cp, len(phases), 'anim_cp.gif')\n\n"
+             '    # ---- the sterile state '
+             '---------------------------------------\n'
+             '    d41s = np.logspace(-1.0, 1.0, 180)\n'
+             '    fig, (ax_map, ax_cut) = plt.subplots(\n'
+             '        1, 2, figsize=FIGSIZE, dpi=DPI,\n'
+             "        gridspec_kw={'width_ratios': [1.35, 1.0]})\n"
+             '    image = ax_map.imshow(sterile_map(d41s[0]), '
+             "origin='lower',\n"
+             "                          aspect='auto', cmap='magma',\n"
+             '                          vmin=0.0, vmax=ceiling_s,\n'
+             '                          extent=[100.0, 12742.0, 0.0, '
+             '2.0])\n'
+             "    ax_map.set_xlabel('Baseline [km]')\n"
+             "    ax_map.set_ylabel('Energy [GeV]')\n"
+             '    ax_map.set_yticks([0, 1, 2])\n'
+             "    ax_map.set_yticklabels(['1', '10', '100'])\n"
+             '    ax_map.grid(False)\n'
+             '    curve, = ax_cut.plot([], [], color=ACCENT, lw=1.8)\n'
+             '    ax_cut.set_xlim(0.0, 2.0)\n'
+             '    ax_cut.set_ylim(0.0, ceiling_s*1.05)\n'
+             '    ax_cut.set_xticks([0, 1, 2])\n'
+             "    ax_cut.set_xticklabels(['1', '10', '100'])\n"
+             "    ax_cut.set_xlabel('Energy [GeV]')\n"
+             "    ax_cut.set_ylabel(r'$P(\\nu_\\mu \\to "
+             "\\nu_s)$')\n"
+             "    ax_cut.set_title('Through the diameter, 12742 km', "
+             'fontsize=11)\n'
+             "    head = caption(fig, 'Four flavors, constant density  "
+             "---  the sterile '\n"
+             "                        'state feels neither potential')\n"
+             '    axis_s = np.log10(energies_s/GEV)\n\n'
+             '    def update_sterile(i):\n'
+             '        now = sterile_map(d41s[i])\n'
+             '        image.set_data(now)\n'
+             '        curve.set_data(axis_s, now[:, -1])\n'
+             "        head.set_text(r'A sterile state:  $\\Delta "
+             "m^2_{41} = %.2f$ eV$^2$'\n"
+             '                      % d41s[i])\n'
+             '        return image, curve\n\n'
+             "    write(fig, update_sterile, len(d41s), "
+             "'anim_sterile.gif')\n\n"
+             '    # ---- through the Earth '
+             '---------------------------------------\n'
+             '    cosines = np.linspace(-1.0, -0.05, 150)\n'
+             '    fig, (ax_earth, ax_prob) = plt.subplots(\n'
+             '        1, 2, figsize=FIGSIZE, dpi=DPI,\n'
+             "        gridspec_kw={'width_ratios': [1.0, 1.35]})\n"
+             '    for radius, colour in zip(radii, colours):\n'
+             '        ax_earth.add_patch(Circle((0.0, 0.0), radius, '
+             'facecolor=colour,\n'
+             "                                  edgecolor='none', "
+             'zorder=1))\n'
+             '    ax_earth.add_patch(Circle((0.0, 0.0), gd.EARTH_RADIUS, '
+             'fill=False,\n'
+             "                              edgecolor='#334155', lw=1.2, "
+             'zorder=3))\n'
+             '    span = gd.EARTH_RADIUS*1.08\n'
+             '    ax_earth.set_xlim(-span, span)\n'
+             '    ax_earth.set_ylim(-span, span)\n'
+             "    ax_earth.set_aspect('equal')\n"
+             "    ax_earth.axis('off')\n"
+             "    ax_earth.plot([0.0], [gd.EARTH_RADIUS], 'v', "
+             "color='#0f172a',\n"
+             '                  ms=9, zorder=5)\n'
+             "    path_line, = ax_earth.plot([], [], color=MARK, lw=2.2, "
+             'zorder=4)\n'
+             '    prob_line, = ax_prob.plot([], [], color=ACCENT, '
+             'lw=1.8)\n'
+             '    ax_prob.set_xlim(0.0, 2.0)\n'
+             '    ax_prob.set_ylim(0.0, 1.02)\n'
+             '    ax_prob.set_xticks([0, 1, 2])\n'
+             "    ax_prob.set_xticklabels(['1', '10', '100'])\n"
+             "    ax_prob.set_xlabel('Energy [GeV]')\n"
+             "    ax_prob.set_ylabel(r'$P(\\nu_\\mu \\to "
+             "\\nu_\\mu)$')\n"
+             "    head = caption(fig, 'The chord is re-cut into PREM slabs "
+             "at every '\n"
+             "                        'angle  ---  100 energies, one "
+             "call')\n"
+             '    axis_e = np.log10(energies_e/GEV)\n\n'
+             '    def update_earth(i):\n'
+             '        costhz = cosines[i]\n'
+             '        length = '
+             'earth.distance_traveled_inside_earth(costhz)\n'
+             '        sin_thz = np.sqrt(max(0.0, 1.0 - costhz*costhz))\n'
+             '        path_line.set_data(\n'
+             '            [length*sin_thz, 0.0],\n'
+             '            [gd.EARTH_RADIUS + length*costhz, '
+             'gd.EARTH_RADIUS])\n'
+             '        prob_line.set_data(axis_e, '
+             'earth.probabilities_3nu_earth(\n'
+             '            H_VAC_3NU, energies_e, costhz)[:, P3_MUMU])\n'
+             "        head.set_text(r'Through the Earth:  "
+             "$\\cos\\theta_z = %+.2f$, '\n"
+             "                      r'%d km' % (costhz, round(length)))\n"
+             '        return path_line, prob_line\n\n'
+             "    write(fig, update_earth, len(cosines), "
+             "'anim_earth.gif')\n\n"
+             '    # ---- cutting the profile '
+             '-------------------------------------\n'
+             '    ramp = np.round(np.logspace(0.0, np.log10(80.0), '
+             '120)).astype(int)\n'
+             '    ramp_values = [probability(int(n)) for n in ramp]\n'
+             '    fig, (ax_rho, ax_conv) = plt.subplots(\n'
+             '        1, 2, figsize=FIGSIZE, dpi=DPI,\n'
+             "        gridspec_kw={'width_ratios': [1.15, 1.0]})\n"
+             '    ax_rho.plot(fine, profile(fine), color=MUTED, lw=1.6,\n'
+             "                label='the true profile')\n"
+             "    stair, = ax_rho.step([], [], where='post', "
+             'color=ACCENT, lw=1.8,\n'
+             "                         label='what is solved')\n"
+             "    ax_rho.set_xlabel('Distance along the trajectory "
+             "[km]')\n"
+             "    ax_rho.set_ylabel(r'Density [g cm$^{-3}$]')\n"
+             '    ax_rho.set_xlim(0.0, baseline_km)\n'
+             '    ax_rho.set_ylim(profile(fine).min()-0.3, '
+             'profile(fine).max()+0.3)\n'
+             "    ax_rho.legend(loc='upper right', fontsize=9)\n"
+             "    ax_conv.axhline(reference, color=MUTED, ls='--', "
+             "lw=1.2,\n"
+             "                    label='600 slabs')\n"
+             '    trace, = ax_conv.plot([], [], color=ACCENT, lw=1.6)\n'
+             "    dot, = ax_conv.plot([], [], 'o', ms=7, color=MARK, "
+             'zorder=5)\n'
+             "    ax_conv.set_xscale('log')\n"
+             '    ax_conv.set_xlim(1, 90)\n'
+             '    edge = 0.12*(max(max(ramp_values), reference)\n'
+             '                 - min(min(ramp_values), reference)) or '
+             '0.01\n'
+             '    ax_conv.set_ylim(min(min(ramp_values), reference)-edge,\n'
+             '                     max(max(ramp_values), '
+             'reference)+edge)\n'
+             "    ax_conv.set_xlabel('Number of slabs')\n"
+             "    ax_conv.set_ylabel(r'$P_{\\mu e}$')\n"
+             "    ax_conv.legend(loc='lower right', fontsize=9)\n"
+             "    head = caption(fig, 'Each slab is solved exactly  ---  "
+             "the only '\n"
+             "                        'approximation is how finely the "
+             "profile is cut')\n\n"
+             '    def update_slabs(i):\n'
+             '        n = int(ramp[i])\n'
+             '        edges = np.linspace(0.0, baseline_km, n + 1)\n'
+             '        mid = 0.5*(edges[:-1] + edges[1:])\n'
+             '        stair.set_data(np.append(edges[:-1], '
+             'baseline_km),\n'
+             '                       np.append(profile(mid), '
+             'profile(mid[-1])))\n'
+             '        trace.set_data(ramp[:i+1], ramp_values[:i+1])\n'
+             '        dot.set_data([n], [ramp_values[i]])\n'
+             "        head.set_text(r'Layered matter:  %d slab%s,  "
+             "$P_{\\mu e} = %.5f$'\n"
+             "                      % (n, '' if n == 1 else 's', "
+             'ramp_values[i]))\n'
+             '        return stair, trace, dot\n\n'
+             "    write(fig, update_slabs, len(ramp), 'anim_slabs.gif')\n\n"
+             '    # Pillow writes a colour table per frame, so what it '
+             'just wrote is\n'
+             '    # some twenty times larger than it needs to be.  The '
+             'same two-pass\n'
+             '    # palette the command line uses brings it down; '
+             'skipped without\n'
+             '    # ffmpeg, since the GIFs are already usable.\n'
+             '    import shutil\n\n'
+             "    sys.path.insert(0, os.path.abspath(os.path.join('..', "
+             "'tools')))\n"
+             '    import make_demo_video\n\n'
+             "    if shutil.which('ffmpeg') is None:\n"
+             "        print('\\nffmpeg not found: the GIFs above are "
+             "Pillow-sized.')\n"
+             '    else:\n'
+             "        for name in ('cp', 'sterile', 'earth', 'slabs'):\n"
+             "            path = os.path.join(OUT, 'anim_%s.gif' % "
+             'name)\n'
+             '            before = os.path.getsize(path)/1024.0/1024.0\n'
+             '            make_demo_video.shrink(path, path, fps=12,\n'
+             '                                   width=860, colors=128)\n'
+             '            after = os.path.getsize(path)/1024.0/1024.0\n'
+             "            print('  %-16s %5.1f MB -> %4.1f MB' % (name, "
+             'before, after))\n'
+             'else:\n'
+             "    print('RENDER is False: the stills above are the "
+             "output,')\n"
+             "    print('and img/anim_*.gif are the rendered scenes.')"),
+        md('### After rendering\n\n'
+           'The cell above writes the four GIFs and then shrinks them '
+           'in place, through `tools/make_demo_video.py` — the same code '
+           'the command line runs, so there is one implementation of the '
+           'encoding rather than two.\n\n'
+           'To do either step by hand:\n\n'
+           '```shell\n'
+           '# Join the four scenes into one reel\n'
+           'python tools/make_demo_video.py --join img/anim_cp.gif \\\n'
+           '    img/anim_sterile.gif img/anim_earth.gif '
+           'img/anim_slabs.gif \\\n'
+           '    --out ~/reel.mp4\n\n'
+           '# Shrink any clip, which is what makes a GIF publishable\n'
+           'python tools/make_demo_video.py --shrink ~/reel.mp4 '
+           '--out ~/reel.gif\n'
+           '```\n\n'
+           'Both go through a **shared palette**: one pass computes a '
+           'colour table for the whole clip, the second applies it. '
+           'Writing a GIF directly gives every frame its own table, '
+           'which is where the twenty-fold difference comes from. The '
+           'knobs are `--fps`, `--width` and `--colors`, in that order '
+           'of effect on size.\n\n'
+           '**Two traps, both hit while writing this.** A GIF stores its '
+           'frame delays in hundredths of a second, so ffmpeg reads a '
+           '90 ms frame as roughly 100 fps and, without an explicit '
+           'output rate, writes every frame nine times over — a '
+           'four-hundred-frame reel became ninety megabytes and climbing '
+           'before it was noticed. And `ffmpeg` installed as a **snap** '
+           'has a private `/tmp` and cannot read or write under the real '
+           'one; it fails naming a path that plainly exists. Work under '
+           '`$HOME`.'),
+    ])
 
 
 # ---------------------------------------------------------------------------
@@ -4003,6 +4817,8 @@ READING_ORDER = [
     ('18_evolution_operator.ipynb',
      'The evolution operator and the SU(n) coefficients',
      'the machinery underneath, for composing and extending'),
+    ('19_animations.ipynb', 'Animated scenes',
+     'four sweeps, as stills, and the reel they came from'),
 ]
 
 DOCS = 'https://mbustama.github.io/NuOscProbExact'
