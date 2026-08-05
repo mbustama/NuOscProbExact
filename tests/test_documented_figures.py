@@ -30,6 +30,7 @@ the sentences beside them.  These derive both the count and the range
 from the data itself.
 """
 
+import glob
 import json
 import os
 import re
@@ -43,6 +44,7 @@ INDEX_RST = os.path.join(ROOT, 'docs', 'source', 'index.rst')
 QUICKSTART_RST = os.path.join(ROOT, 'docs', 'source', 'quickstart.rst')
 METHODOLOGY_RST = os.path.join(ROOT, 'docs', 'source', 'methodology.rst')
 FASTKERNELS = os.path.join(ROOT, 'src', 'fastkernels.py')
+RELEASE_NOTES = os.path.join(ROOT, 'RELEASE_NOTES.md')
 
 # The scalar cost of one probability, in microseconds.  Re-measured in
 # 1.8.6; see the changelog entry for the method.  Stated in words on the
@@ -155,7 +157,7 @@ def test_no_document_still_carries_a_superseded_scalar_timing():
     r"""The figures replaced in 1.8.6 do not survive anywhere."""
     superseded = [13, 16]
     for path in (README, INDEX_RST, QUICKSTART_RST, METHODOLOGY_RST,
-                 FASTKERNELS):
+                 FASTKERNELS, RELEASE_NOTES):
         text = read(path)
         for value in superseded:
             for spelling in (r'\b%d\s*(?:us|µs|microsecond)' % value,
@@ -516,9 +518,14 @@ def test_the_earth_scan_table_agrees_between_readme_and_index():
 
 
 def test_the_earth_crossing_speedups_agree_everywhere():
-    r"""One Earth crossing, compiled against NumPy, stated in three places."""
+    r"""One Earth crossing, compiled against NumPy, stated in four places.
+
+    `RELEASE_NOTES.md` is one of them: it is the first thing a reader of
+    the GitHub release sees, and it quotes the headline figure of the
+    release, so it is exactly the copy that must not be left behind.
+    """
     for _, speedup in EARTH_CROSSING:
-        for path in (README, INDEX_RST, FASTKERNELS):
+        for path in (README, INDEX_RST, FASTKERNELS, RELEASE_NOTES):
             text = read_flowed(path)
             assert '~%sx' % speedup in text.replace('\u00d7', 'x'), (
                 '%s does not quote ~%sx for one Earth crossing'
@@ -533,7 +540,8 @@ def test_the_palindrome_speedup_agrees_everywhere():
     document that quotes it wrongly is immediately falsifiable.
     """
     for speedup in PALINDROME_SPEEDUP:
-        for path in (README, INDEX_RST, QUICKSTART_RST, FASTKERNELS):
+        for path in (README, INDEX_RST, QUICKSTART_RST, FASTKERNELS,
+                     RELEASE_NOTES):
             text = read_flowed(path).replace('\u00d7', 'x')
             # The bare number would be satisfied by `1.5x to 20x`, the span
             # quoted for the backend as a whole, and would pass without the
@@ -549,9 +557,55 @@ def test_every_document_names_the_palindrome_switch():
     import fastkernels
 
     assert isinstance(fastkernels.USE_PALINDROME, bool)
-    for path in (README, INDEX_RST, QUICKSTART_RST):
+    for path in (README, INDEX_RST, QUICKSTART_RST, RELEASE_NOTES):
         # Bounded, because a plain substring test is satisfied by any
         # misspelling that merely contains the name.
         assert re.search(r'\bUSE_PALINDROME\b', read_flowed(path)), (
             '%s claims the palindrome speedup without naming the switch '
             'that turns it off' % os.path.relpath(path, ROOT))
+
+
+# Words for counts a notebook collection plausibly reaches.  Separate from
+# `COUNT_WORDS` above, which stops at twelve because the frozen set is
+# unlikely to grow past it.
+NOTEBOOK_COUNT_WORDS = {
+    15: 'fifteen', 16: 'sixteen', 17: 'seventeen', 18: 'eighteen',
+    19: 'nineteen', 20: 'twenty', 21: 'twenty-one', 22: 'twenty-two',
+    23: 'twenty-three', 24: 'twenty-four', 25: 'twenty-five',
+}
+
+# Files whose prose says how many notebooks there are.
+NOTEBOOK_COUNT_FILES = [README, MAKE_NOTEBOOKS, RELEASE_NOTES]
+
+
+def test_the_notebook_count_is_described_correctly():
+    r"""Prose saying how many notebooks there are agrees with the tree.
+
+    Nothing guarded this, and it duly rotted: `README.md` said
+    "Eighteen worked notebooks" in two places, and the generator's own
+    docstring said "fifteen", while nineteen were shipping.  Both were
+    found by reading, which is the failure mode the rest of this module
+    exists to prevent.
+
+    The count is derived from the directory rather than restated, so
+    adding a notebook fails this until the sentences catch up.
+    """
+    count = len(glob.glob(os.path.join(ROOT, 'notebooks', '*.ipynb')))
+    assert count in NOTEBOOK_COUNT_WORDS, (
+        'no spelling on file for %d notebooks; extend '
+        'NOTEBOOK_COUNT_WORDS' % count)
+
+    for path in NOTEBOOK_COUNT_FILES:
+        text = read_flowed(path)
+        for number, word in NOTEBOOK_COUNT_WORDS.items():
+            if number == count:
+                continue
+            # Bounded on both sides, and requiring the noun: an
+            # unanchored search for "twenty" matches "twenty-two", and a
+            # bare number word matches any unrelated sentence.
+            stale = re.search(r'\b%s (worked )?notebooks\b' % word, text,
+                              re.IGNORECASE)
+            assert not stale, (
+                '%s says "%s notebooks"; there are %d, so it should say '
+                '"%s"' % (os.path.relpath(path, ROOT), word, count,
+                          NOTEBOOK_COUNT_WORDS[count]))

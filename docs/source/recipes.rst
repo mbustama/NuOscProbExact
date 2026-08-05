@@ -290,6 +290,55 @@ are the wrong tool, since no refinement recovers a jump that straddles a
 slab.  Split the trajectory at the discontinuities and call once per piece,
 which is what :mod:`earth` does with the PREM shells.
 
+A Hamiltonian of your own, through the Earth
+--------------------------------------------
+
+:func:`earth.probabilities_3nu_earth` takes the energy-independent *vacuum*
+Hamiltonian and builds :math:`H = H_{\rm vac}/E + V_{CC}P_{ee}` per slab
+itself, so a Hamiltonian that is not of that form cannot go through it —
+non-standard interactions whose strength varies along the path, a
+long-range potential sourced by the whole Earth, anything with its own
+radial dependence.  Build the slabs, then interpret them yourself:
+
+.. jupyter-execute::
+
+    import slabs
+
+    costhz = -1.0
+    widths_km, densities = earth.earth_slabs(costhz, 8)
+
+    # Where each slab sits, which the standard Hamiltonian never needs
+    edges = np.concatenate(([0.0], np.cumsum(widths_km)))
+    r_km = earth.earth_radial_distance_from_depth(
+        costhz, 0.5*(edges[:-1] + edges[1:]))
+
+    h = np.asarray(hamiltonians3nu.hamiltonian_3nu_matter(
+        h_vacuum, 10.0*GEV, earth.matter_potential(densities)))
+
+    # Any Hermitian addition of your own goes here.  This one grows
+    # toward the centre of the Earth, which no V_CC can imitate.
+    extra = 2.0e-14*(1.0 - r_km/gd.EARTH_RADIUS)
+    h = h + extra[:, None, None]*np.diag([1.0, -1.0, 0.0])
+
+    print('slabs: %d' % len(widths_km))
+    print('P_mue = %.6f'
+          % slabs.probabilities_3nu_slabs(h, widths_km*KM)[3])
+
+:func:`earth.earth_slabs` does the part worth reusing — it cuts the chord at
+every PREM boundary it crosses, so no slab straddles a discontinuity — and
+with the extra term set to zero this reproduces
+:func:`earth.probabilities_3nu_earth` exactly, since it is the same
+construction.  That equality is the check to run first when building a
+Hamiltonian this way.
+
+.. figure:: ../../img/gallery/gallery_long_range.png
+   :width: 90%
+   :alt: The change in P_mue through the Earth from a long-range force
+
+   A long-range force from a gauged :math:`L_e - L_\mu` symmetry, in energy
+   and zenith angle.
+   Code: `notebook 20 <https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/20_arbitrary_hamiltonian.ipynb>`_.
+
 Between two places on the Earth
 -------------------------------
 
