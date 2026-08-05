@@ -143,6 +143,29 @@ Set to ``False`` to force the NumPy path even when Numba is installed.
 `available` reports the two together.
 """
 
+USE_PALINDROME = True
+r"""bool: Module-level switch.
+
+Whether a slab sequence that reads the same from either end may be
+composed at roughly two thirds of the cost, by computing each distinct
+operator once instead of twice.  True by default: every Earth chord
+qualifies, and the saving is between 1.3x and 1.8x.
+
+Set it to ``False`` to compose every sequence in full.  That is not a
+correctness switch --- the two agree to a few times 1e-15, and the
+mirrored composer's departure from unitarity is if anything slightly
+smaller --- but the two orderings round differently, so it is the way to
+ask for the plain left-to-right product when a comparison needs one, and
+the way to establish that a discrepancy is or is not the palindrome's
+doing.
+
+Whether a given sequence *is* a palindrome is a separate question, which
+`palindromic` answers; this switch only decides whether it is worth
+asking.
+
+.. versionadded:: 1.12.0
+"""
+
 MIN_BATCH = {2: 50000, 3: 1, 4: 1}
 r"""dict: Module-level constant.
 
@@ -363,7 +386,8 @@ def worthwhile_mirror(n_flavors: int, size: int) -> bool:
     bool
         Whether to use the mirrored composer.
     """
-    return available() and size >= MIN_MIRROR_SLABS.get(n_flavors, 1)
+    return (USE_PALINDROME and available()
+            and size >= MIN_MIRROR_SLABS.get(n_flavors, 1))
 
 
 def worthwhile(n_flavors: int, size: int) -> bool:

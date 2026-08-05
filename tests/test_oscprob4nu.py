@@ -13,6 +13,7 @@ import numpy as np
 import pytest
 import scipy.linalg
 
+import fastkernels
 import globaldefs as gd
 import hamiltonians3nu
 import hamiltonians4nu
@@ -321,34 +322,71 @@ def test_nsi_leaves_the_sterile_row_and_column_alone():
     assert np.max(np.abs(difference[:3, :3])) > 0.0
 
 
-def test_root_polishing_is_what_makes_a_stiff_spectrum_accurate():
-    r"""The refinement against the matrix earns its cost.
+@pytest.mark.parametrize('use_numba', [False, True])
+def test_root_polishing_is_what_makes_a_stiff_spectrum_accurate(use_numba,
+                                                                monkeypatch):
+    r"""The refinement against the matrix earns its cost, on both paths.
 
     A 3+1 spectrum with an eV-scale sterile spans four orders of
     magnitude, and the closed-form roots then carry only what the three
     invariants retain in double precision.  This pins the improvement so
     that removing the refinement cannot pass unnoticed.
+
+    Two things about how it is pinned, both learned the hard way.
+
+    It measures **each backend separately**.  The two compute the
+    closed-form roots with different roundings, and in a cluster this
+    tight that decides which Newton steps the halfway guard in
+    `oscprob4nu._polish_roots` will admit.  Asserting one number for
+    whichever path happened to be dispatched made the test a hostage to
+    that: when the compiled path took over `probabilities_4nu`, the
+    measured gain at 1 GeV fell from 418x to 10.6x, close enough to a
+    threshold of ten that it passed on one machine and failed on
+    another.  Neither backend is better than the other --- swept over
+    energy, the compiled one leads at 0.5 and 10 GeV and trails at 1 and
+    2 --- so there is nothing here to fix, only something to stop
+    measuring by accident.
+
+    And it measures where the effect is **robust rather than merely
+    large**.  The gain is a strong function of how degenerate the
+    spectrum is: at half a GeV the closest pair is 1.4e-4 of the
+    spectrum apart and refining is worth some three thousand times on
+    both paths, while by 25 GeV the roots are 3.3e-3 apart and refining
+    is worth nothing on either --- it is very slightly *harmful*, the
+    guard's guarantee being about the roots rather than about phases
+    accumulated over a long baseline.  The energy here is the degenerate
+    end, where the margin is four orders of magnitude wide and no
+    plausible difference in libm can walk it across.
     """
+    if use_numba and not fastkernels.HAVE_NUMBA:
+        pytest.skip('Numba is not installed')
+    monkeypatch.setattr(fastkernels, 'USE_NUMBA', use_numba)
+
+    energy = 0.5e9
     h_matter = hamiltonians4nu.hamiltonian_4nu_matter(
         vacuum_4nu(s14=np.sqrt(0.10), s24=np.sqrt(0.10)),
-        ENERGY, gd.VCC_EARTH_CRUST, gd.VNC_EARTH_CRUST)
+        energy, gd.VCC_EARTH_CRUST, gd.VNC_EARTH_CRUST)
 
     reference = np.abs(scipy.linalg.expm(
         -1.j*traceless(h_matter)*BASELINE).T)**2
 
-    original = oscprob4nu.POLISH_ROOTS
-    try:
-        oscprob4nu.POLISH_ROOTS = True
-        polished = np.max(np.abs(np.asarray(oscprob4nu.probabilities_4nu(
-            h_matter, BASELINE)).reshape(4, 4) - reference))
-        oscprob4nu.POLISH_ROOTS = False
-        unpolished = np.max(np.abs(np.asarray(oscprob4nu.probabilities_4nu(
-            h_matter, BASELINE)).reshape(4, 4) - reference))
-    finally:
-        oscprob4nu.POLISH_ROOTS = original
+    # The spectrum this is about: four roots spanning orders of
+    # magnitude, with the closest pair a fraction of that apart.
+    spectrum = np.sort(np.linalg.eigvalsh(traceless(h_matter)))
+    relative_gap = np.min(np.diff(spectrum))/np.max(np.abs(spectrum))
+    assert relative_gap < 1.0e-3, relative_gap
 
-    assert polished < 1.e-9
-    assert unpolished > 10.0*polished
+    monkeypatch.setattr(oscprob4nu, 'POLISH_ROOTS', True)
+    polished = np.max(np.abs(np.asarray(oscprob4nu.probabilities_4nu(
+        h_matter, BASELINE)).reshape(4, 4) - reference))
+    monkeypatch.setattr(oscprob4nu, 'POLISH_ROOTS', False)
+    unpolished = np.max(np.abs(np.asarray(oscprob4nu.probabilities_4nu(
+        h_matter, BASELINE)).reshape(4, 4) - reference))
+
+    assert polished < 1.0e-9
+    # Measured at about 3200x on the NumPy path and 3400x on the
+    # compiled one; a hundred leaves a factor of thirty of headroom.
+    assert unpolished > 100.0*polished
 
 
 def nearly_degenerate_pair(rng, separation):

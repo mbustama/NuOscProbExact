@@ -163,6 +163,11 @@ and the project uses [Semantic Versioning](https://semver.org/).
   `_palindromic_stack` walks the first half and returns at the first
   disagreement, and is 8x cheaper.
 
+  `fastkernels.USE_PALINDROME` switches it, and is True by default.  It is
+  not a correctness switch --- the two orderings agree to a few times
+  1e-15 --- but the plain left-to-right product is what a comparison needs
+  when the question is whether a discrepancy is the palindrome's doing.
+
   Composition ordering is regrouped, so results move by 2e-15 to 5e-15
   against composing the whole chord.  Unitarity is unchanged — measured
   identical at three flavors and at four, marginally better for the
@@ -348,6 +353,29 @@ and the project uses [Semantic Versioning](https://semver.org/).
   it reproduces `earth.density_prem` to 5e-14 over 6372 radii.
 
 ### Fixed
+
+- **`test_root_polishing_is_what_makes_a_stiff_spectrum_accurate` measured
+  whichever backend happened to be dispatched.**  When the compiled path
+  took over `probabilities_4nu` earlier in this release, the gain it
+  measured at 1 GeV fell from 418x to 10.6x — close enough to its threshold
+  of ten that it passed on one machine and failed on another.  It now runs
+  per backend.
+
+  Investigating that turned up no bug to fix, which is the useful part.
+  The two paths round the closed-form roots differently, and in a cluster
+  where the closest pair is 2.6e-4 of the spectrum apart, that decides
+  which Newton steps the halfway guard in `_polish_roots` admits.  Neither
+  path is better: swept over energy, the compiled one leads at 0.5 and
+  10 GeV and trails at 1 and 2.
+
+  The larger point is that the gain from refining is a function of how
+  degenerate the spectrum is, not a constant to assert.  At 0.5 GeV, with
+  the closest pair 1.4e-4 apart, refining is worth some three thousand
+  times on both paths; by 25 GeV, at 3.3e-3, it is worth nothing on either
+  and is very slightly harmful — the guard's guarantee being about the
+  roots, not about phases accumulated over a long baseline.  The test now
+  measures at the degenerate end, where the margin is four orders of
+  magnitude wide, rather than where it happened to be written.
 
 - **The convergence order of the slab product was being quoted as first.**
   It is second: the density is sampled at slab *midpoints* and the PREM shell

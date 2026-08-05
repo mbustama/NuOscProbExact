@@ -971,8 +971,7 @@ def test_the_fused_kernel_matches_the_materialised_one(n_flavors,
     if not fastkernels.HAVE_NUMBA:
         pytest.skip('Numba is not installed')
 
-    monkeypatch.setattr(fastkernels, 'MIN_MIRROR_SLABS',
-                        {2: 1 << 30, 3: 1 << 30, 4: 1 << 30})
+    monkeypatch.setattr(fastkernels, 'USE_PALINDROME', False)
     energies = np.logspace(9.0, 11.0, 24)
     widths_km, densities = earth._earth_slabs_cached(COSTHZ, 8)
     widths = widths_km*gd.CONV_KM_TO_INV_EV
@@ -1272,12 +1271,12 @@ def test_the_mirrored_composer_agrees_with_the_whole_chord(n_flavors, costhz):
     fn = probabilities_earth(n_flavors)
 
     mirrored = fn(hv, energies, costhz)
-    original = fastkernels.MIN_MIRROR_SLABS
+    original = fastkernels.USE_PALINDROME
     try:
-        fastkernels.MIN_MIRROR_SLABS = {2: 1 << 30, 3: 1 << 30, 4: 1 << 30}
+        fastkernels.USE_PALINDROME = False
         whole = fn(hv, energies, costhz)
     finally:
-        fastkernels.MIN_MIRROR_SLABS = original
+        fastkernels.USE_PALINDROME = original
 
     assert np.allclose(mirrored, whole, rtol=0.0, atol=1.0e-11)
 
@@ -1310,13 +1309,13 @@ def test_the_mirrored_composer_handles_both_parities(n_per, parity):
     energies = np.logspace(9.0, 11.0, 16)
     mirrored = earth.probabilities_3nu_earth(h_vacuum(3), energies, -1.0,
                                              n_per)
-    original = fastkernels.MIN_MIRROR_SLABS
+    original = fastkernels.USE_PALINDROME
     try:
-        fastkernels.MIN_MIRROR_SLABS = {2: 1 << 30, 3: 1 << 30, 4: 1 << 30}
+        fastkernels.USE_PALINDROME = False
         whole = earth.probabilities_3nu_earth(h_vacuum(3), energies, -1.0,
                                               n_per)
     finally:
-        fastkernels.MIN_MIRROR_SLABS = original
+        fastkernels.USE_PALINDROME = original
 
     assert np.allclose(mirrored, whole, rtol=0.0, atol=1.0e-11)
 
@@ -1443,12 +1442,12 @@ def test_a_symmetric_slab_sequence_is_composed_at_half_cost():
     assert fastkernels.palindromic(h, w)
     mirrored = slabs.probabilities_3nu_slabs(h, w)
 
-    original = fastkernels.MIN_MIRROR_SLABS
+    original = fastkernels.USE_PALINDROME
     try:
-        fastkernels.MIN_MIRROR_SLABS = {2: 1 << 30, 3: 1 << 30, 4: 1 << 30}
+        fastkernels.USE_PALINDROME = False
         whole = slabs.probabilities_3nu_slabs(h, w)
     finally:
-        fastkernels.MIN_MIRROR_SLABS = original
+        fastkernels.USE_PALINDROME = original
 
     assert np.allclose(mirrored, whole, rtol=0.0, atol=1.0e-11)
     assert np.isclose(sum(mirrored), 3.0, rtol=0.0, atol=1.0e-10)
