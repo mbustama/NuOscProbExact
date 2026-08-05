@@ -119,6 +119,11 @@ def test_a_scalar_energy_still_returns_a_tuple(backend, n_flavors):
 def test_the_batched_path_reaches_the_compiled_kernel(kernel_spy):
     r"""The fused chord kernel is what a scan actually calls.
 
+    Skipped where the compiled path is switched off, which is a job the
+    CI runs deliberately: with Numba present but `USE_NUMBA` false there
+    is no kernel to reach, and asserting one was entered would be
+    asserting the opposite of what that job is checking.
+
     Without this the comparison above passes by running the NumPy path
     twice, which is how a threshold change goes unnoticed.  The
     assertion is on the *fused* kernel specifically: an Earth scan that
@@ -126,6 +131,9 @@ def test_the_batched_path_reaches_the_compiled_kernel(kernel_spy):
     and still be batched, and would quietly have given up the reason the
     fused one exists.
     """
+    if not fastkernels.available():
+        pytest.skip('the compiled path is switched off in this job')
+
     earth.probabilities_3nu_earth(h_vacuum(3), np.logspace(9.0, 11.0, 32),
                                   COSTHZ)
 
@@ -135,8 +143,16 @@ def test_the_batched_path_reaches_the_compiled_kernel(kernel_spy):
 
 
 @pytest.mark.parametrize('n_flavors', [2, 3, 4])
-def test_the_numpy_batch_fallback_agrees_with_the_kernel(n_flavors):
+def test_the_numpy_batch_fallback_agrees_with_the_kernel(n_flavors,
+                                                         monkeypatch):
     r"""The uncompiled branch beneath the batch dispatch still works.
+
+    `monkeypatch` rather than a saved-and-restored global, because it
+    restores what was actually there.  Setting `USE_NUMBA` back to True
+    by hand looks equivalent and is not: the CI runs a job with Numba
+    installed and the compiled path deliberately switched off, and a
+    test that hands it back on leaves every later test in that job
+    running the configuration the job exists to avoid.
 
     ``worthwhile_slabs`` is true at every size once Numba is present, so
     this branch is unreachable unless the backend is forced off, and
@@ -155,15 +171,16 @@ def test_the_numpy_batch_fallback_agrees_with_the_kernel(n_flavors):
     fn = probabilities_earth(n_flavors)
     across_backends = 1.0e-9 if n_flavors == 4 else ATOL
 
-    fastkernels.USE_NUMBA = True
+    if not fastkernels.HAVE_NUMBA:
+        pytest.skip('Numba is not installed')
+
+    monkeypatch.setattr(fastkernels, 'USE_NUMBA', True)
     compiled = fn(hv, energies, COSTHZ)
     compiled_loop = np.array([fn(hv, e, COSTHZ) for e in energies])
-    try:
-        fastkernels.USE_NUMBA = False
-        interpreted = fn(hv, energies, COSTHZ)
-        interpreted_loop = np.array([fn(hv, e, COSTHZ) for e in energies])
-    finally:
-        fastkernels.USE_NUMBA = True
+
+    monkeypatch.setattr(fastkernels, 'USE_NUMBA', False)
+    interpreted = fn(hv, energies, COSTHZ)
+    interpreted_loop = np.array([fn(hv, e, COSTHZ) for e in energies])
 
     assert np.allclose(compiled, interpreted, rtol=0.0, atol=across_backends)
     assert np.allclose(compiled, compiled_loop, rtol=0.0, atol=ATOL)
@@ -1146,8 +1163,8 @@ def test_the_general_batch_path_still_reaches_its_kernel(n_flavors,
     tested here directly rather than left to rot behind a dispatch that
     stopped choosing it.
     """
-    if not fastkernels.HAVE_NUMBA:
-        pytest.skip('Numba is not installed')
+    if not fastkernels.available():
+        pytest.skip('the compiled path is switched off in this job')
 
     rng = np.random.default_rng(20260808 + n_flavors)
     n_chords, n_slabs = 4, 6
@@ -1344,8 +1361,8 @@ def test_a_short_chord_is_composed_whole():
     that.  Correctness is unaffected either way, which is what this
     checks.
     """
-    if not fastkernels.HAVE_NUMBA:
-        pytest.skip('Numba is not installed')
+    if not fastkernels.available():
+        pytest.skip('the compiled path is switched off in this job')
 
     assert not fastkernels.worthwhile_mirror(3, 7)
     assert fastkernels.worthwhile_mirror(3, fastkernels.MIN_MIRROR_SLABS[3])
