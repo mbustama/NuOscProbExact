@@ -176,10 +176,12 @@ jobs:
           python-version: '3.12'
 
       - name: Install dependencies
-        # The `fast` extra is not optional here.  Coverage is 100% with Numba installed and
-        # 97% without it, because the whole `if HAVE_NUMBA:` block in fastkernels.py is
-        # unreachable when the import fails; the 98% floor is set against the former.  See
-        # the comment on fail_under in pyproject.toml.
+        # Numba has to be here.  Coverage is 100% with it and 97% without, because the whole
+        # `if HAVE_NUMBA:` block in fastkernels.py is unreachable when the import fails, and
+        # the 98% floor is set against the former.  Since 1.13.0 the base dependencies
+        # supply it, so this no longer rests on remembering an extra -- `[fast]` is kept
+        # below only because it is harmless and says what the job needs.  See the comment on
+        # fail_under in pyproject.toml.
         run: |
           python -m pip install --upgrade pip
           pip install -e '.[fast,test]'
