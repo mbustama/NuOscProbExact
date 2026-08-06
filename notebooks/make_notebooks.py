@@ -1112,8 +1112,8 @@ books['09_performance.ipynb'] = notebook(
     'Performance',
     'Two things make this library fast, and they are worth knowing in order '
     'of importance: **pass arrays instead of looping**, which costs nothing '
-    'and wins the most, and **install the optional compiled backend** if the '
-    'scans are large.\n\n'
+    'and wins the most, and **the compiled backend**, which since 1.13.0 is '
+    'installed with the package and needs nothing asked of it.\n\n'
     'Every number below is measured when the notebook runs, so it reflects '
     'the machine that produced this copy rather than a figure carried over '
     'from a README.',

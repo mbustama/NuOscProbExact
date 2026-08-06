@@ -1,4 +1,5 @@
-# Documentation dependencies.  The library itself needs only numpy.
+# Documentation dependencies.  The library itself needs only numpy and numba,
+# both of which `-e .` below brings in as base dependencies.
 #
 # This file used to list the dozen Sphinx packages by name, alongside a
 # `docs` extra in pyproject.toml that listed some of them.  The two drifted:
