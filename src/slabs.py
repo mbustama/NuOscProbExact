@@ -991,6 +991,31 @@ def probabilities_2nu_profile(
     ------
     ValueError
         As `probabilities_3nu_profile`.
+    
+    Examples
+    --------
+    .. jupyter-execute::
+
+        import numpy as np
+        import slabs
+
+        baseline = 1.0e13
+        H0 = np.diag([1.0e-13, -1.0e-13])
+        H0[0, 1] = H0[1, 0] = 0.3e-13    # something for the profile to act on
+
+        def H_of(x):
+            # A potential that rises linearly along the trajectory.
+            # Normalise by `baseline`, not by `x[-1]`: the midpoints move
+            # as the refinement doubles, so dividing by the last one makes
+            # the profile itself depend on `n_slabs`, which costs an order
+            # of convergence and can leave the tolerance unreachable.
+            h = np.broadcast_to(H0, (len(x), 2, 2)).copy()
+            h[:, 0, 0] += 1.0e-13*x/baseline
+            return h
+
+        prob, n = slabs.probabilities_2nu_profile(
+            H_of, baseline, atol=1.0e-8, return_n_slabs=True)
+        print(n, '%.6f' % prob[0])
     """
     return _probabilities_profile(hamiltonian_of, baseline, 2, n_slabs,
                                   rtol, atol, n_max, return_n_slabs,
@@ -1081,16 +1106,22 @@ def probabilities_3nu_profile(
         import numpy as np
         import slabs
 
+        baseline = 1.0e13
         H0 = np.diag([1.0e-13, 0.0, -1.0e-13])
+        H0[0, 1] = H0[1, 0] = 0.3e-13    # something for the profile to act on
 
         def H_of(x):
-            # A potential that rises linearly along the trajectory
+            # A potential that rises linearly along the trajectory.
+            # Normalise by `baseline`, not by `x[-1]`: the midpoints move
+            # as the refinement doubles, so dividing by the last one makes
+            # the profile itself depend on `n_slabs`, which costs an order
+            # of convergence and can leave the tolerance unreachable.
             h = np.broadcast_to(H0, (len(x), 3, 3)).copy()
-            h[:, 0, 0] += 1.0e-13*x/x[-1]
+            h[:, 0, 0] += 1.0e-13*x/baseline
             return h
 
         prob, n = slabs.probabilities_3nu_profile(
-            H_of, 1.0e14, atol=1.0e-8, return_n_slabs=True)
+            H_of, baseline, atol=1.0e-8, return_n_slabs=True)
         print(n, '%.6f' % prob[0])
     """
     return _probabilities_profile(hamiltonian_of, baseline, 3, n_slabs,
@@ -1147,6 +1178,31 @@ def probabilities_4nu_profile(
     ------
     ValueError
         As `probabilities_3nu_profile`.
+    
+    Examples
+    --------
+    .. jupyter-execute::
+
+        import numpy as np
+        import slabs
+
+        baseline = 1.0e13
+        H0 = np.diag([2.0e-13, 1.0e-13, 0.0, -1.0e-13])
+        H0[0, 1] = H0[1, 0] = 0.5e-13    # something for the profile to act on
+
+        def H_of(x):
+            # A potential that rises linearly along the trajectory.
+            # Normalise by `baseline`, not by `x[-1]`: the midpoints move
+            # as the refinement doubles, so dividing by the last one makes
+            # the profile itself depend on `n_slabs`, which costs an order
+            # of convergence and can leave the tolerance unreachable.
+            h = np.broadcast_to(H0, (len(x), 4, 4)).copy()
+            h[:, 0, 0] += 1.0e-13*x/baseline
+            return h
+
+        prob, n = slabs.probabilities_4nu_profile(
+            H_of, baseline, atol=1.0e-8, return_n_slabs=True)
+        print(n, '%.6f' % prob[0])
     """
     return _probabilities_profile(hamiltonian_of, baseline, 4, n_slabs,
                                   rtol, atol, n_max, return_n_slabs,

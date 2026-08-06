@@ -266,7 +266,17 @@ A profile that is not the Earth
 
 The same refinement works on any continuously varying Hamiltonian, given as a
 callable rather than as PREM: a hand-built density profile, a castle wall, a
-solar model.
+solar model.  :func:`slabs.probabilities_2nu_profile`,
+:func:`slabs.probabilities_3nu_profile` and
+:func:`slabs.probabilities_4nu_profile` are the same routine at each flavor
+count; the three-flavor one is used below.
+
+One thing to get right in the callable, because it is quiet when wrong: the
+positions it receives are the midpoints of the *current* refinement, so they
+move each time the slab count doubles.  Scale by the baseline, never by
+``x[-1]``.  Dividing by the last midpoint makes the profile itself depend on
+``n_slabs``, which costs an order of convergence and can leave a tolerance
+unreachable that would otherwise be met in a handful of slabs.
 
 .. jupyter-execute::
 

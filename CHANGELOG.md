@@ -46,7 +46,52 @@ and the project uses [Semantic Versioning](https://semver.org/).
   described there as the fallback rather than the default, which is what it
   has become.
 
+### Added
+
+- **A runnable example on the eight public routines that had none.**  The six
+  `earth` entry points --- `probabilities_{2,3,4}nu_earth` and the three
+  `_between_locations` wrappers --- are the most-called functions in the
+  library and were the only ones in that module without one, and
+  `probabilities_{2,4}nu_profile` were without one where their three-flavor
+  sibling had it.  The `earth` examples show the array-of-energies form
+  alongside the scalar one, since that is the addition of this release cycle
+  most likely to be missed.  Every block is executed by Sphinx on the API
+  page and again by `tests/test_docstrings.py` on all five Pythons.
+
 ### Fixed
+
+
+- **The documented way to write a varying profile was quietly wrong.**  The
+  example in `slabs.probabilities_3nu_profile` scaled its potential by
+  `x[-1]`, the last position it was handed.  Those positions are the
+  *midpoints of the current refinement*, so they move every time the slab
+  count doubles: dividing by the last one makes the profile itself a function
+  of `n_slabs`.  Measured on a Hamiltonian with any mixing at all, that drops
+  the convergence from fourth order to **first** — 1.03, 1.02, 1.01 over
+  successive doublings against 4.00 for the same profile scaled by the
+  baseline — and `atol=1e-8` then exhausts `n_max=1024` and raises where the
+  corrected form meets it at **16 slabs**.
+
+  It was invisible in the shipped example because that example's Hamiltonian
+  was diagonal at every point, so there was no mixing, `P_ee` was exactly
+  1.000000, and the refinement never had to do anything.  A reader adapting it
+  to a Hamiltonian that oscillates got a `ValueError` and no clue why.  The
+  example now carries an off-diagonal entry, so it exercises the refinement it
+  is demonstrating, and the pitfall is named in the example, in
+  `recipes.rst` and in `README.md`.
+
+- **Five documented constants reached no page.**  `MAX_CHUNK_BYTES`,
+  `CHUNK_BYTES_FALLBACK`, `CHUNK_BYTES_MIN`, `CHUNK_BYTES_MAX` and
+  `MIN_CHUNK_ENERGIES` each carry an autodoc docstring, and `MAX_CHUNK_BYTES`
+  is named in this changelog as the knob to retune — but none was in
+  `earth.__all__`, so `automodule` skipped all five.  The documentation had
+  been written for a page it never appeared on: zero occurrences in the built
+  API reference, against eleven for a sibling that was listed.
+
+- **`README.md`'s requirements table contradicted its own introduction.**  The
+  lead-in said the rows without an extra "need nothing beyond `numpy`",
+  directly above a `numba` row marked as installed by default.
+
 
 - **The copied-out-module test stripped `sys.path` by name, not by path.**
   `test_a_core_module_works_copied_out_on_its_own` removed every entry whose
