@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nuoscprobexact"
-version = "1.12.0"
+version = "1.13.0"
 description = "Exact two-, three- and four-flavor neutrino oscillation probabilities for arbitrary time-independent Hamiltonians"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -25,9 +25,29 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Physics",
 ]
-dependencies = ["numpy"]
+# Numba is a real dependency rather than an extra, so that the compiled path
+# is what a plain `pip install nuoscprobexact` gets.  It had been optional,
+# which meant the 12x on an Earth crossing went to whoever happened to read
+# far enough down the README.
+#
+# The cost is Numba's own numpy ceiling, which it declares and we inherit:
+# numba 0.66.0 requires `numpy<2.5`, so installing this into an environment
+# holding numpy 2.5.1 downgrades numpy to 2.4.6.  That is not hypothetical
+# and not rare --- checked across numba 0.60 to 0.66, the ceiling excluded
+# the then-current numpy either on the day numba shipped or within three
+# months of it, and numpy releases a minor roughly every six.  No spelling
+# on this side avoids it, because the pin is numba's.
+#
+# Deliberately unmarked: every Python from 3.9 to 3.14 resolves a working
+# numba (3.9 gets 0.60.0, the rest 0.66.0), so a `python_version` marker
+# would only withhold the compiled path from someone who could have it.
+dependencies = ["numpy", "numba"]
 
 [project.optional-dependencies]
+# Kept, and now a no-op: `pip install "nuoscprobexact[fast]"` is what every
+# earlier version of these instructions said, it appears in published
+# documentation and in this repository's own CI, and an extra that vanishes
+# turns those into errors for no gain.
 fast = ["numba"]
 test = ["pytest", "scipy", "coverage", "pytest-cov"]
 # Everything `cd docs && make html` needs, which is more than Sphinx itself:
@@ -197,10 +217,13 @@ exclude_also = [
 # rather than a tripwire, without letting it sag to the third.
 #
 # The consequence, stated plainly because it will otherwise be discovered the
-# hard way: `pytest --cov` without the `fast` extra installed reports 97 and
-# exits non-zero.  That is why the coverage job in .github/workflows/tests.yml
-# installs `.[fast,test]`, and it is the reason to prefer
-# `pip install -e '.[fast,test]'` when working on this locally.
+# hard way: `pytest --cov` with numba *absent* reports 97 and exits non-zero,
+# because the whole `if HAVE_NUMBA:` block in fastkernels.py is then
+# unreachable.  Since 1.13.0 numba is a base dependency, so a plain
+# `pip install -e '.[test]'` installs it and this is no longer a trap you can
+# fall into by forgetting an extra --- only by uninstalling numba on purpose,
+# which is exactly what the fallback job in .github/workflows/tests.yml does,
+# and why that job does not measure coverage.
 #
 # Do not lower it to turn a red build green --- a floor that follows the
 # measurement down is not a floor, it merely certifies whatever happened.

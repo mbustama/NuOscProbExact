@@ -1112,8 +1112,8 @@ books['09_performance.ipynb'] = notebook(
     'Performance',
     'Two things make this library fast, and they are worth knowing in order '
     'of importance: **pass arrays instead of looping**, which costs nothing '
-    'and wins the most, and **install the optional compiled backend** if the '
-    'scans are large.\n\n'
+    'and wins the most, and **the compiled backend**, which since 1.13.0 is '
+    'installed with the package and needs nothing asked of it.\n\n'
     'Every number below is measured when the notebook runs, so it reflects '
     'the machine that produced this copy rather than a figure carried over '
     'from a README.',
@@ -1192,10 +1192,12 @@ books['09_performance.ipynb'] = notebook(
              'ax.legend()\n'
              'plt.show()'),
         md('## The compiled backend\n\n'
-           'With `numba` installed, the batched paths hand large stacks to a '
-           'compiled kernel. It is switchable at runtime, which is how the '
-           'regression suite checks the two paths against each other — and is '
-           'what makes the comparison below possible in one process.'),
+           '`numba` comes with the package as of 1.13.0, so the batched paths '
+           'hand large stacks to a compiled kernel without anything being '
+           'installed on purpose. It is switchable at runtime, which is how '
+           'the regression suite checks the two paths against each other — '
+           'and is what makes the comparison below possible in one '
+           'process.'),
         code('if not fastkernels.HAVE_NUMBA:\n'
              '    print("numba is not installed; skipping this comparison.")\n'
              'else:\n'
@@ -1384,10 +1386,9 @@ books['09_performance.ipynb'] = notebook(
         md('## What to take away\n\n'
            '1. Replace loops with array arguments. This is the large win, it '
            'needs no extra dependency, and the results agree to round-off.\n'
-           '2. If the scans are large, `pip install '
-           '"nuoscprobexact[fast]"` on top of that. It is used at three '
-           'and four flavors, and declined at two, where NumPy is already '
-           'as quick.\n'
+           '2. The compiled backend needs nothing installed — `numba` is a '
+           'dependency as of 1.13.0. It is used at three and four flavors, '
+           'and declined at two, where NumPy is already as quick.\n'
            '3. Do not bother for a handful of points: the library already '
            'takes the quicker path there on its own.\n'
            '4. At four flavors, expect several times the per-element cost '

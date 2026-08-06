@@ -1,19 +1,22 @@
 # -*- coding: utf-8 -*-
-r"""Optional Numba-compiled kernels for the batched evaluation paths.
+r"""Numba-compiled kernels for the batched evaluation paths.
 
-**NuOscProbExact** needs only NumPy.  If `Numba <https://numba.pydata.org>`_
-happens to be installed, this module compiles the two-, three- and
-four-neutrino expansions into fused machine-code loops and
+`Numba <https://numba.pydata.org>`_ is a dependency of
+**NuOscProbExact** as of 1.13.0, so this module compiles the two-, three-
+and four-neutrino expansions into fused machine-code loops and
 :mod:`oscprob2nu`, :mod:`oscprob3nu` and :mod:`oscprob4nu` use them for
-large stacks; if it is not, ``HAVE_NUMBA`` is ``False``, nothing here is
-defined, and the NumPy path is used instead.  Nothing else in the
-library changes either way, and the results agree to round-off --- see
+large stacks.
+
+It is still written to do without.  If the import fails --- an
+environment where the dependency was removed on purpose, a platform with
+no wheel --- ``HAVE_NUMBA`` is ``False``, nothing here is defined, and
+the NumPy path is used instead.  Nothing else in the library changes
+either way, and the results agree to round-off --- see
 ``tests/test_fastkernels.py``, which runs both paths against each other
-whichever is available.
-
-Install the optional dependency with::
-
-    pip install "nuoscprobexact[fast]"
+whichever is available.  That fallback is not vestigial: it is the
+independent implementation these kernels are checked against, and
+``.github/workflows/tests.yml`` uninstalls Numba in one job to keep it
+honest.
 
 Why it is worth compiling
 -------------------------
@@ -93,9 +96,13 @@ Costs, so that the trade is visible
   declared with ``cache=True``, so that cost is paid once per machine
   and later runs load the compiled code from disk in milliseconds.
 
-Both are why this is an optional extra rather than a dependency, and why
-the scalar path is deliberately left alone: a single probability takes
-about 8 microseconds, which is not worth a compilation pause.
+Both are why this was an optional extra until 1.13.0.  What changed the
+argument is that neither cost falls where it would be felt: they are
+paid once, and never by a scalar call at all.  The scalar path is
+deliberately left alone --- a single probability takes about
+8 microseconds and never enters a kernel --- so the compilation pause
+belongs only to the batched paths, which are the ones that go on to save
+whole seconds.
 
 Turning it off
 --------------
@@ -414,8 +421,9 @@ def worthwhile(n_flavors: int, size: int) -> bool:
 
     The kernels are only used where they have been measured to win.
     Below the per-flavor threshold in `MIN_BATCH` the NumPy path is
-    quicker, and using the kernel anyway would make installing the
-    optional extra a pessimisation for those calls.
+    quicker, and using the kernel anyway would make the compiled backend
+    a pessimisation for those calls --- which matters more now that it
+    arrives with the package rather than being asked for.
 
     .. versionadded:: 1.6.0
 
@@ -1980,8 +1988,8 @@ if HAVE_NUMBA:                                          # pragma: no branch
         exists: :mod:`slabs` and :mod:`earth` compose *operators* across
         adjacent slabs, so they cannot use a kernel that returns
         probabilities.  Without this they ran the NumPy path however the
-        backend was configured --- installing the optional extra bought
-        an Earth crossing nothing at all.
+        backend was configured --- having Numba installed bought an Earth
+        crossing nothing at all.
 
         Parameters
         ----------

@@ -1,8 +1,15 @@
-This release is about the **Earth**. It had no compiled path at all, took one energy at a
-time, and asked for a slab count where it should have asked for an accuracy. All three are
-fixed here. The full history is in
+This is everything since the published **v1.11.0**, which is versions 1.12.0 and 1.13.0
+together — 1.12.0 was declared but never published, so upgrading from 1.11.0 brings both.
+
+It is mostly about the **Earth**. It had no compiled path at all, took one energy at a time,
+and asked for a slab count where it should have asked for an accuracy; all three are fixed
+here. The one change that is not about the Earth is the one most likely to affect you
+anyway: **`numba` is now a dependency**, so a plain install gets the compiled path — and
+brings numba's ceiling on `numpy` with it. Both are covered below.
+
+The full history is in
 [CHANGELOG.md](https://github.com/mbustama/NuOscProbExact/blob/main/CHANGELOG.md), which
-records how every figure below was measured.
+records how every figure here was measured.
 
 ## Upgrading from 1.11.0: Earth results move in the last digits
 
@@ -26,6 +33,22 @@ three-flavor one. Nothing outside the Earth routines changes numbers, and a scal
 still returns a tuple, bit-for-bit what it returned before.
 
 ## What is new since 1.11.0
+
+**The compiled backend is no longer optional.** `numba` moved from the `fast` extra into the
+base dependencies, so a plain `pip install nuoscprobexact` gets the compiled path. It had
+been an extra, which meant the 12× on an Earth crossing reached whoever read far enough down
+the README.
+
+The cost, stated because it will otherwise be discovered by surprise: `numba` declares its
+own ceiling on `numpy` — 0.66.0 requires `numpy<2.5` — and **this library inherits it**.
+Installing into an environment holding numpy 2.5.1 downgrades numpy to 2.4.6. That is not a
+corner case: across numba 0.60 to 0.66, the ceiling excluded the then-current numpy either on
+the day numba shipped or within three months, and numpy releases a minor roughly every six.
+No spelling on our side avoids it, because the pin is numba's.
+
+If the newest numpy matters more than the speed, install with `--no-deps` and add numpy
+yourself, or keep numba installed and set `fastkernels.USE_NUMBA = False`. The NumPy path is
+still there, still tested on every push, and still agrees to round-off.
 
 **The Earth, compiled.** The backend offered probability kernels only, so composing evolution
 operators across slabs — which is what layered matter and the Earth do — ran the NumPy path
@@ -128,8 +151,9 @@ reader can switch off and re-measure directly, via `fastkernels.USE_PALINDROME`.
 pip install nuoscprobexact
 ```
 
-Python 3.9 or newer, tested on 3.9 through 3.13. `numpy` is the only requirement;
-`pip install "nuoscprobexact[fast]"` adds the optional compiled backend.
+Python 3.9 or newer, tested on 3.9 through 3.13. `numpy` and `numba` are both installed, so
+the compiled backend is what a plain install gets — see the note above on numba's numpy
+ceiling. `pip install "nuoscprobexact[fast]"` still works and is now a no-op.
 
 Twenty worked notebooks, and a regression suite of more than 750 tests at 100% coverage
 against a 98% floor, cross-checked against [nuSQuIDS](https://github.com/arguelles/nuSQuIDS)

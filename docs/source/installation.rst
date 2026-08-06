@@ -25,7 +25,7 @@ want to do:
      - ``numpy``, ``matplotlib``, Jupyter
    * - Run the regression suite (``tests/``)
      - ``numpy``, ``pytest``, ``scipy``, ``coverage``
-   * - Speed up large scans (optional)
+   * - Speed up large scans (installed by default)
      - ``numba``
    * - Build this documentation
      - the contents of ``docs/requirements.txt``
@@ -34,11 +34,21 @@ want to do:
 against an independent matrix exponential.  The library itself never imports
 it.
 
+``numba`` is a base dependency as of 1.13.0, not an optional extra, so the
+compiled path is what a plain install gets.  It brings a ceiling with it:
+``numba`` declares an upper bound on ``numpy`` (0.66.0 requires
+``numpy<2.5``), and installing into an environment holding a newer ``numpy``
+than that will downgrade it.  The bound is ``numba``'s own and cannot be
+avoided from this side.  If the newest ``numpy`` matters more than the speed,
+install with ``--no-deps`` and add ``numpy`` yourself, or leave ``numba``
+installed and set :data:`fastkernels.USE_NUMBA` to ``False``.
+
 **NuOscProbExact** requires Python 3.9 or newer, and every release is tested
 on 3.9, 3.10, 3.11, 3.12, and 3.13.  The floor comes from
 :func:`numpy.broadcast_shapes`, which the batched paths use and which arrived
-in NumPy 1.20; 3.9 is also the oldest version for which the optional ``numba``
-backend still has a wheel.
+in NumPy 1.20; 3.9 is also the oldest version for which ``numba`` still has a
+wheel, which is why it is not excluded by a version marker --- every Python
+from 3.9 to 3.14 resolves a working ``numba``.
 
 Installing
 ----------
@@ -50,13 +60,15 @@ From PyPI (recommended)
 
    pip install nuoscprobexact
 
-That is the whole installation.  The only required dependency is ``numpy``.
+That is the whole installation, and it includes the compiled backend:
+``numpy`` and ``numba`` both arrive, and large scans run on compiled kernels
+without anything further being asked for.
 
 The optional extras add what each task needs, and can be combined:
 
 .. code-block:: shell
 
-   pip install "nuoscprobexact[fast]"       # numba, for the compiled kernels
+   pip install "nuoscprobexact[fast]"       # numba; a base dependency, so a no-op
    pip install "nuoscprobexact[notebooks]"  # Jupyter, matplotlib and scipy
    pip install "nuoscprobexact[test]"       # pytest, scipy and coverage
    pip install "nuoscprobexact[docs]"       # Sphinx and friends
@@ -111,9 +123,10 @@ Run the regression suite:
    pytest
 
 Every test should either pass or be skipped, and skips are expected rather
-than a sign of trouble: the only tests that skip are those for the optional
-Numba backend, which stand down when ``numba`` is not installed --- the
-default.  Install the ``fast`` extra and the whole suite runs.  It is several
+than a sign of trouble: the only tests that skip are those for the Numba
+backend, which stand down when ``numba`` is not installed.  Since ``numba``
+is a base dependency, that now happens only if it has been uninstalled
+deliberately, so the usual result is the whole suite running.  It is several
 hundred tests and takes a few seconds.
 
 The suite checks the SU(2), SU(3) and SU(4) machinery against independent
@@ -251,7 +264,7 @@ File tree
    │   ├── hamiltonians3nu.py           # Example three-flavor Hamiltonians
    │   ├── hamiltonians4nu.py           # Example four-flavor (3+1) Hamiltonians
    │   ├── globaldefs.py                # Physical constants and unit conversions
-   │   ├── fastkernels.py               # Optional Numba kernels, with a NumPy fallback
+   │   ├── fastkernels.py               # Numba kernels, with a NumPy fallback
    │   ├── slabs.py                     # Propagation across adjacent slabs
    │   └── earth.py                     # PREM, chord geometry, and Earth crossings
    ├── tools/                           # Scripts that are not part of the package

@@ -72,9 +72,11 @@ except ImportError:                                       # pragma: no cover
     # line that mattered, which is a poor return for a promise the
     # documentation makes twice.
     #
-    # The backend is optional by design, so its absence is answered the same
-    # way its being switched off is: `worthwhile` says no, and the NumPy path
-    # runs.  Nothing else in this module touches it.
+    # The backend is a dependency, but this module is written to run without
+    # it -- a lone copy like this one, or an environment where it was removed
+    # on purpose.  Its absence is answered the same way its being switched
+    # off is: `worthwhile` says no, and the NumPy path runs.  Nothing else in
+    # this module touches it.
     class _NoFastKernels:
         r"""Stands in for :mod:`fastkernels` when it is not importable."""
 

@@ -510,11 +510,11 @@ expansion does much less work per element, because what has to be amortised
 is the array machinery's fixed cost rather than the arithmetic.  Nothing
 about this is visible from the outside; the answers are the same either way.
 
-The optional compiled backend
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The compiled backend
+^^^^^^^^^^^^^^^^^^^^
 
-With :mod:`fastkernels` --- that is, with Numba installed --- the batched
-paths are compiled instead.  The NumPy path evaluates the expansion as a
+With :mod:`fastkernels` --- that is, with Numba, which is installed with the
+package as of 1.13.0 --- the batched paths are compiled instead.  The NumPy path evaluates the expansion as a
 chain of whole-array operations, so a stack of :math:`N` Hamiltonians makes
 roughly fifteen passes over :math:`N`-element arrays, each writing a
 temporary that the next reads back.  The compiled kernel does the same

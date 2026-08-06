@@ -97,8 +97,8 @@ earth
    :members:
    :undoc-members:
 
-Optional compiled backend
--------------------------
+The compiled backend
+--------------------
 
 .. automodule:: fastkernels
    :members:

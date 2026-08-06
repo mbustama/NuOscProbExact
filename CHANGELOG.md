@@ -5,6 +5,71 @@ All notable changes to **NuOscProbExact** are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.13.0] - 2026-08-06
+
+### Changed
+
+- **`numba` is a dependency, not an optional extra.**  A plain
+  `pip install nuoscprobexact` now gets the compiled path.  It was in the
+  `fast` extra, which meant the 12x on an Earth crossing was collected by
+  whoever read far enough down the README — and this release is largely about
+  making the Earth quick, so leaving the speed opt-in wasted most of it.
+
+  Nothing in the code changed.  `HAVE_NUMBA`, `USE_NUMBA` and `worthwhile()`
+  already preferred the compiled path whenever it existed, so this is
+  packaging alone.  `fast = ["numba"]` is kept as a no-op, because
+  `pip install "nuoscprobexact[fast]"` is what every earlier instruction said
+  and an extra that vanishes turns those into errors.
+
+  **The cost is numba's numpy ceiling, which we now inherit.**  numba 0.66.0
+  requires `numpy<2.5`, so installing into an environment holding numpy 2.5.1
+  downgrades it to 2.4.6 — verified in a clean virtual environment, not
+  inferred.  Nor is it a passing inconvenience: across 0.60 to 0.66 the
+  ceiling excluded the then-current numpy either on the day numba shipped
+  (0.61.0, 0.66.0) or within three months, while numpy releases a minor
+  roughly every six.  The pin is numba's own and no spelling here avoids it.
+  The escape hatches are `--no-deps` plus numpy by hand, or leaving numba
+  installed and setting `fastkernels.USE_NUMBA = False`.
+
+  **Deliberately unmarked.**  A `python_version` marker was drafted and
+  dropped: resolving the dependency set against every target from 3.9 to 3.14
+  showed all six succeed — 3.9 gets numba 0.60.0 with numpy 2.0.2, the rest
+  0.66.0 — so a marker would only have withheld the compiled path from
+  someone who could have had it.  The premise for the marker, a Python where
+  numba cannot be installed, does not currently exist.
+
+  Two consequences worth knowing.  Extras can add but never subtract, so the
+  bare install is no longer a way to *avoid* numba; that is what the two
+  escape hatches above are for.  And the `Without Numba` CI job now
+  uninstalls numba explicitly rather than merely omitting the extra — without
+  that its own assertion fails, reporting a break that is not one.  It is
+  described there as the fallback rather than the default, which is what it
+  has become.
+
+### Fixed
+
+- **The copied-out-module test stripped `sys.path` by name, not by path.**
+  `test_a_core_module_works_copied_out_on_its_own` removed every entry whose
+  *text* contained `NuOscProbExact`, which is not the set it meant: it also
+  removes unrelated directories carrying the project's name, and the
+  commonest of those is a virtual environment created inside the checkout.
+  Its `site-packages` holds NumPy, so the subprocess lost NumPy and the test
+  reported `oscprob2nu does not work copied out on its own:
+  ModuleNotFoundError: No module named 'numpy'` — the library blamed for a
+  path collision, on all three modules at once.  A `.venv` in the project
+  root, which is a common layout, failed three tests on a clean checkout.
+
+  Now the repository root, `src` and `tests` come off by `os.path.realpath`
+  comparison.  A `startswith` test on the root, the obvious alternative,
+  reproduces the bug exactly, since such an environment lives under it.  The
+  assertion that `worthwhile()` returns False still proves `src` really left
+  the path, so the test cannot quietly become vacuous.
+
+  It also now fails loudly on its own account: if NumPy is unimportable once
+  the stripping is done, the subprocess exits saying `TEST FAULT` and dumping
+  `sys.path`, instead of letting it look like the library.  Probed by
+  reinstating the old strip, which now names its own cause.
+
 ## [1.12.0] - 2026-08-02
 
 ### Added

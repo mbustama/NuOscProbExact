@@ -241,11 +241,12 @@ characteristic equation whose roots give the oscillation phases, depends on
 the Hamiltonian alone, so a scan over baselines solves it once instead of
 once per point.  See :ref:`scanning` for the three patterns.
 
-**Install Numba, if the scans are large.**  With
-``pip install "nuoscprobexact[fast]"`` the batched paths run as compiled
-loops spread over the available cores; without it the NumPy path is used and
-the results are the same to round-off.  On 2000-point scans, against the
-Python loop:
+**Numba, which comes with the package.**  Since 1.13.0 it is a base
+dependency rather than an extra, so the batched paths run as compiled loops
+spread over the available cores with nothing further to install.  Where it is
+unavailable, or switched off with :data:`fastkernels.USE_NUMBA`, the NumPy
+path is used and the results are the same to round-off.  On 2000-point scans,
+against the Python loop:
 
 .. list-table::
    :header-rows: 1
