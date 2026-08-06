@@ -284,7 +284,7 @@ of ``float64`` limbs, together holding some 32 digits --- and the same
 :math:`2.3\times10^9` amplification acts on :math:`10^{-32}` instead,
 landing at :math:`10^{-23}`.  The roots are then limited by the final
 rounding of the answer to ``float64`` rather than by the algebra at all.
-Two Aberth sweeps, also in double-double, carry the quartic's roots to that
+One Aberth sweep, also in double-double, carries the quartic's roots to that
 limit.  This is the default since 1.13.0, and
 :data:`oscprob4nu.ROOT_STRATEGY` chooses between the two.
 
@@ -319,8 +319,8 @@ through the compiled kernel, relative to what 1.12.0 shipped:
      - 0.82x
      - no
    * - **Invariants in double-double**
-     - **5.5e-17**
-     - 1.44x
+     - **3.6e-17**
+     - 1.25x
      - yes
 
 The first row has no cost against it because it is no longer a route a
@@ -343,8 +343,13 @@ recover from it, whether by refining against the matrix or by avoiding the
 polynomial altogether; this one denies the amplification anything to work
 on.  It is also the only row whose accuracy is set by the *output* format
 rather than by the method, which is why more Aberth sweeps do not improve
-it --- three are one ulp worse than two, having converged already and only
-re-rounded.
+it: one, two and three give bitwise identical answers on all nine
+Hamiltonians.  That one suffices is a property of the *start*, not of the
+iteration --- the eigensolver's quartet with the residual-trace shift
+removed in double-double rather than in ``float64``.  Removing it in
+``float64`` throws away the low limb, puts the start an ulp out, and costs
+a second sweep to recover; the count was two for exactly as long as that
+was how it was done.
 
 Extended precision is still a **poor trade**, and instructively so.  Solving
 the same quartic in ``numpy.longdouble`` was measured at 4.5e-11 --- under

@@ -49,7 +49,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - **The four-flavor latent roots now come from invariants formed in
   double-double arithmetic.**  Worst relative error over the nine
   Hamiltonians in the new `tests/stiff_reference.json` goes from 3.9e-16 to
-  **5.5e-17** — under half a `float64` ulp — for 44% more time on a full
+  **3.6e-17** — under a fifth of a `float64` ulp — for 25% more time on a full
   `probabilities_4nu` through the compiled kernel.
 
   1.12.0 escaped the invariants' conditioning by refining against the matrix
@@ -61,7 +61,29 @@ and the project uses [Semantic Versioning](https://semver.org/).
   coefficient as a pair of `float64` limbs, some 32 digits, leaves the same
   amplification acting on 1e-32 and landing at 1e-23; the roots are then
   limited by rounding the answer to `float64` rather than by the algebra.
-  Two Aberth sweeps, also in double-double, take the quartic there.
+  One Aberth sweep, also in double-double, takes the quartic there.
+
+  Three things keep the cost to 25%, and the first two were mistakes before
+  they were optimisations.  The residual-trace shift is removed from the
+  eigensolver's start **in double-double**; doing it in `float64` discards
+  the low limb the exact traceless-ing just computed, puts the start an ulp
+  out, and costs a second Aberth sweep to recover — a second sweep that was
+  briefly mistaken for something the iteration needed, since one sweep did
+  then measure 3.9e-16.  Aberth's step is evaluated as `chi*P/(chi'*P -
+  chi*S)`, for `P` and `S` the product and second symmetric function of the
+  three gaps, rather than as `(chi/chi')/(1 - (chi/chi')*sum 1/gap)`: the
+  same expression with one double-double division per root instead of five,
+  and a dd division is three `float64` divisions where a dd multiply is
+  none.  And `1/3` is baked as a dd constant instead of divided for, which
+  also made one reference case exact that was not.  Together these halved
+  the double-double overhead, 52 ms to 27 ms per 100 000 points, and
+  improved the worst root from 5.5e-17 to 3.6e-17.
+
+  Exploiting the exactly-zero imaginary diagonal of `H~` inside `H~^2` was
+  tried too, and measured no faster — the branches cost what the skipped
+  multiplications saved. What remains is close to arithmetic floor: `H~^2` in
+  double-double is about 3000 flops per element, which at 100 000 elements
+  over eight cores accounts for the ~12 ms it takes.
 
   **`oscprob4nu.ROOT_STRATEGY` selects it,** defaulting to
   `'double-double'`, with `'eigensolver'` for the LAPACK route.
@@ -90,7 +112,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
   eigensolver alone.  Callers going through `oscprob4nu` are unaffected.
 
   Two limits worth stating plainly.  On the NumPy fallback the ratio is
-  about 2.8x rather than 1.44x, the double-double primitives being
+  about 1.7x rather than 1.25x, the double-double primitives being
   elementwise array operations with nothing to amortise them over.  And this
   buys *roots*, not probabilities everywhere: reconstructing `U_4` in Newton
   form takes second differences of `exp(-i psi L)`, so a root error enters

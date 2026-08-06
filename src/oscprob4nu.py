@@ -70,9 +70,9 @@ quartic recovers it.
 So the invariants are formed in *double-double* arithmetic instead ---
 each number a pair of ``float64`` limbs, together carrying some 32
 digits --- which leaves the cluster's separation intact where double
-precision destroyed it.  Two Aberth sweeps then take the quartic's roots
-to the last ``float64`` bit: :math:`5.5 \times 10^{-17}` worst over the
-nine reference Hamiltonians, under half an ulp.  :data:`ROOT_STRATEGY`
+precision destroyed it.  One Aberth sweep then takes the quartic's roots
+to the last ``float64`` bit: :math:`3.6 \times 10^{-17}` worst over the
+nine reference Hamiltonians, under a fifth of an ulp.  :data:`ROOT_STRATEGY`
 has the measured comparison, and switches to the older route, which
 escaped the same bottleneck by refining against the *matrix* with one
 Newton step on :math:`\chi(\psi) = \det(\psi \mathbb{1} - \tilde{H})` and
@@ -196,7 +196,7 @@ How the four latent roots :math:`\psi_m` are obtained.  Either
 
 ``'double-double'`` forms :math:`I_2, I_3, I_4` in double-double
 arithmetic --- each number a pair of ``float64`` limbs, carrying some 32
-digits --- and refines the quartic's roots with two Aberth sweeps, also in
+digits --- and refines the quartic's roots with one Aberth sweep, also in
 double-double.  The invariants are the problem this solves: they compress
 the matrix into three numbers, and the amplification from those
 coefficients to the roots was measured at :math:`2.3 \times 10^9`, so a
@@ -222,7 +222,7 @@ compiled kernel, relative to the route 1.12.0 shipped:
 ========================================  ==========  =======
 Strategy for the latent roots             Rel. error  Cost
 ========================================  ==========  =======
-``'double-double'``                       5.5e-17     1.44x
+``'double-double'``                       3.6e-17     1.25x
 ``'eigensolver'``, with the Newton step   3.9e-16     1.00x
 ``'eigensolver'``, without it             6.9e-16     0.82x
 Closed form alone (`psi_roots_4nu`)       2.2e-07     ---
@@ -234,19 +234,20 @@ contract is unchanged, but nothing in the probability path is built on it
 any more.  Its error is quoted on the same nine Hamiltonians as the rest,
 which is what it is there to show.
 
-So the default buys a factor of seven on the roots for 44% more time, and
-that is the whole of the trade.  Two things it is worth being clear about.
+So the default buys an order of magnitude on the roots for 25% more time,
+and that is the whole of the trade.  Two things it is worth being clear
+about.
 
 The cost is not double-double's alone.  Both eigensolver rows call
 :func:`numpy.linalg.eigvalsh` once per element *inside* the compiled
 kernel, across every core, which is why the middle row costs about what a
 single batched :func:`numpy.linalg.eigvalsh` over the same stack costs
 while also building sixteen probabilities from it.  Double-double adds its
-invariants and two Aberth sweeps on top of that same eigensolver call,
+invariants and one Aberth sweep on top of that same eigensolver call,
 which it needs for the start --- see `_latent_roots_dd` for why the start
 cannot instead be the closed form, however much faster that is.
 
-On the NumPy path the ratio is worse, about 2.8x rather than 1.44x, the
+On the NumPy path the ratio is worse, about 1.7x rather than 1.25x, the
 double-double primitives being elementwise NumPy operations with nothing
 to amortise them over.  That path is the fallback for an installation
 without Numba, which since 1.13.0 is not the usual one; accuracy is
@@ -950,22 +951,55 @@ that the product of two halves is exact and `_two_prod` can hand back the
 rounding error it would otherwise have discarded.
 """
 
-DD_SWEEPS = 2
+DD_SWEEPS = 1
 r"""int: Module-level constant.
 
 Aberth sweeps taken over the four latent roots by the double-double route.
 
-Two, measured.  One leaves the worst case in
-``tests/stiff_reference.json`` at :math:`3.9 \times 10^{-16}`; three gives
-:math:`1.9 \times 10^{-16}`, one ``float64`` ulp *worse* than two rather
-than better, the second sweep having already converged and the third only
-re-rounding what it found.  So this is a tuned constant, not a tolerance
-to be raised when something looks inaccurate.
+One, measured: every case in ``tests/stiff_reference.json`` gives an
+identical answer at one, two and three sweeps, to the last bit.  A single
+sweep converges because the start is already good --- the eigensolver's
+quartet with the residual-trace shift removed *in double-double*, so the
+low limb the exact traceless-ing computed is not thrown away before the
+iteration begins.
+
+This constant was two for exactly as long as that subtraction was done in
+``float64``.  Discarding the low limb put the start a whole ulp out and
+cost a second sweep to recover, and the second sweep was then mistaken for
+something the iteration needed --- the error even looked like evidence for
+it, since one sweep did measure :math:`3.9 \times 10^{-16}`.  It is worth
+knowing which way that dependency runs: this is not a tolerance to raise
+when an answer looks inaccurate, it is a count that a correct start makes
+sufficient.
 
 `fastkernels` carries the same constant for its compiled kernel, as it
 does :data:`DEGENERACY_TOL`, because a module imported by this one cannot
 import back.
 """
+
+
+def _dd_reciprocal_of_three() -> tuple:
+    r"""Returns 1/3 as a double-double pair, exact to 3e-33.
+
+    Formed once at import, by the same compensated arithmetic the route uses:
+    :math:`3 h` is split exactly into ``p + e`` by `_two_prod`, so what 1/3
+    is missing after its first limb is ``((1 - p) - e)/3``.
+
+    It exists because :math:`2/3` is the one constant the quartic needs that
+    binary cannot hold, and lifting a *rounded* 2/3 into double-double would
+    zero the low limb and drag :math:`c_1` back to ``float64`` accuracy ---
+    the :math:`1.1 \times 10^{-7}` stall this route exists to remove, wearing
+    the disguise of a solver failure.  Multiplying by this pair costs no
+    division, where `_dd_div` costs three.
+
+    Returns
+    -------
+    tuple
+        The high and low limbs, as Python floats.
+    """
+    hi = 1.0/3.0
+    product, error = _two_prod(3.0, hi)
+    return hi, ((1.0 - product) - error)/3.0
 
 
 def _strategy_code() -> int:
@@ -1076,6 +1110,15 @@ def _dd_scale(x: tuple, factor: float) -> tuple:
     return (factor*x[0], factor*x[1])
 
 
+THIRD_HI, THIRD_LO = _dd_reciprocal_of_three()
+r"""tuple: Module-level constant.
+
+The two ``float64`` limbs of 1/3, from `_dd_reciprocal_of_three`.  Bound
+here rather than beside :data:`DD_SPLIT` because forming it needs
+`_two_prod`, which is defined below it.
+"""
+
+
 def _latent_roots_dd(traceless: np.ndarray) -> np.ndarray:
     r"""Returns the latent roots to the last ``float64`` bit.
 
@@ -1088,7 +1131,7 @@ def _latent_roots_dd(traceless: np.ndarray) -> np.ndarray:
     ``float64`` limbs, carrying some 32 digits --- leaves a
     :math:`10^{-32}` coefficient error to amplify to :math:`10^{-23}`, and
     the roots are then limited by the final rounding to ``float64`` instead
-    of by the algebra: :math:`5.5 \times 10^{-17}` worst over
+    of by the algebra: :math:`3.6 \times 10^{-17}` worst over
     ``tests/stiff_reference.json``, against :math:`3.9 \times 10^{-16}` for
     the eigensolver with a Newton step and :math:`2.2 \times 10^{-7}` for
     the closed form the invariants used to be handed to.
@@ -1141,8 +1184,9 @@ def _latent_roots_dd(traceless: np.ndarray) -> np.ndarray:
     Aberth converges *linearly*, at ratio one half, so from :math:`10^{-7}`
     five sweeps reach :math:`3.8 \times 10^{-9}` and it would need some
     thirty.  A backward-stable Hermitian eigensolver separates a cluster as
-    well as ``float64`` allows, which is what makes :data:`DD_SWEEPS` two
-    rather than many.  Durand-Kerner was measured as well, at one division
+    well as ``float64`` allows, which together with removing the
+    residual-trace shift in double-double is what makes :data:`DD_SWEEPS`
+    one rather than many.  Durand-Kerner was measured as well, at one division
     per root against Aberth's five, and rejected for being non-monotone in
     the sweep count: :math:`3.9 \times 10^{-16}`, then
     :math:`9.7 \times 10^{-17}`, then :math:`1.9 \times 10^{-16}`.
@@ -1238,7 +1282,8 @@ def _latent_roots_dd(traceless: np.ndarray) -> np.ndarray:
     # exists to remove, and it looks like a solver failure rather than a
     # constant.
     c2 = (-invariant_2[0], -invariant_2[1])
-    c1 = _dd_div(_dd_scale(invariant_3, 2.0), const(3.0))
+    c1 = _dd_mul(_dd_scale(invariant_3, 2.0),
+                 (const(THIRD_HI)[0], const(THIRD_LO)[0]))
     c1 = (-c1[0], -c1[1])
     c0 = _dd_scale(_dd_sub(_dd_mul(invariant_2, invariant_2),
                            _dd_scale(invariant_4, 2.0)), 0.25)
@@ -1246,7 +1291,6 @@ def _latent_roots_dd(traceless: np.ndarray) -> np.ndarray:
     start = np.linalg.eigvalsh(traceless)
     roots = [_dd_sub(lift(start[..., k]), shift) for k in range(4)]
 
-    one = const(1.0)
     for _ in range(DD_SWEEPS):
         for i in range(4):
             squared = _dd_mul(roots[i], roots[i])
@@ -1258,35 +1302,47 @@ def _latent_roots_dd(traceless: np.ndarray) -> np.ndarray:
             derivative = _dd_add(
                 _dd_scale(_dd_mul(squared, roots[i]), 4.0),
                 _dd_add(_dd_scale(_dd_mul(c2, roots[i]), 2.0), c1))
-            usable = derivative[0] != 0.0
-            safe = (np.where(usable, derivative[0], 1.0),
-                    np.where(usable, derivative[1], 0.0))
-            ratio = _dd_div(chi, safe)
 
-            # Aberth's correction: Newton's step, divided by one minus the
-            # pull of the other three roots.  That pull is what keeps a
-            # cluster's members from converging onto each other, and the
-            # reason no half-gap guard is needed on this route.
-            pull = zero
-            for j in range(4):
-                if j == i:
-                    continue
-                gap = _dd_sub(roots[i], roots[j])
-                apart = gap[0] != 0.0
-                gap = (np.where(apart, gap[0], 1.0),
-                       np.where(apart, gap[1], 0.0))
-                inverse = _dd_div(one, gap)
-                pull = _dd_add(pull, (np.where(apart, inverse[0], 0.0),
-                                      np.where(apart, inverse[1], 0.0)))
+            # Aberth's correction is Newton's step divided by one minus the
+            # pull of the other three roots, and that pull is what keeps a
+            # cluster's members from converging onto each other --- it is
+            # why no half-gap guard is needed on this route.  Written out,
+            #
+            #     step = (chi/chi') / (1 - (chi/chi') sum_j 1/(psi_i-psi_j))
+            #
+            # takes five double-double divisions per root: one for the
+            # ratio, three for the reciprocal gaps, one for the step.
+            # Clearing the denominators collapses all five into one,
+            #
+            #     step = chi P / (chi' P - chi S)
+            #
+            # for P and S the product and the second elementary symmetric
+            # function of the three gaps, which cost three multiplications.
+            # The two forms are the same expression; a dd division is three
+            # float64 divisions where a dd multiplication is none, and this
+            # loop was over half the route's cost.
+            gaps = [_dd_sub(roots[i], roots[j])
+                    for j in range(4) if j != i]
+            pair = _dd_mul(gaps[1], gaps[2])
+            product = _dd_mul(gaps[0], pair)
+            symmetric = _dd_add(pair, _dd_mul(gaps[0],
+                                              _dd_add(gaps[1], gaps[2])))
 
-            denominator = _dd_sub(one, _dd_mul(ratio, pull))
+            denominator = _dd_sub(_dd_mul(derivative, product),
+                                  _dd_mul(chi, symmetric))
             standing = denominator[0] != 0.0
             denominator = (np.where(standing, denominator[0], 1.0),
                            np.where(standing, denominator[1], 0.0))
-            step = _dd_div(ratio, denominator)
-            taken = usable & standing
-            roots[i] = (np.where(taken, roots[i][0] - step[0], roots[i][0]),
-                        np.where(taken, roots[i][1] - step[1], roots[i][1]))
+            step = _dd_div(_dd_mul(chi, product), denominator)
+
+            # A vanishing gap now leaves the step at exactly zero through
+            # P rather than needing to be skipped: two roots that have
+            # landed on identical bits stay where the eigensolver put them,
+            # which is the same refusal the guarded Newton step makes.
+            roots[i] = (np.where(standing, roots[i][0] - step[0],
+                                 roots[i][0]),
+                        np.where(standing, roots[i][1] - step[1],
+                                 roots[i][1]))
 
     # Only here do the two limbs collapse into one float64
     psi = np.stack([roots[k][0] + roots[k][1] for k in range(4)], axis=-1)

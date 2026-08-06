@@ -282,6 +282,8 @@ NuOscProbExact/
 │   └── make_demo_video.py           # Joins and shrinks the clips notebook 19 renders
 └── tests/                           # Regression suite, run with pytest
     ├── conftest.py                  # Shared fixtures and path setup
+    ├── gen_stiff_reference.py       # Regenerates the fifty-digit four-flavor oracle
+    ├── stiff_reference.json         # That oracle, frozen: nine Hamiltonians in hexadecimal floats
     ├── test_su3_algebra.py          # d tensor, star product, SU(3) invariants
     ├── test_oscprob4nu.py           # SU(4) algebra, quartic roots, 3+1 physics
     ├── test_evolution_operator.py   # U against an independent matrix exponential

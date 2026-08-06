@@ -457,15 +457,39 @@ if HAVE_NUMBA:                                          # pragma: no branch
     `_two_prod` can return the rounding error it discarded.
     """
 
-    DD_SWEEPS = 2
+    def _dd_reciprocal_of_three() -> tuple:
+        r"""Returns 1/3 as a double-double pair, exact to 3e-33.
+
+        Formed once at import, by the same compensated arithmetic the kernel
+        uses: ``3*hi`` is split exactly into ``p + e`` by `_two_prod`, so
+        what 1/3 is missing after the first limb is ``((1 - p) - e)/3``.
+
+        It exists because ``2/3`` is the one irrational-in-binary constant
+        the quartic needs, and lifting a *rounded* 2/3 into double-double
+        would zero the low limb and drag c1 back to float64 accuracy --- the
+        1.1e-07 stall this whole route exists to remove, wearing the
+        disguise of a solver failure.  Multiplying by this pair costs no
+        division at all, where `_dd_div` costs three.
+        """
+        hi = 1.0/3.0
+        p, e = _two_prod(3.0, hi)
+        return hi, ((1.0 - p) - e)/3.0
+
+    DD_SWEEPS = 1
     r"""int: Aberth sweeps taken over the four latent roots.
 
-    Two, measured: one leaves the worst reference case at 3.9e-16 because
-    the eigensolver's start is a little further off than it looks --- the
-    residual trace is removed from it in float64 --- and three gives
-    1.9e-16, one float64 ulp worse than two rather than better, the second
-    sweep having already converged and the third only re-rounding it.  So
-    this is a tuned constant and not a tolerance to be raised.
+    One, measured: every case in `tests/stiff_reference.json` gives an
+    identical answer at one, two and three sweeps, to the last bit.  A
+    single sweep suffices because the start is already good --- the
+    eigensolver's quartet with the residual-trace shift removed in
+    double-double rather than in float64, so the low limb the exact
+    traceless-ing computed survives into the iteration.
+
+    This was two for exactly as long as that subtraction was done in
+    float64, which put the start an ulp out and cost a sweep to recover.
+    See :data:`oscprob4nu.DD_SWEEPS`, which records the mistake, because
+    one sweep did genuinely measure 3.9e-16 back then and the number
+    looked like evidence the iteration needed the second.
     """
 
     @njit(cache=True, inline='always')
@@ -540,6 +564,11 @@ if HAVE_NUMBA:                                          # pragma: no branch
         q3 = rh/yh
         sh, sl = _quick_two_sum(q1, q2)
         return _dd_add(sh, sl, q3, 0.0)
+
+    # Bound here rather than beside `DD_SWEEPS` because forming it needs
+    # `_two_prod`, which is defined above it.  Numba bakes a module global
+    # into the compiled code as a constant, which is exactly what is wanted.
+    THIRD_HI, THIRD_LO = _dd_reciprocal_of_three()
 
     @njit(cache=True, inline='always')
     def _entries_3nu(h_matrix, L):
@@ -840,7 +869,7 @@ if HAVE_NUMBA:                                          # pragma: no branch
         was measured at 2.3e9, so a 1e-16 coefficient becomes a 1e-7 root.
         The invariants are therefore formed in double-double arithmetic,
         where a 1e-32 coefficient error amplifies to 1e-23 and the roots are
-        limited by float64 output rounding instead --- 5.5e-17 worst over
+        limited by float64 output rounding instead --- 3.6e-17 worst over
         `tests/stiff_reference.json`, against 3.9e-16 for the eigensolver
         with a Newton step and 2.2e-07 for the closed form the invariants
         used to be handed to.
@@ -876,12 +905,14 @@ if HAVE_NUMBA:                                          # pragma: no branch
         cancellation to lose digits to.
 
         The start is the eigensolver's, because what a start must supply is
-        not proximity but four distinct basins.  Euler's closed form is
-        twice as fast and exact on every stiff case, and still wrong here:
+        neither accuracy nor proximity but four distinct basins.  Euler's
+        closed form is twice as fast and exact on every stiff case, and
+        still wrong here:
         on a cluster Aberth converges *linearly*, at ratio one half, so from
         1e-7 five sweeps reach 3.8e-9 and it would need some thirty.  A
         backward-stable Hermitian eigensolver separates a cluster as well as
-        float64 allows, which is what makes `DD_SWEEPS` two rather than many.
+        float64 allows, which together with removing the residual-trace shift
+        in double-double is what makes `DD_SWEEPS` one rather than many.
 
         Durand-Kerner was measured too, at one dd division per root against
         Aberth's five, and rejected for being non-monotone in the sweep
@@ -1001,7 +1032,8 @@ if HAVE_NUMBA:                                          # pragma: no branch
         # back to float64 accuracy --- which is exactly the 1.1e-07 stall
         # this whole route exists to remove.
         c2_hi, c2_lo = -invariant_2_hi, -invariant_2_lo
-        p_hi, p_lo = _dd_div(2.0*invariant_3_hi, 2.0*invariant_3_lo, 3.0, 0.0)
+        p_hi, p_lo = _dd_mul(2.0*invariant_3_hi, 2.0*invariant_3_lo,
+                             THIRD_HI, THIRD_LO)
         c1_hi, c1_lo = -p_hi, -p_lo
         p_hi, p_lo = _dd_mul(invariant_2_hi, invariant_2_lo,
                              invariant_2_hi, invariant_2_lo)
@@ -1011,9 +1043,15 @@ if HAVE_NUMBA:                                          # pragma: no branch
 
         latent = np.linalg.eigvalsh(traceless)
         z_hi = np.empty(4)
-        z_lo = np.zeros(4)
+        z_lo = np.empty(4)
         for k in range(4):
-            z_hi[k] = latent[k] - (shift_hi + shift_lo)
+            # In double-double, not float64.  Subtracting the residual-trace
+            # shift with one float64 operation discards the low limb the
+            # exact traceless-ing above went to the trouble of computing,
+            # and the start then arrives a whole ulp out --- which cost a
+            # second Aberth sweep to recover, and was mistaken for the
+            # iteration needing it.
+            z_hi[k], z_lo[k] = _dd_sub(latent[k], 0.0, shift_hi, shift_lo)
 
         for _ in range(DD_SWEEPS):
             for i in range(4):
@@ -1030,29 +1068,56 @@ if HAVE_NUMBA:                                          # pragma: no branch
                 b_hi, b_lo = _dd_mul(c2_hi, c2_lo, z_hi[i], z_lo[i])
                 b_hi, b_lo = _dd_add(2.0*b_hi, 2.0*b_lo, c1_hi, c1_lo)
                 der_hi, der_lo = _dd_add(4.0*a_hi, 4.0*a_lo, b_hi, b_lo)
-                if der_hi == 0.0:
-                    continue
-                ratio_hi, ratio_lo = _dd_div(chi_hi, chi_lo, der_hi, der_lo)
 
-                # Aberth's correction: Newton's step, divided by one minus
-                # the pull of the other three roots.  It is what keeps a
-                # cluster's members from converging onto each other, and
-                # the reason no half-gap guard is needed here.
-                pull_hi, pull_lo = 0.0, 0.0
+                # Aberth's correction is Newton's step divided by one minus
+                # the pull of the other three roots, which is what keeps a
+                # cluster's members from converging onto each other and why
+                # no half-gap guard is needed here.  Written as
+                #
+                #   step = (chi/chi')/(1 - (chi/chi') sum_j 1/(psi_i-psi_j))
+                #
+                # it takes five dd divisions per root.  Clearing the
+                # denominators leaves the same expression as
+                #
+                #   step = chi P/(chi' P - chi S)
+                #
+                # for P and S the product and second elementary symmetric
+                # function of the three gaps, and one dd division.  A dd
+                # division is three float64 divisions where a dd multiply is
+                # none, and this loop was over half the route's cost.
+                gap_1_hi, gap_1_lo = 0.0, 0.0
+                gap_2_hi, gap_2_lo = 0.0, 0.0
+                gap_3_hi, gap_3_lo = 0.0, 0.0
                 for j in range(4):
                     if j != i:
-                        gap_hi, gap_lo = _dd_sub(z_hi[i], z_lo[i],
-                                                 z_hi[j], z_lo[j])
-                        if gap_hi != 0.0:
-                            v_hi, v_lo = _dd_div(1.0, 0.0, gap_hi, gap_lo)
-                            pull_hi, pull_lo = _dd_add(pull_hi, pull_lo,
-                                                       v_hi, v_lo)
-                a_hi, a_lo = _dd_mul(ratio_hi, ratio_lo, pull_hi, pull_lo)
-                den_hi, den_lo = _dd_sub(1.0, 0.0, a_hi, a_lo)
+                        g_hi, g_lo = _dd_sub(z_hi[i], z_lo[i],
+                                             z_hi[j], z_lo[j])
+                        if j == (i + 1) % 4:
+                            gap_1_hi, gap_1_lo = g_hi, g_lo
+                        elif j == (i + 2) % 4:
+                            gap_2_hi, gap_2_lo = g_hi, g_lo
+                        else:
+                            gap_3_hi, gap_3_lo = g_hi, g_lo
+
+                pair_hi, pair_lo = _dd_mul(gap_2_hi, gap_2_lo,
+                                           gap_3_hi, gap_3_lo)
+                prod_hi, prod_lo = _dd_mul(gap_1_hi, gap_1_lo,
+                                           pair_hi, pair_lo)
+                s_hi, s_lo = _dd_add(gap_2_hi, gap_2_lo, gap_3_hi, gap_3_lo)
+                s_hi, s_lo = _dd_mul(gap_1_hi, gap_1_lo, s_hi, s_lo)
+                s_hi, s_lo = _dd_add(pair_hi, pair_lo, s_hi, s_lo)
+
+                a_hi, a_lo = _dd_mul(der_hi, der_lo, prod_hi, prod_lo)
+                b_hi, b_lo = _dd_mul(chi_hi, chi_lo, s_hi, s_lo)
+                den_hi, den_lo = _dd_sub(a_hi, a_lo, b_hi, b_lo)
                 if den_hi == 0.0:
                     continue
-                step_hi, step_lo = _dd_div(ratio_hi, ratio_lo,
-                                           den_hi, den_lo)
+
+                # A vanishing gap leaves the step at exactly zero through P
+                # rather than needing to be skipped: two roots that landed
+                # on identical bits stay where the eigensolver put them.
+                a_hi, a_lo = _dd_mul(chi_hi, chi_lo, prod_hi, prod_lo)
+                step_hi, step_lo = _dd_div(a_hi, a_lo, den_hi, den_lo)
                 z_hi[i], z_lo[i] = _dd_sub(z_hi[i], z_lo[i],
                                            step_hi, step_lo)
 

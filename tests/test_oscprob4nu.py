@@ -455,7 +455,7 @@ def test_the_root_strategies_meet_their_documented_accuracy(strategy,
     r"""Each route hits the figure :data:`oscprob4nu.ROOT_STRATEGY` quotes.
 
     Against the frozen fifty-digit roots, over all nine cases at once so
-    that the stack path is what runs.  Measured worst: 5.5e-17 for
+    that the stack path is what runs.  Measured worst: 3.6e-17 for
     double-double and 3.9e-16 for the eigensolver with its Newton step,
     against bars of 1e-16 and 5e-16 here.
 

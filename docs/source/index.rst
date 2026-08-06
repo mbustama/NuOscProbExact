@@ -120,7 +120,7 @@ scenario with an eV-scale :math:`\Delta m^2_{41}` --- reaches about
 :math:`10^{-9}` rather than :math:`10^{-14}` in probabilities, limited by
 what the SU(4) invariants retain rather than by the expansion itself.  Since
 1.13.0 the invariants are formed in double-double arithmetic, which takes the
-*roots* to :math:`5.5 \times 10^{-17}`, under half a ``float64`` ulp; the
+*roots* to :math:`3.6 \times 10^{-17}`, under a fifth of a ``float64`` ulp; the
 probability figure improves less, because rebuilding :math:`U_4` takes second
 differences of :math:`e^{-i\psi L}` and so amplifies whatever root error
 remains by the square of the accumulated phase.  Both figures are far below
