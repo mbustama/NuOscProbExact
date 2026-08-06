@@ -109,9 +109,15 @@ jobs:
           python -m pytest -q -p _force_numpy
 
   without-numba:
-    # The third configuration: Numba genuinely absent, which is what every user gets from a
-    # plain `pip install nuoscprobexact`.  It is the default installation, so it is the one
-    # a break would affect most people, and it is invisible to every other job here.
+    # The third configuration: Numba genuinely absent.  This used to be what a plain
+    # `pip install nuoscprobexact` produced; since 1.12.0 Numba is a base dependency, so it
+    # is now the *fallback* rather than the default, and it has to be arranged deliberately
+    # by uninstalling Numba after the install.
+    #
+    # It is still worth a job, for three reasons.  A user on a platform with no Numba wheel
+    # lands here; the NumPy path is the independent implementation the compiled kernels are
+    # checked against, so it must keep working to be worth comparing against; and every new
+    # dispatch orphans the branch beneath it, which nothing else here would notice.
     name: Without Numba
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
@@ -123,15 +129,19 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install dependencies
-        # No `fast` extra.  That is the entire difference from the matrix job.
+      - name: Install dependencies, then remove Numba
+        # Numba arrives as a base dependency now, so omitting the `fast` extra no longer
+        # keeps it out -- it has to be uninstalled explicitly.  Without this the assertion
+        # below fails and the job reports a break that is not one.
         run: |
           python -m pip install --upgrade pip
           pip install -e '.[test]'
+          pip uninstall -y numba
 
       - name: Confirm Numba really is absent
-        # A transitive dependency could pull Numba in one day, at which point this job would
-        # quietly stop testing the fallback while still reporting success.
+        # Belt and braces: the uninstall above could stop working (a renamed package, a
+        # transitive dependency reinstalling it), at which point this job would quietly stop
+        # testing the fallback while still reporting success.
         run: |
           python -c "
           import fastkernels

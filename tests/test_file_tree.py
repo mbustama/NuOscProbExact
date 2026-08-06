@@ -164,7 +164,7 @@ TREE = [
     ('src/hamiltonians3nu.py', 'Example three-flavor Hamiltonians'),
     ('src/hamiltonians4nu.py', 'Example four-flavor (3+1) Hamiltonians'),
     ('src/globaldefs.py', 'Physical constants and unit conversions'),
-    ('src/fastkernels.py', 'Optional Numba kernels, with a NumPy fallback'),
+    ('src/fastkernels.py', 'Numba kernels, with a NumPy fallback'),
     ('src/slabs.py', 'Propagation across adjacent slabs'),
     ('src/earth.py', 'PREM, chord geometry, and Earth crossings'),
     ('tools/', 'Scripts that are not part of the package'),

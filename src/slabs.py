@@ -29,7 +29,7 @@ The per-slab operators are evaluated in a single batched call, so the
 cost of :math:`n` slabs is one vectorised evaluation plus :math:`n-1`
 small matrix products rather than :math:`n` separate evaluations.
 
-With the optional compiled backend installed this goes further: the
+With the compiled backend this goes further: the
 whole trajectory is one pass, each slab's operator computed and
 multiplied into the running product in registers, so the stack is never
 materialised and the :math:`n-1` products are never dispatched.  That is

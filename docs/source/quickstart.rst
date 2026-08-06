@@ -357,13 +357,10 @@ exactly as before, so existing code is unaffected.
 Going faster still
 ------------------
 
-If `Numba <https://numba.pydata.org>`_ is installed, the batched paths are
-evaluated by compiled kernels instead of NumPy, which is worth roughly
-1.5x to 20x on large stacks, depending on the number of flavors:
-
-.. code-block:: shell
-
-   pip install "nuoscprobexact[fast]"
+`Numba <https://numba.pydata.org>`_ is installed with the package, so the
+batched paths are evaluated by compiled kernels instead of NumPy, which is
+worth roughly 1.5x to 20x on large stacks, depending on the number of
+flavors.
 
 Nothing in your code changes; :mod:`fastkernels` is picked up
 automatically, and the answers are the same to round-off.  That includes

@@ -1,19 +1,22 @@
 # -*- coding: utf-8 -*-
-r"""Optional Numba-compiled kernels for the batched evaluation paths.
+r"""Numba-compiled kernels for the batched evaluation paths.
 
-**NuOscProbExact** needs only NumPy.  If `Numba <https://numba.pydata.org>`_
-happens to be installed, this module compiles the two-, three- and
-four-neutrino expansions into fused machine-code loops and
+`Numba <https://numba.pydata.org>`_ is a dependency of
+**NuOscProbExact** as of 1.12.0, so this module compiles the two-, three-
+and four-neutrino expansions into fused machine-code loops and
 :mod:`oscprob2nu`, :mod:`oscprob3nu` and :mod:`oscprob4nu` use them for
-large stacks; if it is not, ``HAVE_NUMBA`` is ``False``, nothing here is
-defined, and the NumPy path is used instead.  Nothing else in the
-library changes either way, and the results agree to round-off --- see
+large stacks.
+
+It is still written to do without.  If the import fails --- an
+environment where the dependency was removed on purpose, a platform with
+no wheel --- ``HAVE_NUMBA`` is ``False``, nothing here is defined, and
+the NumPy path is used instead.  Nothing else in the library changes
+either way, and the results agree to round-off --- see
 ``tests/test_fastkernels.py``, which runs both paths against each other
-whichever is available.
-
-Install the optional dependency with::
-
-    pip install "nuoscprobexact[fast]"
+whichever is available.  That fallback is not vestigial: it is the
+independent implementation these kernels are checked against, and
+``.github/workflows/tests.yml`` uninstalls Numba in one job to keep it
+honest.
 
 Why it is worth compiling
 -------------------------
