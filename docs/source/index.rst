@@ -117,13 +117,18 @@ running the suite.
 
 One line of context for the four-flavor row.  A *stiff* spectrum --- a 3+1
 scenario with an eV-scale :math:`\Delta m^2_{41}` --- reaches about
-:math:`10^{-9}` rather than :math:`10^{-14}`, limited by what double
-precision retains when the SU(4) invariants are formed rather than by the
-expansion itself.  Both figures are far below anything an experiment can
-resolve, so this is a statement about the *exactness claim* and about error
-accumulating over composed slabs, not about whether the probabilities are
-good enough to use.  :ref:`stiff-spectra` gives the mechanism, what the code
-does about it, and what the alternatives measured.
+:math:`10^{-9}` rather than :math:`10^{-14}` in probabilities, limited by
+what the SU(4) invariants retain rather than by the expansion itself.  Since
+1.13.0 the invariants are formed in double-double arithmetic, which takes the
+*roots* to :math:`3.6 \times 10^{-17}`, under a fifth of a ``float64`` ulp; the
+probability figure improves less, because rebuilding :math:`U_4` takes second
+differences of :math:`e^{-i\psi L}` and so amplifies whatever root error
+remains by the square of the accumulated phase.  Both figures are far below
+anything an experiment can resolve, so this is a statement about the
+*exactness claim* and about error accumulating over composed slabs, not about
+whether the probabilities are good enough to use.  :ref:`stiff-spectra` gives
+the mechanism, what the code does about it, and what the alternatives
+measured.
 
 The last three rows are the ones an internal suite cannot supply.  Everything
 above them compares this library against itself or against a formula

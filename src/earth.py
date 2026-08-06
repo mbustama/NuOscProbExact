@@ -72,6 +72,13 @@ __author__ = "Mauricio Bustamante"
 __email__ = "mbustamante@gmail.com"
 
 __all__ = ['LOC_COORDS_DMS', 'PREM_BOUNDARIES',
+           # The chunking constants.  Each carries an autodoc docstring and
+           # `MAX_CHUNK_BYTES` is named in the changelog as the knob to
+           # retune, but none of them was listed here, so `automodule`
+           # skipped all five and the documentation was written for a page
+           # it never reached.
+           'CHUNK_BYTES_FALLBACK', 'CHUNK_BYTES_MIN', 'CHUNK_BYTES_MAX',
+           'MIN_CHUNK_ENERGIES', 'MAX_CHUNK_BYTES',
            'dms_to_decimal', 'coordinates_of_named_location',
            'density_prem', 'matter_potential', 'matter_potential_nc',
            'distance_traveled_inside_earth',
@@ -1653,6 +1660,25 @@ def probabilities_2nu_earth(
     ------
     ValueError
         If ``costhz >= 0`` or ``n_slabs_per_segment`` is not positive.
+    
+    Examples
+    --------
+    .. jupyter-execute::
+
+        import numpy as np
+        import earth
+        import globaldefs as gd
+        import hamiltonians2nu
+
+        h_vac = hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(
+            gd.S12_NO_BF, gd.D21_NO_BF)
+
+        # One energy, then a whole scan through the same call
+        print('%.6f' % earth.probabilities_2nu_earth(h_vac, 1.0e9, -1.0)[1])
+
+        energies = np.array([1.0, 5.0, 10.0])*1.0e9
+        prob = earth.probabilities_2nu_earth(h_vac, energies, -1.0)
+        print(prob.shape, np.round(prob[:, 1], 4))
     """
     return _probabilities_earth_tol(
         h_vacuum_energy_independent, energy, costhz, n_slabs_per_segment,
@@ -1743,6 +1769,28 @@ def probabilities_3nu_earth(
     ------
     ValueError
         If ``costhz >= 0`` or ``n_slabs_per_segment`` is not positive.
+    
+    Examples
+    --------
+    .. jupyter-execute::
+
+        import numpy as np
+        import earth
+        import globaldefs as gd
+        import hamiltonians3nu
+
+        h_vac = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(
+            gd.S12_NO_BF, gd.S23_NO_BF, gd.S13_NO_BF, gd.DCP_NO_BF,
+            gd.D21_NO_BF, gd.D31_NO_BF)
+
+        # A core-crossing chord at one energy
+        print('P_mue = %.6f'
+              % earth.probabilities_3nu_earth(h_vac, 1.0e10, -1.0)[3])
+
+        # An array of energies returns the whole scan from one call
+        energies = np.array([1.0, 5.0, 10.0])*1.0e9
+        prob = earth.probabilities_3nu_earth(h_vac, energies, -1.0)
+        print(prob.shape, np.round(prob[:, 3], 4))
     """
     return _probabilities_earth_tol(
         h_vacuum_energy_independent, energy, costhz, n_slabs_per_segment,
@@ -1823,6 +1871,22 @@ def probabilities_2nu_between_locations(
     ValueError
         If either name is not predefined, or if the two locations
         coincide, so that there is no chord between them.
+    
+    Examples
+    --------
+    .. jupyter-execute::
+
+        import numpy as np
+        import earth
+        import globaldefs as gd
+        import hamiltonians2nu
+
+        h_vac = hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(
+            gd.S12_NO_BF, gd.D21_NO_BF)
+
+        prob = earth.probabilities_2nu_between_locations(
+            h_vac, 1.0e9, 'cern', 'gran_sasso')
+        print('P_ee = %.6f' % prob[0])
     """
     costhz = _costhz_of_named_pair(loc_name_1, loc_name_2)
 
@@ -1905,6 +1969,24 @@ def probabilities_3nu_between_locations(
     ValueError
         If either name is not predefined, or if the two locations
         coincide, so that there is no chord between them.
+    
+    Examples
+    --------
+    .. jupyter-execute::
+
+        import numpy as np
+        import earth
+        import globaldefs as gd
+        import hamiltonians3nu
+
+        h_vac = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(
+            gd.S12_NO_BF, gd.S23_NO_BF, gd.S13_NO_BF, gd.DCP_NO_BF,
+            gd.D21_NO_BF, gd.D31_NO_BF)
+
+        # The CNGS chord, looked up rather than given
+        prob = earth.probabilities_3nu_between_locations(
+            h_vac, 1.0e9, 'cern', 'gran_sasso')
+        print('P_mue = %.6f' % prob[3])
     """
     costhz = _costhz_of_named_pair(loc_name_1, loc_name_2)
 
@@ -2035,6 +2117,26 @@ def probabilities_4nu_earth(
     ------
     ValueError
         If ``costhz >= 0`` or ``n_slabs_per_segment`` is not positive.
+    
+    Examples
+    --------
+    .. jupyter-execute::
+
+        import numpy as np
+        import earth
+        import globaldefs as gd
+        import hamiltonians4nu
+
+        # The sterile parameters are illustrative; `globaldefs` carries
+        # no best fit for them.
+        h_vac = hamiltonians4nu.hamiltonian_4nu_vacuum_energy_independent(
+            gd.S12_NO_BF, gd.S23_NO_BF, gd.S13_NO_BF,
+            np.sqrt(0.10), np.sqrt(0.10), 0.0,
+            gd.DCP_NO_BF, gd.D21_NO_BF, gd.D31_NO_BF, 1.0)
+
+        prob = earth.probabilities_4nu_earth(h_vac, 1.0e10, -1.0,
+                                             n_slabs_per_segment=4)
+        print('%d probabilities, P_mue = %.6f' % (len(prob), prob[4]))
     """
     return _probabilities_earth_tol(
         h_vacuum_energy_independent, energy, costhz, n_slabs_per_segment,
@@ -2114,6 +2216,26 @@ def probabilities_4nu_between_locations(
     ValueError
         If either name is not predefined, or if the two locations
         coincide, so that there is no chord between them.
+    
+    Examples
+    --------
+    .. jupyter-execute::
+
+        import numpy as np
+        import earth
+        import globaldefs as gd
+        import hamiltonians4nu
+
+        # The sterile parameters are illustrative; `globaldefs` carries
+        # no best fit for them.
+        h_vac = hamiltonians4nu.hamiltonian_4nu_vacuum_energy_independent(
+            gd.S12_NO_BF, gd.S23_NO_BF, gd.S13_NO_BF,
+            np.sqrt(0.10), np.sqrt(0.10), 0.0,
+            gd.DCP_NO_BF, gd.D21_NO_BF, gd.D31_NO_BF, 1.0)
+
+        prob = earth.probabilities_4nu_between_locations(
+            h_vac, 1.0e9, 'fermilab', 'homestake', n_slabs_per_segment=4)
+        print('P_mue = %.6f' % prob[4])
     """
     costhz = _costhz_of_named_pair(loc_name_1, loc_name_2)
 

@@ -46,7 +46,158 @@ and the project uses [Semantic Versioning](https://semver.org/).
   described there as the fallback rather than the default, which is what it
   has become.
 
+- **The four-flavor latent roots now come from invariants formed in
+  double-double arithmetic.**  Worst relative error over the nine
+  Hamiltonians in the new `tests/stiff_reference.json` goes from 3.9e-16 to
+  **3.6e-17** — under a fifth of a `float64` ulp — for roughly a fifth more
+  time on a full `probabilities_4nu` through the compiled kernel.  The error is
+  exact; the cost is a range, landing at 1.18x, 1.20x and 1.25x by three
+  measurement methods with a per-pair spread of 0.76x to 1.72x, so it is quoted
+  as one.
+
+  1.12.0 escaped the invariants' conditioning by refining against the matrix
+  with a Newton step; this removes the conditioning instead.  `I_2, I_3, I_4`
+  compress a 4x4 matrix into three numbers, and the amplification from those
+  coefficients to the roots measures 2.3e9 — so a `float64` coefficient at
+  1e-16 becomes a root at 1e-7, which is what the closed form alone scores
+  (2.2e-07) and what no better root-finder can beat.  Carrying each
+  coefficient as a pair of `float64` limbs, some 32 digits, leaves the same
+  amplification acting on 1e-32 and landing at 1e-23; the roots are then
+  limited by rounding the answer to `float64` rather than by the algebra.
+  One Aberth sweep, also in double-double, takes the quartic there.
+
+  Three things keep the cost to 25%, and the first two were mistakes before
+  they were optimisations.  The residual-trace shift is removed from the
+  eigensolver's start **in double-double**; doing it in `float64` discards
+  the low limb the exact traceless-ing just computed, puts the start an ulp
+  out, and costs a second Aberth sweep to recover — a second sweep that was
+  briefly mistaken for something the iteration needed, since one sweep did
+  then measure 3.9e-16.  Aberth's step is evaluated as `chi*P/(chi'*P -
+  chi*S)`, for `P` and `S` the product and second symmetric function of the
+  three gaps, rather than as `(chi/chi')/(1 - (chi/chi')*sum 1/gap)`: the
+  same expression with one double-double division per root instead of five,
+  and a dd division is three `float64` divisions where a dd multiply is
+  none.  And `1/3` is baked as a dd constant instead of divided for, which
+  also made one reference case exact that was not.  Together these halved
+  the double-double overhead — roughly 50 ms to roughly 25 ms per 100 000
+  points — and improved the worst root from 5.5e-17 to 3.6e-17.
+
+  Exploiting the exactly-zero imaginary diagonal of `H~` inside `H~^2` was
+  tried too, and measured no faster — the branches cost what the skipped
+  multiplications saved. What remains is close to arithmetic floor: `H~^2` in
+  double-double is about 3000 flops per element, which at 100 000 elements
+  over eight cores accounts for the ~12 ms it takes.
+
+  **`oscprob4nu.ROOT_STRATEGY` selects it,** defaulting to
+  `'double-double'`, with `'eigensolver'` for the LAPACK route.
+  `oscprob4nu.POLISH_ROOTS` keeps its meaning and is read only on the latter
+  — the default route reaches the floor without it and leaves a Newton step
+  nothing to find.  Both routes exist on both backends and agree to an ulp,
+  so a result never depends on whether a compiler was present.
+
+  Three things were measured and rejected, and are recorded because each
+  looks like an obvious improvement.  Mirroring `H~^2` across its diagonal
+  saves a quarter of the work and quietly costs `I_3` and `I_4` 1e-17,
+  because a Hamiltonian built as `U M^2 U†` is Hermitian only to rounding
+  and the mirror discards the asymmetry — Hermitizing exactly in
+  double-double first makes the saving sound, and that is what ships.
+  Starting from Euler's closed form instead of the eigensolver is twice as
+  fast and exact on every stiff case, and still fails, because on a cluster
+  Aberth converges *linearly* at ratio one half: from 1e-7 five sweeps reach
+  3.8e-9 where thirty are needed.  Durand-Kerner needs one division per root
+  against Aberth's five and is non-monotone in the sweep count — 3.9e-16,
+  9.7e-17, 1.9e-16 — so it cannot be a default.
+
+  **`fastkernels`' four-flavor kernel entry points take `strategy: int`
+  where they took `polish: bool`.**  A compiled kernel cannot read a Python
+  global at call time, so the two switches travel as one integer: 0 for
+  double-double, 1 for the eigensolver with the Newton step, 2 for the
+  eigensolver alone.  Callers going through `oscprob4nu` are unaffected.
+
+  Two limits worth stating plainly.  On the NumPy fallback the ratio is of
+  order 1.5-2x rather than 1.2x, the double-double primitives being
+  elementwise array operations with nothing to amortise them over.  And this
+  buys *roots*, not probabilities everywhere: reconstructing `U_4` in Newton
+  form takes second differences of `exp(-i psi L)`, so a root error enters
+  the coefficients twice and the probability error grows as
+  `(psi_max L)^2` — measured at 5e-17 times that across five decades of
+  phase.  At Delta m^2_41 = 1000 eV^2 over 1300 km the phase is 2.5 million
+  radians and both routes land at 2e-4 together.  The physical range is
+  where the tight figures are: 1.3e-12 at 0.1 eV^2.
+
+### Added
+
+- **A runnable example on the eight public routines that had none.**  The six
+  `earth` entry points --- `probabilities_{2,3,4}nu_earth` and the three
+  `_between_locations` wrappers --- are the most-called functions in the
+  library and were the only ones in that module without one, and
+  `probabilities_{2,4}nu_profile` were without one where their three-flavor
+  sibling had it.  The `earth` examples show the array-of-energies form
+  alongside the scalar one, since that is the addition of this release cycle
+  most likely to be missed.  Every block is executed by Sphinx on the API
+  page and again by `tests/test_docstrings.py` on all five Pythons.
+
+- **A frozen fifty-digit oracle for the four-flavor roots,**
+  `tests/stiff_reference.json`, with `tests/gen_stiff_reference.py` to
+  regenerate it.  Nine Hamiltonians — the 3+1 family from 0.1 to 1000 eV^2,
+  two random Hermitian, and two with a pair separated by 1e-8 and 1e-16 —
+  stored as hexadecimal floats so a reader gets the exact bits the reference
+  was computed from.
+
+  It has to be frozen because `numpy.linalg.eigvalsh` stopped being an
+  independent oracle the moment it became one of `ROOT_STRATEGY`'s routes:
+  tests written against it began comparing an implementation with itself,
+  one of them asserting `1.06e-15 <= 0.0`.  The generator uses `mpmath.eig`
+  for the roots and `mpmath.expm` for the probabilities, neither sharing code
+  with the library nor going through the invariants, and checks the stored
+  roots against `det(psi*I - H~)` taken straight from the matrix.
+
+  That check is there because the generator got it wrong first, and its
+  docstring records all three traps.  The quartic built from the invariants
+  is not always the matrix's characteristic polynomial — `float64`
+  traceless-ing leaves a residual trace while that quartic pins its cubic
+  coefficient to exactly zero, and the two disagree by up to 3.8e-7 wherever
+  the residue is nonzero, agreeing to 2e-17 wherever it is not, which is what
+  makes it easy to miss.  Two solvers agreeing is not evidence: the wrong
+  reference was corroborated by `mpmath.eig` and led to `eigvalsh` being
+  blamed for residuals that were the oracle's.  And probability conservation
+  is not an accuracy measure, since a row of `|U|^2` sums to one for any
+  unitary `U` however wrong its eigenvalues.
+
 ### Fixed
+
+
+- **The documented way to write a varying profile was quietly wrong.**  The
+  example in `slabs.probabilities_3nu_profile` scaled its potential by
+  `x[-1]`, the last position it was handed.  Those positions are the
+  *midpoints of the current refinement*, so they move every time the slab
+  count doubles: dividing by the last one makes the profile itself a function
+  of `n_slabs`.  Measured on a Hamiltonian with any mixing at all, that drops
+  the convergence from fourth order to **first** — 1.03, 1.02, 1.01 over
+  successive doublings against 4.00 for the same profile scaled by the
+  baseline — and `atol=1e-8` then exhausts `n_max=1024` and raises where the
+  corrected form meets it at **16 slabs**.
+
+  It was invisible in the shipped example because that example's Hamiltonian
+  was diagonal at every point, so there was no mixing, `P_ee` was exactly
+  1.000000, and the refinement never had to do anything.  A reader adapting it
+  to a Hamiltonian that oscillates got a `ValueError` and no clue why.  The
+  example now carries an off-diagonal entry, so it exercises the refinement it
+  is demonstrating, and the pitfall is named in the example, in
+  `recipes.rst` and in `README.md`.
+
+- **Five documented constants reached no page.**  `MAX_CHUNK_BYTES`,
+  `CHUNK_BYTES_FALLBACK`, `CHUNK_BYTES_MIN`, `CHUNK_BYTES_MAX` and
+  `MIN_CHUNK_ENERGIES` each carry an autodoc docstring, and `MAX_CHUNK_BYTES`
+  is named in this changelog as the knob to retune — but none was in
+  `earth.__all__`, so `automodule` skipped all five.  The documentation had
+  been written for a page it never appeared on: zero occurrences in the built
+  API reference, against eleven for a sibling that was listed.
+
+- **`README.md`'s requirements table contradicted its own introduction.**  The
+  lead-in said the rows without an extra "need nothing beyond `numpy`",
+  directly above a `numba` row marked as installed by default.
+
 
 - **The copied-out-module test stripped `sys.path` by name, not by path.**
   `test_a_core_module_works_copied_out_on_its_own` removed every entry whose

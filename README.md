@@ -106,7 +106,7 @@ Use **Magnus** instead when **the Hamiltonian varies continuously and appreciabl
 
 ## Requirements
 
-**NuOscProbExact** is fully written in Python 3.  It uses standard modules that are available, sometimes by default, as part of most Python installations, either stand-alone or via Anaconda.  Where a row names an extra, that is the one to install; the rest need nothing beyond `numpy`.  The commands are under [Installation](#installation) below, and are not repeated here.
+**NuOscProbExact** is fully written in Python 3.  It uses standard modules that are available, sometimes by default, as part of most Python installations, either stand-alone or via Anaconda.  `numpy` and `numba` are installed with the package, so the first four rows need nothing at all; where a row names an extra, that is the one to install.  The commands are under [Installation](#installation) below, and are not repeated here.
 
 | To do this | You need | Extra |
 |---|---|---|
@@ -192,6 +192,7 @@ NuOscProbExact/
 ├── LICENSE                          # MIT license
 ├── README.md                        # Project overview and worked examples
 ├── pyproject.toml                   # Packaging metadata and pytest configuration
+├── MANIFEST.in                      # Keeps the test suite out of the source distribution
 ├── examples/                        # Runnable scripts, one per scenario, linked from README.md
 │   ├── example_2nu_trivial.py       # Two-flavor, arbitrary Hamiltonian
 │   ├── example_2nu_vacuum.py        # Two-flavor, oscillations in vacuum
@@ -281,6 +282,8 @@ NuOscProbExact/
 │   └── make_demo_video.py           # Joins and shrinks the clips notebook 19 renders
 └── tests/                           # Regression suite, run with pytest
     ├── conftest.py                  # Shared fixtures and path setup
+    ├── gen_stiff_reference.py       # Regenerates the fifty-digit four-flavor oracle
+    ├── stiff_reference.json         # That oracle, frozen: nine Hamiltonians in hexadecimal floats
     ├── test_su3_algebra.py          # d tensor, star product, SU(3) invariants
     ├── test_oscprob4nu.py           # SU(4) algebra, quartic roots, 3+1 physics
     ├── test_evolution_operator.py   # U against an independent matrix exponential
@@ -418,7 +421,7 @@ That is ~38×, ~10× and ~11× over the compiled loop, and ~460×, ~120× and ~8
 
 **A chord is a palindrome.**  A neutrino crossing a spherically symmetric Earth meets every radius on the way in and again on the way out, so slab *j* and slab *n−1−j* carry the same Hamiltonian, the same width, and therefore the same operator.  Composing from the centre outwards computes each of them once instead of twice — worth ~1.4×, ~1.5× and ~1.8× of the figures above.  Nothing about it is specific to PREM: `fastkernels.palindromic` decides, and `slabs` asks it of any sequence, so a symmetric castle wall is composed at the same discount.  `fastkernels.USE_PALINDROME = False` asks for the plain left-to-right product instead.
 
-**Ask for an accuracy, not a slab count.**  `n_slabs_per_segment` fixes the discretisation rather than the error, and the two are not the same thing: the error is strongly energy- and angle-dependent.  Pass `rtol` or `atol` to any `earth` entry point and the chord is refined until the measured error meets it, on *every* returned probability, raising rather than silently returning something coarser when it cannot.  `earth.slabs_for_tolerance` runs the same search on its own, which is the cheap way to set one subdivision for a whole scan.  The same machinery serves profiles that are not the Earth through `slabs.probabilities_3nu_profile`, which takes the profile as a callable.
+**Ask for an accuracy, not a slab count.**  `n_slabs_per_segment` fixes the discretisation rather than the error, and the two are not the same thing: the error is strongly energy- and angle-dependent.  Pass `rtol` or `atol` to any `earth` entry point and the chord is refined until the measured error meets it, on *every* returned probability, raising rather than silently returning something coarser when it cannot.  `earth.slabs_for_tolerance` runs the same search on its own, which is the cheap way to set one subdivision for a whole scan.  The same machinery serves profiles that are not the Earth through `slabs.probabilities_{2,3,4}nu_profile`, which take the profile as a callable — scaled by the baseline rather than by the last sampled position, which moves as the refinement doubles.
 
 **The backend is not used where it would not help.**  For three flavors it wins at every stack size, by between two and sixteen times.  For two flavors it does not: that expansion reduces to a square root and a sine per element, which NumPy already does about as well as compiled code can, and the kernel additionally has to materialise the Hamiltonian stack.  Below fifty thousand elements the NumPy path is quicker, so it is kept; above, the kernel leads by about 1.3–1.8×.  The thresholds are measured, and the library picks whichever is faster without you doing anything.
 

@@ -1,0 +1,26 @@
+# What goes into the source distribution.
+#
+# Only one instruction is needed, and it removes something rather than adding
+# it.  Without this file setuptools applies its legacy default and sweeps
+# `tests/test*.py` into the sdist -- but not `conftest.py`, which every one of
+# those modules imports for `ATOL` and `traceless`.  The result was an sdist
+# carrying 22 of the 41 files in `tests/` and a suite that could not even be
+# collected: `pytest` in an unpacked sdist gave 13 collection errors, every one
+# of them `ModuleNotFoundError: No module named 'conftest'`.  Someone who ran
+# it would reasonably conclude the package was broken.
+#
+# Adding the missing files would not fix it, and that is why this prunes
+# rather than completes.  Much of this suite tests the *repository* rather
+# than the library: `test_file_tree.py` shells out to `git ls-files`,
+# `test_documented_figures.py` reads `docs/source/*.rst`, and the
+# notebook-count guard reads `notebooks/`.  None of that is in an sdist and
+# there is no checkout to ask, so making the suite pass from a tarball would
+# mean shipping essentially the whole repository and then weakening the guards
+# most worth having.  The suite stays where it works, in a clone.
+#
+# Nothing else needs saying here: `docs/`, `notebooks/`, `examples/`, `img/`
+# and `tools/` are already outside the default set and stay out.  The library,
+# its metadata, the README and the licence are what an sdist is for, and both
+# artefacts were checked to compute bit-identical probabilities to the source
+# tree from a clean environment.
+prune tests

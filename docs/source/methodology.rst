@@ -255,26 +255,48 @@ magnitude, with three of them clustered.  The invariants
 precision compresses a :math:`4\times4` matrix into three numbers and loses
 what separates the cluster.  Perturbing the three invariants at the
 :math:`10^{-16}` level --- their own rounding --- moves the roots by
-:math:`6\times10^{-11}` relative.  That is a property of the problem, not of
-the solver: it is the classic ill-conditioning of polynomial roots with
-respect to their coefficients, and it means no better root-finder helps.
-Deflating the quartic to a cubic first was tried, and does not.
+:math:`6\times10^{-11}` relative at :math:`\Delta m^2_{41} \sim 1`
+eV\ :sup:`2`, and by more as the splitting grows: the amplification from
+coefficients to roots measures :math:`2.3\times10^9`, which on the stiffest
+Hamiltonian in the reference puts the closed form at
+:math:`2.2\times10^{-7}`.  That is a property of the problem, not of the
+solver: it is the classic ill-conditioning of polynomial roots with respect
+to their coefficients, and it means no better root-finder helps.  Deflating
+the quartic to a cubic first was tried, and does not.
 
-The fix is to stop asking the invariants.  After the closed form supplies the
-roots, one Newton step on
+There are two ways out of a bottleneck like that, and the library has
+shipped both.
+
+**Stop asking the invariants.**  One Newton step on
 
 .. math:: \chi(\psi) = \det\left(\psi \mathbb{1} - \tilde{H}\right)
 
-refines them using the Hamiltonian *entries* at full precision, which never
-pass through the three-number bottleneck.  A second step changes nothing ---
-Newton doubles the correct digits, and one step already reaches the floor ---
-so exactly one is taken.
+refines the roots using the Hamiltonian *entries* at full precision, which
+never pass through the three-number bottleneck.  A second step changes
+nothing --- Newton doubles the correct digits, and one already reaches that
+route's floor --- so exactly one is taken.  This was the whole answer in
+1.12.0, and :data:`oscprob4nu.POLISH_ROOTS` still switches it.
 
-What it gains, and what the alternatives gain
-"""""""""""""""""""""""""""""""""""""""""""""
+**Or widen the bottleneck.**  The compression is only fatal because
+:math:`10^{-16}` is what a ``float64`` coefficient carries.  Form
+:math:`I_2, I_3, I_4` in *double-double* arithmetic --- each number a pair
+of ``float64`` limbs, together holding some 32 digits --- and the same
+:math:`2.3\times10^9` amplification acts on :math:`10^{-32}` instead,
+landing at :math:`10^{-23}`.  The roots are then limited by the final
+rounding of the answer to ``float64`` rather than by the algebra at all.
+One Aberth sweep, also in double-double, carries the quartic's roots to that
+limit.  This is the default since 1.13.0, and
+:data:`oscprob4nu.ROOT_STRATEGY` chooses between the two.
 
-Measured against ground truth from ``mpmath`` at fifty decimal digits, on
-stiff 3+1 Hamiltonians, with the cost quoted for a 200 000-point scan:
+What each gains, and what the alternatives gain
+"""""""""""""""""""""""""""""""""""""""""""""""
+
+Measured against ground truth from ``mpmath`` at fifty decimal digits, worst
+of the nine Hamiltonians in ``tests/stiff_reference.json``, which run from
+the physical 3+1 range out to :math:`\Delta m^2_{41} = 1000` eV\ :sup:`2`
+and down to a pair separated by :math:`10^{-16}`.  Cost is a full
+:func:`~oscprob4nu.probabilities_4nu` over a 100 000-point stiff stack
+through the compiled kernel, relative to what 1.12.0 shipped:
 
 .. list-table::
    :header-rows: 1
@@ -285,47 +307,82 @@ stiff 3+1 Hamiltonians, with the cost quoted for a 200 000-point scan:
      - Cost
      - Keeps the closed form?
    * - Closed form alone
-     - 8.3e-11
-     - 0.17 s
+     - 2.2e-07
+     - ---
      - yes
-   * - **Closed form + one Newton step**
-     - **1.1e-16**
-     - 0.41 s
+   * - Closed form + one Newton step
+     - 3.9e-16
+     - 1.00x
      - yes
-   * - ``numpy.linalg.eigvalsh``
-     - 7.4e-16
-     - 0.17 s
+   * - ``numpy.linalg.eigvalsh`` alone
+     - 6.9e-16
+     - 0.9-1.0x
      - no
-   * - Closed form in ``numpy.longdouble``
-     - 4.5e-11
-     - 0.43 s
+   * - **Invariants in double-double**
+     - **3.6e-17**
+     - 1.15-1.3x
      - yes
 
-Three things in that table are worth reading twice.
+The errors are exact and reproducible to the digits shown; the costs are
+ranges on purpose.  Timed in alternated pairs to cancel machine drift, the
+double-double row lands at 1.18x, 1.20x and 1.25x by three different
+methods, while the per-pair spread runs from 0.76x to 1.72x --- so a
+tighter figure would be describing one machine's load rather than the
+algorithm.  On the same evidence the Newton step in the row above costs
+under a tenth, which is inside that spread.
 
-The Newton step is **more accurate than LAPACK**, by about a factor of seven.
+The first row has no cost against it because it is no longer a route a
+caller can select: :func:`~oscprob4nu.psi_roots_4nu` still solves the
+quartic in closed form, and its contract is unchanged, but nothing in the
+probability path is built on it any more.  Its error is quoted on the same
+nine Hamiltonians as the rest, which is what it is there to show.
+
+Four things in that table are worth reading twice.
+
+The Newton step is **more accurate than LAPACK**, by about a factor of two.
 That is not a fluke: ``eigvalsh`` reduces the matrix by Householder and QR
 similarity transforms, each carrying a backward error of order
 :math:`\epsilon \|H\|`, while the Newton step converges onto the root of
 :math:`\det(\psi\mathbb{1} - \tilde{H})` for the matrix it was handed.
 
-Extended precision is a **poor trade**.  It buys under one digit rather than
-the three its extra mantissa suggests, because the cluster amplifies
-coefficient error, and it is slower because ``float128`` is not
-hardware-vectorised.  It is also silently platform-dependent: on Apple
-Silicon and on Windows ``numpy.longdouble`` *is* ``float64``, so this
-"fix" would quietly do nothing on those machines.
+Double-double is **the only row that is not fighting the conditioning**.
+Every other entry accepts a :math:`10^{-16}` coefficient and then tries to
+recover from it, whether by refining against the matrix or by avoiding the
+polynomial altogether; this one denies the amplification anything to work
+on.  It is also the only row whose accuracy is set by the *output* format
+rather than by the method, which is why more Aberth sweeps do not improve
+it: one, two and three give bitwise identical answers on all nine
+Hamiltonians.  That one suffices is a property of the *start*, not of the
+iteration --- the eigensolver's quartet with the residual-trace shift
+removed in double-double rather than in ``float64``.  Removing it in
+``float64`` throws away the low limb, puts the start an ulp out, and costs
+a second sweep to recover; the count was two for exactly as long as that
+was how it was done.
 
-``eigvalsh`` is genuinely cheaper --- it replaces the quartic rather than
-adding to it --- and it needs no eigenvectors, so it would not violate that
-principle either.  It is rejected because it is less accurate and because it
-would mean the four-flavor module obtains its eigenvalues from LAPACK, which
-is the one thing this library exists not to do.
+Extended precision is still a **poor trade**, and instructively so.  Solving
+the same quartic in ``numpy.longdouble`` was measured at 4.5e-11 --- under
+one extra digit, rather than the three its wider mantissa suggests, because
+the cluster amplifies whatever coefficient error survives --- while being
+slower for not being hardware-vectorised, and silently ``float64`` on Apple
+Silicon and on Windows, where the "fix" would quietly do nothing at all.
+Double-double gets four orders more than that, portably, out of pairs of the
+``float64`` every machine has.
 
-The refinement costs roughly 40% of the runtime, which brings the four-flavor
-closed form to parity with a batched ``eigh`` rather than ahead of it.  That
-is the honest summary: four flavors costs more per point than three.
-:data:`oscprob4nu.POLISH_ROOTS` records the trade and can switch it off.
+The double-double route does call ``eigvalsh``, once per element, and only
+for a **starting quartet**.  That is a smaller concession than it looks:
+what a start has to supply is not accuracy but four distinct basins, and its
+own error is discarded by the first sweep.  Euler's closed form is twice as
+fast and exact on every stiff case in the reference, and still cannot be
+used, because on a cluster Aberth converges *linearly* at ratio one half ---
+from :math:`10^{-7}` five sweeps reach :math:`3.8\times10^{-9}`, and it
+would need some thirty.  A backward-stable Hermitian eigensolver separates a
+cluster as well as ``float64`` allows, in one call.  Durand-Kerner was
+measured in place of Aberth as well, at one division per root against five,
+and rejected for being non-monotone in the sweep count: 3.9e-16, then
+9.7e-17, then 1.9e-16.
+
+The honest summary on cost is unchanged in shape: four flavors costs more
+per point than three, and the accurate routes cost more than the fast ones.
 
 Why the refinement is not applied selectively
 """""""""""""""""""""""""""""""""""""""""""""
@@ -360,6 +417,20 @@ The second failure points at the general reason.  A criterion complete enough
 to certify all four roots has to evaluate :math:`\chi` at all four roots ---
 and that *is* the refinement.  The check and the fix are the same
 computation, so there is nothing to save by doing the check first.
+
+That conclusion held up when it was retested for the double-double route,
+where it cuts the other way and hands over a free certificate.  An Aberth
+sweep evaluates :math:`\chi` at four roots by construction, so the size of
+the step it takes says whether the answer has converged --- around
+:math:`10^{-32}` relative once it has, against :math:`10^{-9}` while still
+crawling up a cluster, a gap wide enough that any threshold between them
+works.  That made a genuinely cheap arrangement possible: start from Euler's
+closed form, which costs nothing, and fall back to the eigensolver only for
+the elements the certificate rejects.  It was built and measured, and
+dropped --- the fallback fires on 80% of stiff spectra and 99% of those with
+a tight pair, which leaves it slower than simply starting from the
+eigensolver every time, for twice the code.  The criterion was sound; the
+saving it was guarding was not there.
 
 Note also who would benefit.  The four-flavor module exists mainly for 3+1,
 and a 3+1 scan is stiff at every point, so even a working criterion would

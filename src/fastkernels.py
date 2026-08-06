@@ -449,6 +449,127 @@ if HAVE_NUMBA:                                          # pragma: no branch
     TWO_SQRT3_INV = 2.0*SQRT3_INV
     DEGENERACY_TOL = 1.0e-12
 
+    DD_SPLIT = 134217729.0
+    r"""float: :math:`2^{27} + 1`, Dekker's splitting constant.
+
+    Multiplying by it and subtracting isolates the leading 26 bits of a
+    float64, so that the product of two halves is representable exactly and
+    `_two_prod` can return the rounding error it discarded.
+    """
+
+    def _dd_reciprocal_of_three() -> tuple:
+        r"""Returns 1/3 as a double-double pair, exact to 3e-33.
+
+        Formed once at import, by the same compensated arithmetic the kernel
+        uses: ``3*hi`` is split exactly into ``p + e`` by `_two_prod`, so
+        what 1/3 is missing after the first limb is ``((1 - p) - e)/3``.
+
+        It exists because ``2/3`` is the one irrational-in-binary constant
+        the quartic needs, and lifting a *rounded* 2/3 into double-double
+        would zero the low limb and drag c1 back to float64 accuracy --- the
+        1.1e-07 stall this whole route exists to remove, wearing the
+        disguise of a solver failure.  Multiplying by this pair costs no
+        division at all, where `_dd_div` costs three.
+        """
+        hi = 1.0/3.0
+        p, e = _two_prod(3.0, hi)
+        return hi, ((1.0 - p) - e)/3.0
+
+    DD_SWEEPS = 1
+    r"""int: Aberth sweeps taken over the four latent roots.
+
+    One, measured: every case in `tests/stiff_reference.json` gives an
+    identical answer at one, two and three sweeps, to the last bit.  A
+    single sweep suffices because the start is already good --- the
+    eigensolver's quartet with the residual-trace shift removed in
+    double-double rather than in float64, so the low limb the exact
+    traceless-ing computed survives into the iteration.
+
+    This was two for exactly as long as that subtraction was done in
+    float64, which put the start an ulp out and cost a sweep to recover.
+    See :data:`oscprob4nu.DD_SWEEPS`, which records the mistake, because
+    one sweep did genuinely measure 3.9e-16 back then and the number
+    looked like evidence the iteration needed the second.
+    """
+
+    @njit(cache=True, inline='always')
+    def _two_sum(a, b):
+        r"""Returns ``a + b`` as a rounded sum and the error it dropped.
+
+        Knuth's compensated addition: `s` is the float64 sum and `e` is
+        exactly :math:`a + b - s`, so the pair represents the sum with
+        nothing lost.  Six flops, and no assumption about which operand is
+        larger --- `_quick_two_sum` is the cheaper version that does assume
+        it.
+        """
+        s = a + b
+        bb = s - a
+        return s, (a - (s - bb)) + (b - bb)
+
+    @njit(cache=True, inline='always')
+    def _quick_two_sum(a, b):
+        r"""Returns ``a + b`` and its error, given :math:`|a| \geq |b|`."""
+        s = a + b
+        return s, b - (s - a)
+
+    @njit(cache=True, inline='always')
+    def _two_prod(a, b):
+        r"""Returns ``a*b`` as a rounded product and the error it dropped.
+
+        Dekker's algorithm: split both operands at `DD_SPLIT` into halves
+        narrow enough to multiply exactly, then assemble the four partial
+        products and subtract the rounded one.
+        """
+        p = a*b
+        t = DD_SPLIT*a
+        ah = t - (t - a)
+        al = a - ah
+        t = DD_SPLIT*b
+        bh = t - (t - b)
+        bl = b - bh
+        return p, ((ah*bh - p) + ah*bl + al*bh) + al*bl
+
+    @njit(cache=True, inline='always')
+    def _dd_add(xh, xl, yh, yl):
+        r"""Returns the double-double sum of ``(xh, xl)`` and ``(yh, yl)``."""
+        s, e = _two_sum(xh, yh)
+        return _quick_two_sum(s, e + xl + yl)
+
+    @njit(cache=True, inline='always')
+    def _dd_sub(xh, xl, yh, yl):
+        r"""Returns the double-double difference, ``x - y``."""
+        return _dd_add(xh, xl, -yh, -yl)
+
+    @njit(cache=True, inline='always')
+    def _dd_mul(xh, xl, yh, yl):
+        r"""Returns the double-double product, ``x*y``."""
+        p, e = _two_prod(xh, yh)
+        return _quick_two_sum(p, e + xh*yl + xl*yh)
+
+    @njit(cache=True, inline='always')
+    def _dd_div(xh, xl, yh, yl):
+        r"""Returns the double-double quotient, ``x/y``.
+
+        Three float64 divisions, each correcting the remainder left by the
+        one before.  The most expensive dd primitive by some margin, which
+        is why the root iteration below is Aberth's with the divisions
+        counted rather than anything more elaborate.
+        """
+        q1 = xh/yh
+        th, tl = _dd_mul(yh, yl, q1, 0.0)
+        rh, rl = _dd_sub(xh, xl, th, tl)
+        q2 = rh/yh
+        th, tl = _dd_mul(yh, yl, q2, 0.0)
+        rh, rl = _dd_sub(rh, rl, th, tl)
+        q3 = rh/yh
+        sh, sl = _quick_two_sum(q1, q2)
+        return _dd_add(sh, sl, q3, 0.0)
+
+    # Bound here rather than beside `DD_SWEEPS` because forming it needs
+    # `_two_prod`, which is defined above it.  Numba bakes a module global
+    # into the compiled code as a constant, which is exactly what is wanted.
+    THIRD_HI, THIRD_LO = _dd_reciprocal_of_three()
+
     @njit(cache=True, inline='always')
     def _entries_3nu(h_matrix, L):
         r"""Returns the nine entries of :math:`U_3(L)`, row by row.
@@ -737,8 +858,293 @@ if HAVE_NUMBA:                                          # pragma: no branch
         return sign*(scratch[0, 0]*scratch[1, 1]
                      * scratch[2, 2]*scratch[3, 3]).real
 
+    @njit(cache=True)
+    def _latent_roots_dd(traceless):
+        r"""Returns the four latent roots, to the last float64 bit.
+
+        The transcription of :func:`oscprob4nu._latent_roots_dd`.  Three
+        invariants compress a matrix into three numbers, and in float64 that
+        compression is where a stiff spectrum loses the separation between
+        its clustered roots: the amplification from coefficients to roots
+        was measured at 2.3e9, so a 1e-16 coefficient becomes a 1e-7 root.
+        The invariants are therefore formed in double-double arithmetic,
+        where a 1e-32 coefficient error amplifies to 1e-23 and the roots are
+        limited by float64 output rounding instead --- 3.6e-17 worst over
+        `tests/stiff_reference.json`, against 3.9e-16 for the eigensolver
+        with a Newton step and 2.2e-07 for the closed form the invariants
+        used to be handed to.
+
+        Four things here were each chosen against measurement, and each
+        would be easy to undo by accident:
+
+        `traceless` arrives with its trace removed in float64, which leaves
+        a residue :math:`\tau` of order 1e-23.  Removing that residue
+        exactly in dd is not a refinement, it is the difference between a
+        quartic that describes this matrix and one that does not: the
+        invariants would otherwise belong to a matrix whose trace is not
+        quite zero while the quartic pins its cubic coefficient to exactly
+        zero, and the two disagree by up to 3.8e-7.
+
+        :math:`\tilde{H}` is Hermitized exactly --- ``(h[i,j] +
+        conj(h[j,i]))/2``, representable because `_two_sum` of two float64s
+        loses nothing and halving only shifts exponents.  That makes
+        :math:`\tilde{H}^2` exactly Hermitian, so only its upper triangle is
+        formed, ten entries instead of sixteen.  Mirroring *without* the
+        Hermitization looks equivalent and costs :math:`I_3` and
+        :math:`I_4` about 1e-17, because a Hamiltonian built as
+        :math:`U M^2 U^\dagger` is Hermitian only to rounding and the mirror
+        discards the asymmetry silently.  Discarding it deliberately is
+        free: an anti-Hermitian perturbation moves a *real* eigenvalue only
+        at second order, since :math:`\langle v|\delta|v \rangle` is
+        imaginary.
+
+        :math:`\mathrm{Tr}(\tilde{H}^2)` is taken off :math:`\tilde{H}`
+        itself as :math:`\sum_{ij} |\tilde{H}_{ij}|^2` and
+        :math:`\mathrm{Tr}(\tilde{H}^4)` off :math:`\tilde{H}^2` as
+        :math:`\sum_{ij} |S_{ij}|^2`.  Both are sums of squares, with no
+        cancellation to lose digits to.
+
+        The start is the eigensolver's, because what a start must supply is
+        neither accuracy nor proximity but four distinct basins.  Euler's
+        closed form is twice as fast and exact on every stiff case, and
+        still wrong here:
+        on a cluster Aberth converges *linearly*, at ratio one half, so from
+        1e-7 five sweeps reach 3.8e-9 and it would need some thirty.  A
+        backward-stable Hermitian eigensolver separates a cluster as well as
+        float64 allows, which together with removing the residual-trace shift
+        in double-double is what makes `DD_SWEEPS` one rather than many.
+
+        Durand-Kerner was measured too, at one dd division per root against
+        Aberth's five, and rejected for being non-monotone in the sweep
+        count: 3.9e-16, then 9.7e-17, then 1.9e-16.
+        """
+        re_hi = np.empty((4, 4))
+        re_lo = np.empty((4, 4))
+        im_hi = np.empty((4, 4))
+        im_lo = np.empty((4, 4))
+
+        # Exact Hermitization.  A Hermitian diagonal is real, so its
+        # imaginary limbs are exactly zero and never enter a product.
+        for i in range(4):
+            re_hi[i, i] = traceless[i, i].real
+            re_lo[i, i] = 0.0
+            im_hi[i, i] = 0.0
+            im_lo[i, i] = 0.0
+            for j in range(i+1, 4):
+                s, e = _two_sum(traceless[i, j].real, traceless[j, i].real)
+                re_hi[i, j] = 0.5*s
+                re_lo[i, j] = 0.5*e
+                re_hi[j, i] = re_hi[i, j]
+                re_lo[j, i] = re_lo[i, j]
+                s, e = _two_sum(traceless[i, j].imag, -traceless[j, i].imag)
+                im_hi[i, j] = 0.5*s
+                im_lo[i, j] = 0.5*e
+                im_hi[j, i] = -im_hi[i, j]
+                im_lo[j, i] = -im_lo[i, j]
+
+        # The residual trace, removed exactly.  Dividing by four is exact.
+        tau_hi, tau_lo = re_hi[0, 0], re_lo[0, 0]
+        for i in range(1, 4):
+            tau_hi, tau_lo = _dd_add(tau_hi, tau_lo, re_hi[i, i], re_lo[i, i])
+        shift_hi, shift_lo = 0.25*tau_hi, 0.25*tau_lo
+        for i in range(4):
+            re_hi[i, i], re_lo[i, i] = _dd_sub(re_hi[i, i], re_lo[i, i],
+                                               shift_hi, shift_lo)
+
+        trace_2_hi, trace_2_lo = 0.0, 0.0
+        for i in range(4):
+            p_hi, p_lo = _dd_mul(re_hi[i, i], re_lo[i, i],
+                                 re_hi[i, i], re_lo[i, i])
+            trace_2_hi, trace_2_lo = _dd_add(trace_2_hi, trace_2_lo,
+                                             p_hi, p_lo)
+            for j in range(i+1, 4):
+                p_hi, p_lo = _dd_mul(re_hi[i, j], re_lo[i, j],
+                                     re_hi[i, j], re_lo[i, j])
+                q_hi, q_lo = _dd_mul(im_hi[i, j], im_lo[i, j],
+                                     im_hi[i, j], im_lo[i, j])
+                p_hi, p_lo = _dd_add(p_hi, p_lo, q_hi, q_lo)
+                trace_2_hi, trace_2_lo = _dd_add(trace_2_hi, trace_2_lo,
+                                                 2.0*p_hi, 2.0*p_lo)
+
+        sq_re_hi = np.zeros((4, 4))
+        sq_re_lo = np.zeros((4, 4))
+        sq_im_hi = np.zeros((4, 4))
+        sq_im_lo = np.zeros((4, 4))
+        for i in range(4):
+            for j in range(i, 4):
+                x_hi, x_lo = 0.0, 0.0
+                y_hi, y_lo = 0.0, 0.0
+                for k in range(4):
+                    p_hi, p_lo = _dd_mul(re_hi[i, k], re_lo[i, k],
+                                         re_hi[k, j], re_lo[k, j])
+                    q_hi, q_lo = _dd_mul(im_hi[i, k], im_lo[i, k],
+                                         im_hi[k, j], im_lo[k, j])
+                    d_hi, d_lo = _dd_sub(p_hi, p_lo, q_hi, q_lo)
+                    x_hi, x_lo = _dd_add(x_hi, x_lo, d_hi, d_lo)
+                    p_hi, p_lo = _dd_mul(re_hi[i, k], re_lo[i, k],
+                                         im_hi[k, j], im_lo[k, j])
+                    q_hi, q_lo = _dd_mul(im_hi[i, k], im_lo[i, k],
+                                         re_hi[k, j], re_lo[k, j])
+                    d_hi, d_lo = _dd_add(p_hi, p_lo, q_hi, q_lo)
+                    y_hi, y_lo = _dd_add(y_hi, y_lo, d_hi, d_lo)
+                sq_re_hi[i, j], sq_re_lo[i, j] = x_hi, x_lo
+                sq_im_hi[i, j], sq_im_lo[i, j] = y_hi, y_lo
+
+        # Tr(H~^3) = sum_i S_ii H~_ii + 2 sum_{i<j} Re(S_ij conj(H~_ij))
+        # Tr(H~^4) = sum_i S_ii^2   + 2 sum_{i<j} |S_ij|^2
+        trace_3_hi, trace_3_lo = 0.0, 0.0
+        trace_4_hi, trace_4_lo = 0.0, 0.0
+        for i in range(4):
+            p_hi, p_lo = _dd_mul(sq_re_hi[i, i], sq_re_lo[i, i],
+                                 re_hi[i, i], re_lo[i, i])
+            trace_3_hi, trace_3_lo = _dd_add(trace_3_hi, trace_3_lo,
+                                             p_hi, p_lo)
+            p_hi, p_lo = _dd_mul(sq_re_hi[i, i], sq_re_lo[i, i],
+                                 sq_re_hi[i, i], sq_re_lo[i, i])
+            trace_4_hi, trace_4_lo = _dd_add(trace_4_hi, trace_4_lo,
+                                             p_hi, p_lo)
+            for j in range(i+1, 4):
+                p_hi, p_lo = _dd_mul(sq_re_hi[i, j], sq_re_lo[i, j],
+                                     re_hi[i, j], re_lo[i, j])
+                q_hi, q_lo = _dd_mul(sq_im_hi[i, j], sq_im_lo[i, j],
+                                     im_hi[i, j], im_lo[i, j])
+                p_hi, p_lo = _dd_add(p_hi, p_lo, q_hi, q_lo)
+                trace_3_hi, trace_3_lo = _dd_add(trace_3_hi, trace_3_lo,
+                                                 2.0*p_hi, 2.0*p_lo)
+                p_hi, p_lo = _dd_mul(sq_re_hi[i, j], sq_re_lo[i, j],
+                                     sq_re_hi[i, j], sq_re_lo[i, j])
+                q_hi, q_lo = _dd_mul(sq_im_hi[i, j], sq_im_lo[i, j],
+                                     sq_im_hi[i, j], sq_im_lo[i, j])
+                p_hi, p_lo = _dd_add(p_hi, p_lo, q_hi, q_lo)
+                trace_4_hi, trace_4_lo = _dd_add(trace_4_hi, trace_4_lo,
+                                                 2.0*p_hi, 2.0*p_lo)
+
+        invariant_2_hi, invariant_2_lo = 0.5*trace_2_hi, 0.5*trace_2_lo
+        invariant_3_hi, invariant_3_lo = 0.5*trace_3_hi, 0.5*trace_3_lo
+        p_hi, p_lo = _dd_mul(invariant_2_hi, invariant_2_lo,
+                             invariant_2_hi, invariant_2_lo)
+        d_hi, d_lo = _dd_sub(trace_4_hi, trace_4_lo, p_hi, p_lo)
+        invariant_4_hi, invariant_4_lo = 0.5*d_hi, 0.5*d_lo
+
+        # chi(psi) = psi^4 + c2 psi^2 + c1 psi + c0.  The two thirds is
+        # formed by dd division: 2/3 is not representable in float64, and
+        # lifting a rounded 2/3 into dd zeroes the low limb and poisons c1
+        # back to float64 accuracy --- which is exactly the 1.1e-07 stall
+        # this whole route exists to remove.
+        c2_hi, c2_lo = -invariant_2_hi, -invariant_2_lo
+        p_hi, p_lo = _dd_mul(2.0*invariant_3_hi, 2.0*invariant_3_lo,
+                             THIRD_HI, THIRD_LO)
+        c1_hi, c1_lo = -p_hi, -p_lo
+        p_hi, p_lo = _dd_mul(invariant_2_hi, invariant_2_lo,
+                             invariant_2_hi, invariant_2_lo)
+        d_hi, d_lo = _dd_sub(p_hi, p_lo,
+                             2.0*invariant_4_hi, 2.0*invariant_4_lo)
+        c0_hi, c0_lo = 0.25*d_hi, 0.25*d_lo
+
+        latent = np.linalg.eigvalsh(traceless)
+        z_hi = np.empty(4)
+        z_lo = np.empty(4)
+        for k in range(4):
+            # In double-double, not float64.  Subtracting the residual-trace
+            # shift with one float64 operation discards the low limb the
+            # exact traceless-ing above went to the trouble of computing,
+            # and the start then arrives a whole ulp out --- which cost a
+            # second Aberth sweep to recover, and was mistaken for the
+            # iteration needing it.
+            z_hi[k], z_lo[k] = _dd_sub(latent[k], 0.0, shift_hi, shift_lo)
+
+        for _ in range(DD_SWEEPS):
+            for i in range(4):
+                sq_hi, sq_lo = _dd_mul(z_hi[i], z_lo[i], z_hi[i], z_lo[i])
+                a_hi, a_lo = _dd_mul(sq_hi, sq_lo, sq_hi, sq_lo)
+                b_hi, b_lo = _dd_mul(c2_hi, c2_lo, sq_hi, sq_lo)
+                a_hi, a_lo = _dd_add(a_hi, a_lo, b_hi, b_lo)
+                b_hi, b_lo = _dd_mul(c1_hi, c1_lo, z_hi[i], z_lo[i])
+                b_hi, b_lo = _dd_add(b_hi, b_lo, c0_hi, c0_lo)
+                chi_hi, chi_lo = _dd_add(a_hi, a_lo, b_hi, b_lo)
+
+                # chi'(psi) = 4 psi^3 + 2 c2 psi + c1
+                a_hi, a_lo = _dd_mul(sq_hi, sq_lo, z_hi[i], z_lo[i])
+                b_hi, b_lo = _dd_mul(c2_hi, c2_lo, z_hi[i], z_lo[i])
+                b_hi, b_lo = _dd_add(2.0*b_hi, 2.0*b_lo, c1_hi, c1_lo)
+                der_hi, der_lo = _dd_add(4.0*a_hi, 4.0*a_lo, b_hi, b_lo)
+
+                # Aberth's correction is Newton's step divided by one minus
+                # the pull of the other three roots, which is what keeps a
+                # cluster's members from converging onto each other and why
+                # no half-gap guard is needed here.  Written as
+                #
+                #   step = (chi/chi')/(1 - (chi/chi') sum_j 1/(psi_i-psi_j))
+                #
+                # it takes five dd divisions per root.  Clearing the
+                # denominators leaves the same expression as
+                #
+                #   step = chi P/(chi' P - chi S)
+                #
+                # for P and S the product and second elementary symmetric
+                # function of the three gaps, and one dd division.  A dd
+                # division is three float64 divisions where a dd multiply is
+                # none, and this loop was over half the route's cost.
+                gap_1_hi, gap_1_lo = 0.0, 0.0
+                gap_2_hi, gap_2_lo = 0.0, 0.0
+                gap_3_hi, gap_3_lo = 0.0, 0.0
+                for j in range(4):
+                    if j != i:
+                        g_hi, g_lo = _dd_sub(z_hi[i], z_lo[i],
+                                             z_hi[j], z_lo[j])
+                        if j == (i + 1) % 4:
+                            gap_1_hi, gap_1_lo = g_hi, g_lo
+                        elif j == (i + 2) % 4:
+                            gap_2_hi, gap_2_lo = g_hi, g_lo
+                        else:
+                            gap_3_hi, gap_3_lo = g_hi, g_lo
+
+                pair_hi, pair_lo = _dd_mul(gap_2_hi, gap_2_lo,
+                                           gap_3_hi, gap_3_lo)
+                prod_hi, prod_lo = _dd_mul(gap_1_hi, gap_1_lo,
+                                           pair_hi, pair_lo)
+                s_hi, s_lo = _dd_add(gap_2_hi, gap_2_lo, gap_3_hi, gap_3_lo)
+                s_hi, s_lo = _dd_mul(gap_1_hi, gap_1_lo, s_hi, s_lo)
+                s_hi, s_lo = _dd_add(pair_hi, pair_lo, s_hi, s_lo)
+
+                a_hi, a_lo = _dd_mul(der_hi, der_lo, prod_hi, prod_lo)
+                b_hi, b_lo = _dd_mul(chi_hi, chi_lo, s_hi, s_lo)
+                den_hi, den_lo = _dd_sub(a_hi, a_lo, b_hi, b_lo)
+                if den_hi == 0.0:
+                    continue
+
+                # A vanishing gap leaves the step at exactly zero through P
+                # rather than needing to be skipped: two roots that landed
+                # on identical bits stay where the eigensolver put them.
+                a_hi, a_lo = _dd_mul(chi_hi, chi_lo, prod_hi, prod_lo)
+                step_hi, step_lo = _dd_div(a_hi, a_lo, den_hi, den_lo)
+                z_hi[i], z_lo[i] = _dd_sub(z_hi[i], z_lo[i],
+                                           step_hi, step_lo)
+
+        # Only here do the two limbs collapse into one float64
+        psi_0 = z_hi[0] + z_lo[0]
+        psi_1 = z_hi[1] + z_lo[1]
+        psi_2 = z_hi[2] + z_lo[2]
+        psi_3 = z_hi[3] + z_lo[3]
+
+        # Ascending, by the five-comparator network for four elements.  The
+        # eigensolver's order is ascending and Aberth moves each root by far
+        # less than a gap, but `_divided_differences` below is written for
+        # sorted roots and the sort is four comparisons.
+        if psi_0 > psi_1:
+            psi_0, psi_1 = psi_1, psi_0
+        if psi_2 > psi_3:
+            psi_2, psi_3 = psi_3, psi_2
+        if psi_0 > psi_2:
+            psi_0, psi_2 = psi_2, psi_0
+        if psi_1 > psi_3:
+            psi_1, psi_3 = psi_3, psi_1
+        if psi_1 > psi_2:
+            psi_1, psi_2 = psi_2, psi_1
+        return psi_0, psi_1, psi_2, psi_3
+
     @njit(cache=True, inline='always')
-    def _operator_4nu(h_matrix, L, polish, work):
+    def _operator_4nu(h_matrix, L, strategy, work):
         r"""Builds :math:`U_4(L)` for one Hamiltonian in ``work[1]``.
 
         Factored out of `_one_4nu`, which computed the operator and
@@ -748,14 +1154,20 @@ if HAVE_NUMBA:                                          # pragma: no branch
         the caller's scratch, so the split costs nothing at all.
 
         A transcription of :func:`oscprob4nu._evolution_operator_4nu_array`
-        for a single element: the traceless part, the three invariants
-        from traces of powers, the quartic by Euler's reduction, the
-        Newton refinement of the roots against the matrix, the divided
-        differences of the exponential over them, and the Newton-form
-        reconstruction of :math:`U_4`.
+        for a single element: the traceless part, its four latent roots by
+        whichever route `strategy` names, the divided differences of the
+        exponential over them, and the Newton-form reconstruction of
+        :math:`U_4`.
 
         ``work`` is scratch space of shape ``(5, 4, 4)``, supplied by the
         caller so that the loop over a stack allocates nothing.
+        `_latent_roots_dd` breaks that rule: it allocates eight small real
+        arrays for its limbs rather than taking them from `work`, which
+        would mean widening the scratch that all eleven call sites pass for
+        the sake of a route one of them may not take.  Whether Numba hoists
+        those allocations out of the parallel loop has *not* been measured,
+        and if the double-double route's cost ever wants attacking this is
+        the first place to look.
         """
         traceless = work[0]
         operator = work[1]
@@ -770,84 +1182,23 @@ if HAVE_NUMBA:                                          # pragma: no branch
                 traceless[i, j] = h_matrix[i, j]
             traceless[i, i] = h_matrix[i, i] - trace
 
-        # The invariants, from traces of powers of the traceless part.
-        # `second` holds H~^2 until the reconstruction needs it back.
-        for i in range(4):
-            for j in range(4):
-                entry = 0.0j
-                for k in range(4):
-                    entry += traceless[i, k]*traceless[k, j]
-                second[i, j] = entry
-
-        trace_2 = 0.0j
-        trace_3 = 0.0j
-        trace_4 = 0.0j
-        for i in range(4):
-            trace_2 += second[i, i]
-            row_3 = 0.0j
-            row_4 = 0.0j
-            for j in range(4):
-                row_3 += second[i, j]*traceless[j, i]
-                row_4 += second[i, j]*second[j, i]
-            trace_3 += row_3
-            trace_4 += row_4
-
-        invariant_2 = 0.5*trace_2.real
-        invariant_3 = 0.5*trace_3.real
-        invariant_4 = 0.5*(trace_4.real - invariant_2*invariant_2)
-
-        # Euler's reduction: the resolvent cubic, solved trigonometrically
-        quadratic = -invariant_2
-        linear = -(2.0/3.0)*invariant_3
-        constant = 0.25*(invariant_2*invariant_2 - 2.0*invariant_4)
-
-        coeff_2 = 2.0*quadratic
-        coeff_1 = quadratic*quadratic - 4.0*constant
-        coeff_0 = -linear*linear
-
-        depressed_p = coeff_1 - coeff_2*coeff_2/3.0
-        depressed_q = (2.0*coeff_2*coeff_2*coeff_2/27.0
-                       - coeff_2*coeff_1/3.0 + coeff_0)
-        shift = -coeff_2/3.0
-
-        scale = 2.0*math.sqrt(max(-depressed_p, 0.0)/3.0)
-        denominator = depressed_p*scale
-        if denominator != 0.0:
-            argument = 3.0*depressed_q/denominator
+        # `second` no longer holds H~^2 on the way in; it is scratch for the
+        # reconstruction below, which writes every entry before reading any.
+        if strategy == 0:
+            psi_0, psi_1, psi_2, psi_3 = _latent_roots_dd(traceless)
         else:
-            argument = 3.0*depressed_q
-        if argument < -1.0:
-            argument = -1.0
-        elif argument > 1.0:
-            argument = 1.0
-        angle = math.acos(argument)
+            # Eigenvalues of the matrix, not roots of its invariants: in
+            # float64 those three numbers no longer hold a stiff spectrum's
+            # cluster apart, while a Hermitian eigensolver never forms them.
+            # LAPACK returns them ascending, so the five-comparator sorting
+            # network the closed form needed goes with it.
+            latent = np.linalg.eigvalsh(traceless)
+            psi_0 = latent[0]
+            psi_1 = latent[1]
+            psi_2 = latent[2]
+            psi_3 = latent[3]
 
-        root_0 = math.sqrt(max(scale*math.cos(angle/3.0) + shift, 0.0))
-        root_1 = math.sqrt(max(scale*math.cos((angle + 2.0*math.pi)/3.0)
-                               + shift, 0.0))
-        root_2 = math.sqrt(max(scale*math.cos((angle + 4.0*math.pi)/3.0)
-                               + shift, 0.0))
-        if linear > 0.0:
-            root_2 = -root_2
-
-        psi_0 = 0.5*(root_0 + root_1 + root_2)
-        psi_1 = 0.5*(root_0 - root_1 - root_2)
-        psi_2 = 0.5*(-root_0 + root_1 - root_2)
-        psi_3 = 0.5*(-root_0 - root_1 + root_2)
-
-        # Ascending, by the five-comparator network for four elements
-        if psi_0 > psi_1:
-            psi_0, psi_1 = psi_1, psi_0
-        if psi_2 > psi_3:
-            psi_2, psi_3 = psi_3, psi_2
-        if psi_0 > psi_2:
-            psi_0, psi_2 = psi_2, psi_0
-        if psi_1 > psi_3:
-            psi_1, psi_3 = psi_3, psi_1
-        if psi_1 > psi_2:
-            psi_1, psi_2 = psi_2, psi_1
-
-        if polish:
+        if strategy == 1:
             # One Newton step on chi, with chi'(psi_m) taken as the
             # product of the gaps to the other three roots, and refused
             # wherever it would carry a root more than halfway to its
@@ -999,9 +1350,9 @@ if HAVE_NUMBA:                                          # pragma: no branch
 
 
     @njit(cache=True, inline='always')
-    def _one_4nu(h_matrix, L, out, n, polish, work):
+    def _one_4nu(h_matrix, L, out, n, strategy, work):
         r"""Writes the sixteen probabilities into ``out[n]``."""
-        _operator_4nu(h_matrix, L, polish, work)
+        _operator_4nu(h_matrix, L, strategy, work)
         operator = work[1]
 
         # P_ab = |U_ba|^2, initial flavor slowest
@@ -1012,7 +1363,7 @@ if HAVE_NUMBA:                                          # pragma: no branch
                                           + entry.imag*entry.imag)
 
     @njit(cache=True, inline='always')
-    def _one_4nu_u(h_matrix, L, out, n, polish, work):
+    def _one_4nu_u(h_matrix, L, out, n, strategy, work):
         r"""Writes the sixteen entries of :math:`U_4(L)` into ``out[n]``.
 
         Row-major and indexed ``(final, initial)``, so reshaping to
@@ -1020,7 +1371,7 @@ if HAVE_NUMBA:                                          # pragma: no branch
         flavor order the probabilities use, which runs the initial index
         slowest.  The two differ by a transpose.
         """
-        _operator_4nu(h_matrix, L, polish, work)
+        _operator_4nu(h_matrix, L, strategy, work)
         operator = work[1]
 
         for i in range(4):
@@ -1213,14 +1564,14 @@ if HAVE_NUMBA:                                          # pragma: no branch
             _slab_product_3nu(h_stack[c], widths, out[c])
 
     @njit(cache=True)
-    def _slab_product_4nu_batch_serial(h_stack, widths, polish, out):
+    def _slab_product_4nu_batch_serial(h_stack, widths, strategy, out):
         for c in range(h_stack.shape[0]):
-            _slab_product_4nu(h_stack[c], widths, polish, out[c])
+            _slab_product_4nu(h_stack[c], widths, strategy, out[c])
 
     @njit(cache=True, parallel=True)
-    def _slab_product_4nu_batch_parallel(h_stack, widths, polish, out):
+    def _slab_product_4nu_batch_parallel(h_stack, widths, strategy, out):
         for c in prange(h_stack.shape[0]):
-            _slab_product_4nu(h_stack[c], widths, polish, out[c])
+            _slab_product_4nu(h_stack[c], widths, strategy, out[c])
 
     @njit(cache=True)
     def _build_h_2nu(h_vac, inv_e, potentials, k, h_work):
@@ -1343,7 +1694,7 @@ if HAVE_NUMBA:                                          # pragma: no branch
 
     @njit(cache=True)
     def _earth_chord_4nu(h_vac, inv_e, potentials, potentials_nc, widths,
-                         polish, out):
+                         strategy, out):
         r"""Composes one four-flavor chord, Hamiltonians built inline."""
         work = np.empty((5, 4, 4), dtype=np.complex128)
         acc = np.empty((4, 4), dtype=np.complex128)
@@ -1351,14 +1702,14 @@ if HAVE_NUMBA:                                          # pragma: no branch
         h_work = np.empty((4, 4), dtype=np.complex128)
 
         _build_h_4nu(h_vac, inv_e, potentials, potentials_nc, 0, h_work)
-        _operator_4nu(h_work, widths[0], polish, work)
+        _operator_4nu(h_work, widths[0], strategy, work)
         for i in range(4):
             for j in range(4):
                 acc[i, j] = work[1][i, j]
 
         for k in range(1, widths.shape[0]):
             _build_h_4nu(h_vac, inv_e, potentials, potentials_nc, k, h_work)
-            _operator_4nu(h_work, widths[k], polish, work)
+            _operator_4nu(h_work, widths[k], strategy, work)
             for i in range(4):
                 for j in range(4):
                     total = 0.0 + 0.0j
@@ -1512,7 +1863,7 @@ if HAVE_NUMBA:                                          # pragma: no branch
                 out[i, j] = s
 
     @njit(cache=True)
-    def _slab_product_4nu_mirrored(h_stack, widths, polish, out):
+    def _slab_product_4nu_mirrored(h_stack, widths, strategy, out):
         r"""Composes a palindromic four-flavor slab sequence at half cost."""
         work = np.empty((5, 4, 4), dtype=np.complex128)
         acc_a = np.empty((4, 4), dtype=np.complex128)
@@ -1528,7 +1879,7 @@ if HAVE_NUMBA:                                          # pragma: no branch
         n = widths.shape[0]
         m = n//2
         for k in range(m):
-            _operator_4nu(h_stack[k], widths[k], polish, work)
+            _operator_4nu(h_stack[k], widths[k], strategy, work)
             for i in range(4):
                 for j in range(4):
                     sb = 0.0 + 0.0j
@@ -1544,7 +1895,7 @@ if HAVE_NUMBA:                                          # pragma: no branch
                     acc_a[i, j] = tmp_a[i, j]
 
         if n % 2 == 1:
-            _operator_4nu(h_stack[m], widths[m], polish, work)
+            _operator_4nu(h_stack[m], widths[m], strategy, work)
             for i in range(4):
                 for j in range(4):
                     s = 0.0 + 0.0j
@@ -1699,7 +2050,7 @@ if HAVE_NUMBA:                                          # pragma: no branch
 
     @njit(cache=True)
     def _earth_chord_4nu_mirrored(h_vac, inv_e, potentials, potentials_nc,
-                                  widths, polish, out):
+                                  widths, strategy, out):
         r"""Composes one four-flavor chord, using its palindrome."""
         work = np.empty((5, 4, 4), dtype=np.complex128)
         acc_a = np.empty((4, 4), dtype=np.complex128)
@@ -1717,7 +2068,7 @@ if HAVE_NUMBA:                                          # pragma: no branch
         m = n//2
         for k in range(m):
             _build_h_4nu(h_vac, inv_e, potentials, potentials_nc, k, h_work)
-            _operator_4nu(h_work, widths[k], polish, work)
+            _operator_4nu(h_work, widths[k], strategy, work)
             for i in range(4):
                 for j in range(4):
                     sb = 0.0 + 0.0j
@@ -1734,7 +2085,7 @@ if HAVE_NUMBA:                                          # pragma: no branch
 
         if n % 2 == 1:
             _build_h_4nu(h_vac, inv_e, potentials, potentials_nc, m, h_work)
-            _operator_4nu(h_work, widths[m], polish, work)
+            _operator_4nu(h_work, widths[m], strategy, work)
             for i in range(4):
                 for j in range(4):
                     s = 0.0 + 0.0j
@@ -1782,18 +2133,19 @@ if HAVE_NUMBA:                                          # pragma: no branch
 
     @njit(cache=True)
     def _earth_chords_4nu_mirrored_serial(h_vac, inv_energies, potentials,
-                                          widths, potentials_nc, polish, out):
+                                          widths, potentials_nc, strategy,
+                                          out):
         for c in range(inv_energies.shape[0]):
             _earth_chord_4nu_mirrored(h_vac, inv_energies[c], potentials,
-                                      potentials_nc, widths, polish, out[c])
+                                      potentials_nc, widths, strategy, out[c])
 
     @njit(cache=True, parallel=True)
     def _earth_chords_4nu_mirrored_parallel(h_vac, inv_energies, potentials,
-                                            widths, potentials_nc, polish,
+                                            widths, potentials_nc, strategy,
                                             out):
         for c in prange(inv_energies.shape[0]):
             _earth_chord_4nu_mirrored(h_vac, inv_energies[c], potentials,
-                                      potentials_nc, widths, polish, out[c])
+                                      potentials_nc, widths, strategy, out[c])
 
     @njit(cache=True)
     def _earth_chords_2nu_serial(h_vac, inv_energies, potentials, widths, out):
@@ -1826,17 +2178,17 @@ if HAVE_NUMBA:                                          # pragma: no branch
     # `_run_earth_chords` dispatch all three through one call site.
     @njit(cache=True)
     def _earth_chords_4nu_serial(h_vac, inv_energies, potentials, widths,
-                                 potentials_nc, polish, out):
+                                 potentials_nc, strategy, out):
         for c in range(inv_energies.shape[0]):
             _earth_chord_4nu(h_vac, inv_energies[c], potentials,
-                             potentials_nc, widths, polish, out[c])
+                             potentials_nc, widths, strategy, out[c])
 
     @njit(cache=True, parallel=True)
     def _earth_chords_4nu_parallel(h_vac, inv_energies, potentials, widths,
-                                   potentials_nc, polish, out):
+                                   potentials_nc, strategy, out):
         for c in prange(inv_energies.shape[0]):
             _earth_chord_4nu(h_vac, inv_energies[c], potentials,
-                             potentials_nc, widths, polish, out[c])
+                             potentials_nc, widths, strategy, out[c])
 
     @njit(cache=True)
     def _run_2nu_serial(h_stack, l_stack, out):
@@ -1849,31 +2201,31 @@ if HAVE_NUMBA:                                          # pragma: no branch
             _one_2nu(h_stack[n], l_stack[n], out, n)
 
     @njit(cache=True)
-    def _run_4nu_serial(h_stack, l_stack, out, polish):
+    def _run_4nu_serial(h_stack, l_stack, out, strategy):
         work = np.empty((5, 4, 4), dtype=np.complex128)
         for n in range(h_stack.shape[0]):
-            _one_4nu(h_stack[n], l_stack[n], out, n, polish, work)
+            _one_4nu(h_stack[n], l_stack[n], out, n, strategy, work)
 
     @njit(cache=True, parallel=True)
-    def _run_4nu_parallel(h_stack, l_stack, out, polish):
+    def _run_4nu_parallel(h_stack, l_stack, out, strategy):
         for n in prange(h_stack.shape[0]):
             work = np.empty((5, 4, 4), dtype=np.complex128)
-            _one_4nu(h_stack[n], l_stack[n], out, n, polish, work)
+            _one_4nu(h_stack[n], l_stack[n], out, n, strategy, work)
 
     @njit(cache=True)
-    def _run_4nu_u_serial(h_stack, l_stack, out, polish):
+    def _run_4nu_u_serial(h_stack, l_stack, out, strategy):
         work = np.empty((5, 4, 4), dtype=np.complex128)
         for n in range(h_stack.shape[0]):
-            _one_4nu_u(h_stack[n], l_stack[n], out, n, polish, work)
+            _one_4nu_u(h_stack[n], l_stack[n], out, n, strategy, work)
 
     @njit(cache=True, parallel=True)
-    def _run_4nu_u_parallel(h_stack, l_stack, out, polish):
+    def _run_4nu_u_parallel(h_stack, l_stack, out, strategy):
         for n in prange(h_stack.shape[0]):
             work = np.empty((5, 4, 4), dtype=np.complex128)
-            _one_4nu_u(h_stack[n], l_stack[n], out, n, polish, work)
+            _one_4nu_u(h_stack[n], l_stack[n], out, n, strategy, work)
 
     @njit(cache=True)
-    def _slab_product_4nu(h_stack, widths, polish, out):
+    def _slab_product_4nu(h_stack, widths, strategy, out):
         r"""Multiplies the per-slab four-flavor operators into ``out``.
 
         The four-flavor counterpart of `_slab_product_3nu`, and the same
@@ -1883,13 +2235,13 @@ if HAVE_NUMBA:                                          # pragma: no branch
         acc = np.empty((4, 4), dtype=np.complex128)
         tmp = np.empty((4, 4), dtype=np.complex128)
 
-        _operator_4nu(h_stack[0], widths[0], polish, work)
+        _operator_4nu(h_stack[0], widths[0], strategy, work)
         for i in range(4):
             for j in range(4):
                 acc[i, j] = work[1][i, j]
 
         for k in range(1, widths.shape[0]):
-            _operator_4nu(h_stack[k], widths[k], polish, work)
+            _operator_4nu(h_stack[k], widths[k], strategy, work)
             for i in range(4):
                 for j in range(4):
                     total = 0.0 + 0.0j
@@ -2071,7 +2423,7 @@ if HAVE_NUMBA:                                          # pragma: no branch
     def evolution_operator_4nu_kernel(
         h_stack: np.ndarray,
         l_stack: np.ndarray,
-        polish: bool = True
+        strategy: int = 0
     ) -> np.ndarray:
         r"""Returns :math:`U_4(L)` for a stack of Hamiltonians.
 
@@ -2084,9 +2436,13 @@ if HAVE_NUMBA:                                          # pragma: no branch
             against `l_stack`.
         l_stack : numpy.ndarray
             Baselines, of shape ``(...)``.
-        polish : bool, optional
-            Whether to refine the latent roots against the Hamiltonian,
-            as :data:`oscprob4nu.POLISH_ROOTS` does on the NumPy path.
+        strategy : int, optional
+            How to obtain the latent roots, as
+            :data:`oscprob4nu.ROOT_STRATEGY` and
+            :data:`oscprob4nu.POLISH_ROOTS` select between on the NumPy
+            path: ``0`` for double-double invariants with Aberth
+            refinement, ``1`` for the eigensolver with a Newton step,
+            ``2`` for the eigensolver alone.
 
         Returns
         -------
@@ -2096,13 +2452,13 @@ if HAVE_NUMBA:                                          # pragma: no branch
         """
         flat = _run(h_stack, l_stack, 4,
                     _run_4nu_u_serial, _run_4nu_u_parallel,
-                    (bool(polish),), dtype=complex)
+                    (int(strategy),), dtype=complex)
         return flat.reshape(flat.shape[:-1] + (4, 4))
 
     def slab_product_4nu_kernel(
         h_stack: np.ndarray,
         widths: np.ndarray,
-        polish: bool = True
+        strategy: int = 0
     ) -> np.ndarray:
         r"""Returns the composed :math:`U_4` across a sequence of slabs.
 
@@ -2115,8 +2471,10 @@ if HAVE_NUMBA:                                          # pragma: no branch
             along the trajectory.
         widths : numpy.ndarray
             Slab widths, of shape ``(n,)``.
-        polish : bool, optional
-            Whether to refine the latent roots against the Hamiltonian.
+        strategy : int, optional
+            How to obtain the latent roots: ``0`` for double-double
+            invariants with Aberth refinement, ``1`` for the eigensolver
+            with a Newton step, ``2`` for the eigensolver alone.
 
         Returns
         -------
@@ -2127,9 +2485,9 @@ if HAVE_NUMBA:                                          # pragma: no branch
         h = np.ascontiguousarray(h_stack, dtype=complex)
         w = np.ascontiguousarray(widths, dtype=float)
         if worthwhile_mirror(4, w.shape[0]) and _palindromic_stack(h, w):
-            _slab_product_4nu_mirrored(h, w, bool(polish), out)
+            _slab_product_4nu_mirrored(h, w, int(strategy), out)
         else:
-            _slab_product_4nu(h, w, bool(polish), out)
+            _slab_product_4nu(h, w, int(strategy), out)
         return out
 
     def slab_product_3nu_kernel(
@@ -2373,7 +2731,7 @@ if HAVE_NUMBA:                                          # pragma: no branch
         potentials: np.ndarray,
         potentials_nc: np.ndarray,
         widths: np.ndarray,
-        polish: bool = True
+        strategy: int = 0
     ) -> np.ndarray:
         r"""Returns one composed :math:`U_4` per energy, Hamiltonians
         built inline.
@@ -2392,8 +2750,10 @@ if HAVE_NUMBA:                                          # pragma: no branch
             Neutral-current potentials, of the same shape.
         widths : numpy.ndarray
             Slab widths, of shape ``(n_slabs,)``.
-        polish : bool, optional
-            Whether to refine the latent roots against the Hamiltonian.
+        strategy : int, optional
+            How to obtain the latent roots: ``0`` for double-double
+            invariants with Aberth refinement, ``1`` for the eigensolver
+            with a Newton step, ``2`` for the eigensolver alone.
 
         Returns
         -------
@@ -2404,7 +2764,7 @@ if HAVE_NUMBA:                                          # pragma: no branch
             h_vacuum, energies, potentials, widths, 4,
             _earth_chords_4nu_serial, _earth_chords_4nu_parallel,
             (np.ascontiguousarray(potentials_nc, dtype=float),
-             bool(polish)),
+             int(strategy)),
             mirrored=(_earth_chords_4nu_mirrored_serial,
                       _earth_chords_4nu_mirrored_parallel))
 
@@ -2468,7 +2828,7 @@ if HAVE_NUMBA:                                          # pragma: no branch
     def slab_product_4nu_batch_kernel(
         h_stack: np.ndarray,
         widths: np.ndarray,
-        polish: bool = True
+        strategy: int = 0
     ) -> np.ndarray:
         r"""Returns one composed :math:`U_4` per chord.
 
@@ -2481,8 +2841,10 @@ if HAVE_NUMBA:                                          # pragma: no branch
             as `slab_product_4nu_kernel` also expects.
         widths : numpy.ndarray
             Slab widths, of shape ``(n_slabs,)``, shared by every chord.
-        polish : bool, optional
-            Whether to refine the latent roots against the Hamiltonian.
+        strategy : int, optional
+            How to obtain the latent roots: ``0`` for double-double
+            invariants with Aberth refinement, ``1`` for the eigensolver
+            with a Newton step, ``2`` for the eigensolver alone.
 
         Returns
         -------
@@ -2492,7 +2854,7 @@ if HAVE_NUMBA:                                          # pragma: no branch
         return _run_slab_batch(h_stack, widths, 4,
                                _slab_product_4nu_batch_serial,
                                _slab_product_4nu_batch_parallel,
-                               (bool(polish),))
+                               (int(strategy),))
 
     def probabilities_2nu_kernel(
         h_stack: np.ndarray,
@@ -2521,7 +2883,7 @@ if HAVE_NUMBA:                                          # pragma: no branch
     def probabilities_4nu_kernel(
         h_stack: np.ndarray,
         l_stack: np.ndarray,
-        polish: bool = True
+        strategy: int = 0
     ) -> np.ndarray:
         r"""Returns the sixteen probabilities for a stack of Hamiltonians.
 
@@ -2534,12 +2896,15 @@ if HAVE_NUMBA:                                          # pragma: no branch
             against `l_stack`.
         l_stack : numpy.ndarray
             Baselines, of shape ``(...)``.
-        polish : bool, optional
-            Whether to refine the latent roots against the Hamiltonian
-            matrix, as :data:`oscprob4nu.POLISH_ROOTS` asks the NumPy
-            path to.  It is an argument rather than a module constant
-            because a compiled kernel cannot read a Python global at
-            call time without recompiling.
+        strategy : int, optional
+            How to obtain the latent roots, as
+            :data:`oscprob4nu.ROOT_STRATEGY` and
+            :data:`oscprob4nu.POLISH_ROOTS` ask the NumPy path to:
+            ``0`` for double-double invariants with Aberth refinement,
+            ``1`` for the eigensolver with a Newton step, ``2`` for the
+            eigensolver alone.  It is an argument rather than a module
+            constant because a compiled kernel cannot read a Python
+            global at call time without recompiling.
 
         Returns
         -------
@@ -2549,4 +2914,4 @@ if HAVE_NUMBA:                                          # pragma: no branch
             the same values to round-off, as the NumPy path.
         """
         return _run(h_stack, l_stack, 4, _run_4nu_serial, _run_4nu_parallel,
-                    (bool(polish),))
+                    (int(strategy),))

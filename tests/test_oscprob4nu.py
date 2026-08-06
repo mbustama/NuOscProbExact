@@ -7,7 +7,20 @@ operator and ``numpy.linalg.eigh`` for the spectrum --- plus one that
 only exists at four flavors: switching the three sterile mixing angles
 off must reproduce :mod:`oscprob3nu` exactly, since a decoupled fourth
 state cannot change the active block.
+
+The latent roots get a stricter oracle than any of those, in
+``stiff_reference.json``: fifty-digit ``mpmath`` values for nine
+Hamiltonians, frozen to a file.  They have to be frozen, because
+``numpy.linalg.eigvalsh`` stopped being independent of the library the
+moment it became one of :data:`oscprob4nu.ROOT_STRATEGY`'s routes ---
+tests written against it began comparing an implementation with itself,
+one of them asserting ``1.06e-15 <= 0.0``.  See
+``tests/gen_stiff_reference.py``, which regenerates the file and records
+the three traps its own oracle fell into first.
 """
+
+import json
+import os
 
 import numpy as np
 import pytest
@@ -24,6 +37,30 @@ import oscprob4nu
 BASELINE = 1300.0*gd.CONV_KM_TO_INV_EV
 ENERGY = 1.0e9
 DM41 = 1.0
+
+STIFF_REFERENCE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                               'stiff_reference.json')
+
+
+def stiff_cases():
+    r"""Yields the frozen reference cases, as ``float64`` arrays.
+
+    Read from hexadecimal floats, so what comes back is the exact bits the
+    fifty-digit values were computed from rather than a decimal rounding of
+    them.
+    """
+    with open(STIFF_REFERENCE) as handle:
+        payload = json.load(handle)
+
+    for case in payload['cases']:
+        matrix = np.array(
+            [[float.fromhex(case['matrix_real'][i][j])
+              + 1.j*float.fromhex(case['matrix_imag'][i][j])
+              for j in range(4)] for i in range(4)])
+        yield (case['label'], matrix,
+               float.fromhex(case['baseline']),
+               np.array([float.fromhex(r) for r in case['roots']]),
+               np.array([float.fromhex(p) for p in case['probabilities']]))
 
 
 def random_hermitian(rng):
@@ -323,14 +360,27 @@ def test_nsi_leaves_the_sterile_row_and_column_alone():
 
 
 @pytest.mark.parametrize('use_numba', [False, True])
-def test_root_polishing_is_what_makes_a_stiff_spectrum_accurate(use_numba,
-                                                                monkeypatch):
-    r"""The refinement against the matrix earns its cost, on both paths.
+def test_polish_roots_is_scoped_to_the_eigensolver_route(
+        use_numba, monkeypatch):
+    r"""The Newton step is live behind the eigensolver and dead ahead of it.
 
-    A 3+1 spectrum with an eV-scale sterile spans four orders of
-    magnitude, and the closed-form roots then carry only what the three
-    invariants retain in double precision.  This pins the improvement so
-    that removing the refinement cannot pass unnoticed.
+    :data:`oscprob4nu.POLISH_ROOTS` must still reach both backends on the
+    ``'eigensolver'`` route, and must do nothing whatever on the
+    ``'double-double'`` one, which neither forms the roots that way nor
+    leaves a Newton step anything to find.  Wiring the two switches
+    together by accident is what this fails on.
+
+    What it deliberately does *not* do is rank the routes by probability
+    error.  An earlier version of this test asserted a hundredfold gain
+    from the Newton step and got one, because what it was compared against
+    was the closed form, whose roots carry only what three invariants
+    retain in double precision.  Against an eigensolver start the step is
+    worth about five on the roots, and on a spectrum this stiff even that
+    ordering does not survive the trip into probabilities: the accumulated
+    phase amplifies a root error by :math:`(\psi_{\max} L)^2`, which here
+    is enough to reorder two routes that differ by an ulp.  The ranking is
+    pinned where it is clean, on the roots themselves, in
+    `test_the_root_strategies_meet_their_documented_accuracy`.
 
     Two things about how it is pinned, both learned the hard way.
 
@@ -376,17 +426,114 @@ def test_root_polishing_is_what_makes_a_stiff_spectrum_accurate(use_numba,
     relative_gap = np.min(np.diff(spectrum))/np.max(np.abs(spectrum))
     assert relative_gap < 1.0e-3, relative_gap
 
-    monkeypatch.setattr(oscprob4nu, 'POLISH_ROOTS', True)
-    polished = np.max(np.abs(np.asarray(oscprob4nu.probabilities_4nu(
-        h_matter, BASELINE)).reshape(4, 4) - reference))
-    monkeypatch.setattr(oscprob4nu, 'POLISH_ROOTS', False)
-    unpolished = np.max(np.abs(np.asarray(oscprob4nu.probabilities_4nu(
-        h_matter, BASELINE)).reshape(4, 4) - reference))
+    def probabilities(strategy, polish):
+        monkeypatch.setattr(oscprob4nu, 'ROOT_STRATEGY', strategy)
+        monkeypatch.setattr(oscprob4nu, 'POLISH_ROOTS', polish)
+        return np.asarray(oscprob4nu.probabilities_4nu(
+            h_matter, BASELINE)).reshape(4, 4)
 
-    assert polished < 1.0e-9
-    # Measured at about 3200x on the NumPy path and 3400x on the
-    # compiled one; a hundred leaves a factor of thirty of headroom.
-    assert unpolished > 100.0*polished
+    polished = probabilities('eigensolver', True)
+    unpolished = probabilities('eigensolver', False)
+    with_flag = probabilities('double-double', True)
+    without_flag = probabilities('double-double', False)
+
+    # Live behind the eigensolver: the step moves the answer
+    assert np.max(np.abs(polished - unpolished)) > 0.0
+    # Dead ahead of it: bit for bit, the flag is not read at all
+    assert np.array_equal(with_flag, without_flag)
+
+    for candidate in (polished, unpolished, with_flag):
+        assert np.max(np.abs(candidate - reference)) < 1.0e-9
+
+
+@pytest.mark.parametrize('strategy,tolerance',
+                         [('double-double', 1.0e-16),
+                          ('eigensolver', 5.0e-16)])
+def test_the_root_strategies_meet_their_documented_accuracy(strategy,
+                                                            tolerance,
+                                                            monkeypatch):
+    r"""Each route hits the figure :data:`oscprob4nu.ROOT_STRATEGY` quotes.
+
+    Against the frozen fifty-digit roots, over all nine cases at once so
+    that the stack path is what runs.  Measured worst: 3.6e-17 for
+    double-double and 3.9e-16 for the eigensolver with its Newton step,
+    against bars of 1e-16 and 5e-16 here.
+
+    Those bars are close to the measurements on purpose.  One ``float64``
+    ulp on a root of order one is 2.2e-16, so double-double is being held
+    to *below* half an ulp --- there is no room to loosen this without
+    giving up the claim it exists to defend, and a regression that pushed
+    the answer to a whole ulp would still look small while meaning the dd
+    coefficients had stopped arriving in dd.
+    """
+    monkeypatch.setattr(oscprob4nu, 'ROOT_STRATEGY', strategy)
+    monkeypatch.setattr(oscprob4nu, 'POLISH_ROOTS', True)
+
+    labels, matrices, references = [], [], []
+    for label, matrix, _, roots, _ in stiff_cases():
+        labels.append(label)
+        matrices.append(traceless(matrix))
+        references.append(roots)
+
+    psi = oscprob4nu._latent_roots(np.stack(matrices))
+
+    for label, got, want in zip(labels, psi, references):
+        error = np.max(np.abs(np.sort(got) - want))/np.max(np.abs(want))
+        assert error < tolerance, '%s: %.3e' % (label, error)
+
+
+@pytest.mark.parametrize('use_numba', [False, True])
+@pytest.mark.parametrize('strategy', ['double-double', 'eigensolver'])
+def test_the_reference_probabilities_are_reproduced(use_numba, strategy,
+                                                    monkeypatch):
+    r"""Both routes reproduce the frozen ``expm`` probabilities.
+
+    The tolerance grows with the square of the accumulated phase
+    :math:`\psi_{\max} L`, which is where the reference's stiffest cases
+    spend their accuracy: reconstructing :math:`U_4` in Newton form takes
+    second differences of :math:`e^{-i\psi L}` over the roots, so an error
+    in the phase enters the coefficients twice.  Measured
+    :math:`5 \times 10^{-17} (\psi_{\max} L)^2` across five decades of
+    phase --- 1.3e-12 at 245 radians, 2.8e-4 at 2.5e6 --- and the bar below
+    keeps a factor of twenty above that.
+
+    This is a limit of the reconstruction and not of the roots, which the
+    strategies deliver to under an ulp either way; at
+    :math:`\Delta m^2_{41} = 1000\ \mathrm{eV}^2` over 1300 km the phase is
+    2.5 million radians and ``float64`` simply cannot carry it.  Notebook 17
+    records the same wall from the other side, agreeing with nuSQuIDS to
+    3e-10 on the stiffest spectrum tested.  The physical part of the range
+    is where the tight numbers are: 1.3e-12 at 0.1 eV\ :sup:`2`.
+    """
+    if use_numba and not fastkernels.HAVE_NUMBA:
+        pytest.skip('Numba is not installed')
+    monkeypatch.setattr(fastkernels, 'USE_NUMBA', use_numba)
+    monkeypatch.setattr(oscprob4nu, 'ROOT_STRATEGY', strategy)
+    monkeypatch.setattr(oscprob4nu, 'POLISH_ROOTS', True)
+
+    for label, matrix, baseline, roots, want in stiff_cases():
+        got = np.asarray(oscprob4nu.probabilities_4nu(matrix, baseline))
+        phase = np.max(np.abs(roots))*baseline
+        tolerance = 1.0e-15*phase*phase + 4.0e-15
+
+        error = np.max(np.abs(got.ravel() - want))
+        assert error < tolerance, ('%s: %.3e (phase %.2e)'
+                                   % (label, error, phase))
+
+
+def test_an_unknown_root_strategy_is_refused(monkeypatch):
+    r"""A misspelt :data:`oscprob4nu.ROOT_STRATEGY` says so.
+
+    Silently falling back to either route would hide the mistake behind
+    results that look fine, which for a switch whose whole purpose is to
+    choose between accuracies is the one outcome worth ruling out.
+    """
+    monkeypatch.setattr(oscprob4nu, 'ROOT_STRATEGY', 'eigensolvor')
+
+    with pytest.raises(ValueError, match='double-double'):
+        oscprob4nu._latent_roots(np.stack([traceless(vacuum_4nu())]))
+    with pytest.raises(ValueError, match='double-double'):
+        oscprob4nu._strategy_code()
 
 
 def nearly_degenerate_pair(rng, separation):

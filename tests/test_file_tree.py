@@ -60,6 +60,7 @@ TREE = [
     # `installation.rst` as well, where that was untrue.
     ('README.md', 'Project overview and worked examples'),
     ('pyproject.toml', 'Packaging metadata and pytest configuration'),
+    ('MANIFEST.in', 'Keeps the test suite out of the source distribution'),
     ('examples/', 'Runnable scripts, one per scenario, linked from README.md'),
     ('examples/example_2nu_trivial.py', 'Two-flavor, arbitrary Hamiltonian'),
     ('examples/example_2nu_vacuum.py', 'Two-flavor, oscillations in vacuum'),
@@ -172,6 +173,10 @@ TREE = [
      'Joins and shrinks the clips notebook 19 renders'),
     ('tests/', 'Regression suite, run with pytest'),
     ('tests/conftest.py', 'Shared fixtures and path setup'),
+    ('tests/gen_stiff_reference.py',
+     'Regenerates the fifty-digit four-flavor oracle'),
+    ('tests/stiff_reference.json',
+     'That oracle, frozen: nine Hamiltonians in hexadecimal floats'),
     ('tests/test_su3_algebra.py', 'd tensor, star product, SU(3) invariants'),
     ('tests/test_oscprob4nu.py', 'SU(4) algebra, quartic roots, 3+1 physics'),
     ('tests/test_evolution_operator.py',

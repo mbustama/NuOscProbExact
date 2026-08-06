@@ -1250,8 +1250,10 @@ books['09_performance.ipynb'] = notebook(
            'but two things make it dearer per element.\n\n'
            '1. **More algebra.** Fifteen generators rather than eight, a '
            'quartic characteristic equation rather than a cubic.\n'
-           '2. **The root refinement.** `oscprob4nu.POLISH_ROOTS`, on by '
-           'default, is what keeps a stiff 3+1 spectrum accurate.\n\n'
+           '2. **The root strategy.** `oscprob4nu.ROOT_STRATEGY` defaults '
+           'to `\'double-double\'`, which is what keeps a stiff 3+1 '
+           'spectrum accurate and costs roughly a fifth more than the '
+           'eigensolver route behind it.\n\n'
            'Both flavor counts have a compiled kernel, so the ratio is '
            'measured twice below: once with both paths on NumPy and once '
            'with both compiled. Taking it across the two — four-flavor '
@@ -1313,10 +1315,13 @@ books['09_performance.ipynb'] = notebook(
            'whole-array passes, a batched determinant and a Newton step '
            'among them, and the kernel does not pay that cost.\n\n'
            'Switching the refinement off buys back roughly a third of the '
-           'NumPy call and gives up about three orders of magnitude of '
-           'accuracy on a stiff spectrum, which is almost never the right '
-           'trade. Notebook 16 measures both figures against an '
-           'independent reference.'),
+           'NumPy call and gives up a factor of two on the roots. Changing '
+           '`ROOT_STRATEGY` away from its default gives up rather more — an '
+           'order of magnitude — for roughly a fifth of the time. Notebook '
+           '16 measures both against a fifty-digit oracle, and is also '
+           'where the catch lives: on a stiff spectrum neither choice is '
+           'visible in the *probabilities*, because the accumulated phase '
+           'dominates them.'),
         md('## What a tolerance costs\n\n'
            '`rtol` and `atol` are an accuracy feature rather than a '
            'speed one, but they have a cost worth knowing. The search '
@@ -3319,47 +3324,178 @@ books['16_four_neutrinos.ipynb'] = notebook(
            'into three numbers and loses what separates the cluster. That is '
            'ordinary ill-conditioning of polynomial roots against their '
            'coefficients, so no better root-finder helps.\n\n'
-           'The library refines the roots against the *matrix* instead — one '
-           'Newton step on $\\chi(\\psi) = \\det(\\psi\\mathbb{1} - \\tilde '
-           'H)$, which reads the Hamiltonian entries at full precision. '
-           '`POLISH_ROOTS` controls it, and here is what it buys:'),
-        code('def reference(Hs, L):\n'
-             '    Ht = Hs - np.einsum("...ii->...", Hs).real[..., None, None]'
-             '/4.0*np.eye(4)\n'
-             '    w, V = np.linalg.eigh(Ht)\n'
-             '    U = np.einsum("...ik,...k,...jk->...ij", V,\n'
-             '                  np.exp(-1j*w*L), V.conj())\n'
-             '    return np.abs(np.swapaxes(U, -1, -2))**2\n\n\n'
-             'P_ref = reference(H_stack, baseline).reshape(-1, 16)\n'
-             'for flag in (True, False):\n'
-             '    oscprob4nu.POLISH_ROOTS = flag\n'
-             '    P = oscprob4nu.probabilities_4nu(H_stack, baseline)\n'
-             '    print("POLISH_ROOTS = %-5s : max |P - P_eigh| = %.2e"\n'
-             '          % (flag, np.max(np.abs(P - P_ref))))\n'
-             'oscprob4nu.POLISH_ROOTS = True'),
-        md('Three alternatives were measured against `mpmath` at fifty '
-           'decimal digits before settling on this one, and two of them '
-           'lose in instructive ways.\n\n'
-           '| Strategy for the roots | Relative error | Cost, 200k points | '
-           'Closed form? |\n'
-           '|---|---|---|---|\n'
-           '| Closed form alone | 8.3e-11 | 0.17 s | yes |\n'
-           '| **Closed form + one Newton step** | **1.1e-16** | 0.41 s | '
-           'yes |\n'
-           '| `numpy.linalg.eigvalsh` | 7.4e-16 | 0.17 s | no |\n'
-           '| Closed form in `numpy.longdouble` | 4.5e-11 | 0.43 s | yes '
-           '|\n\n'
-           'The Newton step is about **seven times more accurate than '
-           'LAPACK**, because `eigvalsh` reduces the matrix by similarity '
-           'transforms that each carry a backward error $\\sim\\epsilon\\|H\\|$, '
-           'while this converges onto the root of $\\det(\\psi\\mathbb{1} - '
+           'There are two ways out of a bottleneck like that, and the '
+           'library ships both. `oscprob4nu.ROOT_STRATEGY` chooses.\n\n'
+           '**`\'eigensolver\'`** stops asking the invariants: it takes the '
+           'roots from `numpy.linalg.eigvalsh`, which forms no invariants at '
+           'all, and then refines them against the *matrix* with one Newton '
+           'step on $\\chi(\\psi) = \\det(\\psi\\mathbb{1} - \\tilde H)$, '
+           'reading the Hamiltonian entries at full precision. '
+           '`POLISH_ROOTS` switches that step. This was the whole answer in '
+           '1.12.0.\n\n'
+           '**`\'double-double\'`**, the default since 1.13.0, widens the '
+           'bottleneck instead. The compression only hurts because '
+           '$10^{-16}$ is what a `float64` coefficient carries; forming '
+           '$I_2, I_3, I_4$ as *pairs* of `float64` — some 32 digits — '
+           'leaves the same $2.3\\times10^{9}$ amplification acting on '
+           '$10^{-32}$, landing at $10^{-23}$. One Aberth sweep, also in '
+           'double-double, then takes the quartic\'s roots to the last '
+           '`float64` bit.\n\n'
+           'Here is what each costs, and — the part worth reading twice — '
+           'where the difference does and does not show up.'),
+        md('One wrinkle first: **`float64` cannot referee this comparison.** '
+           'The two routes differ at $4\\times10^{-17}$ against '
+           '$4\\times10^{-16}$, and an `eigh` reference is itself only good '
+           'to $\\sim10^{-15}$. So the oracle below is the same frozen one '
+           'the test suite uses — `mpmath.eig` at fifty decimal digits on '
+           'nine Hamiltonians, stored as hexadecimal floats in '
+           '`tests/stiff_reference.json` so that a reader gets the exact '
+           'bits it was computed from. It spans the physical 3+1 range out '
+           'to $\\Delta m^2_{41} = 1000$ eV$^2$ and down to a pair of roots '
+           'separated by $10^{-16}$.'),
+        code(r'''import json
+import time
+import fastkernels
+
+with open(os.path.join('..', 'tests', 'stiff_reference.json')) as handle:
+    CASES = json.load(handle)['cases']
+
+
+def frozen(case, key):
+    """The stored fifty-digit values, off their exact bits."""
+    return np.array([float.fromhex(x) for x in case[key]])
+
+
+def traceless_of(case):
+    entries = np.array([[float.fromhex(case['matrix_real'][i][j])
+                         + 1j*float.fromhex(case['matrix_imag'][i][j])
+                         for j in range(4)] for i in range(4)])
+    return entries - np.trace(entries)/4.0*np.eye(4)
+
+
+# A stack large enough to time stably, stiff at every point
+H_timed = hamiltonians4nu.hamiltonian_4nu_matter(
+    H_VAC_4NU, np.logspace(-1.0, 1.0, 50000)*GEV,
+    gd.VCC_EARTH_CRUST, gd.VNC_EARTH_CRUST)
+
+fastkernels.USE_NUMBA = True
+oscprob4nu.probabilities_4nu(H_timed[:8], baseline)      # warm the kernel
+
+print("%-15s  %-11s  %-11s  %s"
+      % ("ROOT_STRATEGY", "worst root", "worst |dP|", "|dP| at 0.1 eV^2"))
+for strategy in ("double-double", "eigensolver"):
+    oscprob4nu.ROOT_STRATEGY = strategy
+    root_error = 0.0
+    prob_error = 0.0
+    benign = 0.0
+    for case in CASES:
+        matrix = traceless_of(case)
+        # `_latent_roots` is internal; it is used here because it is the
+        # only way to see the roots alone, which is where the routes differ.
+        psi = np.sort(oscprob4nu._latent_roots(matrix[None, ...])[0])
+        exact = frozen(case, "roots")
+        root_error = max(root_error, np.max(np.abs(psi - exact))
+                         / np.max(np.abs(exact)))
+        p = np.asarray(oscprob4nu.probabilities_4nu(
+            matrix, float.fromhex(case["baseline"]))).ravel()
+        gap = np.max(np.abs(p - frozen(case, "probabilities")))
+        prob_error = max(prob_error, gap)
+        if case["label"].endswith("0.1 eV^2"):
+            benign = gap
+    print("%-15s  %-11.2e  %-11.2e  %.2e"
+          % (strategy, root_error, prob_error, benign))
+
+# Timed in ALTERNATING PAIRS, reported as the median ratio.  Timing the two
+# routes once each is dominated by whatever else the machine is doing: done
+# that way on a shared runner, a real 25% difference reads as parity, and
+# the faster route can even come out ahead.  Pairing cancels the drift.
+ratios = []
+for repetition in range(9):
+    order = ("double-double", "eigensolver")
+    if repetition % 2:
+        order = order[::-1]
+    elapsed = {}
+    for strategy in order:
+        oscprob4nu.ROOT_STRATEGY = strategy
+        t0 = time.perf_counter()
+        oscprob4nu.probabilities_4nu(H_timed, baseline)
+        elapsed[strategy] = time.perf_counter() - t0
+    ratios.append(elapsed["double-double"]/elapsed["eigensolver"])
+ratios.sort()
+
+print()
+print("cost of 'double-double' over 'eigensolver', 50k points:")
+print("  median of 9 alternated pairs : %.2fx" % ratios[len(ratios)//2])
+print("  spread across those pairs    : %.2fx to %.2fx"
+      % (ratios[0], ratios[-1]))
+
+oscprob4nu.ROOT_STRATEGY = "double-double"'''),
+        md('Three things in that output, and the second is the one that '
+           'catches people.\n\n'
+           '**On the roots the default wins by about an order of '
+           'magnitude** — $3.6\\times10^{-17}$ against '
+           '$3.9\\times10^{-16}$, which is under a fifth of a `float64` ulp '
+           'against nearly two. That is the whole claim of the '
+           'double-double route, and it is measurable only against an '
+           'oracle carrying more digits than either.\n\n'
+           '**On probabilities the two are indistinguishable, and both are '
+           'poor, on the stiffest cases.** That is not a contradiction and '
+           'not a defect in either route: rebuilding $U_4$ in Newton form '
+           'takes *second* differences of $e^{-i\\psi L}$ over the roots, '
+           'so a root error enters the coefficients twice and the '
+           'probability error grows as $(\\psi_{\\max}L)^2$ — measured at '
+           '$5\\times10^{-17}(\\psi_{\\max}L)^2$ across five decades of '
+           'phase. At $\\Delta m^2_{41} = 1000$ eV$^2$ over 1300 km the '
+           'accumulated phase is 2.5 million radians and `float64` simply '
+           'cannot carry it; every route lands in the same place. The '
+           '`|dP| at 0.1` column is the physical end of the range, where '
+           'the phase is a few hundred radians and the answer is good to '
+           '$10^{-12}$.\n\n'
+           '**The default costs roughly a fifth more**, and notice how '
+           'hard that is to measure: the spread across nine alternated '
+           'pairs is wide enough that a single unpaired before-and-after '
+           'would have been worthless, and could easily have shown the '
+           'slower route winning. The cost is unsurprising once stated — '
+           'the default runs the *same* eigensolver, because it needs a '
+           'start that separates the cluster and that is exactly what a '
+           'backward-stable Hermitian eigensolver is for, and then adds '
+           'its invariants and one Aberth sweep on top of it.\n\n'
+           'So: switch to `\'eigensolver\'` if four-flavor root-finding '
+           'dominates your runtime and you are content with two ulp. Leave '
+           'it alone otherwise. And if you are chasing accuracy in '
+           '*probabilities* at large $\\Delta m^2_{41}L/E$, neither switch '
+           'is your problem — the phase is.'),
+        md('For the record, the alternatives measured and rejected along the '
+           'way, all against the same fifty-digit oracle.\n\n'
+           '| Strategy for the roots | Relative error | Closed form? |\n'
+           '|---|---|---|\n'
+           '| Closed form alone | 2.2e-07 | yes |\n'
+           '| `numpy.linalg.eigvalsh` alone | 6.9e-16 | no |\n'
+           '| `eigvalsh` + one Newton step | 3.9e-16 | no |\n'
+           '| **Invariants in double-double** | **3.6e-17** | yes |\n'
+           '| Closed form in `numpy.longdouble` | 4.5e-11 | yes |\n\n'
+           'The Newton step is about **twice as accurate as LAPACK** alone, '
+           'because `eigvalsh` reduces the matrix by similarity transforms '
+           'that each carry a backward error $\\sim\\epsilon\\|H\\|$, while '
+           'the step converges onto the root of $\\det(\\psi\\mathbb{1} - '
            '\\tilde H)$ for the matrix it was handed.\n\n'
-           'Extended precision buys under one digit rather than the three '
-           'its extra mantissa suggests — the cluster amplifies coefficient '
-           'error — and is slower, since `float128` is not '
-           'hardware-vectorised. It is also silently `float64` on Apple '
-           'Silicon and Windows, so it would appear to work while doing '
-           'nothing.'),
+           'Extended precision is the instructive failure. It buys under one '
+           'digit rather than the three its extra mantissa suggests — the '
+           'cluster amplifies whatever coefficient error survives — is '
+           'slower for not being hardware-vectorised, and is silently '
+           '`float64` on Apple Silicon and Windows, where it would appear '
+           'to work while doing nothing. Double-double gets four orders '
+           'more than that, portably, out of pairs of the `float64` every '
+           'machine has.\n\n'
+           'Two more were tried inside the double-double route itself and '
+           'lost. Starting from the closed form rather than the eigensolver '
+           'is twice as fast and exact on every stiff case here, yet fails '
+           'on a near-degenerate pair, where Aberth converges *linearly* at '
+           'ratio one half: from $10^{-7}$ five sweeps reach '
+           '$3.8\\times10^{-9}$ where thirty are needed. And Durand-Kerner, '
+           'at one division per root against Aberth\'s five, is non-monotone '
+           'in the sweep count — 3.9e-16, then 9.7e-17, then 1.9e-16 — so it '
+           'cannot be a default.'),
         md('## A decoupled sterile state reproduces three flavors\n\n'
            'The strongest check available, and the one worth running if you '
            'ever doubt a four-flavor number: switch the three sterile angles '
@@ -3646,10 +3782,13 @@ books['17_cross_checks.ipynb'] = notebook(
            'how stiff the spectrum is: $3.9\\times10^{-16}$ at a short '
            'baseline where it is benign, $2.4\\times10^{-11}$ in matter, and '
            '$3.0\\times10^{-10}$ for antineutrinos in matter, which is the '
-           'stiffest case here. That last one is the accuracy '
-           '`POLISH_ROOTS` documents, arrived at independently; it is '
-           'attributed at the end of this notebook rather than left '
-           'hanging.'),
+           'stiffest case here. That last one is the stiff-spectrum limit '
+           '`oscprob4nu.ROOT_STRATEGY` documents, arrived at independently; '
+           'it is attributed at the end of this notebook rather than left '
+           'hanging. Note what it is *not*: since 1.13.0 the roots '
+           'themselves are good to a fifth of an ulp, and what remains here '
+           'is the accumulated phase in the reconstruction, which grows as '
+           'its square.'),
         md('## A second check: matter eigenvalues, live\n\n'
            'The nuSQuIDS comparison above is frozen at eleven '
            'configurations. This one runs at **any** configuration, with no '

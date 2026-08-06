@@ -8,3 +8,10 @@ docs/build/
 .coverage
 htmlcov/
 
+
+# Paper figures that notebook 10 writes beside itself when make_notebooks.py
+# runs.  The versions that belong to the repository are the ones under
+# img/gallery, which that script writes deliberately and which are tracked;
+# these are the same plots saved a second time into the working directory,
+# and `git add -A` after a regeneration will otherwise pick up all thirteen.
+/notebooks/*.pdf

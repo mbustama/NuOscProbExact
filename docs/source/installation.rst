@@ -182,6 +182,7 @@ File tree
    ├── LICENSE                          # MIT license
    ├── README.md                        # Project overview and worked examples
    ├── pyproject.toml                   # Packaging metadata and pytest configuration
+   ├── MANIFEST.in                      # Keeps the test suite out of the source distribution
    ├── examples/                        # Runnable scripts, one per scenario, linked from README.md
    │   ├── example_2nu_trivial.py       # Two-flavor, arbitrary Hamiltonian
    │   ├── example_2nu_vacuum.py        # Two-flavor, oscillations in vacuum
@@ -271,6 +272,8 @@ File tree
    │   └── make_demo_video.py           # Joins and shrinks the clips notebook 19 renders
    └── tests/                           # Regression suite, run with pytest
        ├── conftest.py                  # Shared fixtures and path setup
+       ├── gen_stiff_reference.py       # Regenerates the fifty-digit four-flavor oracle
+       ├── stiff_reference.json         # That oracle, frozen: nine Hamiltonians in hexadecimal floats
        ├── test_su3_algebra.py          # d tensor, star product, SU(3) invariants
        ├── test_oscprob4nu.py           # SU(4) algebra, quartic roots, 3+1 physics
        ├── test_evolution_operator.py   # U against an independent matrix exponential

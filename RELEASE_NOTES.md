@@ -3,9 +3,11 @@ together — 1.12.0 was declared but never published, so upgrading from 1.11.0 b
 
 It is mostly about the **Earth**. It had no compiled path at all, took one energy at a time,
 and asked for a slab count where it should have asked for an accuracy; all three are fixed
-here. The one change that is not about the Earth is the one most likely to affect you
+here. Two changes are not about the Earth and are the ones most likely to affect you
 anyway: **`numba` is now a dependency**, so a plain install gets the compiled path — and
-brings numba's ceiling on `numpy` with it. Both are covered below.
+brings numba's ceiling on `numpy` with it — and the **four-flavor latent roots are now
+computed in double-double arithmetic**, which takes their worst error to under a fifth of a
+`float64` ulp. All three are covered below.
 
 The full history is in
 [CHANGELOG.md](https://github.com/mbustama/NuOscProbExact/blob/main/CHANGELOG.md), which
@@ -23,14 +25,20 @@ equal, and shifts the probabilities. Measured over 4640 values across four angle
 subdivisions and five energies, the shift is **6e-15 at two flavors, 7e-14 at three, and
 4e-10 at four**.
 
-The four-flavor figure is much the largest and is not this change's doing: that path polishes
-quartic latent roots, and its conditioning already separated the two backends by 4.0e-10 on
-code this release never touched.
+The four-flavor figure is much the largest, and it is the conditioning of the quartic latent
+roots rather than the widths: that same conditioning already separated the two backends by
+4.0e-10 on code the width change never touched. It is also the thing this release goes on to
+fix — see the double-double roots below.
 
 For scale, the discretisation error at the default subdivision is **1e-4 to 1e-5** — five
 orders of magnitude larger than even the four-flavor shift, and eleven larger than the
-three-flavor one. Nothing outside the Earth routines changes numbers, and a scalar energy
-still returns a tuple, bit-for-bit what it returned before.
+three-flavor one. A scalar energy still returns a tuple, bit-for-bit what it returned before.
+
+**Four-flavor results also move, everywhere, not only in the Earth.** The latent roots now
+come from a different route, so any `probabilities_4nu` may change in its last digits.
+Measured against what 1.11.0 computed, on 3+1 spectra at 0.5, 1 and 10 GeV and
+Δm²₄₁ of 0.1 and 1 eV²: **bit-identical in four of six cases and at most 1.2e-10** in the
+rest. The new values are the accurate ones, by a factor of about seven.
 
 ## What is new since 1.11.0
 
@@ -49,6 +57,33 @@ No spelling on our side avoids it, because the pin is numba's.
 If the newest numpy matters more than the speed, install with `--no-deps` and add numpy
 yourself, or keep numba installed and set `fastkernels.USE_NUMBA = False`. The NumPy path is
 still there, still tested on every push, and still agrees to round-off.
+
+**Four-flavor roots in double-double arithmetic.** Worst relative error over nine reference
+Hamiltonians goes from 3.9e-16 to **3.6e-17** — under a fifth of a `float64` ulp — for
+roughly a fifth more time on a full `probabilities_4nu` through the compiled kernel. The
+error is exact; the cost is deliberately a range, since timed in alternated pairs it lands
+anywhere from 1.18× to 1.25× depending on method, with individual pairs from 0.76× to 1.72×.
+
+The problem was never the quartic solver. The three invariants `I₂, I₃, I₄` compress a 4×4
+matrix into three numbers, and the amplification from those coefficients to the roots
+measures **2.3e9** — so a coefficient rounded at 1e-16 becomes a root wrong at 1e-7, which is
+what the closed form alone scores and what no better root-finder can beat. 1.12.0 got around
+it by refining against the matrix; this removes it, by carrying each coefficient as a pair of
+`float64` limbs, some 32 digits, so the same amplification acts on 1e-32 and lands at 1e-23.
+The roots are then limited by rounding the answer to `float64` rather than by the algebra.
+
+`oscprob4nu.ROOT_STRATEGY` chooses, defaulting to `'double-double'`, with `'eigensolver'` for
+the LAPACK route; `POLISH_ROOTS` keeps its meaning and is read only on the latter. Both routes
+run on both backends and agree to an ulp, so a result never depends on whether a compiler was
+present. If you call `fastkernels`' four-flavor kernels directly, their `polish: bool`
+argument is now `strategy: int`.
+
+Two limits worth stating. On the NumPy fallback the cost ratio is of order 1.5–2× rather
+than 1.2×. And this buys **roots**, not probabilities everywhere: rebuilding `U₄` takes second
+differences of `exp(-iψL)`, so a root error enters twice and the probability error grows as
+`(ψ_max L)²`. At Δm²₄₁ = 1000 eV² over 1300 km the accumulated phase is 2.5 million radians
+and every route lands at 2e-4 together — that is `float64`, not the roots. The physical range
+is where the tight figures are: **1.3e-12** at 0.1 eV².
 
 **The Earth, compiled.** The backend offered probability kernels only, so composing evolution
 operators across slabs — which is what layered matter and the Earth do — ran the NumPy path
