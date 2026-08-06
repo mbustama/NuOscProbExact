@@ -1519,7 +1519,8 @@ def _divided_differences(
 
 def _evolution_operator_4nu_array(
     hamiltonian_matrix: Union[list, np.ndarray],
-    L: Union[int, float, list, np.ndarray]
+    L: Union[int, float, list, np.ndarray],
+    caller: str = 'evolution_operator_4nu'
 ) -> np.ndarray:
     r"""Returns :math:`U_4` for a stack, as an array.
 
@@ -1552,15 +1553,26 @@ def _evolution_operator_4nu_array(
         Hamiltonian, or stack of them, of shape ``(..., 4, 4)``.
     L : int or float or array_like
         Baseline, or array of baselines.
+    caller : str, optional
+        Name of the public routine to blame in a Hermiticity complaint,
+        since three of them reach this helper and none of them is called
+        what this helper is called.
 
     Returns
     -------
     numpy.ndarray
         The evolution operator, of shape ``(..., 4, 4)``.
     """
+    # Named by the caller rather than by this helper.  Three public
+    # routines reach it, and one of them --- `probabilities_4nu` --- runs
+    # the check itself before dispatching to the kernel, so labelling the
+    # message from here made one user error report `probabilities_4nu` with
+    # Numba installed and `oscprob4nu` without it.  The two- and
+    # three-flavor modules name the public routine at their equivalent
+    # sites; this is how a shared helper does the same.
     if CHECK_HERMITICITY:
         _check_hermitian(np.asarray(hamiltonian_matrix, dtype=complex),
-                         'oscprob4nu')
+                         caller)
 
     traceless = _traceless_part(hamiltonian_matrix)
     baseline = np.asarray(L, dtype=float)
@@ -1657,7 +1669,8 @@ def evolution_operator_4nu_u_coefficients(
         print('%d coefficients' % len(u))
         print('u0 = %.6f%+.6fj' % (u[0].real, u[0].imag))
     """
-    operator = _evolution_operator_4nu_array(hamiltonian_matrix, L)
+    operator = _evolution_operator_4nu_array(
+        hamiltonian_matrix, L, 'evolution_operator_4nu_u_coefficients')
 
     u_0 = np.trace(operator)/4.0
     u_a = 0.5*np.einsum('aij,ji->a', LAMBDA_SU4, operator)/1.j
@@ -1821,7 +1834,8 @@ def probabilities_4nu(
                 np.broadcast_to(baseline, batch),
                 _strategy_code())
 
-    operator = _evolution_operator_4nu_array(matrix, baseline)
+    operator = _evolution_operator_4nu_array(matrix, baseline,
+                                             'probabilities_4nu')
 
     # P[alpha][beta] = |U[beta][alpha]|^2, so the initial flavor varies
     # slowest once the last two axes are swapped and flattened.
