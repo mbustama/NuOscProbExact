@@ -182,6 +182,7 @@ File tree
    ├── LICENSE                          # MIT license
    ├── README.md                        # Project overview and worked examples
    ├── pyproject.toml                   # Packaging metadata and pytest configuration
+   ├── MANIFEST.in                      # Keeps the test suite out of the source distribution
    ├── examples/                        # Runnable scripts, one per scenario, linked from README.md
    │   ├── example_2nu_trivial.py       # Two-flavor, arbitrary Hamiltonian
    │   ├── example_2nu_vacuum.py        # Two-flavor, oscillations in vacuum

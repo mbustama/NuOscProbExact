@@ -60,6 +60,7 @@ TREE = [
     # `installation.rst` as well, where that was untrue.
     ('README.md', 'Project overview and worked examples'),
     ('pyproject.toml', 'Packaging metadata and pytest configuration'),
+    ('MANIFEST.in', 'Keeps the test suite out of the source distribution'),
     ('examples/', 'Runnable scripts, one per scenario, linked from README.md'),
     ('examples/example_2nu_trivial.py', 'Two-flavor, arbitrary Hamiltonian'),
     ('examples/example_2nu_vacuum.py', 'Two-flavor, oscillations in vacuum'),
