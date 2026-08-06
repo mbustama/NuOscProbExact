@@ -2,7 +2,7 @@
 r"""Numba-compiled kernels for the batched evaluation paths.
 
 `Numba <https://numba.pydata.org>`_ is a dependency of
-**NuOscProbExact** as of 1.12.0, so this module compiles the two-, three-
+**NuOscProbExact** as of 1.13.0, so this module compiles the two-, three-
 and four-neutrino expansions into fused machine-code loops and
 :mod:`oscprob2nu`, :mod:`oscprob3nu` and :mod:`oscprob4nu` use them for
 large stacks.
@@ -96,7 +96,7 @@ Costs, so that the trade is visible
   declared with ``cache=True``, so that cost is paid once per machine
   and later runs load the compiled code from disk in milliseconds.
 
-Both are why this was an optional extra until 1.12.0.  What changed the
+Both are why this was an optional extra until 1.13.0.  What changed the
 argument is that neither cost falls where it would be felt: they are
 paid once, and never by a scalar call at all.  The scalar path is
 deliberately left alone --- a single probability takes about

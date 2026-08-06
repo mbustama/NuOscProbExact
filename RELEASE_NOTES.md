@@ -1,8 +1,15 @@
-This release is about the **Earth**. It had no compiled path at all, took one energy at a
-time, and asked for a slab count where it should have asked for an accuracy. All three are
-fixed here. The full history is in
+This is everything since the published **v1.11.0**, which is versions 1.12.0 and 1.13.0
+together — 1.12.0 was declared but never published, so upgrading from 1.11.0 brings both.
+
+It is mostly about the **Earth**. It had no compiled path at all, took one energy at a time,
+and asked for a slab count where it should have asked for an accuracy; all three are fixed
+here. The one change that is not about the Earth is the one most likely to affect you
+anyway: **`numba` is now a dependency**, so a plain install gets the compiled path — and
+brings numba's ceiling on `numpy` with it. Both are covered below.
+
+The full history is in
 [CHANGELOG.md](https://github.com/mbustama/NuOscProbExact/blob/main/CHANGELOG.md), which
-records how every figure below was measured.
+records how every figure here was measured.
 
 ## Upgrading from 1.11.0: Earth results move in the last digits
 

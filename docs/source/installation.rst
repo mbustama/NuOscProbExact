@@ -34,7 +34,7 @@ want to do:
 against an independent matrix exponential.  The library itself never imports
 it.
 
-``numba`` is a base dependency as of 1.12.0, not an optional extra, so the
+``numba`` is a base dependency as of 1.13.0, not an optional extra, so the
 compiled path is what a plain install gets.  It brings a ceiling with it:
 ``numba`` declares an upper bound on ``numpy`` (0.66.0 requires
 ``numpy<2.5``), and installing into an environment holding a newer ``numpy``

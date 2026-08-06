@@ -1192,7 +1192,7 @@ books['09_performance.ipynb'] = notebook(
              'ax.legend()\n'
              'plt.show()'),
         md('## The compiled backend\n\n'
-           '`numba` comes with the package as of 1.12.0, so the batched paths '
+           '`numba` comes with the package as of 1.13.0, so the batched paths '
            'hand large stacks to a compiled kernel without anything being '
            'installed on purpose. It is switchable at runtime, which is how '
            'the regression suite checks the two paths against each other — '
@@ -1387,7 +1387,7 @@ books['09_performance.ipynb'] = notebook(
            '1. Replace loops with array arguments. This is the large win, it '
            'needs no extra dependency, and the results agree to round-off.\n'
            '2. The compiled backend needs nothing installed — `numba` is a '
-           'dependency as of 1.12.0. It is used at three and four flavors, '
+           'dependency as of 1.13.0. It is used at three and four flavors, '
            'and declined at two, where NumPy is already as quick.\n'
            '3. Do not bother for a handful of points: the library already '
            'takes the quicker path there on its own.\n'

@@ -110,7 +110,7 @@ jobs:
 
   without-numba:
     # The third configuration: Numba genuinely absent.  This used to be what a plain
-    # `pip install nuoscprobexact` produced; since 1.12.0 Numba is a base dependency, so it
+    # `pip install nuoscprobexact` produced; since 1.13.0 Numba is a base dependency, so it
     # is now the *fallback* rather than the default, and it has to be arranged deliberately
     # by uninstalling Numba after the install.
     #

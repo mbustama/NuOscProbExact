@@ -514,7 +514,7 @@ The compiled backend
 ^^^^^^^^^^^^^^^^^^^^
 
 With :mod:`fastkernels` --- that is, with Numba, which is installed with the
-package as of 1.12.0 --- the batched paths are compiled instead.  The NumPy path evaluates the expansion as a
+package as of 1.13.0 --- the batched paths are compiled instead.  The NumPy path evaluates the expansion as a
 chain of whole-array operations, so a stack of :math:`N` Hamiltonians makes
 roughly fifteen passes over :math:`N`-element arrays, each writing a
 temporary that the next reads back.  The compiled kernel does the same

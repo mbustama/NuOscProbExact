@@ -76,7 +76,7 @@ The method relies on expansions of the Hamiltonian and time-evolution operators 
 * **Whole scans in one call.**  Every core routine accepts a stack of Hamiltonians, an array of baselines, or both broadcast against each other, which is tens of times faster than the equivalent Python loop and gives identical results.
 * **Piecewise-constant matter.**  `slabs` propagates across a sequence of adjacent slabs of arbitrary width and density, solving each exactly and multiplying the operators, at two, three or four flavors.
 * **The Earth.**  `earth` builds those slabs from the Preliminary Reference Earth Model, and computes probabilities along a given zenith angle or between two of fifteen predefined locations.  A 3+1 crossing is included: the sterile state does not feel the neutral-current potential, so that potential stops cancelling and `earth` builds it per slab.
-* **A compiled backend, installed by default.**  Large batched calls run on compiled kernels, and so does the whole slab composition behind `slabs` and `earth` — an Earth crossing is 7–14× quicker depending on the flavor count.  `numba` comes with the package as of 1.12.0; where it is unavailable or switched off, the NumPy path is used and the answers are the same to round-off.
+* **A compiled backend, installed by default.**  Large batched calls run on compiled kernels, and so does the whole slab composition behind `slabs` and `earth` — an Earth crossing is 7–14× quicker depending on the flavor count.  `numba` comes with the package as of 1.13.0; where it is unavailable or switched off, the NumPy path is used and the answers are the same to round-off.
 
 ### What it does not do
 
@@ -120,7 +120,7 @@ Use **Magnus** instead when **the Hamiltonian varies continuously and appreciabl
 
 `numpy` and `numba` are installed for you; nothing else is needed to compute a probability.  `scipy` is used by the test suite alone, to cross-check the evolution operator against an independent matrix exponential; the library itself never imports it.
 
-`numba` became a real dependency in 1.12.0 rather than an optional extra, because it is worth roughly 1.5x to 20x on large scans and there is no reason for that to depend on reading far enough down this page.  The NumPy path remains, is still tested on every push, and is what runs if `numba` is unavailable or switched off — the results are identical to round-off either way.  **One consequence to know about:** `numba` declares its own ceiling on `numpy` (0.66.0 requires `numpy<2.5`), so installing into an environment that holds a newer `numpy` than that will downgrade it.  If you need the newest `numpy` more than you need the speed, install with `--no-deps` and add `numpy` yourself, or set `fastkernels.USE_NUMBA = False` and ignore the compiled path.
+`numba` became a real dependency in 1.13.0 rather than an optional extra, because it is worth roughly 1.5x to 20x on large scans and there is no reason for that to depend on reading far enough down this page.  The NumPy path remains, is still tested on every push, and is what runs if `numba` is unavailable or switched off — the results are identical to round-off either way.  **One consequence to know about:** `numba` declares its own ceiling on `numpy` (0.66.0 requires `numpy<2.5`), so installing into an environment that holds a newer `numpy` than that will downgrade it.  If you need the newest `numpy` more than you need the speed, install with `--no-deps` and add `numpy` yourself, or set `fastkernels.USE_NUMBA = False` and ignore the compiled path.
 
 
 ## Installation
@@ -389,7 +389,7 @@ This is the single biggest win — **roughly 20–90×** — and it needs no ext
 
 ### 2. Numba, which you already have
 
-Nothing to install and nothing in your code to change: [Numba](https://numba.pydata.org) comes with the package as of 1.12.0.  The batched paths run as compiled machine-code loops spread over your cores instead of as a chain of NumPy array operations.  Where Numba is unavailable, or switched off with `fastkernels.USE_NUMBA = False`, the NumPy path is used and the results are the same to round-off.
+Nothing to install and nothing in your code to change: [Numba](https://numba.pydata.org) comes with the package as of 1.13.0.  The batched paths run as compiled machine-code loops spread over your cores instead of as a chain of NumPy array operations.  Where Numba is unavailable, or switched off with `fastkernels.USE_NUMBA = False`, the NumPy path is used and the results are the same to round-off.
 
 Measured on 2000-point scans, against the equivalent Python loop:
 
@@ -424,7 +424,7 @@ That is ~38×, ~10× and ~11× over the compiled loop, and ~460×, ~120× and ~8
 
 Two costs, so the trade is visible: importing Numba takes about 140 ms against 65 ms for NumPy alone, and the first call into a kernel compiles, which takes a few seconds.  The kernels are cached on disk, so later runs start in milliseconds.  Neither cost falls on a single scalar probability, which never enters a kernel at all — it is the closed form, and it returns in microseconds whether or not Numba is present.
 
-That is why this was an optional extra until 1.12.0, and the argument that changed: the costs are paid once and are invisible next to a 12× Earth crossing, while an extra is paid attention to only by readers who get this far.
+That is why this was an optional extra until 1.13.0, and the argument that changed: the costs are paid once and are invisible next to a 12× Earth crossing, while an extra is paid attention to only by readers who get this far.
 
 ### What you do not have to think about
 
