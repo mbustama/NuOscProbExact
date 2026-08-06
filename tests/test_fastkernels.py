@@ -160,33 +160,49 @@ def test_4nu_kernel_matches_numpy_path(rng, monkeypatch, n, kernel_spy):
 
 
 @needs_numba
-def test_4nu_kernel_polishes_its_roots(monkeypatch, kernel_spy):
-    r"""The compiled path refines the latent roots, as the NumPy one does.
+def test_4nu_kernel_honours_the_root_switches(monkeypatch, kernel_spy):
+    r"""All three root strategies reach the compiled kernel.
 
-    ``POLISH_ROOTS`` is module-level state that an ``@njit`` function
-    cannot read at call time, so it is threaded through as an argument.
+    :data:`oscprob4nu.ROOT_STRATEGY` and :data:`oscprob4nu.POLISH_ROOTS`
+    are module-level state that an ``@njit`` function cannot read at call
+    time, so they are collapsed into one integer by
+    :func:`oscprob4nu._strategy_code` and threaded through as an argument.
     If that thread were ever cut the kernel would still return plausible
-    numbers --- just five hundred times worse on a stiff spectrum, which
-    is precisely the case the refinement exists for.  This pins both
-    settings, so a kernel that silently ignored the flag would fail
-    whichever way the flag was set.
+    numbers --- just worse on a stiff spectrum, which is precisely the case
+    the machinery exists for.  This pins all three codes, so a kernel that
+    silently ignored the argument would fail on at least one of them.
+
+    The three are required to be mutually distinct and individually sane,
+    not ranked.  Ranking them here would be measuring the wrong thing: on a
+    spectrum this stiff the accumulated phase amplifies a root error by
+    :math:`(\psi_{\max} L)^2`, which is enough to reorder routes that
+    differ by one ulp on the roots, and it duly does --- the Newton step
+    leaves this particular spectrum very slightly worse.  The accuracy
+    ordering is pinned on the roots instead, in
+    ``test_oscprob4nu.test_the_root_strategies_meet_their_documented_accuracy``.
+    Distinctness is the property that fails if the argument stops arriving.
     """
     monkeypatch.setattr(fastkernels, 'USE_NUMBA', True)
     h_stack = np.stack([STIFF_31]*4)
     l_stack = np.full(4, STIFF_BASELINE)
-
-    monkeypatch.setattr(oscprob4nu, 'POLISH_ROOTS', True)
-    polished = oscprob4nu.probabilities_4nu(h_stack, l_stack)
-    monkeypatch.setattr(oscprob4nu, 'POLISH_ROOTS', False)
-    unpolished = oscprob4nu.probabilities_4nu(h_stack, l_stack)
-    assert kernel_spy['probabilities_4nu_kernel'] == 2
-
     reference = stiff_reference()
-    close = np.max(np.abs(polished[0] - reference))
-    far = np.max(np.abs(unpolished[0] - reference))
 
-    assert close < 1.0e-9
-    assert far > 10.0*close
+    def probabilities(strategy, polish):
+        monkeypatch.setattr(oscprob4nu, 'ROOT_STRATEGY', strategy)
+        monkeypatch.setattr(oscprob4nu, 'POLISH_ROOTS', polish)
+        return oscprob4nu.probabilities_4nu(h_stack, l_stack)[0]
+
+    polished = probabilities('eigensolver', True)
+    unpolished = probabilities('eigensolver', False)
+    double_double = probabilities('double-double', True)
+    assert kernel_spy['probabilities_4nu_kernel'] == 3
+
+    assert np.max(np.abs(polished - unpolished)) > 0.0
+    assert np.max(np.abs(polished - double_double)) > 0.0
+    assert np.max(np.abs(unpolished - double_double)) > 0.0
+
+    for candidate in (polished, unpolished, double_double):
+        assert np.max(np.abs(candidate - reference)) < 1.0e-9
 
 
 @needs_numba

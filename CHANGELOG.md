@@ -46,6 +46,60 @@ and the project uses [Semantic Versioning](https://semver.org/).
   described there as the fallback rather than the default, which is what it
   has become.
 
+- **The four-flavor latent roots now come from invariants formed in
+  double-double arithmetic.**  Worst relative error over the nine
+  Hamiltonians in the new `tests/stiff_reference.json` goes from 3.9e-16 to
+  **5.5e-17** — under half a `float64` ulp — for 44% more time on a full
+  `probabilities_4nu` through the compiled kernel.
+
+  1.12.0 escaped the invariants' conditioning by refining against the matrix
+  with a Newton step; this removes the conditioning instead.  `I_2, I_3, I_4`
+  compress a 4x4 matrix into three numbers, and the amplification from those
+  coefficients to the roots measures 2.3e9 — so a `float64` coefficient at
+  1e-16 becomes a root at 1e-7, which is what the closed form alone scores
+  (2.2e-07) and what no better root-finder can beat.  Carrying each
+  coefficient as a pair of `float64` limbs, some 32 digits, leaves the same
+  amplification acting on 1e-32 and landing at 1e-23; the roots are then
+  limited by rounding the answer to `float64` rather than by the algebra.
+  Two Aberth sweeps, also in double-double, take the quartic there.
+
+  **`oscprob4nu.ROOT_STRATEGY` selects it,** defaulting to
+  `'double-double'`, with `'eigensolver'` for the LAPACK route.
+  `oscprob4nu.POLISH_ROOTS` keeps its meaning and is read only on the latter
+  — the default route reaches the floor without it and leaves a Newton step
+  nothing to find.  Both routes exist on both backends and agree to an ulp,
+  so a result never depends on whether a compiler was present.
+
+  Three things were measured and rejected, and are recorded because each
+  looks like an obvious improvement.  Mirroring `H~^2` across its diagonal
+  saves a quarter of the work and quietly costs `I_3` and `I_4` 1e-17,
+  because a Hamiltonian built as `U M^2 U†` is Hermitian only to rounding
+  and the mirror discards the asymmetry — Hermitizing exactly in
+  double-double first makes the saving sound, and that is what ships.
+  Starting from Euler's closed form instead of the eigensolver is twice as
+  fast and exact on every stiff case, and still fails, because on a cluster
+  Aberth converges *linearly* at ratio one half: from 1e-7 five sweeps reach
+  3.8e-9 where thirty are needed.  Durand-Kerner needs one division per root
+  against Aberth's five and is non-monotone in the sweep count — 3.9e-16,
+  9.7e-17, 1.9e-16 — so it cannot be a default.
+
+  **`fastkernels`' four-flavor kernel entry points take `strategy: int`
+  where they took `polish: bool`.**  A compiled kernel cannot read a Python
+  global at call time, so the two switches travel as one integer: 0 for
+  double-double, 1 for the eigensolver with the Newton step, 2 for the
+  eigensolver alone.  Callers going through `oscprob4nu` are unaffected.
+
+  Two limits worth stating plainly.  On the NumPy fallback the ratio is
+  about 2.8x rather than 1.44x, the double-double primitives being
+  elementwise array operations with nothing to amortise them over.  And this
+  buys *roots*, not probabilities everywhere: reconstructing `U_4` in Newton
+  form takes second differences of `exp(-i psi L)`, so a root error enters
+  the coefficients twice and the probability error grows as
+  `(psi_max L)^2` — measured at 5e-17 times that across five decades of
+  phase.  At Delta m^2_41 = 1000 eV^2 over 1300 km the phase is 2.5 million
+  radians and both routes land at 2e-4 together.  The physical range is
+  where the tight figures are: 1.3e-12 at 0.1 eV^2.
+
 ### Added
 
 - **A runnable example on the eight public routines that had none.**  The six
@@ -57,6 +111,33 @@ and the project uses [Semantic Versioning](https://semver.org/).
   alongside the scalar one, since that is the addition of this release cycle
   most likely to be missed.  Every block is executed by Sphinx on the API
   page and again by `tests/test_docstrings.py` on all five Pythons.
+
+- **A frozen fifty-digit oracle for the four-flavor roots,**
+  `tests/stiff_reference.json`, with `tests/gen_stiff_reference.py` to
+  regenerate it.  Nine Hamiltonians — the 3+1 family from 0.1 to 1000 eV^2,
+  two random Hermitian, and two with a pair separated by 1e-8 and 1e-16 —
+  stored as hexadecimal floats so a reader gets the exact bits the reference
+  was computed from.
+
+  It has to be frozen because `numpy.linalg.eigvalsh` stopped being an
+  independent oracle the moment it became one of `ROOT_STRATEGY`'s routes:
+  tests written against it began comparing an implementation with itself,
+  one of them asserting `1.06e-15 <= 0.0`.  The generator uses `mpmath.eig`
+  for the roots and `mpmath.expm` for the probabilities, neither sharing code
+  with the library nor going through the invariants, and checks the stored
+  roots against `det(psi*I - H~)` taken straight from the matrix.
+
+  That check is there because the generator got it wrong first, and its
+  docstring records all three traps.  The quartic built from the invariants
+  is not always the matrix's characteristic polynomial — `float64`
+  traceless-ing leaves a residual trace while that quartic pins its cubic
+  coefficient to exactly zero, and the two disagree by up to 3.8e-7 wherever
+  the residue is nonzero, agreeing to 2e-17 wherever it is not, which is what
+  makes it easy to miss.  Two solvers agreeing is not evidence: the wrong
+  reference was corroborated by `mpmath.eig` and led to `eigvalsh` being
+  blamed for residuals that were the oracle's.  And probability conservation
+  is not an accuracy measure, since a row of `|U|^2` sums to one for any
+  unitary `U` however wrong its eigenvalues.
 
 ### Fixed
 
