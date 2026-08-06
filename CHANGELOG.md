@@ -428,6 +428,28 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **The copied-out-module test stripped `sys.path` by name, not by path.**
+  `test_a_core_module_works_copied_out_on_its_own` removed every entry whose
+  *text* contained `NuOscProbExact`, which is not the set it meant: it also
+  removes unrelated directories carrying the project's name, and the
+  commonest of those is a virtual environment created inside the checkout.
+  Its `site-packages` holds NumPy, so the subprocess lost NumPy and the test
+  reported `oscprob2nu does not work copied out on its own:
+  ModuleNotFoundError: No module named 'numpy'` — the library blamed for a
+  path collision, on all three modules at once.  A `.venv` in the project
+  root, which is a common layout, failed three tests on a clean checkout.
+
+  Now the repository root, `src` and `tests` come off by `os.path.realpath`
+  comparison.  A `startswith` test on the root, the obvious alternative,
+  reproduces the bug exactly, since such an environment lives under it.  The
+  assertion that `worthwhile()` returns False still proves `src` really left
+  the path, so the test cannot quietly become vacuous.
+
+  It also now fails loudly on its own account: if NumPy is unimportable once
+  the stripping is done, the subprocess exits saying `TEST FAULT` and dumping
+  `sys.path`, instead of letting it look like the library.  Probed by
+  reinstating the old strip, which now names its own cause.
+
 - **The documented notebook count had rotted, and nothing was guarding it.**
   `README.md` said "Eighteen worked notebooks" in two places and the
   generator's own docstring said "fifteen", while nineteen were shipping; the
