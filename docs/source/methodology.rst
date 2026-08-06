@@ -316,12 +316,20 @@ through the compiled kernel, relative to what 1.12.0 shipped:
      - yes
    * - ``numpy.linalg.eigvalsh`` alone
      - 6.9e-16
-     - 0.82x
+     - 0.9-1.0x
      - no
    * - **Invariants in double-double**
      - **3.6e-17**
-     - 1.25x
+     - 1.15-1.3x
      - yes
+
+The errors are exact and reproducible to the digits shown; the costs are
+ranges on purpose.  Timed in alternated pairs to cancel machine drift, the
+double-double row lands at 1.18x, 1.20x and 1.25x by three different
+methods, while the per-pair spread runs from 0.76x to 1.72x --- so a
+tighter figure would be describing one machine's load rather than the
+algorithm.  On the same evidence the Newton step in the row above costs
+under a tenth, which is inside that spread.
 
 The first row has no cost against it because it is no longer a route a
 caller can select: :func:`~oscprob4nu.psi_roots_4nu` still solves the

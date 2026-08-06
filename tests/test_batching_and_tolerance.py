@@ -158,18 +158,35 @@ def test_the_numpy_batch_fallback_agrees_with_the_kernel(n_flavors,
     this branch is unreachable unless the backend is forced off, and
     nothing but a test like this one keeps it honest.
 
-    Four flavors compares at 1e-9 rather than at round-off, and not
-    because of anything batching does: the two backends polish the
-    latent roots slightly differently, and the same 4e-10 separates them
-    on the per-energy path that predates this feature.  What is asserted
-    at round-off, below, is that each backend's batched answer matches
-    *its own* scalar answer, which is the property batching is
-    responsible for.
+    Four flavors compares at 1e-8 rather than at round-off, and not
+    because of anything batching does.  The two backends reconstruct
+    :math:`U_4` from the roots in separate code --- whole-array NumPy
+    against scalar kernel --- and those round differently; rebuilding
+    takes second differences of :math:`e^{-i\psi L}`, so an ulp of
+    disagreement is amplified by the square of the accumulated phase,
+    which on this configuration turns 1e-16 into some 4e-10.  The same
+    gap separates them on the per-energy path that predates this feature.
+
+    The bar was 1e-9, and that was too tight to survive a change of
+    machine: it left about 1.5x of headroom over what the strategy of the
+    day measured locally, and CI duly failed on hardware whose LAPACK
+    rounds differently.  Raising it is not papering over a regression ---
+    the current default is the *closest* the two backends have been,
+    4.9e-10 against 6.6e-10 for the eigensolver route it replaced, and
+    2.5e-9 for that route without its Newton step.  Nor does more
+    refinement close it: the roots agree between backends to
+    double-double precision here, identically at one Aberth sweep and at
+    two, so what is left is the reconstruction and not the spectrum.
+
+    What is asserted at round-off, below, is that each backend's batched
+    answer matches *its own* scalar answer, which is the property
+    batching is actually responsible for, and which no tolerance here
+    weakens.
     """
     energies = np.logspace(9.0, 11.0, 11)
     hv = h_vacuum(n_flavors)
     fn = probabilities_earth(n_flavors)
-    across_backends = 1.0e-9 if n_flavors == 4 else ATOL
+    across_backends = 1.0e-8 if n_flavors == 4 else ATOL
 
     if not fastkernels.HAVE_NUMBA:
         pytest.skip('Numba is not installed')

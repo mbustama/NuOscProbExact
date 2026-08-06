@@ -49,8 +49,11 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - **The four-flavor latent roots now come from invariants formed in
   double-double arithmetic.**  Worst relative error over the nine
   Hamiltonians in the new `tests/stiff_reference.json` goes from 3.9e-16 to
-  **3.6e-17** — under a fifth of a `float64` ulp — for 25% more time on a full
-  `probabilities_4nu` through the compiled kernel.
+  **3.6e-17** — under a fifth of a `float64` ulp — for roughly a fifth more
+  time on a full `probabilities_4nu` through the compiled kernel.  The error is
+  exact; the cost is a range, landing at 1.18x, 1.20x and 1.25x by three
+  measurement methods with a per-pair spread of 0.76x to 1.72x, so it is quoted
+  as one.
 
   1.12.0 escaped the invariants' conditioning by refining against the matrix
   with a Newton step; this removes the conditioning instead.  `I_2, I_3, I_4`
@@ -76,8 +79,8 @@ and the project uses [Semantic Versioning](https://semver.org/).
   and a dd division is three `float64` divisions where a dd multiply is
   none.  And `1/3` is baked as a dd constant instead of divided for, which
   also made one reference case exact that was not.  Together these halved
-  the double-double overhead, 52 ms to 27 ms per 100 000 points, and
-  improved the worst root from 5.5e-17 to 3.6e-17.
+  the double-double overhead — roughly 50 ms to roughly 25 ms per 100 000
+  points — and improved the worst root from 5.5e-17 to 3.6e-17.
 
   Exploiting the exactly-zero imaginary diagonal of `H~` inside `H~^2` was
   tried too, and measured no faster — the branches cost what the skipped
@@ -111,8 +114,8 @@ and the project uses [Semantic Versioning](https://semver.org/).
   double-double, 1 for the eigensolver with the Newton step, 2 for the
   eigensolver alone.  Callers going through `oscprob4nu` are unaffected.
 
-  Two limits worth stating plainly.  On the NumPy fallback the ratio is
-  about 1.7x rather than 1.25x, the double-double primitives being
+  Two limits worth stating plainly.  On the NumPy fallback the ratio is of
+  order 1.5-2x rather than 1.2x, the double-double primitives being
   elementwise array operations with nothing to amortise them over.  And this
   buys *roots*, not probabilities everywhere: reconstructing `U_4` in Newton
   form takes second differences of `exp(-i psi L)`, so a root error enters

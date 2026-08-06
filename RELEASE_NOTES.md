@@ -59,8 +59,10 @@ yourself, or keep numba installed and set `fastkernels.USE_NUMBA = False`. The N
 still there, still tested on every push, and still agrees to round-off.
 
 **Four-flavor roots in double-double arithmetic.** Worst relative error over nine reference
-Hamiltonians goes from 3.9e-16 to **3.6e-17** — under a fifth of a `float64` ulp — for 25%
-more time on a full `probabilities_4nu` through the compiled kernel.
+Hamiltonians goes from 3.9e-16 to **3.6e-17** — under a fifth of a `float64` ulp — for
+roughly a fifth more time on a full `probabilities_4nu` through the compiled kernel. The
+error is exact; the cost is deliberately a range, since timed in alternated pairs it lands
+anywhere from 1.18× to 1.25× depending on method, with individual pairs from 0.76× to 1.72×.
 
 The problem was never the quartic solver. The three invariants `I₂, I₃, I₄` compress a 4×4
 matrix into three numbers, and the amplification from those coefficients to the roots
@@ -76,8 +78,8 @@ run on both backends and agree to an ulp, so a result never depends on whether a
 present. If you call `fastkernels`' four-flavor kernels directly, their `polish: bool`
 argument is now `strategy: int`.
 
-Two limits worth stating. On the NumPy fallback the cost ratio is about 1.7× rather than
-1.25×. And this buys **roots**, not probabilities everywhere: rebuilding `U₄` takes second
+Two limits worth stating. On the NumPy fallback the cost ratio is of order 1.5–2× rather
+than 1.2×. And this buys **roots**, not probabilities everywhere: rebuilding `U₄` takes second
 differences of `exp(-iψL)`, so a root error enters twice and the probability error grows as
 `(ψ_max L)²`. At Δm²₄₁ = 1000 eV² over 1300 km the accumulated phase is 2.5 million radians
 and every route lands at 2e-4 together — that is `float64`, not the roots. The physical range

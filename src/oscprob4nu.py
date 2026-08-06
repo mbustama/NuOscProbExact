@@ -219,24 +219,34 @@ and down to a pair separated by :math:`10^{-16}`.  Cost is a full
 :func:`probabilities_4nu` over a 100 000-point stiff 3+1 stack through the
 compiled kernel, relative to the route 1.12.0 shipped:
 
-========================================  ==========  =======
+========================================  ==========  =========
 Strategy for the latent roots             Rel. error  Cost
-========================================  ==========  =======
-``'double-double'``                       3.6e-17     1.25x
+========================================  ==========  =========
+``'double-double'``                       3.6e-17     1.15-1.3x
 ``'eigensolver'``, with the Newton step   3.9e-16     1.00x
-``'eigensolver'``, without it             6.9e-16     0.82x
+``'eigensolver'``, without it             6.9e-16     0.9-1.0x
 Closed form alone (`psi_roots_4nu`)       2.2e-07     ---
-========================================  ==========  =======
+========================================  ==========  =========
 
-The last row has no cost against it because it is not a route a caller can
-select: `psi_roots_4nu` still solves the quartic in closed form, and its
-contract is unchanged, but nothing in the probability path is built on it
-any more.  Its error is quoted on the same nine Hamiltonians as the rest,
-which is what it is there to show.
+`psi_roots_4nu` still solves the quartic in closed form and its contract is
+unchanged, but nothing in the probability path is built on it any more, so
+there is no comparable figure to time.  Its error is quoted on the same
+nine Hamiltonians as the rest, which is what it is there to show.
 
-So the default buys an order of magnitude on the roots for 25% more time,
-and that is the whole of the trade.  Two things it is worth being clear
-about.
+Note also what the third row costs against the second: the Newton step is
+*within the noise*, under a tenth, not the fifth an earlier single-shot
+measurement here suggested.
+
+The errors are exact figures, reproducible to the digits shown.  The costs
+are not, and are given as ranges on purpose: timed in alternated pairs to
+cancel machine drift, the double-double row lands at 1.18x, 1.20x and
+1.25x by three different methods, while the *per-pair* spread runs from
+0.76x to 1.72x.  Anything quoted more precisely than this would be
+describing one afternoon's load average.  The last row's own cost is
+absent because it is no longer a route a caller can select --- see below.
+
+So the default buys an order of magnitude on the roots for roughly a fifth
+more time.  Two things it is worth being clear about.
 
 The cost is not double-double's alone.  Both eigensolver rows call
 :func:`numpy.linalg.eigvalsh` once per element *inside* the compiled
@@ -247,9 +257,9 @@ invariants and one Aberth sweep on top of that same eigensolver call,
 which it needs for the start --- see `_latent_roots_dd` for why the start
 cannot instead be the closed form, however much faster that is.
 
-On the NumPy path the ratio is worse, about 1.7x rather than 1.25x, the
-double-double primitives being elementwise NumPy operations with nothing
-to amortise them over.  That path is the fallback for an installation
+On the NumPy path the ratio is worse, of order 1.5-2x rather than 1.2x,
+the double-double primitives being elementwise NumPy operations with
+nothing to amortise them over.  That path is the fallback for an installation
 without Numba, which since 1.13.0 is not the usual one; accuracy is
 deliberately the same on both, so that a result never depends on whether a
 compiler was present.
@@ -268,7 +278,8 @@ entirely by the default double-double route, which reaches the
 ``float64`` floor on its own and leaves a Newton step nothing to find.
 On the eigensolver route it is on by default and should stay on: it is
 worth a factor of about two on the roots, 3.9e-16 against 6.9e-16 over
-``tests/stiff_reference.json``, for about 20% more time.
+``tests/stiff_reference.json``, for a cost too small to measure reliably
+here --- under a tenth, and inside the run-to-run spread.
 
 The reason it helps at all is that ``eigvalsh`` reduces by similarity
 transforms which each carry a backward error of order
