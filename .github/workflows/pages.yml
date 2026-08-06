@@ -5,6 +5,16 @@ name: Documentation Deployment
 on:
   push:
     branches: [ "main" ]
+  # Re-publish on demand, from the Actions tab.  A Pages *deployment* can fail
+  # server-side after a build that succeeded --- it happened on 2026-08-06,
+  # going waiting -> queued -> in_progress -> failure with no description,
+  # after six consecutive successes and with nothing deploy-relevant changed
+  # --- and `actions/deploy-pages` then spends its ten-minute poll waiting for
+  # a success that is never coming and reports only `Timeout reached`.  The
+  # site is left serving the previous tree.  Without this trigger the only way
+  # back is to push a commit to `main` for no reason other than to redeploy,
+  # which is a poor way to fix a transient fault.
+  workflow_dispatch:
 
 # Permissions the GITHUB_TOKEN needs to deploy to GitHub Pages.  `id-token: write` is what
 # lets actions/deploy-pages authenticate without a stored secret.
