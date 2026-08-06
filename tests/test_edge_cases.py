@@ -470,24 +470,56 @@ def test_a_core_module_works_copied_out_on_its_own(module_name, tmp_path):
     So this runs in a subprocess with the repository stripped from
     ``sys.path``, which is the only way to reproduce a user's situation
     from within the project.
+
+    What is stripped is three named directories, compared by resolved
+    path.  It used to be any entry whose *text* contained
+    ``'NuOscProbExact'``, which is not the same set: it also removes
+    unrelated directories that happen to carry the project's name, and
+    the commonest of those is a virtual environment created inside the
+    checkout --- ``.venv/lib/pythonX.Y/site-packages`` holds NumPy, so
+    the subprocess lost NumPy and this test reported that the *library*
+    does not work copied out.  A prefix test on the repository root would
+    do the same thing, since such an environment lives under it.
     """
     import shutil
     import subprocess
     import sys
     import textwrap
 
-    source = pathlib.Path(__file__).resolve().parents[1]/'src'/(
-        module_name + '.py')
+    root = pathlib.Path(__file__).resolve().parents[1]
+    source = root/'src'/(module_name + '.py')
     shutil.copy(source, tmp_path/(module_name + '.py'))
+
+    # `src` is what `conftest.py` and an editable install both put on the
+    # path, and is what has to go for `fastkernels` to be unreachable.  The
+    # root and `tests` are removed for tidiness, so nothing else of ours is
+    # importable either.  Anything outside these three stays, including an
+    # interpreter's own site-packages wherever it happens to live.
+    drop = [str(root), str(root/'src'), str(root/'tests')]
 
     n_flavors = int(module_name[len('oscprob')])
     script = textwrap.dedent('''
+        import os
         import sys
+
+        drop = {os.path.realpath(p) for p in %r}
         sys.path = [p for p in sys.path
-                    if 'NuOscProbExact' not in p and p not in ('', '.')]
+                    if p not in ('', '.')
+                    and os.path.realpath(p) not in drop]
         sys.path.insert(0, %r)
 
-        import numpy as np
+        # If NumPy went missing, the stripping took too much and nothing
+        # below says anything about the library.  Say so, rather than
+        # letting it surface as the copied-out module failing to import.
+        try:
+            import numpy as np
+        except ImportError:
+            raise SystemExit(
+                'TEST FAULT: numpy is not importable once the repository '
+                'is off sys.path, so this test cannot say anything about '
+                'the library.  Something outside the repository was '
+                'stripped as well.  sys.path is now %%r' %% (sys.path,))
+
         import %s as module
 
         n = %d
@@ -511,7 +543,7 @@ def test_a_core_module_works_copied_out_on_its_own(module_name, tmp_path):
         assert abs(stack[0].reshape(n, n).sum(axis=1)[0] - 1.0) < 1.0e-12
 
         print('ok')
-    ''') % (str(tmp_path), module_name, n_flavors)
+    ''') % (drop, str(tmp_path), module_name, n_flavors)
 
     result = subprocess.run([sys.executable, '-c', script],
                             capture_output=True, text=True)
