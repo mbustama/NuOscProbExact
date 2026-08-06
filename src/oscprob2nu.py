@@ -210,7 +210,7 @@ def _check_hermitian(h_matrix: np.ndarray, caller: str) -> None:
     if h_matrix.size == 0:
         return
 
-    non_finite = (
+    non_finite_message = (
         '%s: the Hamiltonian has a non-finite entry, so it is neither '
         'Hermitian nor usable.  Set %s.CHECK_HERMITICITY = False to '
         'skip this check.')
@@ -247,7 +247,8 @@ def _check_hermitian(h_matrix: np.ndarray, caller: str) -> None:
             for entry in row:
                 real, imaginary = abs(entry.real), abs(entry.imag)
                 if not (math.isfinite(real) and math.isfinite(imaginary)):
-                    raise ValueError(non_finite % (caller, 'oscprob2nu'))
+                    raise ValueError(
+                        non_finite_message % (caller, 'oscprob2nu'))
                 scale = max(scale, real, imaginary)
 
         tolerance = (_HERMITICITY_TOL*scale if scale > 0.0
@@ -267,6 +268,36 @@ def _check_hermitian(h_matrix: np.ndarray, caller: str) -> None:
                         'conjugate of entry (%d, %d)' % (i, j, j, i)))
         return
 
+    # The compiled scan, where there is one.  This check was cheap against
+    # the expansion it guards and is no longer: once the kernels made the
+    # expansion some ten times quicker, the NumPy comparisons below came to
+    # most of a whole probability call on a large stack.  The compiled scan
+    # reaches the same verdict, tolerance and all, in one pass per stage
+    # instead of a dozen reductions that each allocate a temporary the size
+    # of the stack.  See `fastkernels.MIN_BATCH_HERMITICITY`.
+    #
+    # The flavor count is read off the array rather than written as a
+    # literal, so that this block is textually identical in all three
+    # modules --- which `tests/test_edge_cases.py` requires of these copies.
+    n_flavors = h_matrix.shape[-1]
+    if (fastkernels.available()
+            and h_matrix.size//(n_flavors*n_flavors)
+            >= fastkernels.MIN_BATCH_HERMITICITY):
+        non_finite, element, i, j = fastkernels.hermiticity_offender(
+            h_matrix, n_flavors, _HERMITICITY_TOL)
+        if non_finite:
+            raise ValueError(
+                non_finite_message % (caller, 'oscprob2nu'))
+        if element >= 0:
+            if i == j:
+                raise ValueError(complaint % (
+                    caller, ' --- the diagonal entry (%d, %d) has a non-zero '
+                    'imaginary part' % (i, i)))
+            raise ValueError(complaint % (
+                caller, ' --- entry (%d, %d) is not the complex '
+                'conjugate of entry (%d, %d)' % (i, j, j, i)))
+        return
+
     real, imaginary = h_matrix.real, h_matrix.imag
 
     # `np.abs(...).max()` allocates a float array the size of the stack,
@@ -283,7 +314,7 @@ def _check_hermitian(h_matrix: np.ndarray, caller: str) -> None:
     # so a Hamiltonian that is both non-finite *and* non-Hermitian would
     # pass a check whose whole purpose is to refuse the second.
     if not np.isfinite(scale):
-        raise ValueError(non_finite % (caller, 'oscprob2nu'))
+        raise ValueError(non_finite_message % (caller, 'oscprob2nu'))
 
     tolerance = _HERMITICITY_TOL*scale if scale > 0.0 else _HERMITICITY_TOL
 

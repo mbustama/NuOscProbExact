@@ -243,7 +243,7 @@ def _check_hermitian(h_matrix: np.ndarray, caller: str) -> None:
     if h_matrix.size == 0:
         return
 
-    non_finite = (
+    non_finite_message = (
         '%s: the Hamiltonian has a non-finite entry, so it is neither '
         'Hermitian nor usable.  Set %s.CHECK_HERMITICITY = False to '
         'skip this check.')
@@ -280,7 +280,8 @@ def _check_hermitian(h_matrix: np.ndarray, caller: str) -> None:
             for entry in row:
                 real, imaginary = abs(entry.real), abs(entry.imag)
                 if not (math.isfinite(real) and math.isfinite(imaginary)):
-                    raise ValueError(non_finite % (caller, 'oscprob3nu'))
+                    raise ValueError(
+                        non_finite_message % (caller, 'oscprob3nu'))
                 scale = max(scale, real, imaginary)
 
         tolerance = (_HERMITICITY_TOL*scale if scale > 0.0
@@ -300,6 +301,36 @@ def _check_hermitian(h_matrix: np.ndarray, caller: str) -> None:
                         'conjugate of entry (%d, %d)' % (i, j, j, i)))
         return
 
+    # The compiled scan, where there is one.  This check was cheap against
+    # the expansion it guards and is no longer: once the kernels made the
+    # expansion some ten times quicker, the NumPy comparisons below came to
+    # most of a whole probability call on a large stack.  The compiled scan
+    # reaches the same verdict, tolerance and all, in one pass per stage
+    # instead of a dozen reductions that each allocate a temporary the size
+    # of the stack.  See `fastkernels.MIN_BATCH_HERMITICITY`.
+    #
+    # The flavor count is read off the array rather than written as a
+    # literal, so that this block is textually identical in all three
+    # modules --- which `tests/test_edge_cases.py` requires of these copies.
+    n_flavors = h_matrix.shape[-1]
+    if (fastkernels.available()
+            and h_matrix.size//(n_flavors*n_flavors)
+            >= fastkernels.MIN_BATCH_HERMITICITY):
+        non_finite, element, i, j = fastkernels.hermiticity_offender(
+            h_matrix, n_flavors, _HERMITICITY_TOL)
+        if non_finite:
+            raise ValueError(
+                non_finite_message % (caller, 'oscprob3nu'))
+        if element >= 0:
+            if i == j:
+                raise ValueError(complaint % (
+                    caller, ' --- the diagonal entry (%d, %d) has a non-zero '
+                    'imaginary part' % (i, i)))
+            raise ValueError(complaint % (
+                caller, ' --- entry (%d, %d) is not the complex '
+                'conjugate of entry (%d, %d)' % (i, j, j, i)))
+        return
+
     real, imaginary = h_matrix.real, h_matrix.imag
 
     # `np.abs(...).max()` allocates a float array the size of the stack,
@@ -316,7 +347,7 @@ def _check_hermitian(h_matrix: np.ndarray, caller: str) -> None:
     # so a Hamiltonian that is both non-finite *and* non-Hermitian would
     # pass a check whose whole purpose is to refuse the second.
     if not np.isfinite(scale):
-        raise ValueError(non_finite % (caller, 'oscprob3nu'))
+        raise ValueError(non_finite_message % (caller, 'oscprob3nu'))
 
     tolerance = _HERMITICITY_TOL*scale if scale > 0.0 else _HERMITICITY_TOL
 
@@ -739,8 +770,16 @@ def _star_all(h: Union[list, np.ndarray]) -> Tuple[float, ...]:
     entries per component, so contracting the dense
     :math:`8\times8\times8` table costs several microseconds of NumPy
     dispatch to do a few dozen multiplications --- about six times
-    longer than the arithmetic itself.  On the batched path the array
-    machinery pays for itself and the table is used instead.
+    longer than the arithmetic itself.
+
+    The batched path uses these same expressions, for the same reason
+    written larger: contracting the dense table with `einsum` there was
+    measured an order of magnitude dearer, having no path plan and so
+    walking the whole table per element.  The table, `_TENSOR_D`, is
+    reached only by `star`, which returns one component at a time and is
+    public.  An earlier version of this paragraph claimed the batched path
+    used the table instead, which was the reverse of the truth and would
+    have sent a reader to restore the slower of the two.
 
     These expressions are generated from, and checked against,
     `tensor_d` by ``tests/test_su3_algebra.py``; edit them only in step
@@ -960,11 +999,17 @@ def _u_coefficients_3nu_batch(h: np.ndarray, L: np.ndarray) -> np.ndarray:
     # so it is evaluated at the shape of `h` and only then broadcast
     # against the baselines.  Scanning one Hamiltonian over N baselines
     # therefore solves the characteristic equation once, not N times.
-    # The star product uses the same sparse expansion as the scalar path.  Contracting the
-    # dense table with einsum instead costs an order of magnitude more:
+    # The star product uses the same sparse expansion as the scalar path.
+    # Contracting the dense table with einsum costs an order of magnitude more:
     # without a path plan it walks the 8x8x8 tensor for every element,
     # where this is a few dozen array multiplications.
-    star = np.stack(_star_all(h))
+    # Written into one array rather than stacked from eight: `np.stack`
+    # allocates the result and then copies every component into it, and the
+    # components are wanted only in that layout.
+    components = _star_all(h)
+    star = np.empty((8,) + np.shape(components[0]))
+    for index in range(8):
+        star[index] = components[index]
     h2 = (h*h).sum(0)
     h3 = (h*star).sum(0)
 
@@ -989,8 +1034,18 @@ def _u_coefficients_3nu_batch(h: np.ndarray, L: np.ndarray) -> np.ndarray:
     denom = 3.0*psi*psi - h2
     safe_denom = np.where(denom != 0.0, denom, 1.0)
 
-    # The baselines enter only here
-    exp_psi = np.exp(1.j*L*psi)
+    # The baselines enter only here.  Written as a cosine and a sine into
+    # the two halves of a complex array rather than as `np.exp(1j*phase)`,
+    # which is the same value to the bit and about a third dearer: the
+    # complex exponential computes exp(re)*(cos(im) + i sin(im)) and pays
+    # for an exp(0) it does not need.  Note that the obvious spelling,
+    # `np.cos(phase) + 1j*np.sin(phase)`, is *slower* than what it replaces
+    # -- it allocates three temporaries -- so the `out=` is the point.
+    phase = L*psi
+    exp_psi = np.empty(np.broadcast_shapes(np.shape(L), psi.shape),
+                       dtype=complex)
+    np.cos(phase, out=exp_psi.real)
+    np.sin(phase, out=exp_psi.imag)
 
     # Only two combinations of the three terms survive the sum over m,
     #   u_k = i [ (sum_m w_m psi_m) h_k - (sum_m w_m) (h*h)_k ],

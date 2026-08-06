@@ -17,6 +17,8 @@ import hamiltonians2nu
 import hamiltonians3nu
 import oscprob2nu
 import oscprob3nu
+import oscprob4nu
+import fastkernels
 
 from conftest import ATOL, as_nested_list, random_hermitian
 
@@ -552,3 +554,69 @@ def test_a_core_module_works_copied_out_on_its_own(module_name, tmp_path):
         '%s does not work copied out on its own:\n%s'
         % (module_name, result.stderr[-1500:]))
     assert result.stdout.strip().endswith('ok')
+
+
+@pytest.mark.parametrize('n_flavors', [2, 3, 4])
+@pytest.mark.parametrize('flaw', ['diagonal', 'off-diagonal', 'non-finite'])
+def test_the_compiled_hermiticity_scan_refuses_what_the_numpy_one_does(
+    n_flavors, flaw, rng, monkeypatch
+):
+    r"""The compiled scan reaches the same verdict as the NumPy one.
+
+    Above `fastkernels.MIN_BATCH_HERMITICITY` the check runs in a compiled
+    kernel rather than as NumPy comparisons, because once the kernels made
+    the expansion some ten times quicker the check became most of the cost
+    of a probability call.  That is an optimisation of a *guard*, which is
+    the kind that fails quietly: a scan that refuses nothing is
+    indistinguishable from a stack that is Hermitian.  So each of the three
+    ways a Hamiltonian can be rejected is exercised on both paths and the
+    verdicts are required to agree.
+
+    The non-finite case is the one worth having.  Comparisons against a nan
+    are all false, so a nan slips through ``if real > local`` and would
+    never reach a finiteness test placed after the scale --- which is why
+    the compiled scan counts non-finite entries as it goes.  The NumPy path
+    gets that free from ``numpy.max`` propagating nan.  A Hamiltonian both
+    non-finite and non-Hermitian passing a check meant to refuse the second
+    is exactly the divergence this pins.
+    """
+    module = {2: oscprob2nu, 3: oscprob3nu, 4: oscprob4nu}[n_flavors]
+
+    elements = fastkernels.MIN_BATCH_HERMITICITY + 8
+    stack = np.stack([random_hermitian(rng, n_flavors)
+                      for _ in range(elements)])
+    offender = elements - 3
+
+    if flaw == 'diagonal':
+        stack[offender, 1, 1] += 1.0j
+        expected = 'imaginary part'
+    elif flaw == 'off-diagonal':
+        stack[offender, 0, n_flavors-1] += 1.0
+        expected = 'complex'
+    else:
+        stack[offender, 0, 0] = np.nan
+        expected = 'non-finite'
+
+    monkeypatch.setattr(module, 'CHECK_HERMITICITY', True)
+
+    verdicts = []
+    for use_numba in (True, False):
+        if use_numba and not fastkernels.HAVE_NUMBA:
+            continue
+        monkeypatch.setattr(fastkernels, 'USE_NUMBA', use_numba)
+        with pytest.raises(ValueError, match=expected) as raised:
+            module._check_hermitian(stack, 'test')
+        verdicts.append(str(raised.value))
+
+    # Not merely that both refuse: that they say the same thing about it,
+    # which is what pins the compiled scan's decoding of the offending entry
+    assert len(set(verdicts)) == 1, verdicts
+
+    # And the same stack without the flaw passes on both paths
+    clean = np.stack([random_hermitian(rng, n_flavors)
+                      for _ in range(elements)])
+    for use_numba in (True, False):
+        if use_numba and not fastkernels.HAVE_NUMBA:
+            continue
+        monkeypatch.setattr(fastkernels, 'USE_NUMBA', use_numba)
+        module._check_hermitian(clean, 'test')

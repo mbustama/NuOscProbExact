@@ -192,6 +192,25 @@ asking.
 .. versionadded:: 1.12.0
 """
 
+MIN_BATCH_HERMITICITY = 256
+r"""int: Module-level constant.
+
+The smallest stack for which `hermiticity_offender` beats the NumPy
+comparisons it replaces.  Below it the compiled call's own dispatch
+dominates, so :func:`oscprob3nu._check_hermitian` and its siblings stay on
+NumPy; above it the saving is most of the check.
+
+Why the check needed a kernel at all is worth recording.  It was written
+against the cost of the *expansion*, and was carefully made cheap by that
+measure --- comparing the independent pairs on real and imaginary views
+rather than forming :math:`H - H^\dagger`, worth about three times.  Then
+the compiled kernels made the expansion roughly ten times cheaper and left
+the check untouched, at which point validating a 100 000-element stack cost
+70% of a three-flavor probability call and 82% of a two-flavor one: more
+than the physics it guards.  The check's own docstring had predicted
+exactly that failure, about the implementation it replaced.
+"""
+
 MIN_BATCH = {2: 50000, 3: 1, 4: 1}
 r"""dict: Module-level constant.
 
@@ -448,6 +467,117 @@ if HAVE_NUMBA:                                          # pragma: no branch
     SQRT3_INV = 1.0/SQRT3
     TWO_SQRT3_INV = 2.0*SQRT3_INV
     DEGENERACY_TOL = 1.0e-12
+
+    @njit(cache=True, parallel=True)
+    def _hermiticity_scale(h_stack, n_flavors):
+        r"""Returns ``(largest magnitude, count of non-finite entries)``.
+
+        The tolerance is relative to one global scale rather than to each
+        element --- which is what the NumPy version this replaces does, and
+        the reason the comparisons cannot be fused into this pass.
+
+        Non-finite entries are counted rather than left to poison the scale.
+        Comparisons against a nan are all false, so a nan would never
+        survive ``if real > local`` to reach a finiteness test afterwards,
+        and a Hamiltonian both non-finite *and* non-Hermitian would pass a
+        check whose whole purpose is to refuse the second.  The NumPy path
+        gets this free from ``np.max`` propagating nan; here it is explicit.
+        """
+        biggest = 0.0
+        non_finite = 0
+        for element in prange(h_stack.shape[0]):
+            local = 0.0
+            local_bad = 0
+            for i in range(n_flavors):
+                for j in range(n_flavors):
+                    entry = h_stack[element, i, j]
+                    real = abs(entry.real)
+                    imaginary = abs(entry.imag)
+                    if not (math.isfinite(real) and math.isfinite(imaginary)):
+                        local_bad = 1
+                    if real > local:
+                        local = real
+                    if imaginary > local:
+                        local = imaginary
+            biggest = max(biggest, local)
+            non_finite += local_bad
+        return biggest, non_finite
+
+    @njit(cache=True)
+    def _hermiticity_first_bad(h_stack, n_flavors, tolerance):
+        r"""Returns ``element*16 + i*4 + j`` for the first offender, or -1.
+
+        Serial on purpose, and it costs nothing to be.  It returns on the
+        first offending element, so a stack that fails is settled almost
+        immediately, and a stack that passes is one sweep of reads with no
+        allocation --- against the dozen NumPy reductions this replaces,
+        each of which allocated a temporary the size of the stack and then
+        reduced it away.  Running it across cores would need a minimum
+        reduction guarded by a conditional to keep the reported element
+        independent of the core count, which Numba's parfor pass rejects,
+        and would buy a pass that is already not the expensive one.
+
+        ``i == j`` means a diagonal entry whose imaginary part does not
+        vanish.
+        """
+        for element in range(h_stack.shape[0]):
+            for i in range(n_flavors):
+                if abs(h_stack[element, i, i].imag) > tolerance:
+                    return element*16 + i*4 + i
+                for j in range(i+1, n_flavors):
+                    upper = h_stack[element, i, j]
+                    lower = h_stack[element, j, i]
+                    if (abs(upper.real - lower.real) > tolerance
+                            or abs(upper.imag + lower.imag) > tolerance):
+                        return element*16 + i*4 + j
+        return -1
+
+    def hermiticity_offender(
+        h_stack: np.ndarray,
+        n_flavors: int,
+        relative_tol: float
+    ) -> tuple:
+        r"""Returns ``(non_finite, element, i, j)`` for a stack.
+
+        The compiled counterpart of the stack branch of
+        :func:`oscprob3nu._check_hermitian` and its siblings, which own the
+        error messages; this only finds the offender.  The verdict is
+        identical, including the global relative tolerance and the refusal
+        of non-finite entries --- what changes is that the scan happens in
+        one compiled pass per stage rather than a dozen NumPy reductions,
+        each allocating a temporary the size of the stack.
+
+        Parameters
+        ----------
+        h_stack : numpy.ndarray
+            Hamiltonians, of shape ``(..., n, n)``, with at least one
+            leading axis.
+        n_flavors : int
+            The number of flavors, 2, 3 or 4.
+        relative_tol : float
+            The caller's ``_HERMITICITY_TOL``, applied relative to the
+            largest magnitude anywhere in the stack.
+
+        Returns
+        -------
+        tuple
+            ``(non_finite, element, i, j)``.  `non_finite` is True if any
+            entry is not finite, in which case the indices are ``-1``.
+            Otherwise `element` is ``-1`` when the stack is Hermitian, and
+            the flat index of the first offending element when it is not,
+            with `i` and `j` its entry --- equal for a diagonal entry whose
+            imaginary part does not vanish.
+        """
+        flat = h_stack.reshape(-1, n_flavors, n_flavors)
+        biggest, non_finite = _hermiticity_scale(flat, n_flavors)
+        if non_finite > 0:
+            return True, -1, -1, -1
+
+        tolerance = relative_tol*biggest if biggest > 0.0 else relative_tol
+        code = int(_hermiticity_first_bad(flat, n_flavors, tolerance))
+        if code < 0:
+            return False, -1, -1, -1
+        return False, code//16, (code % 16)//4, code % 4
 
     DD_SPLIT = 134217729.0
     r"""float: :math:`2^{27} + 1`, Dekker's splitting constant.
