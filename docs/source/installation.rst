@@ -319,5 +319,6 @@ File tree
        │   ├── prob3_prem.txt
        │   ├── perf_nusquids.py         # nuSQuIDS on the constant-density scan
        │   ├── globes_perf.c            # GLoBES on the same scan
-       │   └── prob3_perf.cpp           # Prob3++ on the same scan
+       │   ├── prob3_perf.cpp           # Prob3++ on the same scan
+       │   └── nufast_lbl_perf.cpp      # NuFast-LBL at two Newton settings
        └── test_file_tree.py            # Keeps this tree in step with the repository

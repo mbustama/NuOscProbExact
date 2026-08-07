@@ -33,6 +33,20 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **`performance.pdf` gains NuFast-LBL at two Newton steps.**  It had only
+  its default of zero, which is a truncation at 1.5e-5, so the figure was
+  timing that code at an accuracy no other entry was near.  The accurate
+  setting costs 1.14x to 1.38x, measured in alternated pairs: run as two
+  blocks it came out *faster* than the default, which is not something more
+  Newton steps can be, and is the same ordering artefact that turned up
+  between the two four-flavor root strategies.
+
+- **The architecture diagram's middle column is aligned with its
+  neighbours.**  The core box's top now lines up with the two upper boxes
+  and the kernel box with the two lower ones, which is what the arrows
+  describe; the kernel box is also taller, so its second line no longer sits
+  on the border.
+
 - **The constant-density plane is restyled to match the two Earth ones**, so
   a code keeps its colour and marker across all three, and shows only this
   library's batched-plus-kernel point: the other two routes are what the

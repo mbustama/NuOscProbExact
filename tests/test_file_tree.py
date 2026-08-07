@@ -250,6 +250,8 @@ TREE = [
      'GLoBES on the same scan'),
     ('tests/external_drivers/prob3_perf.cpp',
      'Prob3++ on the same scan'),
+    ('tests/external_drivers/nufast_lbl_perf.cpp',
+     'NuFast-LBL at two Newton settings'),
     ('tests/test_file_tree.py', 'Keeps this tree in step with the repository'),
 
 ]

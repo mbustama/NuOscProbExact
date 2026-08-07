@@ -2,7 +2,7 @@
  "note": "Frozen timings of two independent codes, for the paper performance figure. Measured on one desktop machine; absolute values are machine-dependent, the ratios much less so. Both solve the same problem: P(nu_mu -> nu_e) at L = 1300 km in constant matter of 3 g/cm^3, three flavors. nuCraft is absent: its interface is (PDG type, energy, zenith angle) through its own Earth model, with no constant-density mode, so it has no way to answer this question.  It appears in the Earth figures instead.",
  "nufast_lbl": {
   "version": "github.com/PeterDenton/NuFast-LBL, arXiv:2405.02400",
-  "how": "timed inside C++, best of five runs, N_Newton = 0 (its default); no Python involved",
+  "how": "N_Newton = 0, its default, which is a truncation at 1.5e-5; timed inside C++, best of nine, no Python involved.  The two Newton settings are timed in ALTERNATED pairs, not in blocks: run as two blocks this reported N_Newton = 2 as faster than N_Newton = 0, which is not something more Newton steps can be.  Alternated, the ratio is 1.14 to 1.38.  Baseline 1299.999945 km and rhoYe = 1.4881386 carry the hbar*c and mass-defect conventions.",
   "sizes": [
    1,
    3,
@@ -16,16 +16,16 @@
    30000
   ],
   "seconds": [
-   1.04e-07,
-   2.32e-07,
-   7.43e-07,
-   2.181e-06,
-   7.313e-06,
-   2.1834e-05,
-   7.2919e-05,
-   0.000114027,
-   0.000377788,
-   0.001076496
+   1.4e-07,
+   2.67e-07,
+   7.76e-07,
+   2.184e-06,
+   7.222e-06,
+   2.1624e-05,
+   7.2003e-05,
+   0.000105748,
+   0.000353419,
+   0.001054119
   ]
  },
  "nusquids": {
@@ -110,6 +110,34 @@
    0.003927994,
    0.007654418,
    0.020142938
+  ]
+ },
+ "nufast_lbl_n2": {
+  "version": "github.com/PeterDenton/NuFast-LBL, arXiv:2405.02400",
+  "how": "N_Newton = 2, which reaches 8.3e-12; timed inside C++, best of nine, no Python involved.  The two Newton settings are timed in ALTERNATED pairs, not in blocks: run as two blocks this reported N_Newton = 2 as faster than N_Newton = 0, which is not something more Newton steps can be.  Alternated, the ratio is 1.14 to 1.38.  Baseline 1299.999945 km and rhoYe = 1.4881386 carry the hbar*c and mass-defect conventions.",
+  "sizes": [
+   1,
+   3,
+   10,
+   30,
+   100,
+   300,
+   1000,
+   3000,
+   10000,
+   30000
+  ],
+  "seconds": [
+   1.6e-07,
+   3.28e-07,
+   9.77e-07,
+   2.794e-06,
+   9.332e-06,
+   2.7943e-05,
+   9.2328e-05,
+   0.000144528,
+   0.000484449,
+   0.001452357
   ]
  }
 }

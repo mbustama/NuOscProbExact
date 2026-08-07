@@ -1919,12 +1919,15 @@ box(0.3, 0.5, 7.4, 3.9, C_IN, E_IN, "hamiltonians$n$nu",
 # empty, and its rounded corner met the orange box's: 2.6 against 2.5, minus
 # 0.12 of padding each, overlapped them.  Shortened, and moved up to leave a
 # clear 0.5 between the two.
-box(9.6, 3.4, 9.4, 4.05, C_CORE, E_CORE, "oscprob$n$nu",
+# The middle column sits between the two flanking pairs rather than below
+# them: the core box's top lines up with the upper boxes and the kernel box
+# with the lower ones, which is what the arrows are describing.
+box(9.6, 4.9, 9.4, 4.6, C_CORE, E_CORE, "oscprob$n$nu",
     "Invariants from traces\n"
     "$\\rightarrow$ eigenvalues in closed form\n"
     "$\\rightarrow$ coefficients $u_0,\\, u_k$\n"
     "$\\rightarrow$ the probabilities")
-box(9.6, 0.5, 9.4, 2.2, C_ACC, E_ACC, "fastkernels",
+box(9.6, 1.5, 9.4, 2.6, C_ACC, E_ACC, "fastkernels",
     "Compiled kernels: the same\nnumbers, up to $12{\\times}$ faster")
 
 box(21.0, 5.6, 8.7, 3.9, C_COMP, E_COMP, "slabs",
@@ -1932,11 +1935,11 @@ box(21.0, 5.6, 8.7, 3.9, C_COMP, E_COMP, "slabs",
 box(21.0, 0.5, 8.7, 3.9, C_COMP, E_COMP, "earth",
     "PREM chords, named sites\nand zenith scans --- it\nbuilds the slabs")
 
-arrow(7.9, 7.5, 9.4, 6.0)
-arrow(7.9, 2.4, 9.4, 4.2)
-arrow(14.3, 3.35, 14.3, 2.85, color=E_ACC, ls="--")
-arrow(19.2, 6.0, 20.8, 7.0, color=E_COMP)
-arrow(20.8, 4.6, 19.2, 4.4, color=E_COMP)
+arrow(7.9, 7.5, 9.4, 7.4)
+arrow(7.9, 2.4, 9.4, 5.6)
+arrow(14.3, 4.75, 14.3, 4.25, color=E_ACC, ls="--")
+arrow(19.2, 7.4, 20.8, 7.6, color=E_COMP)
+arrow(20.8, 3.0, 19.2, 5.4, color=E_COMP)
 arrow(25.3, 4.5, 25.3, 5.5, color=E_COMP)
 fig.savefig(os.path.join(FIGDIR, "architecture.pdf"),
             bbox_inches="tight", pad_inches=0.02)
@@ -2345,7 +2348,7 @@ fig, (axt, ax) = plt.subplots(
 # Earth planes, so a reader tracks one code across three figures.
 for col, style, size, lab in (
         (3, "-o", 3.4, "NuOscProbExact, array + kernel"),
-        (1, "-^", 3.6, "NuOscProbExact, one point at a time")):
+        (1, "-^", 3.6, "NuOscProbExact, one at a time")):
     if col == 3 and not fastkernels.HAVE_NUMBA:
         continue
     kw = dict(ms=size, color="C3", mfc="white", mew=0.9, zorder=5)
@@ -2359,19 +2362,25 @@ for col, style, size, lab in (
 # the solver setup and not the integration.
 for key, style, col, size, lab in (
         ("nusquids", "-v", "C2", 2.6, "nuSQuIDS"),
-        ("nufast_lbl", "-D", "C4", 2.4, "NuFast-LBL"),
+        ("nufast_lbl", "-D", "C4", 2.4,
+         r"NuFast-LBL, $N_{\rm Newton} = 0$"),
+        ("nufast_lbl_n2", "--D", "C4", 2.4,
+         r"NuFast-LBL, $N_{\rm Newton} = 2$"),
         ("globes", "-*", "C6", 4.4, "GLoBES"),
         ("prob3pp", "-P", "C5", 3.2, "Prob3++")):
     n = np.array(other[key]["sizes"], dtype=float)
     t = np.array(other[key]["seconds"])
-    axt.loglog(n, t*1e3, style, ms=size, color=col, label=lab)
-    ax.loglog(n, t/n*1e6, style, ms=size, color=col)
+    kw = dict(ms=size, color=col)
+    if key == "nufast_lbl_n2":
+        kw.update(mfc="white", mew=0.8)
+    axt.loglog(n, t*1e3, style, label=lab, **kw)
+    ax.loglog(n, t/n*1e6, style, **kw)
 
 axt.set_ylabel("Total time [ms]")
 axt.text(0.02, 0.97, "Constant density:  " + r"$L = 1300$ km," + "\n"
          r"$E = 0.1$--$32$ GeV,  $\rho = 3$ g cm$^{-3}$" + "\n"
          "All nine three-flavor probabilities" + "\n"
-         "All codes at std.\\ settings",
+         "All codes at std.\\ settings, except as noted",
          transform=axt.transAxes, ha="left", va="top", fontsize=5.6,
          color="0.2", linespacing=1.4)
 # `mode="expand"` with the anchor spanning the axes makes the legend box
