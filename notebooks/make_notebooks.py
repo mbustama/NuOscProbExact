@@ -2052,9 +2052,10 @@ ax.semilogx(E_LRI, P_STD_LRI, "--", color="0.35", lw=1.1,
 ax.semilogx(E_LRI, P_NEW_LRI, "-", color="C3", lw=1.1,
             label=r"$+\ L_e - L_\mu$, $\alpha^\prime = 10^{-52}$")
 ax.set_ylabel(r"$P_{\nu_\mu \to \nu_e}$")
-# Headroom for the legend and the case label, which would otherwise sit on
-# top of the 5 GeV peak.
-ax.set_ylim(0.0, 0.70)
+# The two curves peak at 0.608 and 0.612, so anything at or below 0.61
+# clips them; 0.65 is tight while leaving the peaks whole and giving the
+# legend somewhere to sit.
+ax.set_ylim(0.0, 0.65)
 # Three short lines rather than two long ones: the second line of a
 # two-line version runs under the legend box.
 ax.text(0.035, 0.96,
