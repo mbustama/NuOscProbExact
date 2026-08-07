@@ -90,6 +90,19 @@ LD_LIBRARY_PATH=$PREFIX/lib ./globes_drv > globes_prem.txt
 Each driver also takes `--vacuum` and `--scan lo hi steps`, which are the two
 checks tabulated above; `nufast_drv --profile` dumps the PREM it is using.
 
+## The constant-density performance sweep
+
+`globes_perf.c`, `prob3_perf.cpp` and `perf_nusquids.py` are the other
+figure: cost against the number of energies in a scan, at L = 1300 km
+through 3 g/cm^3, which is `performance.pdf`. They exist because none of
+those three codes batches over energies, so their cost per probability is
+flat in N, and a figure about batching needs that shown rather than
+asserted. Build them the same way as the drivers above; each prints
+`N seconds` per line, best of five.
+
+nuCraft is not among them and cannot be: its interface takes a zenith
+angle and propagates through its own Earth, with no constant-density mode.
+
 ## Output format
 
 One row per shell count: `n  microseconds_per_probability  P(1) ... P(12)`,

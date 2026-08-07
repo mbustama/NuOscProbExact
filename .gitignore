@@ -15,3 +15,16 @@ htmlcov/
 # these are the same plots saved a second time into the working directory,
 # and `git add -A` after a regeneration will otherwise pick up all thirteen.
 /notebooks/*.pdf
+
+# The paper's build artefacts and the two files make_versions.py derives
+# from main.tex.  main.tex is the source; these are outputs.
+resources/paper/*.aux
+resources/paper/*.log
+resources/paper/*.out
+resources/paper/*.spl
+resources/paper/*.bbl
+resources/paper/*.blg
+resources/paper/*.pdf
+resources/paper/main_clean.tex
+resources/paper/main_diff.tex
+resources/paper/bisect_probe.*

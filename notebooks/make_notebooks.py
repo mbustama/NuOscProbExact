@@ -1118,7 +1118,8 @@ books['09_performance.ipynb'] = notebook(
     'the machine that produced this copy rather than a figure carried over '
     'from a README.',
     [
-        code('import time\n\n'
+        code('# Every timing in this notebook, and every timing quoted in the paper,\n# was measured on one laptop:\n#\n#     Intel Core i5-1334U, 10 cores / 12 threads, up to 4.6 GHz\n#     16 GB RAM\n#     Ubuntu 24.04.4 LTS, kernel 7.0.0-28-generic\n#     Python 3.12.7, numpy 1.26.4, numba 0.60.0, gcc 13.3\n#\n# Absolute times mean little without that, and would be perhaps a factor\n# of two different on a workstation.  The ratios between routes, which is\n# what these cells are actually about, are far more stable than the\n# absolute numbers and are what the text quotes.\n' +
+             'import time\n\n'
              'import fastkernels\n\n\n'
              'def best_of(func, repeat=5):\n'
              '    """Returns the fastest of `repeat` runs, in seconds.\n\n'
@@ -1495,7 +1496,7 @@ def framed(ax, **kw):
     leg.get_frame().set_linewidth(0.7)
     return leg
 
-# Set NUOSC_PAPER_FIGDIR to write the PDFs into the paper's directory.
+# Set NUOSC_PAPER_FIGDIR to write the PDFs into the paper's figs/ folder.
 FIGDIR = os.environ.get('NUOSC_PAPER_FIGDIR', '.')'''),
         md('''## Exactness, against an independent reference
 
@@ -1915,24 +1916,30 @@ box(0.3, 5.6, 7.4, 3.9, C_IN, E_IN, "Your Hamiltonian",
 box(0.3, 0.5, 7.4, 3.9, C_IN, E_IN, "hamiltonians$n$nu",
     "Vacuum, matter, NSI, LIV,\n3+1 --- the worked scenarios,\nbuilt from globaldefs")
 
-box(9.6, 2.6, 9.4, 5.0, C_CORE, E_CORE, "oscprob$n$nu",
+# The green box was 5.0 tall for four lines of body, leaving its lower half
+# empty, and its rounded corner met the orange box's: 2.6 against 2.5, minus
+# 0.12 of padding each, overlapped them.  Shortened, and moved up to leave a
+# clear 0.5 between the two.
+# The middle column is aligned with the two flanking pairs: the core box's
+# top with the upper boxes, the kernel box's bottom with the lower ones.
+box(9.6, 4.9, 9.4, 4.6, C_CORE, E_CORE, "oscprob$n$nu",
     "Invariants from traces\n"
     "$\\rightarrow$ eigenvalues in closed form\n"
     "$\\rightarrow$ coefficients $u_0,\\, u_k$\n"
     "$\\rightarrow$ the probabilities")
-box(9.6, 0.5, 9.4, 2.0, C_ACC, E_ACC, "fastkernels",
-    "Optional compiled kernels:\nsame numbers, $4$--$5{\\times}$ faster")
+box(9.6, 0.5, 9.4, 2.6, C_ACC, E_ACC, "fastkernels",
+    "Compiled kernels: the same\nnumbers, up to $12{\\times}$ faster")
 
 box(21.0, 5.6, 8.7, 3.9, C_COMP, E_COMP, "slabs",
     "Composes the operators of\nadjacent constant-density\nlayers, in order")
 box(21.0, 0.5, 8.7, 3.9, C_COMP, E_COMP, "earth",
     "PREM chords, named sites\nand zenith scans --- it\nbuilds the slabs")
 
-arrow(7.9, 7.5, 9.4, 6.0)
-arrow(7.9, 2.4, 9.4, 4.2)
-arrow(14.3, 2.62, 14.3, 2.52, color=E_ACC, ls="--")
-arrow(19.2, 6.0, 20.8, 7.0, color=E_COMP)
-arrow(20.8, 4.6, 19.2, 4.4, color=E_COMP)
+arrow(7.9, 7.5, 9.4, 7.4)
+arrow(7.9, 2.4, 9.4, 5.6)
+arrow(14.3, 4.75, 14.3, 3.35, color=E_ACC, ls="--")
+arrow(19.2, 7.4, 20.8, 7.6, color=E_COMP)
+arrow(20.8, 3.0, 19.2, 5.4, color=E_COMP)
 arrow(25.3, 4.5, 25.3, 5.5, color=E_COMP)
 fig.savefig(os.path.join(FIGDIR, "architecture.pdf"),
             bbox_inches="tight", pad_inches=0.02)
@@ -2024,52 +2031,59 @@ import json
 with open(os.path.join('..', 'tests', 'speed_accuracy.json')) as handle:
     sa = json.load(handle)
 
-STYLE = {"NuOscProbExact": ("-o", "C0", 4.0),
+# The same colours, markers and layout as the two Earth planes, so that a
+# code keeps its identity across all three.  This library shows only the
+# batched-plus-kernel point: the other two routes are what the performance
+# figure is for, and here they would be three labels on one horizontal line.
+STYLE = {"NuOscProbExact": ("-o", "C3", 4.0),
          "nuSQuIDS": ("-v", "C2", 3.6),
          "NuFast-LBL": ("-D", "C4", 3.2),
-         "GLoBES": ("*", "C6", 7.0),
-         "Prob3++": ("P", "C5", 5.0),
-         "Second-order expansion": ("s", "C1", 4.0)}
+         "GLoBES": ("-*", "C6", 6.0),
+         "Prob3++": ("-P", "C5", 4.4),
+         "Second-order expansion": ("-s", "C1", 3.6)}
+DRAWN = {"NuOscProbExact": ("Array + kernel",)}
 
-fig, ax = plt.subplots(figsize=(COLW, COLW*0.95))
+fig, ax = plt.subplots(figsize=FIGSIZE_SQUARE)
 for series in sa["series"]:
     marker, colour, size = STYLE[series["name"]]
-    t = [q["us_per_probability"] for q in series["points"]]
-    e = [q["max_abs_error"] for q in series["points"]]
+    keep = DRAWN.get(series["name"])
+    points = [q for q in series["points"]
+              if keep is None or q["label"] in keep]
+    t = [q["us_per_probability"] for q in points]
+    e = [q["max_abs_error"] for q in points]
     kw = dict(ms=size, color=colour, label=series["name"], zorder=4)
     if series["name"] == "NuOscProbExact":
         kw.update(mfc="white", mew=1.0, zorder=5)
     ax.loglog(t, e, marker, **kw)
 
-for lab, x, y, dx, dy in (("Array + kernel", 0.230, 9.71e-16, -12, 7),
-                          ("Array", 0.955, 9.85e-16, 0, 7),
-                          ("One at a time", 31.235, 8.88e-16, 0, 7)):
+# What is varied along each curve, at both ends where there are two.
+for lab, x, y, dx, dy, c, ha in (
+        (r"tol $10^{-4}$", 51.61, 1.83e-04, 0, 7, "C2", "center"),
+        (r"$10^{-12}$", 189.37, 1.89e-08, 7, -1, "C2", "left"),
+        (r"$N_{\rm Newton} = 0$", 0.044, 1.53e-05, 7, -2, "C4", "left"),
+        (r"$3$", 0.066, 8.30e-12, 7, -2, "C4", "left")):
     ax.annotate(lab, xy=(x, y), xytext=(dx, dy), textcoords="offset points",
-                fontsize=5.2, color="C0", ha="center")
-for lab, x, y, dx, dy in ((r"tol $10^{-4}$", 51.61, 1.83e-04, -33, -11),
-                          (r"tol $10^{-8}$", 62.10, 3.10e-08, -32, 3),
-                          (r"tol $10^{-12}$", 189.37, 1.89e-08, -18, -9)):
-    ax.annotate(lab, xy=(x, y), xytext=(dx, dy), textcoords="offset points",
-                fontsize=5.2, color="C2")
-for lab, x, y in (("0", 0.044, 1.53e-05), ("1", 0.052, 4.87e-09),
-                  ("2", 0.060, 8.30e-12)):
-    ax.annotate(lab, xy=(x, y), xytext=(-8, -2), textcoords="offset points",
-                fontsize=5.2, color="C4")
-ax.annotate("Newton\nsteps", xy=(0.105, 2e-7), fontsize=5.2, color="C4",
-            ha="center", linespacing=1.3)
+                fontsize=5.2, color=c, ha=ha)
 
 ax.axhline(2.2e-16, color="0.5", ls=":", lw=0.7, zorder=1)
-ax.text(2.6e-2, 3.4e-16, "Double precision", fontsize=5.4, color="0.4")
-ax.text(0.97, 0.955, "Constant density:  $L = 1300$ km,\n"
+ax.text(2.6e-2, 3.2e-16, "Double precision", fontsize=5.4, color="0.4")
+# This panel's data does not leave the same corners free as the Earth ones:
+# the single NuOscProbExact point sits at the bottom left and nuSQuIDS runs
+# along the top right, so the subtitle goes just above the former and the
+# legend into the empty bottom right.
+ax.text(0.03, 0.17, "Constant density:  $L = 1300$ km,\n"
         r"$E = 0.6$--$20$ GeV,  $\rho = 3$ g cm$^{-3}$",
-        transform=ax.transAxes, ha="right", va="top", fontsize=6.0,
+        transform=ax.transAxes, ha="left", va="bottom", fontsize=6.0,
         color="0.2", linespacing=1.4)
+ax.annotate("Array + kernel", xy=(0.230, 9.71e-16), xytext=(8, -1),
+            textcoords="offset points", fontsize=5.2, color="C3", ha="left")
 ax.set_xlabel(r"Time per probability [$\mu$s]")
-ax.set_ylabel(r"Error against a 50-digit reference,  "
+ax.set_ylabel(r"Error vs.\ a 50-digit reference,  "
               r"max $|\Delta P_{\nu_\mu \to \nu_e}|$")
-ax.set_xlim(2.0e-2, 9.0e2)
+ax.set_xlim(2.0e-2, 1.0e3)
 ax.set_ylim(1.0e-16, 1.0e-2)
-leg = ax.legend(loc="center right", bbox_to_anchor=(0.995, 0.27), fontsize=6.0)
+leg = ax.legend(loc="lower right", bbox_to_anchor=(0.995, 0.02),
+                fontsize=6.0)
 leg.get_frame().set_linewidth(0.7)
 fig.tight_layout(pad=0.3)
 fig.savefig(os.path.join(FIGDIR, "speed_accuracy.pdf"))
@@ -2150,30 +2164,54 @@ with open(os.path.join('..', 'tests', 'prem_speed_accuracy.json')) as handle:
 
 # The colours and markers of the constant-density plane, so that a code
 # keeps its identity between the two figures.
-PREM_STYLE = {"NuOscProbExact": ("-o", "C0", 4.0),
+# The tolerance dial is the primary curve: it is the one where the user
+# states the quantity the y-axis measures, and the one a new reader meets
+# first.  The explicit slab count is the same code told the answer instead
+# of asked to find it, and is drawn broken behind it.
+PREM_STYLE = {"NuOscProbExact (tolerance)": ("-o", "C3", 4.0),
+              "NuOscProbExact": ("--s", "C3", 3.2),
+              # The style is keyed off the frozen name, not the legend
+              # label, so the four-flavor slab curve needs the broken style
+              # under its own name too.
+              "NuOscProbExact (double-double)": ("--s", "C3", 3.2),
+              "NuOscProbExact (eigensolver)": (":^", "C1", 3.8),
               "nuSQuIDS": ("-v", "C2", 3.6),
               "NuFast-Earth": ("-D", "C4", 3.2),
               "GLoBES": ("-*", "C6", 6.0),
               "Prob3++": ("-P", "C5", 4.4),
-              "nuCraft": ("-s", "C3", 3.4)}
+              "nuCraft": ("-s", "C0", 3.4)}
 
 
 def prem_plane(panel, annotations, subtitle, xlim, ylim, outfile,
                dial_at=None, legend_loc="lower left",
-               legend_anchor=None):
-    """One speed-accuracy plane: time across, error against the referee up."""
+               legend_anchor=None, only=None, relabel=None):
+    """One speed-accuracy plane: time across, error against the referee up.
+
+    `only` restricts which series are drawn, and `relabel` renames them in
+    the legend.  Both exist for the four-flavor panel, where the two root
+    strategies are measured and frozen but only the default is drawn: the
+    curves coincide to the last bit, so plotting both put two labels on one
+    line.
+    """
     fig, ax = plt.subplots(figsize=FIGSIZE_SQUARE)
     wanted = {}
-    for series in panel["series"]:
+    relabel = relabel or {}
+    order = list(PREM_STYLE)
+    for series in sorted(panel["series"],
+                         key=lambda x: order.index(x["name"])):
+        if only is not None and series["name"] not in only:
+            continue
         marker, colour, size = PREM_STYLE[series["name"]]
         t = [q["us_per_probability"] for q in series["points"]]
         e = [q["max_abs_error"] for q in series["points"]]
-        kw = dict(ms=size, color=colour, label=series["name"], zorder=4)
-        if series["name"] == "NuOscProbExact":
+        kw = dict(ms=size, color=colour,
+                  label=relabel.get(series["name"], series["name"]), zorder=4)
+        if series["name"].startswith("NuOscProbExact"):
             kw.update(mfc="white", mew=1.0, zorder=5)
         ax.loglog(t, e, marker, **kw)
         for q in series["points"]:
-            wanted[(series["name"], q["label"])] = (
+            key = relabel.get(series["name"], series["name"])
+            wanted[(key, q["label"])] = (
                 q["us_per_probability"], q["max_abs_error"], colour)
 
     for (name, label), text, dx, dy, ha in annotations:
@@ -2188,13 +2226,14 @@ def prem_plane(panel, annotations, subtitle, xlim, ylim, outfile,
     if dial_at is not None:
         ax.text(dial_at[0], dial_at[1], "Slabs per\nsegment", fontsize=5.2,
                 color="C0", ha="center", linespacing=1.3)
-    ax.text(0.97, 0.955, subtitle, transform=ax.transAxes, ha="right",
-            va="top", fontsize=6.0, color="0.2", linespacing=1.4)
+    # Bottom left is the one corner no curve reaches in either panel, and
+    # the legend needs the top right: with four to seven entries it was
+    # otherwise sitting on top of nuCraft.
+    ax.text(0.03, 0.03, subtitle, transform=ax.transAxes, ha="left",
+            va="bottom", fontsize=6.0, color="0.2", linespacing=1.4)
     ax.set_xlabel(r"Time per probability [$\mu$s]")
-    # Two lines: set on one, this label is taller than the axis it labels.
-    ax.set_ylabel("Error against a converged PREM solution,\n"
-                  r"max $|\Delta P_{\nu_\mu \to \nu_\mu}|$",
-                  linespacing=1.5)
+    ax.set_ylabel(r"Error vs.\ converged solution,  "
+                  r"max $|\Delta P_{\nu_\mu \to \nu_\mu}|$")
     ax.set_xlim(*xlim)
     ax.set_ylim(*ylim)
     leg = ax.legend(loc=legend_loc, bbox_to_anchor=legend_anchor,
@@ -2207,35 +2246,63 @@ def prem_plane(panel, annotations, subtitle, xlim, ylim, outfile,
 
 prem_plane(
     prem["three_flavor"],
-    [(("NuOscProbExact", "1"), r"$n=1$", -7, -3, "right"),
-     (("NuOscProbExact", "256"), "256", 7, -1, "left"),
-     (("nuSQuIDS", "1e-03"), r"tol $10^{-3}$", -2, 7, "center"),
+    [(("NuOscProbExact, rtol", "3e+00"), r"rtol $=3$", 7, -2, "left"),
+     (("NuOscProbExact, rtol", "1e-05"), r"$10^{-5}$", 0, 7, "center"),
+     ((r"NuOscProbExact, $N_{\rm slabs}$", "1"), r"$N_{\rm slabs}=1$",
+      -7, -2, "right"),
+     ((r"NuOscProbExact, $N_{\rm slabs}$", "256"), "256", 6, -3, "left"),
+     (("nuSQuIDS", "1e-03"), r"tol $10^{-3}$", -3, 7, "center"),
      (("nuSQuIDS", "1e-12"), r"$10^{-12}$", 7, -1, "left"),
-     (("NuFast-Earth", "1"), r"$n=1$", 6, -6, "left"),
-     (("NuFast-Earth", "256"), "256", -1, -11, "center")],
+     (("NuFast-Earth", "1"), r"$N_{\rm shells}=1$", 4, -8, "left"),
+     (("NuFast-Earth", "256"), "256", 6, -2, "left")],
     "PREM, three flavors:  " + r"$\cos\theta_z = -0.9$," + "\n"
     r"$E = 3$--$40$ GeV,  $L = 11468$ km",
-    (7.0e-1, 4.0e5), (2.0e-7, 1.8e-1),
+    (1.0e0, 1.0e5), (2.0e-8, 2.0e-1),
     "prem_speed_accuracy.pdf", None,
-    legend_loc="upper right", legend_anchor=(0.995, 0.86))
+    legend_loc="upper right", legend_anchor=(0.995, 0.995),
+    relabel={"NuOscProbExact": r"NuOscProbExact, $N_{\rm slabs}$",
+             "NuOscProbExact (tolerance)": "NuOscProbExact, rtol"})
 
 prem_plane(
     prem["sterile_3plus1"],
-    [(("NuOscProbExact", "1"), "1", -7, -2, "right"),
-     (("NuOscProbExact", "16"), "16", 7, -2, "left"),
-     (("NuOscProbExact", "256"), "256", -2, -11, "center"),
-     (("nuSQuIDS", "1e-03"), r"tol $10^{-3}$", 7, -1, "left"),
+    [(("NuOscProbExact, rtol", "3e+00"), r"rtol $=3$", 7, -2, "left"),
+     (("NuOscProbExact, rtol", "1e-05"), r"$10^{-5}$", 0, 7, "center"),
+     ((r"NuOscProbExact, $N_{\rm slabs}$", "1"), r"$N_{\rm slabs}=1$",
+      0, 7, "center"),
+     ((r"NuOscProbExact, $N_{\rm slabs}$", "256"), "256", 6, -3, "left"),
+     (("nuSQuIDS", "1e-03"), r"tol $10^{-3}$", -3, 7, "center"),
      (("nuSQuIDS", "1e-12"), r"$10^{-12}$", 7, -1, "left")],
     r"PREM, $3+1$:  $\cos\theta_z = -0.9$," + "\n"
     r"$E = 0.3$--$30$ TeV,  $\Delta m_{41}^2 = 1$ eV$^2$",
-    (4.0e1, 8.0e4), (3.0e-7, 1.2e-1),
-    "prem_speed_accuracy_3plus1.pdf", (7.0e3, 4.0e-3))'''),
+    (1.0e1, 1.0e5), (2.0e-8, 2.0e-1),
+    "prem_speed_accuracy_3plus1.pdf", None,
+    legend_loc="upper right", legend_anchor=(0.995, 0.995),
+    # Both root strategies are frozen in the data; only the default is
+    # drawn, because the two agree to the last bit and their curves lie on
+    # top of one another.
+    only={"NuOscProbExact (double-double)", "NuOscProbExact (tolerance)",
+          "nuSQuIDS", "nuCraft"},
+    relabel={"NuOscProbExact (double-double)":
+             r"NuOscProbExact, $N_{\rm slabs}$",
+             "NuOscProbExact (tolerance)": "NuOscProbExact, rtol"})'''),
     md(r'''## Performance
 
 Three ways of evaluating the same scan: one point at a time, the whole stack
 in one call, and the whole stack through the compiled kernel. The cost per
 point is what a parameter scan actually pays.'''),
-    code(r'''import time
+    code(r'''# Every timing in this notebook, and every timing quoted in the paper,
+# was measured on one laptop:
+#
+#     Intel Core i5-1334U, 10 cores / 12 threads, up to 4.6 GHz
+#     16 GB RAM
+#     Ubuntu 24.04.4 LTS, kernel 7.0.0-28-generic
+#     Python 3.12.7, numpy 1.26.4, numba 0.60.0, gcc 13.3
+#
+# Absolute times mean little without that, and would be perhaps a factor
+# of two different on a workstation.  The ratios between routes, which is
+# what these cells are actually about, are far more stable than the
+# absolute numbers and are what the text quotes.
+import time
 import fastkernels
 
 
@@ -2283,30 +2350,62 @@ with open(os.path.join('..', 'tests', 'timing_other_codes.json')) as handle:
     other = json.load(handle)
 
 fig, (axt, ax) = plt.subplots(
-    2, 1, figsize=(COLW, COLW*1.24), sharex=True,
+    2, 1, figsize=(COLW, COLW*1.30), sharex=True,
     gridspec_kw={"height_ratios": [1.0, 1.0], "hspace": 0.07})
 
-for col, style, c, lab in ((1, "-o", "C0", "This code, one point at a time"),
-                           (2, "--s", "C1", "This code, array"),
-                           (3, ":^", "C3", "This code, array + kernel")):
+# Two of the three routes through this library: the compiled kernel, which
+# is what an installation gets, and one point at a time, which is what the
+# batching is worth against.  The plain array path lies between them and is
+# left out to keep the legend readable.  Marker and colour match the two
+# Earth planes, so a reader tracks one code across three figures.
+for col, style, size, lab in (
+        (3, "-o", 3.4, "NuOscProbExact, array + kernel"),
+        (1, "-^", 3.6, "NuOscProbExact, one at a time")):
     if col == 3 and not fastkernels.HAVE_NUMBA:
         continue
-    axt.loglog(rows[:, 0], rows[:, col]*1e3, style, ms=2.5, color=c, label=lab)
-    ax.loglog(rows[:, 0], rows[:, col]/rows[:, 0]*1e6, style, ms=2.5, color=c)
+    kw = dict(ms=size, color="C3", mfc="white", mew=0.9, zorder=5)
+    axt.loglog(rows[:, 0], rows[:, col]*1e3, style, label=lab, **kw)
+    ax.loglog(rows[:, 0], rows[:, col]/rows[:, 0]*1e6, style, **kw)
 
-for key, style, col, lab in (("nusquids", "-v", "C2", "nuSQuIDS"),
-                             ("nufast_lbl", "-D", "C4", "NuFast-LBL")):
+# The external codes.  None of them batches: GLoBES, Prob3++ and NuFast-LBL
+# take one energy per call, so their cost per probability is flat in N, and
+# that flatness is the point of the lower panel.  nuSQuIDS has a
+# multiple-energy mode and still does not fall, because what it amortises is
+# the solver setup and not the integration.
+for key, style, col, size, lab in (
+        ("nusquids", "-v", "C2", 2.6, "nuSQuIDS"),
+        ("nufast_lbl", "-D", "C4", 2.4,
+         r"NuFast-LBL, $N_{\rm Newton} = 0$"),
+        ("nufast_lbl_n2", "--D", "C4", 2.4,
+         r"NuFast-LBL, $N_{\rm Newton} = 2$"),
+        ("globes", "-*", "C6", 4.4, "GLoBES"),
+        ("prob3pp", "-P", "C5", 3.2, "Prob3++")):
     n = np.array(other[key]["sizes"], dtype=float)
     t = np.array(other[key]["seconds"])
-    axt.loglog(n, t*1e3, style, ms=2.5, color=col, label=lab)
-    ax.loglog(n, t/n*1e6, style, ms=2.5, color=col)
+    kw = dict(ms=size, color=col)
+    if key == "nufast_lbl_n2":
+        kw.update(mfc="white", mew=0.8)
+    axt.loglog(n, t*1e3, style, label=lab, **kw)
+    ax.loglog(n, t/n*1e6, style, **kw)
+
 axt.set_ylabel("Total time [ms]")
-framed(axt, loc="lower right", ncol=1)
+axt.text(0.02, 0.97, "Constant density:  " + r"$L = 1300$ km," + "\n"
+         r"$E = 0.1$--$32$ GeV,  $\rho = 3$ g cm$^{-3}$" + "\n"
+         "All nine three-flavor probabilities" + "\n"
+         "All codes at std.\\ settings, except as noted",
+         transform=axt.transAxes, ha="left", va="top", fontsize=5.6,
+         color="0.2", linespacing=1.4)
+# `mode="expand"` with the anchor spanning the axes makes the legend box
+# exactly as wide as the panels it sits above.
+leg = axt.legend(loc="lower left", bbox_to_anchor=(0.0, 1.015, 1.0, 0.1),
+                 mode="expand", ncol=2, fontsize=5.6, borderaxespad=0.0,
+                 columnspacing=1.2, handlelength=2.0)
+leg.get_frame().set_linewidth(0.7)
 ax.set_xlim(rows[0, 0], rows[-1, 0])
 ax.set_xlabel("Number of energies in the scan")
 ax.set_ylabel(r"Time per probability [$\mu$s]")
-ax.set_ylim(2.0e-2, 2.0e3)
-fig.savefig(os.path.join(FIGDIR, "performance.pdf"))
+ax.set_ylim(2.0e-2, 1.0e3)
+fig.savefig(os.path.join(FIGDIR, "performance.pdf"), bbox_inches="tight")
 plt.show()'''),
     md(r'''## Comparison to the alternatives
 
@@ -2348,42 +2447,47 @@ rho = ref['density_g_cm3']
 L = L_km*KM
 vcc = earth.matter_potential(rho)
 
+# Every curve is refereed by the same 50-digit matrix exponential as the
+# speed-accuracy plane, so that this library is not its own referee here
+# either.  The reference, and the GLoBES and Prob3++ scans, are frozen in
+# tests/const_density_scan.json.
+with open(os.path.join('..', 'tests', 'const_density_scan.json')) as handle:
+    cd = json.load(handle)
+
+reference = np.array(cd['probability_reference'])
 exact = oscprob3nu.probabilities_3nu(
     hamiltonians3nu.hamiltonian_3nu_matter(H_VAC_3NU, E, vcc), L)[:, 3]
-nusq = np.array(ref['probability'])
-nufast = np.array(nuf['probability_N_Newton_0'])
-approx = p_mue_expansion(E, L, gd.S12_NO_BF, gd.S13_NO_BF, gd.S23_NO_BF,
-                         gd.DCP_NO_BF, gd.D21_NO_BF, gd.D31_NO_BF, vcc)
+curves = [
+    ("NuOscProbExact", "-", "C3", exact),
+    ("nuSQuIDS", "-", "C2", np.array(ref['probability'])),
+    ("NuFast-LBL", "-", "C4", np.array(nuf['probability_N_Newton_2'])),
+    ("GLoBES", "-", "C6", np.array(cd['probability_globes'])),
+    ("Prob3++", "-", "C5", np.array(cd['probability_prob3pp'])),
+    (r"$\alpha$--$s_{13}$ expansion", "--", "C1",
+     p_mue_expansion(E, L, gd.S12_NO_BF, gd.S13_NO_BF, gd.S23_NO_BF,
+                     gd.DCP_NO_BF, gd.D21_NO_BF, gd.D31_NO_BF, vcc)),
+]
 
-print("max |exact - nuSQuIDS|  = %.1e" % np.abs(exact-nusq).max())
-print("max |exact - NuFast|    = %.1e" % np.abs(exact-nufast).max())
-print("max |exact - expansion| = %.1e" % np.abs(exact-approx).max())
+for name, _, _, values in curves:
+    print("max |%-24s - reference| = %.1e"
+          % (name, np.abs(values-reference).max()))
 
 fig, (ax, axr) = plt.subplots(
     2, 1, figsize=(COLW, COLW*1.06), sharex=True,
     gridspec_kw={"height_ratios": [2.4, 1.2], "hspace": 0.06})
 
-ax.semilogx(E_gev, exact, "-", color="C0", label="NuOscProbExact")
-ax.semilogx(E_gev[::4], nusq[::4], "o", color="C2", ms=2.4, mfc="none",
-            mew=0.7, label="nuSQuIDS")
-ax.semilogx(E_gev[::4], nufast[::4], "s", color="C4", ms=2.2, mfc="none",
-            mew=0.7, label="NuFast-LBL")
-ax.semilogx(E_gev, approx, "--", color="C1", label=r"$\alpha$--$s_{13}$ expansion")
+for name, dash, colour, values in curves:
+    ax.semilogx(E_gev, values, dash, color=colour, lw=0.9, label=name)
+    axr.loglog(E_gev, np.abs(values-reference), dash, color=colour, lw=0.9)
 ax.set_ylabel(r"$P_{\nu_\mu \to \nu_e}$")
 ax.set_ylim(0.0, 0.16)
-framed(ax, loc="upper right", ncol=1)
+framed(ax, loc="upper right", ncol=2)
 
-axr.loglog(E_gev, np.abs(exact-nusq), "-", color="C2", lw=0.9,
-           label="nuSQuIDS")
-axr.loglog(E_gev, np.abs(exact-nufast), "-.", color="C4", lw=0.9,
-           label="NuFast-LBL")
-axr.loglog(E_gev, np.abs(exact-approx), "--", color="C1", lw=0.9,
-           label="expansion")
-axr.set_ylabel(r"$|\Delta P|$")
+axr.set_ylabel(r"$|\Delta P|$ vs.\ ref.")
 axr.set_xlabel("Neutrino energy [GeV]")
 axr.set_xlim(E_gev[0], E_gev[-1])
-axr.set_ylim(1.0e-10, 1.0e-1)
-axr.set_yticks([1.0e-9, 1.0e-6, 1.0e-3])
+axr.set_ylim(1.0e-18, 1.0e-1)
+axr.set_yticks([1.0e-16, 1.0e-12, 1.0e-8, 1.0e-4])
 fig.savefig(os.path.join(FIGDIR, "exact_vs_approximations.pdf"))
 plt.show()'''),
         md(r'''## Two flavors, four scenarios

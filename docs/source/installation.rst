@@ -273,6 +273,30 @@ File tree
    │   └── earth.py                     # PREM, chord geometry, and Earth crossings
    ├── tools/                           # Scripts that are not part of the package
    │   └── make_demo_video.py           # Joins and shrinks the clips notebook 19 renders
+   ├── resources/                       # Things the repository carries but does not install
+   │   └── paper/                       # Source of the paper that documents this library
+   │       ├── README.md                # How to build it, and what each file is
+   │       ├── main.tex                 # The paper, with the revision marked up
+   │       ├── make_versions.py         # Derives the clean and the diffed versions
+   │       ├── baseline_cpc_v1.tex      # The published version, for the diff
+   │       ├── refs.bib                 # Kept for reference; the .bbl is inlined
+   │       ├── elsarticle.cls
+   │       ├── elsarticle-num.bst
+   │       └── figs/                    # Every figure, twelve of them from notebook 10
+   │           ├── validation.pdf
+   │           ├── prob_2nu_vs_energy_compare.pdf
+   │           ├── prob_3nu_vs_energy_compare.pdf
+   │           ├── slabs_composition.pdf
+   │           ├── earth_oscillogram.pdf
+   │           ├── density_arrangement.pdf
+   │           ├── sterile_earth_oscillogram.pdf
+   │           ├── architecture.pdf
+   │           ├── performance.pdf
+   │           ├── exact_vs_approximations.pdf
+   │           ├── speed_accuracy.pdf
+   │           ├── prem_speed_accuracy.pdf
+   │           ├── prem_speed_accuracy_3plus1.pdf
+   │           └── Notes_on_SU_n__probability_relations.pdf
    └── tests/                           # Regression suite, run with pytest
        ├── conftest.py                  # Shared fixtures and path setup
        ├── gen_stiff_reference.py       # Regenerates the fifty-digit four-flavor oracle
@@ -308,6 +332,7 @@ File tree
        ├── timing_other_codes.json      # Timings behind the performance figure
        ├── prem_scan.py                 # Regenerates the two Earth speed-accuracy planes
        ├── prem_speed_accuracy.json     # Those planes, at three flavors and at 3+1
+       ├── const_density_scan.json      # The exact reference for the comparison figure
        ├── external_drivers/            # Drivers for the codes that cannot be called from Python
        │   ├── README.md                # Every convention each one had to be told, and why
        │   ├── gen_prem_header.py       # Emits this library's PREM as a C header
@@ -316,5 +341,12 @@ File tree
        │   ├── globes_drv.c             # GLoBES on the PREM chord
        │   ├── globes_prem.txt
        │   ├── prob3_drv.cpp            # Prob3++ on the PREM chord
-       │   └── prob3_prem.txt
+       │   ├── prob3_prem.txt
+       │   ├── perf_nusquids.py         # nuSQuIDS on the constant-density scan
+       │   ├── globes_perf.c            # GLoBES on the same scan
+       │   ├── prob3_perf.cpp           # Prob3++ on the same scan
+       │   ├── nufast_lbl_perf.cpp      # NuFast-LBL at two Newton settings
+       │   ├── const_scan.py            # The 50-digit reference for the comparison figure
+       │   ├── globes_scan.c            # GLoBES on that comparison
+       │   └── prob3_scan.cpp           # Prob3++ on that comparison
        └── test_file_tree.py            # Keeps this tree in step with the repository
