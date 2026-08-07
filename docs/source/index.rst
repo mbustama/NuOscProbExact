@@ -53,6 +53,7 @@ NuOscProbExact: Exact Neutrino Oscillation Probabilities
    * :doc:`What it can compute, with code <recipes>`
    * `GitHub repository <https://github.com/mbustama/NuOscProbExact>`_
    * `The paper <https://arxiv.org/abs/1904.12391>`_ (arXiv:1904.12391)
+   * `Papers citing it <https://inspirehep.net/literature?sort=mostrecent&size=250&page=1&q=refersto%3Arecid%3A1731803&ui-citation-summary=true>`_, on INSPIRE
    * `The notebooks <https://github.com/mbustama/NuOscProbExact/tree/main/notebooks>`_
    * :doc:`changelog`
 
@@ -408,6 +409,7 @@ See :doc:`installation` and :doc:`quickstart` for the longer version.
    installation
    quickstart
    recipes
+   notebooks
    methodology
    functions
    references

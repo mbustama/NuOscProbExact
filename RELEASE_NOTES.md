@@ -37,7 +37,7 @@ three-flavor one. A scalar energy still returns a tuple, bit-for-bit what it ret
 **Four-flavor results also move, everywhere, not only in the Earth.** The latent roots now
 come from a different route, so any `probabilities_4nu` may change in its last digits.
 Measured against what 1.11.0 computed, on 3+1 spectra at 0.5, 1 and 10 GeV and
-Δm²₄₁ of 0.1 and 1 eV²: **bit-identical in four of six cases and at most 1.2e-10** in the
+Δm²₄₁ of 0.1 and 1 eV²: **bit-identical in two of those six, and at most 1.2e-10** in the
 rest. The new values are the accurate ones, by a factor of about seven.
 
 ## What is new since 1.11.0

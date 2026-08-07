@@ -6,6 +6,7 @@
 [![Downloads](https://pepy.tech/badge/nuoscprobexact)](https://pepy.tech/project/nuoscprobexact)
 [![arXiv](https://img.shields.io/badge/arXiv-1904.12391-orange.svg)](https://arxiv.org/abs/1904.12391)
 [![DOI](https://zenodo.org/badge/182178323.svg)](https://zenodo.org/badge/latestdoi/182178323)
+[![INSPIRE](https://img.shields.io/badge/INSPIRE-cited%20by-003a6c.svg)](https://inspirehep.net/literature?sort=mostrecent&size=250&page=1&q=refersto%3Arecid%3A1731803&ui-citation-summary=true)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
@@ -213,6 +214,7 @@ NuOscProbExact/
 │       ├── installation.rst         # Requirements, installation, file tree
 │       ├── quickstart.rst           # Shortest path to a probability
 │       ├── recipes.rst              # Numerical recipes, with pre-generated figures
+│       ├── notebooks.rst            # The twenty tutorial notebooks, in reading order
 │       ├── methodology.rst          # The SU(2), SU(3) and SU(4) expansions
 │       ├── functions.rst            # API reference, from the docstrings
 │       ├── references.rst           # Bibliography
@@ -626,12 +628,12 @@ Each of these is a runnable script; none of them is transcribed into this file, 
 | SU(2) and SU(3) expansion coefficients, and the evolution operator | [`example_2nu_vacuum_coeffs.py`](https://github.com/mbustama/NuOscProbExact/blob/main/examples/example_2nu_vacuum_coeffs.py), [`example_3nu_vacuum_coeffs.py`](https://github.com/mbustama/NuOscProbExact/blob/main/examples/example_3nu_vacuum_coeffs.py) | [18](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/18_evolution_operator.ipynb) |
 | Layered matter, and the Earth through PREM | — | [06](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/06_earth_and_prem.ipynb), [07](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/07_earth_probabilities.ipynb) |
 
-The [numerical recipes](https://mbustama.github.io/NuOscProbExact/recipes.html) page collects the same material as runnable snippets, and the [API reference](https://mbustama.github.io/NuOscProbExact/functions.html) documents every routine, with examples that are executed when the documentation is built rather than pasted beside it.
+The [numerical recipes](https://mbustama.github.io/NuOscProbExact/recipes.html) page collects the same material as runnable snippets, the [tutorial notebooks](https://mbustama.github.io/NuOscProbExact/notebooks.html) page indexes the twenty in reading order, and the [API reference](https://mbustama.github.io/NuOscProbExact/functions.html) documents every routine, with examples that are executed when the documentation is built rather than pasted beside it.
 
 
 ## Notebooks
 
-Twenty worked notebooks live in [`notebooks/`](https://github.com/mbustama/NuOscProbExact/tree/main/notebooks/), numbered in reading order.  They carry their figures inline, so they render on GitHub without being run:
+Twenty worked notebooks live in [`notebooks/`](https://github.com/mbustama/NuOscProbExact/tree/main/notebooks/), numbered in reading order.  They carry their figures inline, so they render on GitHub without being run.  The documentation lists them with the same descriptions, grouped by what they are for, on its [tutorial notebooks](https://mbustama.github.io/NuOscProbExact/notebooks.html) page:
 
 | Notebook | What it covers |
 |---|---|
@@ -693,7 +695,7 @@ This will print to screen a description of what the function does (in the exampl
 
 ## Citing
 
-If you use **NuOscProbExact** in your work, we ask you that you please cite the following paper: Mauricio Bustamante, *NuOscProbExact: a general-purpose code to compute exact two-flavor and three-flavor neutrino oscillation probabilities* ([arXiv:1904.12391](https://arxiv.org/abs/1904.12391)).
+If you use **NuOscProbExact** in your work, we ask you that you please cite the following paper: Mauricio Bustamante, *NuOscProbExact: a general-purpose code to compute exact two-flavor and three-flavor neutrino oscillation probabilities* ([arXiv:1904.12391](https://arxiv.org/abs/1904.12391)).  The papers that cite it are listed [on INSPIRE](https://inspirehep.net/literature?sort=mostrecent&size=250&page=1&q=refersto%3Arecid%3A1731803&ui-citation-summary=true).
 
 If you are citing **NuOscProbExact** in a document that will be uploaded to the arXiv, please consider using the LaTeX or BibTeX entries provided by INSPIRE ([link here](https://inspirehep.net/literature/1731803)):
 ```
