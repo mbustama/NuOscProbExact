@@ -627,12 +627,12 @@ Each of these is a runnable script; none of them is transcribed into this file, 
 | SU(2) and SU(3) expansion coefficients, and the evolution operator | [`example_2nu_vacuum_coeffs.py`](https://github.com/mbustama/NuOscProbExact/blob/main/examples/example_2nu_vacuum_coeffs.py), [`example_3nu_vacuum_coeffs.py`](https://github.com/mbustama/NuOscProbExact/blob/main/examples/example_3nu_vacuum_coeffs.py) | [18](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/18_evolution_operator.ipynb) |
 | Layered matter, and the Earth through PREM | — | [06](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/06_earth_and_prem.ipynb), [07](https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/07_earth_probabilities.ipynb) |
 
-The [numerical recipes](https://mbustama.github.io/NuOscProbExact/recipes.html) page collects the same material as runnable snippets, and the [API reference](https://mbustama.github.io/NuOscProbExact/functions.html) documents every routine, with examples that are executed when the documentation is built rather than pasted beside it.
+The [numerical recipes](https://mbustama.github.io/NuOscProbExact/recipes.html) page collects the same material as runnable snippets, the [tutorial notebooks](https://mbustama.github.io/NuOscProbExact/notebooks.html) page indexes the twenty in reading order, and the [API reference](https://mbustama.github.io/NuOscProbExact/functions.html) documents every routine, with examples that are executed when the documentation is built rather than pasted beside it.
 
 
 ## Notebooks
 
-Twenty worked notebooks live in [`notebooks/`](https://github.com/mbustama/NuOscProbExact/tree/main/notebooks/), numbered in reading order.  They carry their figures inline, so they render on GitHub without being run:
+Twenty worked notebooks live in [`notebooks/`](https://github.com/mbustama/NuOscProbExact/tree/main/notebooks/), numbered in reading order.  They carry their figures inline, so they render on GitHub without being run.  The documentation lists them with the same descriptions, grouped by what they are for, on its [tutorial notebooks](https://mbustama.github.io/NuOscProbExact/notebooks.html) page:
 
 | Notebook | What it covers |
 |---|---|
