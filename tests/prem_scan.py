@@ -11,8 +11,25 @@ nuCraft on the path::
 
     python tests/prem_scan.py > tests/prem_speed_accuracy.json
 
-It takes about five minutes, nearly all of it in the arbitrary-precision
+It takes about seven minutes, nearly all of it in the arbitrary-precision
 referee.
+
+How this library is called
+--------------------------
+Since 1.12.0 the Earth routines take an array of energies, so the twelve
+points are one batched call and not twelve scalar ones.  That is how the
+question would actually be asked, and it is what makes the comparison
+like for like: NuFast-Earth is handed the same twelve energies through
+``Set_Spectra``, and the GLoBES and Prob3++ drivers loop over them inside
+C.  Batching alone is worth between 4x and 10x here, on top of the
+compiled evolution-operator kernel that 1.13.0 gave the slab path.
+
+At four flavors :data:`oscprob4nu.ROOT_STRATEGY` selects how the latent
+roots are found, and both routes are shown.  On this problem they are not
+an accuracy trade: they agree **bit for bit** at every slab count, because
+the discretisation error swamps a root difference of 3.6e-17 against
+3.9e-16.  The two curves therefore differ horizontally and not vertically,
+and what the panel shows is the cost of the choice, not its consequence.
 
 What a PREM figure can and cannot measure
 -----------------------------------------
@@ -156,6 +173,7 @@ import globaldefs as gd                                       # noqa: E402
 import earth                                                  # noqa: E402
 import hamiltonians3nu                                        # noqa: E402
 import hamiltonians4nu                                        # noqa: E402
+import oscprob4nu                                             # noqa: E402
 
 import nuSQuIDS as nsq                                        # noqa: E402
 
@@ -297,14 +315,23 @@ def ode_reference(energy_ev, n_flavors, tol=1.0e-13):
 # The codes
 # --------------------------------------------------------------------------
 
-def ours(energy_ev, n, n_flavors):
+def ours(energies_ev, n, n_flavors):
+    r"""P(nu_mu -> nu_mu) for the whole energy stack, in one call.
+
+    Since 1.12.0 the Earth routines take an array of energies, so the
+    twelve points are one batched call rather than twelve scalar ones.
+    That is how a user would ask this question, and it is the like-for-like
+    comparison: NuFast-Earth is handed the same twelve through
+    ``Set_Spectra``, and the GLoBES and Prob3++ drivers loop over them
+    inside C.  Batching is worth between 4x and 10x here on its own.
+    """
     if n_flavors == 3:
-        return earth.probabilities_3nu_earth(
-            H_VAC_3NU, energy_ev, COSTHZ, n_slabs_per_segment=n,
-            electron_fraction=YE)[4]
-    return earth.probabilities_4nu_earth(
-        H_VAC_4NU, energy_ev, COSTHZ, n_slabs_per_segment=n,
-        electron_fraction=YE)[5]
+        return np.asarray(earth.probabilities_3nu_earth(
+            H_VAC_3NU, energies_ev, COSTHZ, n_slabs_per_segment=n,
+            electron_fraction=YE))[..., 4].ravel()
+    return np.asarray(earth.probabilities_4nu_earth(
+        H_VAC_4NU, energies_ev, COSTHZ, n_slabs_per_segment=n,
+        electron_fraction=YE))[..., 5].ravel()
 
 
 def _aligned_radii(n_per_shell):
@@ -387,7 +414,11 @@ def nucraft(energy_ev, instance, prec):
 # --------------------------------------------------------------------------
 
 def timed(call, energies, repeat=5):
-    """Microseconds per probability, best of `repeat` passes."""
+    """Microseconds per probability, best of `repeat` passes.
+
+    `call` takes one energy; the whole stack is looped over here.  Used
+    for nuSQuIDS and nuCraft, whose interfaces are one point at a time.
+    """
     best = np.inf
     for _ in range(repeat):
         start = time.perf_counter()
@@ -395,6 +426,87 @@ def timed(call, energies, repeat=5):
             call(energy_ev)
         best = min(best, (time.perf_counter()-start)/len(energies)*1.0e6)
     return best*1.0
+
+
+def timed_batch(call, n_energies, repeat=7, min_block=0.05):
+    """The same, for a `call` that takes the whole stack at once.
+
+    The first pass is thrown away: with Numba present it pays for
+    compiling the kernel specialisation, which a user pays once per
+    session and not once per call.
+
+    Since 1.13.0 a batched call over twelve energies can finish in a few
+    hundred microseconds, which is too short to time one at a time: the
+    first attempt at this produced a curve whose cost fell between 64 and
+    128 slabs per segment, which is not something the code does.  So the
+    call is repeated inside the timed block until the block lasts at least
+    `min_block` seconds, the way `timeit` autoranges, and the best of
+    `repeat` such blocks is taken.
+
+    That also matters for the two four-flavor root strategies, whose gap
+    is smaller than the run-to-run spread: timed in alternated pairs the
+    ratio sits at 0.94-1.02 while individual pairs range from 0.40 to
+    1.63.  Nothing here manufactures a difference that is not there.
+    """
+    call()
+    inner = 1
+    while True:
+        start = time.perf_counter()
+        for _ in range(inner):
+            call()
+        elapsed = time.perf_counter() - start
+        if elapsed >= min_block or inner >= 1 << 20:
+            break
+        inner = max(inner + 1, int(inner*min_block/max(elapsed, 1e-9)*1.2))
+
+    best = np.inf
+    for _ in range(repeat):
+        start = time.perf_counter()
+        for _ in range(inner):
+            call()
+        elapsed = time.perf_counter() - start
+        best = min(best, elapsed/inner/n_energies*1.0e6)
+    return best*1.0
+
+
+def timed_batch_interleaved(calls, n_energies, repeat=7, min_block=0.05):
+    """Time several batched calls against each other, alternating.
+
+    Timing one route to completion and then the next lets machine drift
+    masquerade as a cost difference, and here it did: run in blocks, the
+    eigensolver came out 1.4x slower than double-double at four flavors,
+    while alternated pairs put the ratio at 0.94-1.02 with individual
+    pairs ranging from 0.40 to 1.63.  The 1.4x was the ordering.
+
+    So the routes are interleaved, and the direction of the sweep is
+    reversed on alternate passes, which cancels a drift that is linear in
+    time.  `oscprob4nu`'s own docstring times its two strategies this way
+    and says why.
+    """
+    for call in calls:
+        call()
+
+    inner = 1
+    while True:
+        start = time.perf_counter()
+        for _ in range(inner):
+            calls[0]()
+        elapsed = time.perf_counter() - start
+        if elapsed >= min_block or inner >= 1 << 20:
+            break
+        inner = max(inner + 1, int(inner*min_block/max(elapsed, 1e-9)*1.2))
+
+    best = [np.inf]*len(calls)
+    for rep in range(repeat):
+        order = range(len(calls)) if rep % 2 == 0 \
+            else range(len(calls)-1, -1, -1)
+        for i in order:
+            start = time.perf_counter()
+            for _ in range(inner):
+                calls[i]()
+            elapsed = time.perf_counter() - start
+            best[i] = min(best[i], elapsed/inner/n_energies*1.0e6)
+    return best
 
 
 def series(name, points):
@@ -439,15 +551,48 @@ def build(n_flavors, energies_gev):
     # Richardson error estimator for themselves; what makes them honest is
     # the independent ODE check on the referee's absolute value, four
     # decades below the finest point plotted.
-    out = [series('NuOscProbExact', [])]
+    # At four flavors the latent roots can come by either of two routes,
+    # and they are shown separately because the choice is a real one.  On
+    # this problem they are not an accuracy trade at all: the two agree
+    # bit for bit at every slab count, because the discretisation error
+    # swamps a root difference of 3.6e-17 against 3.9e-16.  What separates
+    # them is cost, so the two curves differ horizontally and not
+    # vertically.  At three flavors the question does not arise.
+    if n_flavors == 3:
+        variants = [('NuOscProbExact', None)]
+    else:
+        variants = [('NuOscProbExact (double-double)', 'double-double'),
+                    ('NuOscProbExact (eigensolver)', 'eigensolver')]
+
+    out = []
+    def with_strategy(strategy, n):
+        """One batched call, under the named root strategy."""
+        def call():
+            if strategy is not None:
+                oscprob4nu.ROOT_STRATEGY = strategy
+            return ours(energies, n, n_flavors)
+        return call
+
+    pts = [[] for _ in variants]
     for n in (1, 2, 4, 8, 16, 32, 64, 128, 256):
-        p = np.array([ours(e, n, n_flavors) for e in energies])
-        out[0]['points'].append({
-            'label': str(n),
-            'n_slabs_per_segment': n,
-            'max_abs_error': float(np.max(np.abs(p-ref))),
-            'us_per_probability': timed(lambda e, k=n: ours(e, k, n_flavors),
-                                        energies)})
+        calls = [with_strategy(strategy, n) for _, strategy in variants]
+        # accuracy first: order cannot affect it
+        errors = []
+        for call in calls:
+            errors.append(float(np.max(np.abs(call() - ref))))
+        # then cost, with the routes alternated against each other
+        times = timed_batch_interleaved(calls, len(energies))
+        for i, (_, strategy) in enumerate(variants):
+            pts[i].append({
+                'label': str(n),
+                'n_slabs_per_segment': n,
+                'root_strategy': strategy,
+                'max_abs_error': errors[i],
+                'us_per_probability': times[i]})
+    for i, (name, _) in enumerate(variants):
+        out.append(series(name, pts[i]))
+    if n_flavors == 4:
+        oscprob4nu.ROOT_STRATEGY = 'double-double'      # back to the default
 
     body = nusquids_body()
     pts = []

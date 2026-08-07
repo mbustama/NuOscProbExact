@@ -27,7 +27,7 @@
   ],
   "reference": [
    0.7854042765130703,
-   0.025840212612905287,
+   0.025840212612905294,
    0.5710884288305977,
    0.6816700607909918,
    0.02168834417765105,
@@ -61,56 +61,65 @@
      {
       "label": "1",
       "n_slabs_per_segment": 1,
-      "max_abs_error": 0.0240252210069688,
-      "us_per_probability": 511.0627510778917
+      "root_strategy": null,
+      "max_abs_error": 0.024025221006966135,
+      "us_per_probability": 3.0393899385098946
      },
      {
       "label": "2",
       "n_slabs_per_segment": 2,
-      "max_abs_error": 0.008464856615559735,
-      "us_per_probability": 543.1226648700734
+      "root_strategy": null,
+      "max_abs_error": 0.008464856615560845,
+      "us_per_probability": 4.506036218939167
      },
      {
       "label": "4",
       "n_slabs_per_segment": 4,
-      "max_abs_error": 0.0024544979264800038,
-      "us_per_probability": 613.368252137055
+      "root_strategy": null,
+      "max_abs_error": 0.002454497926487109,
+      "us_per_probability": 4.6240471058059125
      },
      {
       "label": "8",
       "n_slabs_per_segment": 8,
-      "max_abs_error": 0.0006382378427204349,
-      "us_per_probability": 746.6341679294904
+      "root_strategy": null,
+      "max_abs_error": 0.0006382378427296498,
+      "us_per_probability": 5.988145859622179
      },
      {
       "label": "16",
       "n_slabs_per_segment": 16,
-      "max_abs_error": 0.00016110830712579016,
-      "us_per_probability": 990.8471668798786
+      "root_strategy": null,
+      "max_abs_error": 0.00016110830715709845,
+      "us_per_probability": 8.404485922240754
      },
      {
       "label": "32",
       "n_slabs_per_segment": 32,
-      "max_abs_error": 4.03739771395184e-05,
-      "us_per_probability": 1461.955417956536
+      "root_strategy": null,
+      "max_abs_error": 4.037397720069169e-05,
+      "us_per_probability": 13.82988521497469
      },
      {
       "label": "64",
       "n_slabs_per_segment": 64,
-      "max_abs_error": 1.0099529864748824e-05,
-      "us_per_probability": 2406.3892487902194
+      "root_strategy": null,
+      "max_abs_error": 1.0099529912377392e-05,
+      "us_per_probability": 24.338866991456598
      },
      {
       "label": "128",
       "n_slabs_per_segment": 128,
-      "max_abs_error": 2.525237189354712e-06,
-      "us_per_probability": 4862.570999345432
+      "root_strategy": null,
+      "max_abs_error": 2.5252373013762153e-06,
+      "us_per_probability": 45.37485574962952
      },
      {
       "label": "256",
       "n_slabs_per_segment": 256,
-      "max_abs_error": 6.313085448850231e-07,
-      "us_per_probability": 9010.543583523637
+      "root_strategy": null,
+      "max_abs_error": 6.313087738130108e-07,
+      "us_per_probability": 119.22787373242457
      }
     ]
    },
@@ -121,55 +130,55 @@
       "label": "1e-03",
       "tolerance": 0.001,
       "max_abs_error": 0.020669967431509506,
-      "us_per_probability": 46.410083693141736
+      "us_per_probability": 111.49116714174549
      },
      {
       "label": "1e-04",
       "tolerance": 0.0001,
       "max_abs_error": 0.004818686937075212,
-      "us_per_probability": 75.8266663372827
+      "us_per_probability": 91.83941680627565
      },
      {
       "label": "1e-05",
       "tolerance": 1e-05,
       "max_abs_error": 0.0004429508184968789,
-      "us_per_probability": 135.72141809466606
+      "us_per_probability": 157.33325077841678
      },
      {
       "label": "1e-06",
       "tolerance": 1e-06,
       "max_abs_error": 0.00010728239634916203,
-      "us_per_probability": 247.4063342864004
+      "us_per_probability": 282.6509977846096
      },
      {
       "label": "1e-07",
       "tolerance": 1e-07,
       "max_abs_error": 3.4091156778326415e-05,
-      "us_per_probability": 424.78458150678006
+      "us_per_probability": 465.9844998968765
      },
      {
       "label": "1e-08",
       "tolerance": 1e-08,
       "max_abs_error": 1.195642661655505e-06,
-      "us_per_probability": 642.8753331420012
+      "us_per_probability": 669.2950846627355
      },
      {
       "label": "1e-09",
       "tolerance": 1e-09,
       "max_abs_error": 1.1266944399679346e-06,
-      "us_per_probability": 873.4205014964876
+      "us_per_probability": 872.4588309026634
      },
      {
       "label": "1e-10",
       "tolerance": 1e-10,
       "max_abs_error": 1.011973588704862e-06,
-      "us_per_probability": 1089.734168393382
+      "us_per_probability": 1061.684000887908
      },
      {
       "label": "1e-12",
       "tolerance": 1e-12,
       "max_abs_error": 1.0313941767314816e-06,
-      "us_per_probability": 1826.845749747008
+      "us_per_probability": 1644.5928340544924
      }
     ]
    },
@@ -180,43 +189,43 @@
       "label": "1e-02",
       "num_prec": 0.01,
       "max_abs_error": 0.0009752920370696971,
-      "us_per_probability": 3414.18008126008
+      "us_per_probability": 3029.122749770371
      },
      {
       "label": "1e-03",
       "num_prec": 0.001,
-      "max_abs_error": 0.0001516186894293739,
-      "us_per_probability": 5766.254500485957
+      "max_abs_error": 0.00015161868942938084,
+      "us_per_probability": 5075.350001182717
      },
      {
       "label": "1e-04",
       "num_prec": 0.0001,
       "max_abs_error": 6.746086245790206e-05,
-      "us_per_probability": 8876.071415822176
+      "us_per_probability": 8197.598663779596
      },
      {
       "label": "1e-05",
       "num_prec": 1e-05,
       "max_abs_error": 3.921085228508758e-06,
-      "us_per_probability": 12547.176166359955
+      "us_per_probability": 12096.542666161744
      },
      {
       "label": "1e-06",
       "num_prec": 1e-06,
       "max_abs_error": 2.468744740968809e-06,
-      "us_per_probability": 16950.544583475374
+      "us_per_probability": 15952.504831754293
      },
      {
       "label": "1e-08",
       "num_prec": 1e-08,
       "max_abs_error": 2.5576817299644006e-06,
-      "us_per_probability": 28150.736000194836
+      "us_per_probability": 24849.201416751992
      },
      {
       "label": "1e-10",
       "num_prec": 1e-10,
       "max_abs_error": 2.5466972272125687e-06,
-      "us_per_probability": 45973.7121661116
+      "us_per_probability": 42830.902583470255
      }
     ]
    },
@@ -418,7 +427,7 @@
    0.701672268547235,
    0.8021836117857185,
    0.9313347187180732,
-   0.7190819027579295,
+   0.7190819027579297,
    0.9318534541017102,
    0.8838493027454888,
    0.9781701894927148,
@@ -445,61 +454,138 @@
   "reference_vs_ode_max_abs": 1.1692119494810527e-09,
   "series": [
    {
-    "name": "NuOscProbExact",
+    "name": "NuOscProbExact (double-double)",
     "points": [
      {
       "label": "1",
       "n_slabs_per_segment": 1,
-      "max_abs_error": 0.03081239374004685,
-      "us_per_probability": 749.0588347233521
+      "root_strategy": "double-double",
+      "max_abs_error": 0.030812393740053623,
+      "us_per_probability": 19.212738858344242
      },
      {
       "label": "2",
       "n_slabs_per_segment": 2,
-      "max_abs_error": 0.009893255837579495,
-      "us_per_probability": 810.3344177167552
+      "root_strategy": "double-double",
+      "max_abs_error": 0.009893255837576942,
+      "us_per_probability": 13.269072657640413
      },
      {
       "label": "4",
       "n_slabs_per_segment": 4,
-      "max_abs_error": 0.007325970340897436,
-      "us_per_probability": 988.470834272448
+      "root_strategy": "double-double",
+      "max_abs_error": 0.007325970340896326,
+      "us_per_probability": 22.307202109517767
      },
      {
       "label": "8",
       "n_slabs_per_segment": 8,
-      "max_abs_error": 0.0015000185602392913,
-      "us_per_probability": 1336.0848339895408
+      "root_strategy": "double-double",
+      "max_abs_error": 0.001500018560237515,
+      "us_per_probability": 38.52481368725974
      },
      {
       "label": "16",
       "n_slabs_per_segment": 16,
-      "max_abs_error": 0.00020833536582409717,
-      "us_per_probability": 1957.8188342469125
+      "root_strategy": "double-double",
+      "max_abs_error": 0.00020833536582387513,
+      "us_per_probability": 74.7706410007424
      },
      {
       "label": "32",
       "n_slabs_per_segment": 32,
-      "max_abs_error": 5.0791313887188494e-05,
-      "us_per_probability": 3190.1445812157667
+      "root_strategy": "double-double",
+      "max_abs_error": 5.079131388507907e-05,
+      "us_per_probability": 133.2385674997879
      },
      {
       "label": "64",
       "n_slabs_per_segment": 64,
-      "max_abs_error": 1.2623482929075003e-05,
-      "us_per_probability": 6199.240582645871
+      "root_strategy": "double-double",
+      "max_abs_error": 1.262348291974913e-05,
+      "us_per_probability": 286.9524292085165
      },
      {
       "label": "128",
       "n_slabs_per_segment": 128,
-      "max_abs_error": 3.1515794911562978e-06,
-      "us_per_probability": 14026.190333728058
+      "root_strategy": "double-double",
+      "max_abs_error": 3.1515794965963906e-06,
+      "us_per_probability": 709.6130497908841
      },
      {
       "label": "256",
       "n_slabs_per_segment": 256,
-      "max_abs_error": 7.878949001005608e-07,
-      "us_per_probability": 24738.48683439428
+      "root_strategy": "double-double",
+      "max_abs_error": 7.878949066508767e-07,
+      "us_per_probability": 1339.906721518168
+     }
+    ]
+   },
+   {
+    "name": "NuOscProbExact (eigensolver)",
+    "points": [
+     {
+      "label": "1",
+      "n_slabs_per_segment": 1,
+      "root_strategy": "eigensolver",
+      "max_abs_error": 0.030812393740053623,
+      "us_per_probability": 19.28715794820733
+     },
+     {
+      "label": "2",
+      "n_slabs_per_segment": 2,
+      "root_strategy": "eigensolver",
+      "max_abs_error": 0.009893255837576942,
+      "us_per_probability": 13.034237930166364
+     },
+     {
+      "label": "4",
+      "n_slabs_per_segment": 4,
+      "root_strategy": "eigensolver",
+      "max_abs_error": 0.007325970340896326,
+      "us_per_probability": 23.03578279196772
+     },
+     {
+      "label": "8",
+      "n_slabs_per_segment": 8,
+      "root_strategy": "eigensolver",
+      "max_abs_error": 0.001500018560237515,
+      "us_per_probability": 39.0377337192526
+     },
+     {
+      "label": "16",
+      "n_slabs_per_segment": 16,
+      "root_strategy": "eigensolver",
+      "max_abs_error": 0.00020833536582387513,
+      "us_per_probability": 73.41313567639399
+     },
+     {
+      "label": "32",
+      "n_slabs_per_segment": 32,
+      "root_strategy": "eigensolver",
+      "max_abs_error": 5.079131388507907e-05,
+      "us_per_probability": 136.87727704900107
+     },
+     {
+      "label": "64",
+      "n_slabs_per_segment": 64,
+      "root_strategy": "eigensolver",
+      "max_abs_error": 1.262348291974913e-05,
+      "us_per_probability": 312.58305825758725
+     },
+     {
+      "label": "128",
+      "n_slabs_per_segment": 128,
+      "root_strategy": "eigensolver",
+      "max_abs_error": 3.1515794965963906e-06,
+      "us_per_probability": 682.0910668466239
+     },
+     {
+      "label": "256",
+      "n_slabs_per_segment": 256,
+      "root_strategy": "eigensolver",
+      "max_abs_error": 7.878949066508767e-07,
+      "us_per_probability": 1293.882611207664
      }
     ]
    },
@@ -510,55 +596,55 @@
       "label": "1e-03",
       "tolerance": 0.001,
       "max_abs_error": 0.01956251356424188,
-      "us_per_probability": 67.44141622524087
+      "us_per_probability": 86.94425438685964
      },
      {
       "label": "1e-04",
       "tolerance": 0.0001,
       "max_abs_error": 0.011504792287497012,
-      "us_per_probability": 105.32891853169228
+      "us_per_probability": 133.52916478955498
      },
      {
       "label": "1e-05",
       "tolerance": 1e-05,
       "max_abs_error": 0.0012886126333293557,
-      "us_per_probability": 179.90608224257207
+      "us_per_probability": 226.9834173299993
      },
      {
       "label": "1e-06",
       "tolerance": 1e-06,
       "max_abs_error": 0.00012961432405489415,
-      "us_per_probability": 350.9298330754973
+      "us_per_probability": 424.7985828745489
      },
      {
       "label": "1e-07",
       "tolerance": 1e-07,
       "max_abs_error": 3.493467321846744e-05,
-      "us_per_probability": 609.4434162757049
+      "us_per_probability": 679.2403340417271
      },
      {
       "label": "1e-08",
       "tolerance": 1e-08,
       "max_abs_error": 2.894978189393882e-06,
-      "us_per_probability": 957.0442513601544
+      "us_per_probability": 994.5196652552113
      },
      {
       "label": "1e-09",
       "tolerance": 1e-09,
       "max_abs_error": 1.3027635313855868e-06,
-      "us_per_probability": 1295.1480845610301
+      "us_per_probability": 1211.688999319449
      },
      {
       "label": "1e-10",
       "tolerance": 1e-10,
       "max_abs_error": 1.0871191024053317e-06,
-      "us_per_probability": 2884.435001760721
+      "us_per_probability": 1506.0243361707155
      },
      {
       "label": "1e-12",
       "tolerance": 1e-12,
       "max_abs_error": 1.0795397542562313e-06,
-      "us_per_probability": 3087.7208337187767
+      "us_per_probability": 2322.3650835764906
      }
     ]
    }

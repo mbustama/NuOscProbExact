@@ -2151,6 +2151,11 @@ with open(os.path.join('..', 'tests', 'prem_speed_accuracy.json')) as handle:
 # The colours and markers of the constant-density plane, so that a code
 # keeps its identity between the two figures.
 PREM_STYLE = {"NuOscProbExact": ("-o", "C0", 4.0),
+              # The two four-flavor root strategies are the same code and
+              # give bit-identical probabilities here, so they have to be
+              # told apart by marker rather than by position.
+              "NuOscProbExact (double-double)": ("-o", "C0", 4.0),
+              "NuOscProbExact (eigensolver)": ("--^", "C1", 3.8),
               "nuSQuIDS": ("-v", "C2", 3.6),
               "NuFast-Earth": ("-D", "C4", 3.2),
               "GLoBES": ("-*", "C6", 6.0),
@@ -2169,7 +2174,7 @@ def prem_plane(panel, annotations, subtitle, xlim, ylim, outfile,
         t = [q["us_per_probability"] for q in series["points"]]
         e = [q["max_abs_error"] for q in series["points"]]
         kw = dict(ms=size, color=colour, label=series["name"], zorder=4)
-        if series["name"] == "NuOscProbExact":
+        if series["name"].startswith("NuOscProbExact"):
             kw.update(mfc="white", mew=1.0, zorder=5)
         ax.loglog(t, e, marker, **kw)
         for q in series["points"]:
@@ -2207,29 +2212,29 @@ def prem_plane(panel, annotations, subtitle, xlim, ylim, outfile,
 
 prem_plane(
     prem["three_flavor"],
-    [(("NuOscProbExact", "1"), r"$n=1$", -7, -3, "right"),
-     (("NuOscProbExact", "256"), "256", 7, -1, "left"),
-     (("nuSQuIDS", "1e-03"), r"tol $10^{-3}$", -2, 7, "center"),
+    [(("NuOscProbExact", "1"), r"$n=1$", -6, -4, "right"),
+     (("NuOscProbExact", "256"), "256", 6, -2, "left"),
+     (("nuSQuIDS", "1e-03"), r"tol $10^{-3}$", -3, 7, "center"),
      (("nuSQuIDS", "1e-12"), r"$10^{-12}$", 7, -1, "left"),
-     (("NuFast-Earth", "1"), r"$n=1$", 6, -6, "left"),
-     (("NuFast-Earth", "256"), "256", -1, -11, "center")],
+     (("NuFast-Earth", "1"), r"$n=1$", 5, -7, "left"),
+     (("NuFast-Earth", "256"), "256", 6, -2, "left")],
     "PREM, three flavors:  " + r"$\cos\theta_z = -0.9$," + "\n"
     r"$E = 3$--$40$ GeV,  $L = 11468$ km",
-    (7.0e-1, 4.0e5), (2.0e-7, 1.8e-1),
+    (6.0e-1, 2.0e5), (2.0e-7, 2.5e-1),
     "prem_speed_accuracy.pdf", None,
-    legend_loc="upper right", legend_anchor=(0.995, 0.86))
+    legend_loc="upper right", legend_anchor=(0.995, 0.84))
 
 prem_plane(
     prem["sterile_3plus1"],
-    [(("NuOscProbExact", "1"), "1", -7, -2, "right"),
-     (("NuOscProbExact", "16"), "16", 7, -2, "left"),
-     (("NuOscProbExact", "256"), "256", -2, -11, "center"),
-     (("nuSQuIDS", "1e-03"), r"tol $10^{-3}$", 7, -1, "left"),
+    [(("NuOscProbExact (double-double)", "1"), r"$n=1$", -6, -4, "right"),
+     (("NuOscProbExact (double-double)", "256"), "256", 6, -2, "left"),
+     (("nuSQuIDS", "1e-03"), r"tol $10^{-3}$", -3, 7, "center"),
      (("nuSQuIDS", "1e-12"), r"$10^{-12}$", 7, -1, "left")],
     r"PREM, $3+1$:  $\cos\theta_z = -0.9$," + "\n"
     r"$E = 0.3$--$30$ TeV,  $\Delta m_{41}^2 = 1$ eV$^2$",
-    (4.0e1, 8.0e4), (3.0e-7, 1.2e-1),
-    "prem_speed_accuracy_3plus1.pdf", (7.0e3, 4.0e-3))'''),
+    (6.0e0, 8.0e3), (3.0e-7, 2.5e-1),
+    "prem_speed_accuracy_3plus1.pdf", None,
+    legend_loc="upper right", legend_anchor=(0.995, 0.84))'''),
     md(r'''## Performance
 
 Three ways of evaluating the same scan: one point at a time, the whole stack

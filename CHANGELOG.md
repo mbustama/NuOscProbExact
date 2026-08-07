@@ -5,6 +5,32 @@ All notable changes to **NuOscProbExact** are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+
+- **The Earth speed-accuracy figures are re-measured against the compiled
+  slab path.**  Their timings were taken before the evolution-operator
+  kernel existed, when the Earth routines still evaluated one energy at a
+  time and composed the slabs in a serial Python loop.  Both figures now
+  call the batched path: at three flavors the same accuracy that cost
+  9010 us costs 119 us, and this library moves from the right-hand edge of
+  the plane to the lower-left corner, ahead of GLoBES and NuFast-Earth at
+  every accuracy the six codes share.  The accuracies are unchanged to the
+  last digit, and the arbitrary-precision referee moved by 7e-18, which is
+  the check that the speed-up left the physics alone.
+
+- **The 3+1 panel now carries one curve per `oscprob4nu.ROOT_STRATEGY`.**
+  On this problem the two routes are indistinguishable: bit-identical
+  probabilities at every slab count, and costs within 0.4% of each other.
+  Two things had to be fixed before that could be said. Timing the routes
+  in blocks made the eigensolver look 1.4x slower, which was the ordering
+  and not the code; they are now interleaved with the sweep direction
+  reversed on alternate passes. And single-shot timing of a call that can
+  finish in a few hundred microseconds produced a three-flavor curve whose
+  cost *fell* between 64 and 128 slabs per segment, so the timer now
+  autoranges the way `timeit` does.
+
 ## [1.13.0] - 2026-08-06
 
 ### Changed
