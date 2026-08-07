@@ -1495,7 +1495,7 @@ def framed(ax, **kw):
     leg.get_frame().set_linewidth(0.7)
     return leg
 
-# Set NUOSC_PAPER_FIGDIR to write the PDFs into the paper's directory.
+# Set NUOSC_PAPER_FIGDIR to write the PDFs into the paper's figs/ folder.
 FIGDIR = os.environ.get('NUOSC_PAPER_FIGDIR', '.')'''),
         md('''## Exactness, against an independent reference
 
@@ -1919,15 +1919,14 @@ box(0.3, 0.5, 7.4, 3.9, C_IN, E_IN, "hamiltonians$n$nu",
 # empty, and its rounded corner met the orange box's: 2.6 against 2.5, minus
 # 0.12 of padding each, overlapped them.  Shortened, and moved up to leave a
 # clear 0.5 between the two.
-# The middle column sits between the two flanking pairs rather than below
-# them: the core box's top lines up with the upper boxes and the kernel box
-# with the lower ones, which is what the arrows are describing.
+# The middle column is aligned with the two flanking pairs: the core box's
+# top with the upper boxes, the kernel box's bottom with the lower ones.
 box(9.6, 4.9, 9.4, 4.6, C_CORE, E_CORE, "oscprob$n$nu",
     "Invariants from traces\n"
     "$\\rightarrow$ eigenvalues in closed form\n"
     "$\\rightarrow$ coefficients $u_0,\\, u_k$\n"
     "$\\rightarrow$ the probabilities")
-box(9.6, 1.5, 9.4, 2.6, C_ACC, E_ACC, "fastkernels",
+box(9.6, 0.5, 9.4, 2.6, C_ACC, E_ACC, "fastkernels",
     "Compiled kernels: the same\nnumbers, up to $12{\\times}$ faster")
 
 box(21.0, 5.6, 8.7, 3.9, C_COMP, E_COMP, "slabs",
@@ -1937,7 +1936,7 @@ box(21.0, 0.5, 8.7, 3.9, C_COMP, E_COMP, "earth",
 
 arrow(7.9, 7.5, 9.4, 7.4)
 arrow(7.9, 2.4, 9.4, 5.6)
-arrow(14.3, 4.75, 14.3, 4.25, color=E_ACC, ls="--")
+arrow(14.3, 4.75, 14.3, 3.35, color=E_ACC, ls="--")
 arrow(19.2, 7.4, 20.8, 7.6, color=E_COMP)
 arrow(20.8, 3.0, 19.2, 5.4, color=E_COMP)
 arrow(25.3, 4.5, 25.3, 5.5, color=E_COMP)
@@ -2469,13 +2468,13 @@ for name, dash, colour, values in curves:
     axr.loglog(E_gev, np.abs(values-reference), dash, color=colour, lw=0.9)
 ax.set_ylabel(r"$P_{\nu_\mu \to \nu_e}$")
 ax.set_ylim(0.0, 0.16)
-framed(ax, loc="upper right", ncol=1)
+framed(ax, loc="upper right", ncol=2)
 
-axr.set_ylabel(r"$|\Delta P|$ vs.\ reference")
+axr.set_ylabel(r"$|\Delta P|$ vs.\ ref.")
 axr.set_xlabel("Neutrino energy [GeV]")
 axr.set_xlim(E_gev[0], E_gev[-1])
-axr.set_ylim(1.0e-16, 1.0e-1)
-axr.set_yticks([1.0e-14, 1.0e-10, 1.0e-6, 1.0e-2])
+axr.set_ylim(1.0e-18, 1.0e-1)
+axr.set_yticks([1.0e-16, 1.0e-12, 1.0e-8, 1.0e-4])
 fig.savefig(os.path.join(FIGDIR, "exact_vs_approximations.pdf"))
 plt.show()'''),
         md(r'''## Two flavors, four scenarios
