@@ -209,6 +209,13 @@ TH14 = np.arcsin(np.sqrt(0.10))
 TH24 = np.arcsin(np.sqrt(0.10))
 TH34 = 0.0
 
+# The tolerance dial, which reaches 1024 slabs per segment where the
+# explicit sweep stops at 256.  Below 1e-5 it cannot be met within
+# `slabs.N_SLABS_MAX`: rtol is relative, and the smallest probability in
+# this stack is 0.026, so 1e-6 of it is 2.6e-8 against an error estimate of
+# 7.1e-8 at 1024 slabs.
+RTOLS = (1e-1, 3e-2, 1e-2, 1e-3, 1e-4, 3e-5, 1e-5)
+
 E_GEV_3NU = np.logspace(np.log10(3.0), np.log10(40.0), 12)
 E_GEV_4NU = np.logspace(np.log10(300.0), np.log10(30000.0), 12)
 
@@ -362,8 +369,23 @@ def nusquids_body(n_per_shell=200):
     return body
 
 
-def nusquids(energy_ev, body, tol, n_flavors):
-    s = nsq.nuSQUIDS(n_flavors, nsq.NeutrinoType.neutrino)
+def nusquids(energies_ev, body, tol, n_flavors):
+    r"""P(nu_mu -> nu_mu) for the whole energy stack, in one solver.
+
+    nuSQuIDS has a multiple-energy constructor, and it is used here for the
+    same reason this library's batched call is: driving it one energy at a
+    time, rebuilding the solver for each, costs it a factor of 1.4 to 1.8
+    that it does not have to pay.  GLoBES and Prob3++ have no equivalent
+    and are looped, which is not a handicap imposed on them but the only
+    interface they expose.
+
+    The multiple-energy mode shares its adaptive stepping across the stack,
+    so at a loose tolerance it does not return quite what the one-at-a-time
+    mode does -- 2.5e-2 apart at 1e-3.  By 1e-10 they agree to 1.8e-8, well
+    under the floor either reaches here.
+    """
+    e = np.asarray(energies_ev, dtype=float)/1.0e9*UNITS.GeV
+    s = nsq.nuSQUIDS(e, n_flavors, nsq.NeutrinoType.neutrino, False)
     s.Set_MixingAngle(0, 1, TH12)
     s.Set_MixingAngle(0, 2, TH13)
     s.Set_MixingAngle(1, 2, TH23)
@@ -379,12 +401,11 @@ def nusquids(energy_ev, body, tol, n_flavors):
     s.Set_abs_error(tol)
     s.Set_Body(body)
     s.Set_Track(body.MakeTrackWithCosine(COSTHZ_NUSQUIDS))
-    s.Set_E(energy_ev/1.0e9*UNITS.GeV)
-    state = np.zeros(n_flavors)
-    state[1] = 1.0
+    state = np.zeros((e.size, n_flavors))
+    state[:, 1] = 1.0
     s.Set_initial_state(state, nsq.Basis.flavor)
     s.EvolveState()
-    return s.EvalFlavor(1)
+    return np.array([s.EvalFlavor(1, ee) for ee in e])
 
 
 def nucraft_instance(n_flavors):
@@ -404,10 +425,20 @@ def nucraft_instance(n_flavors):
                    detectorDepth=0.0, atmHeight=0.0)
 
 
-def nucraft(energy_ev, instance, prec):
+def nucraft(energies_ev, instance, prec):
+    r"""The same, for nuCraft, which takes a list of particles.
+
+    Handing it the whole list rather than one at a time is worth nothing --
+    1.00x, and bit-identical answers -- because CalcWeights loops over the
+    list internally.  It is done this way regardless, so that no code in
+    these figures is looped from outside when its own interface would take
+    the stack.
+    """
     # atmMode 0 with atmHeight 0 is surface to surface; zenith in radians.
-    return instance.CalcWeights([(14, energy_ev/1.0e9, np.arccos(COSTHZ))],
-                               atmMode=0, numPrec=prec)[0][1]
+    zenith = np.arccos(COSTHZ)
+    rows = [(14, float(e)/1.0e9, zenith) for e in np.atleast_1d(energies_ev)]
+    return np.array([w[1] for w in instance.CalcWeights(rows, atmMode=0,
+                                                        numPrec=prec)])
 
 
 # --------------------------------------------------------------------------
@@ -592,19 +623,60 @@ def build(n_flavors, energies_gev):
                 'us_per_probability': times[i]})
     for i, (name, _) in enumerate(variants):
         out.append(series(name, pts[i]))
+
+    # The other dial this library exposes.  Since 1.12.0 the Earth routines
+    # take rtol/atol and choose the slab count themselves, doubling until
+    # the answer settles, which is the same kind of knob nuSQuIDS and
+    # nuCraft expose and a fairer thing to compare against them than a raw
+    # slab count.  `return_n_slabs` reports what it picked.
+    if n_flavors == 3:
+        pts = []
+        for rtol in RTOLS:
+            p, n_used = earth.probabilities_3nu_earth(
+                H_VAC_3NU, energies, COSTHZ, electron_fraction=YE,
+                rtol=rtol, return_n_slabs=True)
+            p = np.asarray(p)[..., 4].ravel()
+            pts.append({
+                'label': '%.0e' % rtol,
+                'rtol': rtol,
+                'n_slabs_chosen': int(np.max(n_used)),
+                'max_abs_error': float(np.max(np.abs(p-ref))),
+                'us_per_probability': timed_batch(
+                    lambda r=rtol: earth.probabilities_3nu_earth(
+                        H_VAC_3NU, energies, COSTHZ, electron_fraction=YE,
+                        rtol=r), len(energies))})
+        out.append(series('NuOscProbExact (tolerance)', pts))
+    else:
+        pts = []
+        for rtol in RTOLS:
+            p, n_used = earth.probabilities_4nu_earth(
+                H_VAC_4NU, energies, COSTHZ, electron_fraction=YE,
+                rtol=rtol, return_n_slabs=True)
+            p = np.asarray(p)[..., 5].ravel()
+            pts.append({
+                'label': '%.0e' % rtol,
+                'rtol': rtol,
+                'n_slabs_chosen': int(np.max(n_used)),
+                'max_abs_error': float(np.max(np.abs(p-ref))),
+                'us_per_probability': timed_batch(
+                    lambda r=rtol: earth.probabilities_4nu_earth(
+                        H_VAC_4NU, energies, COSTHZ, electron_fraction=YE,
+                        rtol=r), len(energies))})
+        out.append(series('NuOscProbExact (tolerance)', pts))
     if n_flavors == 4:
         oscprob4nu.ROOT_STRATEGY = 'double-double'      # back to the default
 
     body = nusquids_body()
     pts = []
     for tol in (1e-3, 1e-4, 1e-5, 1e-6, 1e-7, 1e-8, 1e-9, 1e-10, 1e-12):
-        p = np.array([nusquids(e, body, tol, n_flavors) for e in energies])
+        p = nusquids(energies, body, tol, n_flavors)
         pts.append({
             'label': '%.0e' % tol,
             'tolerance': tol,
             'max_abs_error': float(np.max(np.abs(p-ref))),
-            'us_per_probability': timed(
-                lambda e, t=tol: nusquids(e, body, t, n_flavors), energies)})
+            'us_per_probability': timed_batch(
+                lambda t=tol: nusquids(energies, body, t, n_flavors),
+                len(energies))})
     out.append(series('nuSQuIDS', pts))
 
     # nuCraft runs at both, but at 3+1 it cannot get below 3.7e-4: its
@@ -617,13 +689,14 @@ def build(n_flavors, energies_gev):
     inst = nucraft_instance(n_flavors)
     pts = []
     for prec in (1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 1e-8, 1e-10):
-        p = np.array([nucraft(e, inst, prec) for e in energies])
+        p = nucraft(energies, inst, prec)
         pts.append({
             'label': '%.0e' % prec,
             'num_prec': prec,
             'max_abs_error': float(np.max(np.abs(p-ref))),
-            'us_per_probability': timed(
-                lambda e, q=prec: nucraft(e, inst, q), energies)})
+            'us_per_probability': timed_batch(
+                lambda q=prec: nucraft(energies, inst, q), len(energies),
+                repeat=3)})
     out.append(series('nuCraft', pts))
 
     # The three compiled codes are three-flavor only: NuFast-Earth takes

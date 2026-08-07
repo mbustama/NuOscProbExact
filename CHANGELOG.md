@@ -31,7 +31,27 @@ and the project uses [Semantic Versioning](https://semver.org/).
   cost *fell* between 64 and 128 slabs per segment, so the timer now
   autoranges the way `timeit` does.
 
+### Fixed
+
+- **nuSQuIDS was being driven one energy at a time in the Earth figures.**
+  It has a multiple-energy constructor, and the performance figure already
+  used it; the PREM scan did not, and rebuilding the solver twelve times
+  cost it a factor of 1.4 to 1.8 it does not have to pay.  Now fixed, which
+  moves its best point from 894 to 459 us.  nuCraft's `CalcWeights` takes a
+  particle list and is now given one, though that turns out to be worth
+  nothing -- 1.00x and bit-identical, because it loops internally.  GLoBES
+  and Prob3++ expose no batched entry point at all, so looping them is
+  their interface rather than a handicap.
+
 ### Changed
+
+- **Both Earth panels now show this library on its other dial.**  As well
+  as an explicit slab count, `rtol` is swept, letting the routine choose
+  the count itself: the same kind of knob nuSQuIDS and nuCraft take, and a
+  fairer thing to compare against them.  It reaches 1024 slabs per segment
+  and 3.9e-8 where the explicit sweep stops at 256 and 6.3e-7.  Below
+  rtol = 1e-5 it cannot be met within `slabs.N_SLABS_MAX`, because rtol is
+  relative and the smallest probability in the stack is 0.026.
 
 - **The figures are recoloured and rearranged.**  `NuOscProbExact` is red
   across all three, having swapped with `nuCraft`, and carries the same open

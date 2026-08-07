@@ -2151,6 +2151,10 @@ with open(os.path.join('..', 'tests', 'prem_speed_accuracy.json')) as handle:
 # The colours and markers of the constant-density plane, so that a code
 # keeps its identity between the two figures.
 PREM_STYLE = {"NuOscProbExact": ("-o", "C3", 4.0),
+              # The same code on its other dial: rtol, which picks the slab
+              # count itself and reaches 1024 where the explicit sweep stops
+              # at 256.  Same colour, different marker and a broken line.
+              "NuOscProbExact (tolerance)": ("--s", "C3", 3.4),
               "NuOscProbExact (double-double)": ("-o", "C3", 4.0),
               "NuOscProbExact (eigensolver)": ("--^", "C1", 3.8),
               "nuSQuIDS": ("-v", "C2", 3.6),
@@ -2202,8 +2206,11 @@ def prem_plane(panel, annotations, subtitle, xlim, ylim, outfile,
     if dial_at is not None:
         ax.text(dial_at[0], dial_at[1], "Slabs per\nsegment", fontsize=5.2,
                 color="C0", ha="center", linespacing=1.3)
-    ax.text(0.97, 0.955, subtitle, transform=ax.transAxes, ha="right",
-            va="top", fontsize=6.0, color="0.2", linespacing=1.4)
+    # Bottom left is the one corner no curve reaches in either panel, and
+    # the legend needs the top right: with four to seven entries it was
+    # otherwise sitting on top of nuCraft.
+    ax.text(0.03, 0.03, subtitle, transform=ax.transAxes, ha="left",
+            va="bottom", fontsize=6.0, color="0.2", linespacing=1.4)
     ax.set_xlabel(r"Time per probability [$\mu$s]")
     ax.set_ylabel(r"Error vs.\ converged solution,  "
                   r"max $|\Delta P_{\nu_\mu \to \nu_\mu}|$")
@@ -2221,31 +2228,36 @@ prem_plane(
     prem["three_flavor"],
     [(("NuOscProbExact", "1"), r"$n=1$", -6, -4, "right"),
      (("NuOscProbExact", "256"), "256", 6, -2, "left"),
+     (("NuOscProbExact (tolerance)", "1e-05"), r"rtol $10^{-5}$",
+      0, 7, "center"),
      (("nuSQuIDS", "1e-03"), r"tol $10^{-3}$", -3, 7, "center"),
      (("nuSQuIDS", "1e-12"), r"$10^{-12}$", 7, -1, "left"),
      (("NuFast-Earth", "1"), r"$n=1$", 5, -7, "left"),
      (("NuFast-Earth", "256"), "256", 6, -2, "left")],
     "PREM, three flavors:  " + r"$\cos\theta_z = -0.9$," + "\n"
     r"$E = 3$--$40$ GeV,  $L = 11468$ km",
-    (6.0e-1, 2.0e5), (2.0e-7, 2.5e-1),
+    (1.0e0, 1.0e5), (2.0e-8, 2.0e-1),
     "prem_speed_accuracy.pdf", None,
-    legend_loc="upper right", legend_anchor=(0.995, 0.84))
+    legend_loc="upper right", legend_anchor=(0.995, 0.995))
 
 prem_plane(
     prem["sterile_3plus1"],
     [(("NuOscProbExact", "1"), r"$n=1$", -6, -4, "right"),
      (("NuOscProbExact", "256"), "256", 6, -2, "left"),
+     (("NuOscProbExact (tolerance)", "1e-05"), r"rtol $10^{-5}$",
+      0, 7, "center"),
      (("nuSQuIDS", "1e-03"), r"tol $10^{-3}$", -3, 7, "center"),
      (("nuSQuIDS", "1e-12"), r"$10^{-12}$", 7, -1, "left")],
     r"PREM, $3+1$:  $\cos\theta_z = -0.9$," + "\n"
     r"$E = 0.3$--$30$ TeV,  $\Delta m_{41}^2 = 1$ eV$^2$",
-    (6.0e0, 1.0e5), (3.0e-7, 2.5e-1),
+    (1.0e1, 1.0e5), (2.0e-8, 2.0e-1),
     "prem_speed_accuracy_3plus1.pdf", None,
-    legend_loc="upper right", legend_anchor=(0.995, 0.84),
+    legend_loc="upper right", legend_anchor=(0.995, 0.995),
     # Both root strategies are frozen in the data; only the default is
     # drawn, because the two agree to the last bit and their curves lie on
     # top of one another.
-    only={"NuOscProbExact (double-double)", "nuSQuIDS", "nuCraft"},
+    only={"NuOscProbExact (double-double)", "NuOscProbExact (tolerance)",
+          "nuSQuIDS", "nuCraft"},
     relabel={"NuOscProbExact (double-double)": "NuOscProbExact"})'''),
     md(r'''## Performance
 
@@ -2308,12 +2320,12 @@ fig, (axt, ax) = plt.subplots(
 # batching is worth against.  The plain array path lies between them and is
 # left out to keep the legend readable.  Marker and colour match the two
 # Earth planes, so a reader tracks one code across three figures.
-for col, style, dash, lab in (
-        (3, "-o", None, "NuOscProbExact, array + kernel"),
-        (1, "--o", None, "NuOscProbExact, one point at a time")):
+for col, style, size, lab in (
+        (3, "-o", 3.4, "NuOscProbExact, array + kernel"),
+        (1, "-^", 3.6, "NuOscProbExact, one point at a time")):
     if col == 3 and not fastkernels.HAVE_NUMBA:
         continue
-    kw = dict(ms=3.4, color="C3", mfc="white", mew=0.9, zorder=5)
+    kw = dict(ms=size, color="C3", mfc="white", mew=0.9, zorder=5)
     axt.loglog(rows[:, 0], rows[:, col]*1e3, style, label=lab, **kw)
     ax.loglog(rows[:, 0], rows[:, col]/rows[:, 0]*1e6, style, **kw)
 
@@ -2338,14 +2350,16 @@ axt.text(0.02, 0.97, "Constant density:  " + r"$L = 1300$ km," + "\n"
          "All nine three-flavor probabilities",
          transform=axt.transAxes, ha="left", va="top", fontsize=5.6,
          color="0.2", linespacing=1.4)
-leg = axt.legend(loc="lower center", bbox_to_anchor=(0.5, 1.02), ncol=2,
-                 fontsize=5.6, borderaxespad=0.0, columnspacing=1.2,
-                 handlelength=2.0)
+# `mode="expand"` with the anchor spanning the axes makes the legend box
+# exactly as wide as the panels it sits above.
+leg = axt.legend(loc="lower left", bbox_to_anchor=(0.0, 1.015, 1.0, 0.1),
+                 mode="expand", ncol=2, fontsize=5.6, borderaxespad=0.0,
+                 columnspacing=1.2, handlelength=2.0)
 leg.get_frame().set_linewidth(0.7)
 ax.set_xlim(rows[0, 0], rows[-1, 0])
 ax.set_xlabel("Number of energies in the scan")
 ax.set_ylabel(r"Time per probability [$\mu$s]")
-ax.set_ylim(2.0e-2, 2.0e3)
+ax.set_ylim(2.0e-2, 1.0e3)
 fig.savefig(os.path.join(FIGDIR, "performance.pdf"), bbox_inches="tight")
 plt.show()'''),
     md(r'''## Comparison to the alternatives
