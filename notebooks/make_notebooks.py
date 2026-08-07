@@ -2047,7 +2047,7 @@ print("largest |dP| = %.3f, at E = %.1f GeV"
     2, 1, figsize=(COLW, COLW*1.34), sharex=True,
     gridspec_kw={"height_ratios": [3.2, 1.0], "hspace": 0.08})
 
-ax.semilogx(E_LRI, P_STD_LRI, "-", color="0.35", lw=1.1,
+ax.semilogx(E_LRI, P_STD_LRI, "--", color="0.35", lw=1.1,
             label="Standard matter")
 ax.semilogx(E_LRI, P_NEW_LRI, "-", color="C3", lw=1.1,
             label=r"$+\ L_e - L_\mu$, $\alpha^\prime = 10^{-52}$")
