@@ -33,6 +33,19 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **The constant-density plane is restyled to match the two Earth ones**, so
+  a code keeps its colour and marker across all three, and shows only this
+  library's batched-plus-kernel point: the other two routes are what the
+  performance figure is for, and here they were three labels on one
+  horizontal line.  Its y-axis reads "vs." rather than "against", and both
+  ends of each swept knob are labelled rather than only one.
+
+- **The architecture diagram's middle two boxes no longer overlap.**  The
+  green box was 5.0 tall for four lines of body, leaving its lower half
+  empty and its rounded corner meeting the orange box's; it is shorter now,
+  with a clear gap, and the orange box's second line is no longer clipped by
+  the axis.
+
 - **The tolerance is now the primary dial in both Earth figures**, with the
   explicit slab count drawn behind it.  It is the only dial on any curve in
   those figures where the user states the quantity the vertical axis

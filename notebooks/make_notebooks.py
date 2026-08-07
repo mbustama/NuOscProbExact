@@ -1915,13 +1915,17 @@ box(0.3, 5.6, 7.4, 3.9, C_IN, E_IN, "Your Hamiltonian",
 box(0.3, 0.5, 7.4, 3.9, C_IN, E_IN, "hamiltonians$n$nu",
     "Vacuum, matter, NSI, LIV,\n3+1 --- the worked scenarios,\nbuilt from globaldefs")
 
-box(9.6, 2.6, 9.4, 5.0, C_CORE, E_CORE, "oscprob$n$nu",
+# The green box was 5.0 tall for four lines of body, leaving its lower half
+# empty, and its rounded corner met the orange box's: 2.6 against 2.5, minus
+# 0.12 of padding each, overlapped them.  Shortened, and moved up to leave a
+# clear 0.5 between the two.
+box(9.6, 3.4, 9.4, 4.05, C_CORE, E_CORE, "oscprob$n$nu",
     "Invariants from traces\n"
     "$\\rightarrow$ eigenvalues in closed form\n"
     "$\\rightarrow$ coefficients $u_0,\\, u_k$\n"
     "$\\rightarrow$ the probabilities")
-box(9.6, 0.5, 9.4, 2.0, C_ACC, E_ACC, "fastkernels",
-    "Optional compiled kernels:\nsame numbers, $4$--$5{\\times}$ faster")
+box(9.6, 0.5, 9.4, 2.2, C_ACC, E_ACC, "fastkernels",
+    "Compiled kernels: the same\nnumbers, up to $12{\\times}$ faster")
 
 box(21.0, 5.6, 8.7, 3.9, C_COMP, E_COMP, "slabs",
     "Composes the operators of\nadjacent constant-density\nlayers, in order")
@@ -1930,7 +1934,7 @@ box(21.0, 0.5, 8.7, 3.9, C_COMP, E_COMP, "earth",
 
 arrow(7.9, 7.5, 9.4, 6.0)
 arrow(7.9, 2.4, 9.4, 4.2)
-arrow(14.3, 2.62, 14.3, 2.52, color=E_ACC, ls="--")
+arrow(14.3, 3.35, 14.3, 2.85, color=E_ACC, ls="--")
 arrow(19.2, 6.0, 20.8, 7.0, color=E_COMP)
 arrow(20.8, 4.6, 19.2, 4.4, color=E_COMP)
 arrow(25.3, 4.5, 25.3, 5.5, color=E_COMP)
@@ -2024,52 +2028,59 @@ import json
 with open(os.path.join('..', 'tests', 'speed_accuracy.json')) as handle:
     sa = json.load(handle)
 
-STYLE = {"NuOscProbExact": ("-o", "C0", 4.0),
+# The same colours, markers and layout as the two Earth planes, so that a
+# code keeps its identity across all three.  This library shows only the
+# batched-plus-kernel point: the other two routes are what the performance
+# figure is for, and here they would be three labels on one horizontal line.
+STYLE = {"NuOscProbExact": ("-o", "C3", 4.0),
          "nuSQuIDS": ("-v", "C2", 3.6),
          "NuFast-LBL": ("-D", "C4", 3.2),
-         "GLoBES": ("*", "C6", 7.0),
-         "Prob3++": ("P", "C5", 5.0),
-         "Second-order expansion": ("s", "C1", 4.0)}
+         "GLoBES": ("-*", "C6", 6.0),
+         "Prob3++": ("-P", "C5", 4.4),
+         "Second-order expansion": ("-s", "C1", 3.6)}
+DRAWN = {"NuOscProbExact": ("Array + kernel",)}
 
-fig, ax = plt.subplots(figsize=(COLW, COLW*0.95))
+fig, ax = plt.subplots(figsize=FIGSIZE_SQUARE)
 for series in sa["series"]:
     marker, colour, size = STYLE[series["name"]]
-    t = [q["us_per_probability"] for q in series["points"]]
-    e = [q["max_abs_error"] for q in series["points"]]
+    keep = DRAWN.get(series["name"])
+    points = [q for q in series["points"]
+              if keep is None or q["label"] in keep]
+    t = [q["us_per_probability"] for q in points]
+    e = [q["max_abs_error"] for q in points]
     kw = dict(ms=size, color=colour, label=series["name"], zorder=4)
     if series["name"] == "NuOscProbExact":
         kw.update(mfc="white", mew=1.0, zorder=5)
     ax.loglog(t, e, marker, **kw)
 
-for lab, x, y, dx, dy in (("Array + kernel", 0.230, 9.71e-16, -12, 7),
-                          ("Array", 0.955, 9.85e-16, 0, 7),
-                          ("One at a time", 31.235, 8.88e-16, 0, 7)):
+# What is varied along each curve, at both ends where there are two.
+for lab, x, y, dx, dy, c, ha in (
+        (r"tol $10^{-4}$", 51.61, 1.83e-04, 0, 7, "C2", "center"),
+        (r"$10^{-12}$", 189.37, 1.89e-08, 7, -1, "C2", "left"),
+        (r"$N_{\rm Newton} = 0$", 0.044, 1.53e-05, 7, -2, "C4", "left"),
+        (r"$3$", 0.066, 8.30e-12, 7, -2, "C4", "left")):
     ax.annotate(lab, xy=(x, y), xytext=(dx, dy), textcoords="offset points",
-                fontsize=5.2, color="C0", ha="center")
-for lab, x, y, dx, dy in ((r"tol $10^{-4}$", 51.61, 1.83e-04, -33, -11),
-                          (r"tol $10^{-8}$", 62.10, 3.10e-08, -32, 3),
-                          (r"tol $10^{-12}$", 189.37, 1.89e-08, -18, -9)):
-    ax.annotate(lab, xy=(x, y), xytext=(dx, dy), textcoords="offset points",
-                fontsize=5.2, color="C2")
-for lab, x, y in (("0", 0.044, 1.53e-05), ("1", 0.052, 4.87e-09),
-                  ("2", 0.060, 8.30e-12)):
-    ax.annotate(lab, xy=(x, y), xytext=(-8, -2), textcoords="offset points",
-                fontsize=5.2, color="C4")
-ax.annotate("Newton\nsteps", xy=(0.105, 2e-7), fontsize=5.2, color="C4",
-            ha="center", linespacing=1.3)
+                fontsize=5.2, color=c, ha=ha)
 
 ax.axhline(2.2e-16, color="0.5", ls=":", lw=0.7, zorder=1)
-ax.text(2.6e-2, 3.4e-16, "Double precision", fontsize=5.4, color="0.4")
-ax.text(0.97, 0.955, "Constant density:  $L = 1300$ km,\n"
+ax.text(2.6e-2, 3.2e-16, "Double precision", fontsize=5.4, color="0.4")
+# This panel's data does not leave the same corners free as the Earth ones:
+# the single NuOscProbExact point sits at the bottom left and nuSQuIDS runs
+# along the top right, so the subtitle goes just above the former and the
+# legend into the empty bottom right.
+ax.text(0.03, 0.17, "Constant density:  $L = 1300$ km,\n"
         r"$E = 0.6$--$20$ GeV,  $\rho = 3$ g cm$^{-3}$",
-        transform=ax.transAxes, ha="right", va="top", fontsize=6.0,
+        transform=ax.transAxes, ha="left", va="bottom", fontsize=6.0,
         color="0.2", linespacing=1.4)
+ax.annotate("Array + kernel", xy=(0.230, 9.71e-16), xytext=(8, -1),
+            textcoords="offset points", fontsize=5.2, color="C3", ha="left")
 ax.set_xlabel(r"Time per probability [$\mu$s]")
-ax.set_ylabel(r"Error against a 50-digit reference,  "
+ax.set_ylabel(r"Error vs.\ a 50-digit reference,  "
               r"max $|\Delta P_{\nu_\mu \to \nu_e}|$")
-ax.set_xlim(2.0e-2, 9.0e2)
+ax.set_xlim(2.0e-2, 1.0e3)
 ax.set_ylim(1.0e-16, 1.0e-2)
-leg = ax.legend(loc="center right", bbox_to_anchor=(0.995, 0.27), fontsize=6.0)
+leg = ax.legend(loc="lower right", bbox_to_anchor=(0.995, 0.02),
+                fontsize=6.0)
 leg.get_frame().set_linewidth(0.7)
 fig.tight_layout(pad=0.3)
 fig.savefig(os.path.join(FIGDIR, "speed_accuracy.pdf"))
