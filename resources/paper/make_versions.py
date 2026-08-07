@@ -186,17 +186,32 @@ def _blocks(text):
     return out
 
 
-def detexorpdfstring(text):
-    r"""Defines ``\DIFadd``/``\DIFdel`` without ``\texorpdfstring``.
+def restyle_markup(text):
+    r"""Rewrites the four macros ``latexdiff`` marks changes with.
 
-    ``latexdiff`` notices ``hyperref`` and routes its two mark-up macros
-    through ``\texorpdfstring`` so that a bookmark gets the plain text.
-    Inside a ``\caption``, inside a ``minipage``, inside a ``figure*`` ---
-    which is where the two speed-accuracy planes now live --- that recurses
-    until TeX's input stack is exhausted.  The bookmarks are not worth it:
-    the macros are defined to their own ``tex`` variants instead, which is
-    what ``latexdiff`` uses when ``hyperref`` is absent.
+    Two changes, for two different reasons.
+
+    *Appearance.*  ``--type=CFONT`` sets additions in blue sans-serif and
+    deletions in red at ``\scriptsize``, so changed text is a different
+    typeface and size from the text around it and deletions are not struck
+    at all.  They are set in the document's own font instead: additions
+    blue, deletions red and struck through with ``\sout``, which is what
+    ``main.tex``'s own ``\add`` and ``\del`` do and what a reader of the
+    revision expects.  ``ulem`` is already loaded, with ``normalem``.
+
+    *Recursion.*  ``latexdiff`` notices ``hyperref`` and routes its two
+    mark-up macros through ``\texorpdfstring`` so a bookmark gets the plain
+    text.  Inside a ``\caption``, inside a ``minipage``, inside a
+    ``figure*`` --- which is where the two speed-accuracy planes live ---
+    that recurses until TeX's input stack is exhausted.  The bookmarks are
+    not worth it.
     """
+    text = text.replace(
+        r'\providecommand{\DIFaddtex}[1]{{\protect\color{blue} \sf #1}}',
+        r'\providecommand{\DIFaddtex}[1]{{\protect\color{blue}#1}}')
+    text = text.replace(
+        r'\providecommand{\DIFdeltex}[1]{{\protect\color{red} \scriptsize #1}}',
+        r'\providecommand{\DIFdeltex}[1]{{\protect\color{red}\sout{#1}}}')
     text = text.replace(
         r'\providecommand{\DIFadd}[1]{\texorpdfstring{\DIFaddtex{#1}}{#1}}',
         r'\providecommand{\DIFadd}[1]{\DIFaddtex{#1}}')
@@ -345,7 +360,7 @@ def main():
     if r.returncode != 0:
         print('latexdiff failed:', r.stderr[-400:])
         return 1
-    diffed = repair(detexorpdfstring(
+    diffed = repair(restyle_markup(
         restore_bibliography(r.stdout, new_bib)))
     open(os.path.join(HERE, 'main_diff.tex'), 'w').write(diffed)
     print('main_diff.tex written (%d bytes)' % len(diffed))

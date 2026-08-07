@@ -63,7 +63,13 @@ Both compile: `main_clean.pdf` at 27 pages, `main_diff.pdf` at 28, neither
 with errors. `main_diff.tex` is the file to send a journal alongside the
 clean one.
 
-Four things had to be worked around to get `latexdiff` through this document,
+The diff marks changes the way `main.tex` does — additions blue, deletions
+red and struck through, both in the document's own font and size.
+`latexdiff`'s `CFONT` type instead sets additions in sans-serif and deletions
+at `\scriptsize` without striking them, so `make_versions.py` redefines its
+two macros; `ulem` is already loaded with `normalem`.
+
+Five things had to be worked around to get `latexdiff` through this document,
 and `make_versions.py` does all four. They are recorded here because each one
 failed in a way that did not point at its own cause:
 

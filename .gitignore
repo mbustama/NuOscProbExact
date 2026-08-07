@@ -27,3 +27,4 @@ resources/paper/*.blg
 resources/paper/*.pdf
 resources/paper/main_clean.tex
 resources/paper/main_diff.tex
+resources/paper/bisect_probe.*
