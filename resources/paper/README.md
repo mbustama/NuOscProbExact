@@ -31,37 +31,57 @@ Everything the preamble loads is in a normal TeX Live install. `elsarticle.cls`
 and `elsarticle-num.bst` are bundled anyway, so that the folder compiles on a
 machine whose TeX Live was installed without the Elsevier bundle.
 
-## The three versions
+## The two versions
 
-`main.tex` is the working copy, and it carries the revision in its own mark-up:
+`main.tex` is the paper as it should read. **Write ordinary LaTeX in it.**
+Nothing in it records what changed since the published version; that is worked
+out mechanically:
 
-| | |
-|---|---|
-| `\add{...}` | added in this revision — green |
-| `\del{...}` | removed in this revision — red, struck through |
-| `\addstart` … `\addend` | the same, for spans too large to pass as a macro argument: a whole section, or anything containing a float, an equation or a listing |
+```bash
+cd resources/paper
+python make_versions.py
+```
 
-`\markuptrue` in the preamble shows the colours; `\markupfalse` prints the same
-file without them. Both states must compile before anything is handed on.
+which writes **`main_diff.tex`** — `latexdiff` of `baseline_cpc_v1.tex`, the
+published version, against `main.tex` — and compiles both. Additions come out
+blue, deletions red and struck through, both in the document's own font.
+`main_diff.tex` is the file to send a journal alongside `main.tex` itself.
+Needs `latexdiff` on the `PATH`, or its location in `$LATEXDIFF`.
 
-Floats do **not** inherit `\addstart`, so a table or figure inside such a span
-needs its own `\addstart` after `\begin{table}`.
+Both compile: `main.pdf` at 28 pages, `main_diff.pdf` at 29, neither with
+errors.
 
-`python make_versions.py` derives two more files from it:
+### The mark-up convention is retired
 
-- **`main_clean.tex`** — the mark-up *resolved*, not merely uncoloured: every
-  `\add{X}` becomes `X`, every `\del{X}` disappears, and the span switches are
-  removed. This is the file for a journal, for arXiv, or for Overleaf. It needs
-  nothing but Python.
-- **`main_diff.tex`** — `latexdiff` of `baseline_cpc_v1.tex`, the published
-  version, against `main_clean.tex`. The hand mark-up says what the author
-  meant to change; the diff says what actually changed. Where the two disagree,
-  one of them is wrong, which is the point of having both. Needs `latexdiff` on
-  the `PATH`, or its location in `$LATEXDIFF`.
+`main.tex` used to carry the revision by hand — `\add{...}` for new material,
+`\del{...}` for removed, `\addstart`/`\addend` for spans too large to pass as a
+macro argument — with `make_versions.py` resolving it into a `main_clean.tex`.
+That is gone. Two files to keep in agreement became one, and the diff no longer
+depends on the author having remembered to mark a change while typing it.
 
-Both compile: `main_clean.pdf` at 27 pages, `main_diff.pdf` at 28, neither
-with errors. `main_diff.tex` is the file to send a journal alongside the
-clean one.
+`make_versions.py` refuses to run if any of those four macros reappears in
+`main.tex`, since they are no longer defined in the preamble and would compile
+to an undefined-command error further downstream. If you paste text from an old
+draft and hit that message, delete the macro and keep the words.
+
+`ulem` is still loaded, and is the one leftover: `main_diff.tex` inherits this
+preamble, and `latexdiff`'s deletions are struck through with `\sout`.
+
+### Line numbers
+
+On, for a referee. The preamble carries a switch:
+
+```latex
+\linenostrue         % \linenosfalse for the camera-ready
+```
+
+`elsarticle`'s own `review` option will *not* do this — it only sets preprint
+mode and 1.5 spacing, and discards the `5p` two-column layout — so `lineno` is
+loaded directly. `switch` puts the numbers on the outer edge of each column,
+which two-column needs: without it the right column's numbers land in the
+gutter. `mathlines` numbers display equations. Floats are never numbered, so
+the figures, tables and listings are skipped, and `lineno` is known to drop
+numbers on some `amsmath` display environments.
 
 The diff marks changes the way `main.tex` does — additions blue, deletions
 red and struck through, both in the document's own font and size.
