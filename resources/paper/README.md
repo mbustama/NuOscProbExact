@@ -143,6 +143,6 @@ in the repository now.
 
 Every timing quoted in the paper was measured on one laptop: an Intel Core
 i5-1334U, ten cores and twelve threads to 4.6 GHz, 16 GB of memory, Ubuntu
-24.04 LTS, Python 3.12.7, numpy 1.26.4, numba 0.60.0, gcc 13.3. Absolute
+24.04.4 LTS, Python 3.12.7, numpy 1.26.4, numba 0.60.0, gcc 13.3. Absolute
 numbers will differ elsewhere; the ratios between codes, which is what the
 figures are about, are far more stable.

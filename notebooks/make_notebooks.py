@@ -1118,7 +1118,7 @@ books['09_performance.ipynb'] = notebook(
     'the machine that produced this copy rather than a figure carried over '
     'from a README.',
     [
-        code('# Every timing in this notebook, and every timing quoted in the paper,\n# was measured on one laptop:\n#\n#     Intel Core i5-1334U, 10 cores / 12 threads, up to 4.6 GHz\n#     16 GB RAM\n#     Ubuntu 24.04 LTS, kernel 6.14\n#     Python 3.12.7, numpy 1.26.4, numba 0.60.0, gcc 13.3\n#\n# Absolute times mean little without that, and would be perhaps a factor\n# of two different on a workstation.  The ratios between routes, which is\n# what these cells are actually about, are far more stable than the\n# absolute numbers and are what the text quotes.\n' +
+        code('# Every timing in this notebook, and every timing quoted in the paper,\n# was measured on one laptop:\n#\n#     Intel Core i5-1334U, 10 cores / 12 threads, up to 4.6 GHz\n#     16 GB RAM\n#     Ubuntu 24.04.4 LTS, kernel 7.0.0-28-generic\n#     Python 3.12.7, numpy 1.26.4, numba 0.60.0, gcc 13.3\n#\n# Absolute times mean little without that, and would be perhaps a factor\n# of two different on a workstation.  The ratios between routes, which is\n# what these cells are actually about, are far more stable than the\n# absolute numbers and are what the text quotes.\n' +
              'import time\n\n'
              'import fastkernels\n\n\n'
              'def best_of(func, repeat=5):\n'
@@ -2295,7 +2295,7 @@ point is what a parameter scan actually pays.'''),
 #
 #     Intel Core i5-1334U, 10 cores / 12 threads, up to 4.6 GHz
 #     16 GB RAM
-#     Ubuntu 24.04 LTS, kernel 6.14
+#     Ubuntu 24.04.4 LTS, kernel 7.0.0-28-generic
 #     Python 3.12.7, numpy 1.26.4, numba 0.60.0, gcc 13.3
 #
 # Absolute times mean little without that, and would be perhaps a factor
