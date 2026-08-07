@@ -2150,13 +2150,17 @@ with open(os.path.join('..', 'tests', 'prem_speed_accuracy.json')) as handle:
 
 # The colours and markers of the constant-density plane, so that a code
 # keeps its identity between the two figures.
-PREM_STYLE = {"NuOscProbExact": ("-o", "C3", 4.0),
-              # The same code on its other dial: rtol, which picks the slab
-              # count itself and reaches 1024 where the explicit sweep stops
-              # at 256.  Same colour, different marker and a broken line.
-              "NuOscProbExact (tolerance)": ("--s", "C3", 3.4),
-              "NuOscProbExact (double-double)": ("-o", "C3", 4.0),
-              "NuOscProbExact (eigensolver)": ("--^", "C1", 3.8),
+# The tolerance dial is the primary curve: it is the one where the user
+# states the quantity the y-axis measures, and the one a new reader meets
+# first.  The explicit slab count is the same code told the answer instead
+# of asked to find it, and is drawn broken behind it.
+PREM_STYLE = {"NuOscProbExact (tolerance)": ("-o", "C3", 4.0),
+              "NuOscProbExact": ("--s", "C3", 3.2),
+              # The style is keyed off the frozen name, not the legend
+              # label, so the four-flavor slab curve needs the broken style
+              # under its own name too.
+              "NuOscProbExact (double-double)": ("--s", "C3", 3.2),
+              "NuOscProbExact (eigensolver)": (":^", "C1", 3.8),
               "nuSQuIDS": ("-v", "C2", 3.6),
               "NuFast-Earth": ("-D", "C4", 3.2),
               "GLoBES": ("-*", "C6", 6.0),
@@ -2178,7 +2182,9 @@ def prem_plane(panel, annotations, subtitle, xlim, ylim, outfile,
     fig, ax = plt.subplots(figsize=FIGSIZE_SQUARE)
     wanted = {}
     relabel = relabel or {}
-    for series in panel["series"]:
+    order = list(PREM_STYLE)
+    for series in sorted(panel["series"],
+                         key=lambda x: order.index(x["name"])):
         if only is not None and series["name"] not in only:
             continue
         marker, colour, size = PREM_STYLE[series["name"]]
@@ -2226,26 +2232,30 @@ def prem_plane(panel, annotations, subtitle, xlim, ylim, outfile,
 
 prem_plane(
     prem["three_flavor"],
-    [(("NuOscProbExact", "1"), r"$n=1$", -6, -4, "right"),
-     (("NuOscProbExact", "256"), "256", 6, -2, "left"),
-     (("NuOscProbExact (tolerance)", "1e-05"), r"rtol $10^{-5}$",
-      0, 7, "center"),
+    [(("NuOscProbExact, rtol", "3e+00"), r"rtol $=3$", 7, -2, "left"),
+     (("NuOscProbExact, rtol", "1e-05"), r"$10^{-5}$", 0, 7, "center"),
+     ((r"NuOscProbExact, $N_{\rm slabs}$", "1"), r"$N_{\rm slabs}=1$",
+      -7, -2, "right"),
+     ((r"NuOscProbExact, $N_{\rm slabs}$", "256"), "256", 6, -3, "left"),
      (("nuSQuIDS", "1e-03"), r"tol $10^{-3}$", -3, 7, "center"),
      (("nuSQuIDS", "1e-12"), r"$10^{-12}$", 7, -1, "left"),
-     (("NuFast-Earth", "1"), r"$n=1$", 5, -7, "left"),
+     (("NuFast-Earth", "1"), r"$N_{\rm shells}=1$", 4, -8, "left"),
      (("NuFast-Earth", "256"), "256", 6, -2, "left")],
     "PREM, three flavors:  " + r"$\cos\theta_z = -0.9$," + "\n"
     r"$E = 3$--$40$ GeV,  $L = 11468$ km",
     (1.0e0, 1.0e5), (2.0e-8, 2.0e-1),
     "prem_speed_accuracy.pdf", None,
-    legend_loc="upper right", legend_anchor=(0.995, 0.995))
+    legend_loc="upper right", legend_anchor=(0.995, 0.995),
+    relabel={"NuOscProbExact": r"NuOscProbExact, $N_{\rm slabs}$",
+             "NuOscProbExact (tolerance)": "NuOscProbExact, rtol"})
 
 prem_plane(
     prem["sterile_3plus1"],
-    [(("NuOscProbExact", "1"), r"$n=1$", -6, -4, "right"),
-     (("NuOscProbExact", "256"), "256", 6, -2, "left"),
-     (("NuOscProbExact (tolerance)", "1e-05"), r"rtol $10^{-5}$",
+    [(("NuOscProbExact, rtol", "3e+00"), r"rtol $=3$", 7, -2, "left"),
+     (("NuOscProbExact, rtol", "1e-05"), r"$10^{-5}$", 0, 7, "center"),
+     ((r"NuOscProbExact, $N_{\rm slabs}$", "1"), r"$N_{\rm slabs}=1$",
       0, 7, "center"),
+     ((r"NuOscProbExact, $N_{\rm slabs}$", "256"), "256", 6, -3, "left"),
      (("nuSQuIDS", "1e-03"), r"tol $10^{-3}$", -3, 7, "center"),
      (("nuSQuIDS", "1e-12"), r"$10^{-12}$", 7, -1, "left")],
     r"PREM, $3+1$:  $\cos\theta_z = -0.9$," + "\n"
@@ -2258,7 +2268,9 @@ prem_plane(
     # top of one another.
     only={"NuOscProbExact (double-double)", "NuOscProbExact (tolerance)",
           "nuSQuIDS", "nuCraft"},
-    relabel={"NuOscProbExact (double-double)": "NuOscProbExact"})'''),
+    relabel={"NuOscProbExact (double-double)":
+             r"NuOscProbExact, $N_{\rm slabs}$",
+             "NuOscProbExact (tolerance)": "NuOscProbExact, rtol"})'''),
     md(r'''## Performance
 
 Three ways of evaluating the same scan: one point at a time, the whole stack
@@ -2347,7 +2359,8 @@ for key, style, col, size, lab in (
 axt.set_ylabel("Total time [ms]")
 axt.text(0.02, 0.97, "Constant density:  " + r"$L = 1300$ km," + "\n"
          r"$E = 0.1$--$32$ GeV,  $\rho = 3$ g cm$^{-3}$" + "\n"
-         "All nine three-flavor probabilities",
+         "All nine three-flavor probabilities" + "\n"
+         "All codes at std.\\ settings",
          transform=axt.transAxes, ha="left", va="top", fontsize=5.6,
          color="0.2", linespacing=1.4)
 # `mode="expand"` with the anchor spanning the axes makes the legend box

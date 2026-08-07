@@ -209,12 +209,18 @@ TH14 = np.arcsin(np.sqrt(0.10))
 TH24 = np.arcsin(np.sqrt(0.10))
 TH34 = 0.0
 
-# The tolerance dial, which reaches 1024 slabs per segment where the
-# explicit sweep stops at 256.  Below 1e-5 it cannot be met within
-# `slabs.N_SLABS_MAX`: rtol is relative, and the smallest probability in
-# this stack is 0.026, so 1e-6 of it is 2.6e-8 against an error estimate of
-# 7.1e-8 at 1024 slabs.
-RTOLS = (1e-1, 3e-2, 1e-2, 1e-3, 1e-4, 3e-5, 1e-5)
+# The tolerance dial.  `_n_for_tolerance` starts its search at
+# `n_slabs_per_segment` and only ever doubles upward, so leaving that at its
+# default of 8 pinned the coarse end of this curve at the accuracy of eight
+# slabs however loose the tolerance: the curve was a truncated copy of the
+# slab sweep rather than an independent span of it.  Starting the search at
+# 1 makes the two coextensive, and these tolerances then select 1, 2, 8, 16,
+# 32, 64, 256, 512 and 1024 slabs per segment.
+#
+# Below 1e-5 the tolerance cannot be met within `slabs.N_SLABS_MAX`: rtol is
+# relative, and the smallest probability in this stack is 0.026, so 1e-6 of
+# it is 2.6e-8 against an error estimate of 7.1e-8 at 1024 slabs.
+RTOLS = (3e0, 1e0, 3e-1, 3e-2, 1e-2, 1e-3, 1e-4, 3e-5, 1e-5)
 
 E_GEV_3NU = np.logspace(np.log10(3.0), np.log10(40.0), 12)
 E_GEV_4NU = np.logspace(np.log10(300.0), np.log10(30000.0), 12)
@@ -634,7 +640,7 @@ def build(n_flavors, energies_gev):
         for rtol in RTOLS:
             p, n_used = earth.probabilities_3nu_earth(
                 H_VAC_3NU, energies, COSTHZ, electron_fraction=YE,
-                rtol=rtol, return_n_slabs=True)
+                n_slabs_per_segment=1, rtol=rtol, return_n_slabs=True)
             p = np.asarray(p)[..., 4].ravel()
             pts.append({
                 'label': '%.0e' % rtol,
@@ -644,14 +650,14 @@ def build(n_flavors, energies_gev):
                 'us_per_probability': timed_batch(
                     lambda r=rtol: earth.probabilities_3nu_earth(
                         H_VAC_3NU, energies, COSTHZ, electron_fraction=YE,
-                        rtol=r), len(energies))})
+                        n_slabs_per_segment=1, rtol=r), len(energies))})
         out.append(series('NuOscProbExact (tolerance)', pts))
     else:
         pts = []
         for rtol in RTOLS:
             p, n_used = earth.probabilities_4nu_earth(
                 H_VAC_4NU, energies, COSTHZ, electron_fraction=YE,
-                rtol=rtol, return_n_slabs=True)
+                n_slabs_per_segment=1, rtol=rtol, return_n_slabs=True)
             p = np.asarray(p)[..., 5].ravel()
             pts.append({
                 'label': '%.0e' % rtol,
@@ -661,7 +667,7 @@ def build(n_flavors, energies_gev):
                 'us_per_probability': timed_batch(
                     lambda r=rtol: earth.probabilities_4nu_earth(
                         H_VAC_4NU, energies, COSTHZ, electron_fraction=YE,
-                        rtol=r), len(energies))})
+                        n_slabs_per_segment=1, rtol=r), len(energies))})
         out.append(series('NuOscProbExact (tolerance)', pts))
     if n_flavors == 4:
         oscprob4nu.ROOT_STRATEGY = 'double-double'      # back to the default

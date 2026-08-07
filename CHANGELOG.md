@@ -31,6 +31,23 @@ and the project uses [Semantic Versioning](https://semver.org/).
   cost *fell* between 64 and 128 slabs per segment, so the timer now
   autoranges the way `timeit` does.
 
+### Changed
+
+- **The tolerance is now the primary dial in both Earth figures**, with the
+  explicit slab count drawn behind it.  It is the only dial on any curve in
+  those figures where the user states the quantity the vertical axis
+  measures.  The convenience costs about a factor of two: 6.3e-7 takes
+  134 us when the code is told to use 256 slabs and 252 us when it is asked
+  to find that number, since the search evaluates at 1, 2, 4, ... and keeps
+  the last.
+
+- **The tolerance sweep now starts its search at one slab.**
+  `_n_for_tolerance` begins at `n_slabs_per_segment` and only doubles
+  upward, so leaving that at its default of 8 pinned the coarse end of the
+  curve at the accuracy of eight slabs however loose the tolerance: it was a
+  truncated copy of the slab sweep rather than an independent span of it.
+  The two curves are now coextensive, 1 to 1024 slabs either way.
+
 ### Fixed
 
 - **nuSQuIDS was being driven one energy at a time in the Earth figures.**
