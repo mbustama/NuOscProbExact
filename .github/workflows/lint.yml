@@ -11,6 +11,11 @@ on:
     # treat the workflow as tag-only and run it for no branch push at all.
     branches: ['**']
   pull_request:
+  # Re-run on demand, from the Actions tab.  When Actions itself is unwell --- as on
+  # 2026-08-06, when runs sat queued for hours and were cancelled out from under us by
+  # the infrastructure --- the alternative is pushing a commit to a branch for no reason
+  # but to re-trigger.  `pages.yml` gained this for the same reason.
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
