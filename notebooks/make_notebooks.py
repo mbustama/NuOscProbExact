@@ -1944,6 +1944,139 @@ arrow(25.3, 4.5, 25.3, 5.5, color=E_COMP)
 fig.savefig(os.path.join(FIGDIR, "architecture.pdf"),
             bbox_inches="tight", pad_inches=0.02)
 plt.show()'''),
+    md(r'''## A long-range interaction through the Earth
+
+The point of an *arbitrary* Hamiltonian is that a scenario nobody has written
+a formula for costs no more than one that has been solved for decades.  This
+is the example the paper uses to make that concrete: a gauged $L_e - L_\mu$
+interaction, in which the electrons of the Earth source a Yukawa potential
+that the neutrino feels as a term added to the matter Hamiltonian.
+
+Unlike $V_{\rm CC}$, that potential is *non-local* --- it depends on how many
+electrons there are and only weakly on where they sit --- so it cannot be
+folded into an effective density profile, and no tailored expression exists
+for it.  It is still only a Hermitian matrix, so the library takes it.
+
+Everything the figure needs is repeated here rather than imported, so that
+this notebook does not depend on `20_arbitrary_hamiltonian.ipynb`, which is
+where the potential is built up, checked against its two limits, and
+validated.'''),
+    code(r'''def shc(x):
+    """sinh(x)/x, continued to 1 at the origin."""
+    safe = np.where(x == 0.0, 1.0, x)
+    return np.where(x == 0.0, 1.0, np.sinh(safe)/safe)
+
+
+def yukawa_potential(r, radii, n_e, m_mediator, alpha):
+    """V_emu [eV] at radii `r`, from a ball of electrons.
+
+    `r`, `radii` and 1/`m_mediator` in eV^-1, `n_e` in eV^3, and
+    `alpha` = g^2/(4 pi) for the new gauge coupling g.
+    """
+    f = radii*n_e
+    a = f*radii*shc(m_mediator*radii)
+    inner = np.concatenate(([0.0], np.cumsum(
+        0.5*(a[1:]+a[:-1])*np.diff(radii))))
+
+    # The exterior piece is accumulated *inward* from the surface.  Taking
+    # it as (total - interior) is the obvious thing to write and is wrong:
+    # once exp(-m R) is small the tail is a difference of two nearly equal
+    # numbers and vanishes into round-off.
+    b = f*np.exp(-m_mediator*radii)
+    d = 0.5*(b[1:]+b[:-1])*np.diff(radii)
+    outer = np.concatenate((np.cumsum(d[::-1])[::-1], [0.0]))
+
+    r = np.asarray(r, dtype=float)
+    safe = np.where(r == 0.0, 1.0, r)          # the 1/r is removable
+    return 4.0*np.pi*alpha*np.where(
+        r == 0.0, np.interp(r, radii, outer),
+        np.exp(-m_mediator*safe)*np.interp(r, radii, inner)/safe
+        + shc(m_mediator*safe)*np.interp(r, radii, outer))
+
+
+# nu_e carries +1 of the gauged charge and nu_mu carries -1.
+Q_LR = np.diag([1.0, -1.0, 0.0])
+R_E = gd.EARTH_RADIUS*KM
+
+# n_e is read back from the library's own V_CC, rather than repeating the
+# density-to-electron-number conversion here and risking a different one.
+_edges = np.concatenate(([0.0], earth.PREM_BOUNDARIES, [gd.EARTH_RADIUS]))
+_radii = np.concatenate([np.linspace(lo, hi, 201) for lo, hi
+                         in zip(_edges[:-1], _edges[1:]) if hi > lo])
+_inside = np.clip(_radii, 1.0e-9, gd.EARTH_RADIUS)
+NE_EARTH = (earth.matter_potential(earth.density_prem(_inside))
+            /(np.sqrt(2.0)*gd.GF))
+RADII_EARTH = _radii*KM
+
+COSZ_LRI = -1.0                  # straight through, along a diameter
+M_LRI = 1.0/R_E                  # range of the force equal to R_earth
+ALPHA_LRI = 1.0e-52
+# Densely sampled: below about 2 GeV the diameter is many oscillation
+# lengths, and a coarser grid aliases those wiggles rather than resolving
+# them.
+E_LRI = np.logspace(np.log10(1.0), np.log10(40.0), 500)
+
+WIDTHS_LRI, DENS_LRI = earth.earth_slabs(COSZ_LRI, n_slabs_per_segment=24)
+_edge = np.concatenate(([0.0], np.cumsum(WIDTHS_LRI)))
+_mid = 0.5*(_edge[:-1] + _edge[1:])
+R_SLAB = earth.earth_radial_distance_from_depth(COSZ_LRI, _mid)*KM
+VCC_LRI = earth.matter_potential(DENS_LRI)
+V_LRI = yukawa_potential(R_SLAB, RADII_EARTH, NE_EARTH, M_LRI, ALPHA_LRI)
+print("V_CC at the centre  : %.3e eV" % VCC_LRI[len(VCC_LRI)//2])
+print("V_emu at the centre : %.3e eV" % V_LRI[len(V_LRI)//2])
+
+
+def p_mue_lri(energy_ev, with_lri):
+    """P(nu_mu -> nu_e) along the chord, with or without the new term."""
+    h = np.asarray(hamiltonians3nu.hamiltonian_3nu_matter(
+        H_VAC_3NU, energy_ev, VCC_LRI))
+    if with_lri:
+        h = h + V_LRI[:, None, None]*Q_LR
+    return slabs.probabilities_3nu_slabs(h, WIDTHS_LRI*KM)[3]
+
+
+P_STD_LRI = np.array([p_mue_lri(e*GEV, False) for e in E_LRI])
+P_NEW_LRI = np.array([p_mue_lri(e*GEV, True) for e in E_LRI])
+print("largest |dP| = %.3f, at E = %.1f GeV"
+      % (np.max(np.abs(P_NEW_LRI-P_STD_LRI)),
+         E_LRI[np.argmax(np.abs(P_NEW_LRI-P_STD_LRI))]))'''),
+    md('The upper panel is the probability itself and the lower one the\n'
+       'difference the new interaction makes, on a scale where it is\n'
+       'visible.'),
+    code(r'''fig, (ax, axd) = plt.subplots(
+    2, 1, figsize=(COLW, COLW*1.34), sharex=True,
+    gridspec_kw={"height_ratios": [3.2, 1.0], "hspace": 0.08})
+
+ax.semilogx(E_LRI, P_STD_LRI, "-", color="0.35", lw=1.1,
+            label="Standard matter")
+ax.semilogx(E_LRI, P_NEW_LRI, "-", color="C3", lw=1.1,
+            label=r"$+\ L_e - L_\mu$, $\alpha^\prime = 10^{-52}$")
+ax.set_ylabel(r"$P_{\nu_\mu \to \nu_e}$")
+# Headroom for the legend and the case label, which would otherwise sit on
+# top of the 5 GeV peak.
+ax.set_ylim(0.0, 0.86)
+# Three short lines rather than two long ones: the second line of a
+# two-line version runs under the legend box.
+ax.text(0.035, 0.96,
+        "PREM, three flavors\n"
+        + r"$\cos\theta_z = -1$" + "\n"
+        + r"$m_{Z^\prime} = 1/R_\oplus$",
+        transform=ax.transAxes, ha="left", va="top", fontsize=6.5,
+        color="0.25", linespacing=1.6)
+leg = ax.legend(loc="upper right", fontsize=6.5, handlelength=1.6)
+leg.get_frame().set_linewidth(0.7)
+# The main panel is square, like the other figures in this notebook; the
+# residual strip below it is a fixed fraction of that.
+ax.set_box_aspect(1.0)
+axd.set_box_aspect(0.30)
+
+axd.semilogx(E_LRI, P_NEW_LRI-P_STD_LRI, "-", color="C3", lw=1.1)
+axd.axhline(0.0, color="0.6", ls=":", lw=0.8)
+axd.set_ylabel(r"$\Delta P$")
+axd.set_xlabel("Neutrino energy [GeV]")
+axd.set_xlim(E_LRI[0], E_LRI[-1])
+fig.savefig(os.path.join(FIGDIR, "lri_earth.pdf"))
+plt.show()'''),
     md(r'''## Speed and accuracy, against five other codes
 
 Every code here solves the *same* problem and is refereed by the *same*
