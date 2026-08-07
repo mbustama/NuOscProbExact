@@ -2150,35 +2150,44 @@ with open(os.path.join('..', 'tests', 'prem_speed_accuracy.json')) as handle:
 
 # The colours and markers of the constant-density plane, so that a code
 # keeps its identity between the two figures.
-PREM_STYLE = {"NuOscProbExact": ("-o", "C0", 4.0),
-              # The two four-flavor root strategies are the same code and
-              # give bit-identical probabilities here, so they have to be
-              # told apart by marker rather than by position.
-              "NuOscProbExact (double-double)": ("-o", "C0", 4.0),
+PREM_STYLE = {"NuOscProbExact": ("-o", "C3", 4.0),
+              "NuOscProbExact (double-double)": ("-o", "C3", 4.0),
               "NuOscProbExact (eigensolver)": ("--^", "C1", 3.8),
               "nuSQuIDS": ("-v", "C2", 3.6),
               "NuFast-Earth": ("-D", "C4", 3.2),
               "GLoBES": ("-*", "C6", 6.0),
               "Prob3++": ("-P", "C5", 4.4),
-              "nuCraft": ("-s", "C3", 3.4)}
+              "nuCraft": ("-s", "C0", 3.4)}
 
 
 def prem_plane(panel, annotations, subtitle, xlim, ylim, outfile,
                dial_at=None, legend_loc="lower left",
-               legend_anchor=None):
-    """One speed-accuracy plane: time across, error against the referee up."""
+               legend_anchor=None, only=None, relabel=None):
+    """One speed-accuracy plane: time across, error against the referee up.
+
+    `only` restricts which series are drawn, and `relabel` renames them in
+    the legend.  Both exist for the four-flavor panel, where the two root
+    strategies are measured and frozen but only the default is drawn: the
+    curves coincide to the last bit, so plotting both put two labels on one
+    line.
+    """
     fig, ax = plt.subplots(figsize=FIGSIZE_SQUARE)
     wanted = {}
+    relabel = relabel or {}
     for series in panel["series"]:
+        if only is not None and series["name"] not in only:
+            continue
         marker, colour, size = PREM_STYLE[series["name"]]
         t = [q["us_per_probability"] for q in series["points"]]
         e = [q["max_abs_error"] for q in series["points"]]
-        kw = dict(ms=size, color=colour, label=series["name"], zorder=4)
+        kw = dict(ms=size, color=colour,
+                  label=relabel.get(series["name"], series["name"]), zorder=4)
         if series["name"].startswith("NuOscProbExact"):
             kw.update(mfc="white", mew=1.0, zorder=5)
         ax.loglog(t, e, marker, **kw)
         for q in series["points"]:
-            wanted[(series["name"], q["label"])] = (
+            key = relabel.get(series["name"], series["name"])
+            wanted[(key, q["label"])] = (
                 q["us_per_probability"], q["max_abs_error"], colour)
 
     for (name, label), text, dx, dy, ha in annotations:
@@ -2196,10 +2205,8 @@ def prem_plane(panel, annotations, subtitle, xlim, ylim, outfile,
     ax.text(0.97, 0.955, subtitle, transform=ax.transAxes, ha="right",
             va="top", fontsize=6.0, color="0.2", linespacing=1.4)
     ax.set_xlabel(r"Time per probability [$\mu$s]")
-    # Two lines: set on one, this label is taller than the axis it labels.
-    ax.set_ylabel("Error against a converged PREM solution,\n"
-                  r"max $|\Delta P_{\nu_\mu \to \nu_\mu}|$",
-                  linespacing=1.5)
+    ax.set_ylabel(r"Error vs.\ converged solution,  "
+                  r"max $|\Delta P_{\nu_\mu \to \nu_\mu}|$")
     ax.set_xlim(*xlim)
     ax.set_ylim(*ylim)
     leg = ax.legend(loc=legend_loc, bbox_to_anchor=legend_anchor,
@@ -2226,15 +2233,20 @@ prem_plane(
 
 prem_plane(
     prem["sterile_3plus1"],
-    [(("NuOscProbExact (double-double)", "1"), r"$n=1$", -6, -4, "right"),
-     (("NuOscProbExact (double-double)", "256"), "256", 6, -2, "left"),
+    [(("NuOscProbExact", "1"), r"$n=1$", -6, -4, "right"),
+     (("NuOscProbExact", "256"), "256", 6, -2, "left"),
      (("nuSQuIDS", "1e-03"), r"tol $10^{-3}$", -3, 7, "center"),
      (("nuSQuIDS", "1e-12"), r"$10^{-12}$", 7, -1, "left")],
     r"PREM, $3+1$:  $\cos\theta_z = -0.9$," + "\n"
     r"$E = 0.3$--$30$ TeV,  $\Delta m_{41}^2 = 1$ eV$^2$",
-    (6.0e0, 8.0e3), (3.0e-7, 2.5e-1),
+    (6.0e0, 1.0e5), (3.0e-7, 2.5e-1),
     "prem_speed_accuracy_3plus1.pdf", None,
-    legend_loc="upper right", legend_anchor=(0.995, 0.84))'''),
+    legend_loc="upper right", legend_anchor=(0.995, 0.84),
+    # Both root strategies are frozen in the data; only the default is
+    # drawn, because the two agree to the last bit and their curves lie on
+    # top of one another.
+    only={"NuOscProbExact (double-double)", "nuSQuIDS", "nuCraft"},
+    relabel={"NuOscProbExact (double-double)": "NuOscProbExact"})'''),
     md(r'''## Performance
 
 Three ways of evaluating the same scan: one point at a time, the whole stack
@@ -2288,30 +2300,53 @@ with open(os.path.join('..', 'tests', 'timing_other_codes.json')) as handle:
     other = json.load(handle)
 
 fig, (axt, ax) = plt.subplots(
-    2, 1, figsize=(COLW, COLW*1.24), sharex=True,
+    2, 1, figsize=(COLW, COLW*1.30), sharex=True,
     gridspec_kw={"height_ratios": [1.0, 1.0], "hspace": 0.07})
 
-for col, style, c, lab in ((1, "-o", "C0", "This code, one point at a time"),
-                           (2, "--s", "C1", "This code, array"),
-                           (3, ":^", "C3", "This code, array + kernel")):
+# Two of the three routes through this library: the compiled kernel, which
+# is what an installation gets, and one point at a time, which is what the
+# batching is worth against.  The plain array path lies between them and is
+# left out to keep the legend readable.  Marker and colour match the two
+# Earth planes, so a reader tracks one code across three figures.
+for col, style, dash, lab in (
+        (3, "-o", None, "NuOscProbExact, array + kernel"),
+        (1, "--o", None, "NuOscProbExact, one point at a time")):
     if col == 3 and not fastkernels.HAVE_NUMBA:
         continue
-    axt.loglog(rows[:, 0], rows[:, col]*1e3, style, ms=2.5, color=c, label=lab)
-    ax.loglog(rows[:, 0], rows[:, col]/rows[:, 0]*1e6, style, ms=2.5, color=c)
+    kw = dict(ms=3.4, color="C3", mfc="white", mew=0.9, zorder=5)
+    axt.loglog(rows[:, 0], rows[:, col]*1e3, style, label=lab, **kw)
+    ax.loglog(rows[:, 0], rows[:, col]/rows[:, 0]*1e6, style, **kw)
 
-for key, style, col, lab in (("nusquids", "-v", "C2", "nuSQuIDS"),
-                             ("nufast_lbl", "-D", "C4", "NuFast-LBL")):
+# The external codes.  None of them batches: GLoBES, Prob3++ and NuFast-LBL
+# take one energy per call, so their cost per probability is flat in N, and
+# that flatness is the point of the lower panel.  nuSQuIDS has a
+# multiple-energy mode and still does not fall, because what it amortises is
+# the solver setup and not the integration.
+for key, style, col, size, lab in (
+        ("nusquids", "-v", "C2", 2.6, "nuSQuIDS"),
+        ("nufast_lbl", "-D", "C4", 2.4, "NuFast-LBL"),
+        ("globes", "-*", "C6", 4.4, "GLoBES"),
+        ("prob3pp", "-P", "C5", 3.2, "Prob3++")):
     n = np.array(other[key]["sizes"], dtype=float)
     t = np.array(other[key]["seconds"])
-    axt.loglog(n, t*1e3, style, ms=2.5, color=col, label=lab)
-    ax.loglog(n, t/n*1e6, style, ms=2.5, color=col)
+    axt.loglog(n, t*1e3, style, ms=size, color=col, label=lab)
+    ax.loglog(n, t/n*1e6, style, ms=size, color=col)
+
 axt.set_ylabel("Total time [ms]")
-framed(axt, loc="lower right", ncol=1)
+axt.text(0.02, 0.97, "Constant density:  " + r"$L = 1300$ km," + "\n"
+         r"$E = 0.1$--$32$ GeV,  $\rho = 3$ g cm$^{-3}$" + "\n"
+         "All nine three-flavor probabilities",
+         transform=axt.transAxes, ha="left", va="top", fontsize=5.6,
+         color="0.2", linespacing=1.4)
+leg = axt.legend(loc="lower center", bbox_to_anchor=(0.5, 1.02), ncol=2,
+                 fontsize=5.6, borderaxespad=0.0, columnspacing=1.2,
+                 handlelength=2.0)
+leg.get_frame().set_linewidth(0.7)
 ax.set_xlim(rows[0, 0], rows[-1, 0])
 ax.set_xlabel("Number of energies in the scan")
 ax.set_ylabel(r"Time per probability [$\mu$s]")
 ax.set_ylim(2.0e-2, 2.0e3)
-fig.savefig(os.path.join(FIGDIR, "performance.pdf"))
+fig.savefig(os.path.join(FIGDIR, "performance.pdf"), bbox_inches="tight")
 plt.show()'''),
     md(r'''## Comparison to the alternatives
 

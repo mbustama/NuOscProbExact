@@ -31,6 +31,33 @@ and the project uses [Semantic Versioning](https://semver.org/).
   cost *fell* between 64 and 128 slabs per segment, so the timer now
   autoranges the way `timeit` does.
 
+### Changed
+
+- **The figures are recoloured and rearranged.**  `NuOscProbExact` is red
+  across all three, having swapped with `nuCraft`, and carries the same open
+  circle everywhere so that one code is followed by eye between the
+  constant-density and Earth planes.  The Earth panels' y-axis label now fits
+  on one line.  The four-flavor panel draws one curve rather than two: both
+  root strategies are still measured and frozen, but they agree to the last
+  bit and cost the same to within 0.4%, so two labels sat on one line.
+
+- **`performance.pdf` gains `GLoBES` and `Prob3++`, and `nuSQuIDS` reaches
+  30 000 energies.**  It also drops to two curves for this library, the
+  compiled kernel and one point at a time, with the plain array path between
+  them left out; and the legend moves above the panel in two columns to make
+  room.  The new codes are flat lines, which is the point: none of the four
+  external codes has a batched entry point over energies, and `nuSQuIDS`'
+  multiple-energy mode amortises building the solver rather than the
+  integration.  `nuCraft` is not there because it has no constant-density
+  mode to time.
+
+- **`nuCraft` now appears in the 3+1 Earth panel**, flat at 2.8e-3.  It was
+  left out on the grounds that publishing that floor would misrepresent its
+  solver; drawn with a caption that says where the floor comes from -- two
+  independently rounded constants whose ratio is 0.5016 against an exact
+  0.5 -- it misrepresents nothing, and it is what a user of released nuCraft
+  gets.
+
 ## [1.13.0] - 2026-08-06
 
 ### Changed

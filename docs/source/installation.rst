@@ -316,5 +316,8 @@ File tree
        │   ├── globes_drv.c             # GLoBES on the PREM chord
        │   ├── globes_prem.txt
        │   ├── prob3_drv.cpp            # Prob3++ on the PREM chord
-       │   └── prob3_prem.txt
+       │   ├── prob3_prem.txt
+       │   ├── perf_nusquids.py         # nuSQuIDS on the constant-density scan
+       │   ├── globes_perf.c            # GLoBES on the same scan
+       │   └── prob3_perf.cpp           # Prob3++ on the same scan
        └── test_file_tree.py            # Keeps this tree in step with the repository

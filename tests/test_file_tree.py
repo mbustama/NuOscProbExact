@@ -244,6 +244,12 @@ TREE = [
     ('tests/external_drivers/globes_prem.txt', None),
     ('tests/external_drivers/prob3_drv.cpp', 'Prob3++ on the PREM chord'),
     ('tests/external_drivers/prob3_prem.txt', None),
+    ('tests/external_drivers/perf_nusquids.py',
+     'nuSQuIDS on the constant-density scan'),
+    ('tests/external_drivers/globes_perf.c',
+     'GLoBES on the same scan'),
+    ('tests/external_drivers/prob3_perf.cpp',
+     'Prob3++ on the same scan'),
     ('tests/test_file_tree.py', 'Keeps this tree in step with the repository'),
 
 ]

@@ -25,7 +25,8 @@ C.  Batching alone is worth between 4x and 10x here, on top of the
 compiled evolution-operator kernel that 1.13.0 gave the slab path.
 
 At four flavors :data:`oscprob4nu.ROOT_STRATEGY` selects how the latent
-roots are found, and both routes are shown.  On this problem they are not
+roots are found, and both routes are measured and frozen here even though
+the figure now draws only the default.  On this problem they are not
 an accuracy trade: they agree **bit for bit** at every slab count, because
 the discretisation error swamps a root difference of 3.6e-17 against
 3.9e-16.  The two curves therefore differ horizontally and not vertically,
@@ -123,18 +124,18 @@ Per-code traps
   where it means ``=``, so the ``rE`` keyword is silently ignored.  Both
   are worth reporting upstream.
 
-* **nuCraft is absent from the 3+1 panel, and not because it cannot do
-  it.**  Its sterile entry and its charged-current entry are set by two
+* **nuCraft cannot get below 3.7e-4 at 3+1, and it is not the solver.**
+  Its sterile entry and its charged-current entry are set by two
   independently rounded constants, ``7.6525e-5*(1-y)`` and
   ``15.256e-5*y``, whose ratio is 0.5016 where the isoscalar value
   ``(1/2)(1-Y_e)/Y_e`` is exactly 0.5 -- 0.32% high.  Scaling the density
-  cannot separate them, because it scales both.  That leaves a 3.7e-4
-  floor at 3+1 that no setting removes; forcing the ratio to 0.5 by hand
-  drops the same run to 2.8e-7, which is nuCraft's real accuracy here.
-  Publishing the patched curve would misrepresent the released code and
-  publishing the unpatched one would misrepresent its solver, so it is
-  shown at three flavors, where the sterile entry never enters, and left
-  out at 3+1.  Worth reporting upstream with the other two.
+  cannot separate them, because it scales both, so no setting removes that
+  floor.  Forcing the ratio to 0.5 by hand drops the same run to 2.8e-7,
+  which is what its solver is actually worth.  The curve is drawn as
+  released, floor and all, because that is what a user of nuCraft gets;
+  the caption says where the floor comes from rather than leaving a reader
+  to conclude the solver is poor.  Worth reporting upstream with the
+  other two.
 
 The three compiled codes
 ------------------------
@@ -606,25 +607,31 @@ def build(n_flavors, energies_gev):
                 lambda e, t=tol: nusquids(e, body, t, n_flavors), energies)})
     out.append(series('nuSQuIDS', pts))
 
-    # nuCraft appears at three flavors only; see the module docstring for
-    # the sterile-entry constant that keeps it out of the 3+1 panel.
-    if n_flavors == 3:
-        inst = nucraft_instance(n_flavors)
-        pts = []
-        for prec in (1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 1e-8, 1e-10):
-            p = np.array([nucraft(e, inst, prec) for e in energies])
-            pts.append({
-                'label': '%.0e' % prec,
-                'num_prec': prec,
-                'max_abs_error': float(np.max(np.abs(p-ref))),
-                'us_per_probability': timed(
-                    lambda e, q=prec: nucraft(e, inst, q), energies)})
-        out.append(series('nuCraft', pts))
+    # nuCraft runs at both, but at 3+1 it cannot get below 3.7e-4: its
+    # sterile and charged-current entries come from two independently
+    # rounded constants whose ratio is 0.5016 where the isoscalar value is
+    # exactly 0.5, and rescaling the density scales both together.  The
+    # curve is shown anyway, because that floor is what a user of released
+    # nuCraft actually gets and the caption says where it comes from;
+    # forcing the ratio by hand drops the same run to 2.8e-7.
+    inst = nucraft_instance(n_flavors)
+    pts = []
+    for prec in (1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 1e-8, 1e-10):
+        p = np.array([nucraft(e, inst, prec) for e in energies])
+        pts.append({
+            'label': '%.0e' % prec,
+            'num_prec': prec,
+            'max_abs_error': float(np.max(np.abs(p-ref))),
+            'us_per_probability': timed(
+                lambda e, q=prec: nucraft(e, inst, q), energies)})
+    out.append(series('nuCraft', pts))
 
-        # The three compiled codes.  All are three-flavor only: NuFast-Earth
-        # takes three angles and two splittings, Prob3++ hard-wires
-        # double Probability[3][3], and GLoBES the same, so none of them
-        # appears in the 3+1 panel.
+    # The three compiled codes are three-flavor only: NuFast-Earth takes
+    # three angles and two splittings, and Prob3++ and GLoBES both
+    # hard-wire double P[3][3].  GLoBES exposes glbRegisterProbabilityEngine
+    # and Kopp's snu extension uses it to provide 3+n, but that is separate
+    # software with its own conventions, not a flag.
+    if n_flavors == 3:
         out.append(compiled_series('NuFast-Earth', 'nufast_earth_prem.txt',
                                    ref))
         out.append(compiled_series('GLoBES', 'globes_prem.txt', ref))
