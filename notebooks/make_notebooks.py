@@ -2054,7 +2054,7 @@ ax.semilogx(E_LRI, P_NEW_LRI, "-", color="C3", lw=1.1,
 ax.set_ylabel(r"$P_{\nu_\mu \to \nu_e}$")
 # Headroom for the legend and the case label, which would otherwise sit on
 # top of the 5 GeV peak.
-ax.set_ylim(0.0, 0.86)
+ax.set_ylim(0.0, 0.70)
 # Three short lines rather than two long ones: the second line of a
 # two-line version runs under the legend box.
 ax.text(0.035, 0.96,

@@ -1075,7 +1075,7 @@ grid = oscprob4nu.probabilities_4nu( \
 The usefulness of {\tt NuOscProbExact} stems in part from its ability to compute oscillation probabilities for any arbitrary time-independent Hamiltonian.   Listing \ref{lst:3nu_arbitrary} shows a code template to compute three-neutrino oscillation probabilities using a user-supplied Hamiltonian that is added to the Hamiltonian for oscillations in \del{vacuum}\add{matter}.
 
 \addstart
-The template is written around a concrete instance rather than a placeholder, because the placeholder hides what is being claimed.  The instance is a long-range interaction: a new neutral gauge boson $Z^\prime$ coupled to the anomaly-free combination $L_e - L_\mu$, under which the $\sim\!10^{51}$ electrons of the Earth source a Yukawa potential $V_{e\mu}(r)$ that $\nu_e$ and $\nu_\mu$ feel with opposite sign.  What makes it a useful example is that it is not merely a new number in an existing formula.  The potential is \emph{non-local}: at mediator masses light enough to matter, $m_{Z^\prime} \lesssim 1/R_\oplus$, its value at any radius is an integral over the whole electron distribution, so it depends on how many electrons there are and only weakly on where they sit.  It therefore cannot be absorbed into an effective density profile, and no specialized expression for it exists in any of the codes of Section \ref{section:comparison}.  Here it is some thirty lines, and the probability that comes out is exact.
+The template is written around a concrete instance rather than a placeholder, because the placeholder hides what is being claimed.  The instance is a long-range interaction: a new neutral gauge boson $Z^\prime$ coupled to the anomaly-free combination $L_e - L_\mu$\ \cite{He:1991qd, Foot:1994vd}, under which the $\sim\!10^{51}$ electrons of the Earth source a Yukawa potential $V_{e\mu}(r)$ that $\nu_e$ and $\nu_\mu$ feel with opposite sign.  What makes it a useful example is that it is not merely a new number in an existing formula.  The potential is \emph{non-local}: at mediator masses light enough to matter, $m_{Z^\prime} \lesssim 1/R_\oplus$, its value at any radius is an integral over the whole electron distribution, so it depends on how many electrons there are and only weakly on where they sit\ \cite{Wise:2018rnb}.  It therefore cannot be absorbed into an effective density profile, and no specialized expression for it exists in any of the codes of Section \ref{section:comparison}.  The scenario and its phenomenology are developed in \Refs\ \cite{Joshipura:2003jj, Bandyopadhyay:2006uh, Bustamante:2018mzu, Agarwalla:2024lri}; here it is some thirty lines, and the probability that comes out is exact.
 
 \figu{lri_earth} shows the result for a neutrino crossing the full diameter of the Earth.  The two curves are the same PREM slab decomposition, evaluated with and without the extra term, and the only difference between the calculations that produced them is the single line that adds $V_{e\mu}$ to the matter Hamiltonian.  At $\alpha^\prime \equiv g^{\prime 2}/4\pi = 10^{-52}$ --- a coupling at which $V_{e\mu}$ at the center of the Earth is about $1\%$ of $V_{\rm CC}$ there --- the appearance probability is displaced by up to $0.10$ in absolute terms, with the largest effect near $4$~GeV, where the standard matter resonance sits.  The lower panel is that difference on its own scale.  The point of the figure is not the parameter value, which is chosen to make the effect visible rather than to bound anything; it is that a scenario none of the codes of Section \ref{section:comparison} anticipates costs the user one array and one addition.  Notebook 20 in the repository builds $V_{e\mu}$ from scratch, checks it against its short- and long-range limits, and scans $\alpha^\prime$ over three decades.
 \addend
@@ -2342,6 +2342,46 @@ M.~Bustamante, {NuOscProbExact documentation}.
 M.~Bustamante, {NuOscProbExact on the Python Package Index}.
 \newblock \href {https://pypi.org/project/nuoscprobexact/}
   {\path{https://pypi.org/project/nuoscprobexact/}}.
+
+\bibitem{He:1991qd}
+X.~G. He, G.~C. Joshi, H.~Lew, R.~R. Volkas, {New $Z^\prime$ Phenomenology},
+  Phys.\ Rev.\ D 43 (1991) 22.
+
+\bibitem{Foot:1994vd}
+R.~Foot, X.-G. He, H.~Lew, R.~R. Volkas, {Model for a light $Z^\prime$ boson},
+  Phys.\ Rev.\ D 50 (1994) 4571.
+\newblock \href {http://arxiv.org/abs/hep-ph/9401250}
+  {\path{arXiv:hep-ph/9401250}}.
+
+\bibitem{Joshipura:2003jj}
+A.~S. Joshipura, S.~Mohanty, {Constraints on flavor dependent long range forces
+  from atmospheric neutrino observations at Super-Kamiokande}, Phys.\ Lett.\ B
+  584 (2004) 103.
+\newblock \href {http://arxiv.org/abs/hep-ph/0310210}
+  {\path{arXiv:hep-ph/0310210}}.
+
+\bibitem{Bandyopadhyay:2006uh}
+A.~Bandyopadhyay, A.~Dighe, A.~S. Joshipura, {Constraints on flavor-dependent
+  long range forces from solar neutrinos and KamLAND}, Phys.\ Rev.\ D 75 (2007)
+  093005.
+\newblock \href {http://arxiv.org/abs/hep-ph/0610263}
+  {\path{arXiv:hep-ph/0610263}}.
+
+\bibitem{Wise:2018rnb}
+M.~B. Wise, Y.~Zhang, {Lepton Flavorful Fifth Force and Depth-dependent
+  Neutrino Matter Interactions}, JHEP 06 (2018) 053.
+\newblock \href {http://arxiv.org/abs/1803.00591} {\path{arXiv:1803.00591}}.
+
+\bibitem{Bustamante:2018mzu}
+M.~Bustamante, S.~K. Agarwalla, {Universe's Worth of Electrons to Probe
+  Long-Range Interactions of High-Energy Astrophysical Neutrinos}, Phys.\ Rev.\
+  Lett.\ 122 (2019) 061103.
+\newblock \href {http://arxiv.org/abs/1808.02042} {\path{arXiv:1808.02042}}.
+
+\bibitem{Agarwalla:2024lri}
+S.~K. Agarwalla, M.~Bustamante, M.~Singh, P.~Swain, {A plethora of long-range
+  neutrino interactions probed by DUNE and T2HK}.
+\newblock \href {http://arxiv.org/abs/2404.02775} {\path{arXiv:2404.02775}}.
 
 \end{thebibliography}
 

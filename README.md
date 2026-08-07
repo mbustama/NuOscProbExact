@@ -291,7 +291,7 @@ NuOscProbExact/
 │       ├── refs.bib                 # Kept for reference; the .bbl is inlined
 │       ├── elsarticle.cls
 │       ├── elsarticle-num.bst
-│       └── figs/                    # Every figure, twelve of them from notebook 10
+│       └── figs/                    # Every figure, fourteen of them from notebook 10
 │           ├── validation.pdf
 │           ├── prob_2nu_vs_energy_compare.pdf
 │           ├── prob_3nu_vs_energy_compare.pdf
@@ -305,6 +305,7 @@ NuOscProbExact/
 │           ├── speed_accuracy.pdf
 │           ├── prem_speed_accuracy.pdf
 │           ├── prem_speed_accuracy_3plus1.pdf
+│           ├── lri_earth.pdf
 │           └── Notes_on_SU_n__probability_relations.pdf
 └── tests/                           # Regression suite, run with pytest
     ├── conftest.py                  # Shared fixtures and path setup
