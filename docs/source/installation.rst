@@ -273,6 +273,30 @@ File tree
    │   └── earth.py                     # PREM, chord geometry, and Earth crossings
    ├── tools/                           # Scripts that are not part of the package
    │   └── make_demo_video.py           # Joins and shrinks the clips notebook 19 renders
+   ├── resources/                       # Things the repository carries but does not install
+   │   └── paper/                       # Source of the paper that documents this library
+   │       ├── README.md                # How to build it, and what each file is
+   │       ├── main.tex                 # The paper, with the revision marked up
+   │       ├── make_versions.py         # Derives the clean and the diffed versions
+   │       ├── baseline_cpc_v1.tex      # The published version, for the diff
+   │       ├── refs.bib                 # Kept for reference; the .bbl is inlined
+   │       ├── elsarticle.cls
+   │       ├── elsarticle-num.bst
+   │       └── figs/                    # Every figure, twelve of them from notebook 10
+   │           ├── validation.pdf
+   │           ├── prob_2nu_vs_energy_compare.pdf
+   │           ├── prob_3nu_vs_energy_compare.pdf
+   │           ├── slabs_composition.pdf
+   │           ├── earth_oscillogram.pdf
+   │           ├── density_arrangement.pdf
+   │           ├── sterile_earth_oscillogram.pdf
+   │           ├── architecture.pdf
+   │           ├── performance.pdf
+   │           ├── exact_vs_approximations.pdf
+   │           ├── speed_accuracy.pdf
+   │           ├── prem_speed_accuracy.pdf
+   │           ├── prem_speed_accuracy_3plus1.pdf
+   │           └── Notes_on_SU_n__probability_relations.pdf
    └── tests/                           # Regression suite, run with pytest
        ├── conftest.py                  # Shared fixtures and path setup
        ├── gen_stiff_reference.py       # Regenerates the fifty-digit four-flavor oracle

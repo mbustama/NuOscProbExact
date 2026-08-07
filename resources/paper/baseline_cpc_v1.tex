@@ -1,0 +1,2090 @@
+\documentclass[final,5p,times,twocolumn]{elsarticle}
+
+
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{bbold}
+\usepackage{epsfig}
+\usepackage{graphicx}
+\usepackage{bm}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{color}
+
+\newcommand{\ie}{{\it i.e.}}
+\newcommand{\Ie}{{\it I.e.}}
+\newcommand{\eg}{{\it e.g.}}
+\newcommand{\Eg}{{\it E.g.}}
+\newcommand{\cf}{{\it cf.}}
+\newcommand{\etc}{{\it etc.}}
+\newcommand{\eq}{Eq.}
+\newcommand{\eqs}{Eqs.}
+\newcommand{\fig}{Fig.}
+\newcommand{\Fig}{Fig.}
+\newcommand{\Ref}{Ref.}
+\newcommand{\Refs}{Refs.}
+\newcommand{\Tab}{Tab.}
+\newcommand{\Tabs}{Tabs.}
+\newcommand{\equ}[1]{\eq~(\ref{equ:#1})}
+\newcommand{\figu}[1]{\fig~\ref{fig:#1}}
+\newcommand{\tabl}[1]{\Tab~\ref{tab:#1}}
+
+\definecolor{mygreen}{rgb}{0,0.6,0}
+\definecolor{mygray}{rgb}{0.5,0.5,0.5}
+\definecolor{mylightgray}{rgb}{0.937,0.937,0.937}
+\definecolor{mymauve}{rgb}{0.58,0,0.82}
+
+
+\lstset{ 
+  backgroundcolor=\color{mylightgray},   % choose the background color; you must add \usepackage{color} or \usepackage{xcolor}; should come as last argument
+  basicstyle=\scriptsize\ttfamily,        % the size of the fonts that are used for the code
+  breakatwhitespace=false,         % sets if automatic breaks should only happen at whitespace
+  breaklines=true,                 % sets automatic line breaking
+  captionpos=b,                    % sets the caption-position to bottom
+  commentstyle=\color{mygreen},    % comment style
+  deletekeywords={...},            % if you want to delete keywords from the given language
+  escapeinside={\%*}{*)},          % if you want to add LaTeX within your code
+  extendedchars=true,              % lets you use non-ASCII characters; for 8-bits encodings only, does not work with UTF-8
+  firstnumber=1,                   % start line enumeration with line 1000
+  frame=single,	                   % adds a frame around the code
+  keepspaces=true,                 % keeps spaces in text, useful for keeping indentation of code (possibly needs columns=flexible)
+  keywordstyle=\color{blue},       % keyword style
+  language=Python,                 % the language of the code
+  morekeywords={*,...},            % if you want to add more keywords to the set
+  numbers=left,                    % where to put the line-numbers; possible values are (none, left, right)
+  numbersep=5pt,                   % how far the line-numbers are from the code
+  numberstyle=\tiny\color{mygray}, % the style that is used for the line-numbers
+  rulecolor=\color{black},         % if not set, the frame-color may be changed on line-breaks within not-black text (e.g. comments (green here))
+  showspaces=false,                % show spaces everywhere adding particular underscores; it overrides 'showstringspaces'
+  showstringspaces=false,          % underline spaces within strings only
+  showtabs=false,                  % show tabs within strings adding particular underscores
+  stepnumber=1,                    % the step between two line-numbers. If it's 1, each line will be numbered
+  stringstyle=\color{mymauve},     % string literal style
+  tabsize=2,	                   % sets default tabsize to 2 spaces
+  title=\lstname,                   % show the filename of files included with \lstinputlisting; also try caption instead of title
+  framesep=3pt
+}
+
+
+\newcounter{bla}
+\newenvironment{refnummer}{%
+\list{[\arabic{bla}]}%
+{\usecounter{bla}%
+ \setlength{\itemindent}{0pt}%
+ \setlength{\topsep}{0pt}%
+ \setlength{\itemsep}{0pt}%
+ \setlength{\labelsep}{2pt}%
+ \setlength{\listparindent}{0pt}%
+ \settowidth{\labelwidth}{[9]}%
+ \setlength{\leftmargin}{\labelwidth}%
+ \addtolength{\leftmargin}{\labelsep}%
+ \setlength{\rightmargin}{0pt}}}
+ {\endlist}
+
+\journal{Computer Physics Communications}
+
+\begin{document}
+
+\begin{frontmatter}
+
+\title{{\tt NuOscProbExact}: a general-purpose code to compute\\
+exact two-flavor and three-flavor neutrino oscillation probabilities}
+
+\author{Mauricio Bustamante\corref{author}}
+\ead{mbustamante@nbi.ku.dk}
+\cortext[author]{ORCID: \href{http://orcid.org/0000-0001-6923-0865}{0000-0001-6923-0865}.}
+\address{Niels Bohr International Academy \& DARK, Niels Bohr Institute,\\University of Copenhagen, DK-2100 Copenhagen, Denmark}
+
+\date{\today}
+
+\begin{abstract}
+
+In neutrino oscillations, a neutrino created with one flavor can be later detected with a different flavor, with some probability.  In general, the probability is computed exactly by diagonalizing the Hamiltonian operator that describes the physical system and that drives the oscillations.  Here we use an alternative method developed by Ohlsson \& Snellman to compute exact oscillation probabilities, that bypasses diagonalization, and that produces expressions for the probabilities that are straightforward to implement.  The method employs expansions of quantum operators in terms of SU(2) and SU(3) matrices.  We implement the method in the code {\tt NuOscProbExact}, which we make publicly available.  It can be applied to any closed system of two or three neutrino flavors described by an arbitrary time-independent Hamiltonian.  This includes, but is not limited to, oscillations in vacuum, in matter of constant density, with non-standard matter interactions, and in a Lorentz-violating background.  
+
+\end{abstract}
+
+\begin{keyword}
+
+%% keywords here, in the form: keyword \sep keyword
+neutrino \sep oscillation \sep flavor \sep particle physics
+
+\end{keyword}
+
+\end{frontmatter}
+
+\noindent
+{\bf Program summary}
+\smallskip
+
+\begin{small}
+
+\noindent
+{\em Program title:} NuOscProbExact v1.0.0    \\
+\smallskip 
+%%%%
+{\em Licensing provisions:} MIT License  \\
+\smallskip
+%%%%
+{\em Program obtainable from:} \\ 
+\href{https://github.com/mbustama/NuOscProbExact}{\tt https://github.com/mbustama/NuOscProbExact}  \\ \\
+\smallskip
+%%%%
+% {\em No.~of lines in distributed program, including test data, etc.:} XXXX \\
+% \smallskip
+%%%%
+% {\em No.~of bytes in distributed program, including test data, etc.:} XXXX \\
+% \smallskip
+%%%%
+% {\em Distribution format:} git or tar.gz \\
+% \smallskip
+%%%%
+{\em Programming language:} Python 3.7   \\
+\smallskip
+%%%%
+% {\em Computer:} CPU?   \\
+% \smallskip
+%%%%
+% {\em Operating system:} Independent   \\
+% \smallskip
+%%%%
+% {\em RAM:} Minimal?   \\
+% \smallskip
+%%%%
+% {\em Classification:} XXXX   \\
+% \smallskip
+%%%%
+{\em External routines:} Python 3.7, numpy, scipy, matplotlib   \\
+\smallskip
+%%%%
+{\em Nature of problem:} \\
+Computation of exact neutrino flavor oscillation probabilities in arbitrary physical systems described by time-independent Hamiltonians.  Applicable to closed systems of two and three neutrino flavors. \\ \\
+\smallskip
+%%%%
+{\em Solution method:}\\
+Closed-form expansions of the time-evolution quantum operators using SU(2) and SU(3) identities.  The program is a lightweight implementation of the method introduced in Refs.\ [1, 2] to find the oscillation probabilities. \\ \\
+\smallskip
+%%%%
+{\em Additional comments:}\\
+The program can be applied to the computation of oscillations in matter with piece-wise constant density, \eg, inside Earth.   \\ \\
+% \medskip
+%%%%
+% {\em Running time:}\\
+% Fast?
+  %    \\
+
+\medskip
+  
+\begin{thebibliography}{0}
+\bibitem{1} 
+  T.~Ohlsson and H.~Snellman,
+  ``Three flavor neutrino oscillations in matter,''
+  J.\ Math.\ Phys.\  {\bf 41}, 2768 (2000)
+  Erratum: [J.\ Math.\ Phys.\  {\bf 42}, 2345 (2001)]
+  doi:10.1063/1.533270
+  [hep-ph/9910546].
+  %%%%
+\bibitem{2} 
+  T.~Ohlsson and H.~Snellman,
+  ``Neutrino oscillations with three flavors in matter: Applications to neutrinos traversing the Earth,''
+  Phys.\ Lett.\ B {\bf 474}, 153 (2000)
+  Erratum: [Phys.\ Lett.\ B {\bf 480}, 419 (2000)]
+  doi:10.1016/S0370-2693(00)00445-7, 10.1016/S0370-2693(00)00008-3
+  [hep-ph/9912295].
+\end{thebibliography}
+
+\end{small}
+
+
+\section{Introduction}\label{Section_Introduction}
+
+Neutrinos are created and detected in weak interactions as flavor states --- $\nu_e$, $\nu_\mu$, $\nu_\tau$ --- but they propagate as superpositions of propagation states --- in vacuum, these are the mass eigenstates $\nu_1$, $\nu_2$, $\nu_3$.  Because the superposition evolves with time, a neutrino created with a certain flavor has a non-zero probability of being detected later with a different flavor\ \cite{Pontecorvo:1967fh, Barger:1980hs, Bilenky:2004sn, Fantini:2018itu}.  The observation of oscillations in solar, atmospheric, reactor, and accelerator neutrinos has led to the momentous discovery of neutrino mass and of flavor mixing in leptons\ \cite{Kajita:2016cak, McDonald:2016ixn}.
+
+Computing the probabilities of flavor transition is integral to studying oscillations.  Computing them exactly typically involves diagonalizing the Hamiltonian operator that drives the time-evolution of neutrinos.  But, because the expressions involved are often complex, it is notoriously hard to produce exact analytical expressions for the probabilities that also provide physical insight.  The case of oscillations in vacuum is an exception\ \cite{Kayser:1981ye, Giunti:2007ry, Tanabashi:2018oca}.  Beyond that, there is a large body of work dedicated to deriving exact probabilities for different scenarios; see, \eg, \Refs\ \cite{Barger:1980tf, Petcov:1987zj, Zaglauer:1988gz, TorrenteLujan:1995qi, Balantekin:1997jp, Coleman:1998ti, Gago:2001xg, Kimura:2002wd, Harrison:2003fi, Kostelecky:2003xn, Kostelecky:2003cr, GonzalezGarcia:2004wg, Blennow:2004qd, Meloni:2009ia, Ando:2009ts, Abe:2014wla, Flores:2015mah, Popov:2018seq}.  Yet, though some of these expressions are superficially elegant, they are seldom used due to their underlying complexity, particularly in the case of oscillations amongst three neutrino flavors.
+
+More often, carefully selected perturbative expansions and approximations are employed to cast the probabilities in forms that are amenable to physical interpretation.  Many such approximate expressions exist in the literature\ \cite{Gago:2002na, Blennow:2008eb, Diaz:2009qk, Meloni:2009ia, Chaves:2018sih}, especially for oscillations in matter\ \cite{Petcov:1986qg, Hirota:1998wv, Cervera:2000kp, Freund:2001pn, Akhmedov:2004ny, Friedland:2006pi, Ioannisian:2008ve, Supanitsky:2008eq, Minakata:2015gra, Flores:2015mah, Li:2016pzm, Denton:2016wmg, Parke:2019vbs} with precisions that reach the per-cent level.  Unfortunately, there is no systematic way to produce these useful expressions, since they are tailored to specific Hamiltonians (however, see, \Ref\ \cite{Denton:2018fex}), their derivation is not trivial, or their application is limited to specific ranges of values of a perturbative parameter.  
+
+Hence, the best course of action in cases where we seek high precision in the computation of probabilities is simply to compute them exactly, often numerically.  This is a common strategy to explore non-standard oscillation scenarios, \ie, arbitrary Hamiltonians, for which analytic solutions are in general unavailable.  For instance, this is done when scanning a parameter space without knowing {\it a priori} our region of interest, or approximate expressions of the probabilities that are valid inside that region.   
+
+Here, in lieu of diagonalizing the Hamiltonian, we use an alternative method, developed by Ohlsson \& Snellman (hereafter, OS) in \Refs\ \cite{Ohlsson:1999xb, Ohlsson:1999um, Ohlsson:2000zz, Ohlsson:2001et}, to compute exact oscillation probabilities.  We provide a numerical implementation for systems of two and three neutrino flavors.  The method relies on expanding the quantum operators that drive the time-evolution of neutrinos in terms of SU(2) and SU(3) matrices\ \cite{Ohlsson:1999xb, Ohlsson:1999um, Ohlsson:2000zz, Ohlsson:2001et}.  It has two assumptions: 
+\begin{enumerate}
+ \item 
+  The system must be closed, \ie, it must conserve the number of neutrinos summed over all flavors
+ \item
+  The Hamiltonian must be time-independent (except in some cases; see Section \ref{section:prob_3nu_matter})
+\end{enumerate}
+Both conditions are satisfied in many physical scenarios studied in the literature, \eg, oscillations in vacuum, in matter of constant density, with non-standard neutrino interactions, and in diverse new-physics scenarios.  The method does not apply to scenarios where neutrinos ``leak out'' of the system, \eg, 3+1 systems of sterile neutrinos\ \cite{Abazajian:2012ys, Palazzo:2013me, Gariazzo:2015rra, Dentler:2018sju, Giunti:2019aiy}, with neutrino decays into invisible products\ \cite{Joshipura:2002fb, Beacom:2002cb, Beacom:2002vi, GonzalezGarcia:2008ru, Baerwald:2012kc, Berryman:2014yoa}, or open systems, like those with decoherence\ \cite{Benatti:2000ph, Lisi:2000zt, Ohlsson:2000mj, Carpio:2017nui, Coloma:2018idr}.
+
+We provide the computer code {\tt NuOscProbExact}\ \cite{NuOscProbExact}, a lightweight numerical implementation of the OS method that computes exact two- and three-flavor oscillation probabilities for arbitrary time-independent Hamiltonians.  The code can be easily used in oscillation analyses.  
+
+In Section \ref{section:scope}, we set the scope, context, and approach of the paper.  In Section \ref{section:general_remarks}, we recap the basics of neutrino oscillations and establish the concrete goal of the computation.  In Sections \ref{section:two_flavors} and \ref{section:three_flavors}, we present the OS method, in a simplified formulation, for systems of two and three flavors.  In Section \ref{section:code}, we describe {\tt NuOscProbExact} and show examples of its use.  In Section \ref{section:conclusions}, we conclude.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\section{Scope, context, and approach}
+\label{section:scope}
+
+Below, to compute the oscillation probabilities, we follow the OS method.  References\ \cite{Ohlsson:1999xb, Ohlsson:1999um, Ohlsson:2000zz, Ohlsson:2001et} introduced expressions applicable to generic oscillation scenarios, and also found analytic expressions\ \cite{Ohlsson:1999xb} for the probabilities in the cases of two-flavor oscillations in matter and three-flavor oscillations in vacuum and matter.  Reference \cite{Barger:1980tf} presented an earlier application to three-flavor oscillations in matter.  Because the exact analytic expressions tailored to three-neutrino oscillations in vacuum and matter are lengthy, and because we are interested in providing a general-purpose numerical implementation of the method, we do not attempt to reproduce analytical solutions or find new ones.  
+
+Later, we work through the method.  Here, we give an overview.  We start by expanding the Hamiltonian in terms of $2 \times 2$ Pauli matrices --- in the case of two neutrino flavors --- or of $3 \times 3$ Gell-Mann matrices --- in the case of three flavors.  \ref{appendix:matrices} shows these matrices.  When studying neutrino oscillations, these expansions are sometimes performed not on the Hamiltonian, but on the associated density matrix.  This approach is particularly useful to study oscillations in the early Universe\ \cite{McKellar:1992ja, Bell:1998ds, Hannestad:2001iy, Wong:2002fa, Hannestad:2012ky, Boriero:2017tkh} and in supernovae\ \cite{Pantaleone:1994ns, Sigl:1994hc, Pastor:2002we, Balantekin:2004ug, Fogli:2007bk, Dasgupta:2007ws, Duan:2010bg, Mirizzi:2015eza}.  
+
+In the OS method, we instead first expand the Hamiltonian $H$ and then the associated time-evolution operator $e^{-i H t}$.  For the latter, we use the exponential expansions of Pauli and Gell-Mann matrices\ \cite{MacFarlane:1968vc, Curtright:2015iba, VanKortryk:2015kua}.  These expansions are a direct application of the Cayley-Hamilton theorem, which states that an analytic function of an $n \times n$ matrix can be written as a polynomial of degree $(n-1)$ in that matrix.  The coefficients of the expansion are computed using SU(2) and SU(3) invariants, which allows us to bypass the diagonalization of the Hamiltonian that would otherwise be needed to compute the probabilities.  
+
+Sophisticated numerical codes exist to compute probabilities, either for general application or for particular scenarios, \eg, {\tt GLoBES}\ \cite{GLoBES}, {\tt nuCraft}\ \cite{nuCraft}, {\tt NuSQuIDS}\ \cite{NuSQuIDS}, and {\tt Prob3++}\ \cite{Prob3pp}.  The general-purpose code {\tt NuSQuIDS}\ \cite{Delgado:2014kpa, NuSQuIDS} implements the same expansions used in the OS method efficiently, and embeds them in a larger formalism that can also deal with time-dependent Hamiltonians.  The code {\tt Prob3++}\ \cite{Prob3pp} implements the expansions for oscillations in matter, based on \Ref\ \cite{Barger:1980tf}. 
+
+While it is possible to extend the method to systems of $n > 3$ neutrino flavors, the expansions in SU($n$) quickly become complicated\ \cite{Kusnezov:1995, VanKortryk:2015kua}.  Since the objective of {\tt NuOscProbExact} is to treat the common cases of two- and three-neutrino oscillations, exploring these generalizations is beyond the scope of this paper.  However, \Ref\ \cite{Kamo:2002sj} applied the OS method to the $n=4$ case for four-flavor oscillations in matter and {\tt NuSQuIDS}\ \cite{Delgado:2014kpa, NuSQuIDS} implements it for cases up to $n=6$\ \cite{Salvado:Private}.  
+
+Below, our approach is expository while condensed: we provide sufficient detail to present the method and facilitate its implementation, and refer to earlier works for further mathematical detail.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\section{Neutrino oscillation recap}
+\label{section:general_remarks}
+
+Let $\nu$ represent the flavor state of a neutrino.  The state evolves according to the Schr\"odinger equation
+\begin{equation}
+ \label{equ:evolution_eq}
+ i \frac{d\nu}{dt} = H \nu \;,
+\end{equation}
+where $t$ is the time elapsed since the creation of the neutrino and $H$ is the Hamiltonian written in flavor space.  We use units where $c = \hbar = 1$.  By definition, $H$ is Hermitian.  In a system of $n$ neutrinos, we represent $H$ by a $n \times n$ matrix and $\nu$ by a column vector with $n$ entries.  Below, we consider the cases $n=2$, for two-neutrino oscillations, and $n=3$, for three-neutrino oscillations. 
+
+We restrict the discussion to time-independent Hamiltonians, so that the corresponding time-evolution operator is $U\left(t\right) = e^{-iHt}$.  Hamiltonians of this type describe, for instance, neutrino propagation in vacuum and in matter of constant density.  Because neutrinos are relativistic, we approximate the propagated distance $L \simeq t$.   Thus, the evolved state of a neutrino born as $\nu_\alpha$ ($\alpha = e, \mu, \tau$) is
+\begin{equation}
+ \label{equ:evolved_state}
+ \nu_\alpha\left(L\right) 
+ = U(L) \nu_\alpha
+ = e^{-iHL} \nu_\alpha \;.
+\end{equation}
+Since $H$ is Hermitian, the evolution operator $U$ is unitary.
+
+Because the Hamiltonian in flavor space is non-diagonal, \ie, because it mixes flavor states, after propagating for a distance $L$, the neutrino of initial flavor $\nu_\alpha$ becomes a superposition of neutrinos of all flavors, each with a different probability amplitude, $\nu_\beta^\dagger \nu_\alpha(L)$ ($\beta = e, \mu, \tau$).  The probability of detecting the neutrino with flavor $\beta$ is $P_{\nu_\alpha \to \nu_\beta}(L) = \lvert \nu_\beta^\dagger \nu_\alpha(L) \rvert^2$.
+
+In \equ{evolved_state}, to compute the action of the evolution operator, $\nu_\alpha$ must be an eigenstate of $H$.  Yet, this is typically not the case.  Thus, the usual procedure to compute the evolved state is to diagonalize the Hamiltonian in \equ{evolved_state}, compute the evolved state in the space spanned by the eigenvectors of the Hamiltonian, and rotate back to flavor space to obtain $\nu_\alpha(L)$.  These steps are often carried out numerically, especially in the three-neutrino case, because the expressions quickly become unmanageable.  There are numerical codes that do this efficiently, \eg, {\tt GLoBES}\ \cite{GLoBES, Kopp:2006wp, Huber:2007ji}.
+
+Below, we follow instead the OS method, as explained in Section\ \ref{section:scope}, implement it numerically, and show results of the implementation.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\section{Two-neutrino oscillations}
+\label{section:two_flavors}
+
+We consider first oscillations between only two neutrino flavors; later, we consider three flavors.  This is a good approximation when describing reactor, accelerator, and atmospheric neutrinos.  We represent the two-neutrino Hamiltonian operator by a $2 \times 2$ matrix $\mathbb{H}_2$.  The three traceless, Hermitian Pauli matrices $\sigma^k$ ($k=1,2,3$) --- the generators of the SU(2) algebra --- plus the identity matrix $\mathbb{1}$ make up the orthogonal basis of $2 \times 2$ matrices.  Thus, we expand the Hamiltonian as
+\begin{equation}
+ \label{equ:h2_expansion}
+ \mathbb{H}_2 = h_0 \mathbb{1} + h_k \sigma^k \;,
+\end{equation}
+where, here and below, we assume the Einstein convention of summing over repeated indices.  The coefficients $h_0$ and $h_k$ are functions of the components of the Hamiltonian; we show their explicit expressions in Table \ref{tab:h2_coefficients}.  In the two-neutrino case, the neutrino state at any time is $\nu(L) = f_\alpha(L) \nu_\alpha + f_\beta(L) \nu_\beta$, where $f_\alpha$ and $f_\beta$ are, respectively, the probability amplitudes of measuring the state to be a $\nu_\alpha$ or a $\nu_\beta$ (with $\alpha \neq \beta$).  We represent the neutrino state as a two-component column vector; the pure states are $\nu_\alpha = \left(1~0\right)^{\rm T}$ and $\nu_\beta = \left(0~1\right)^{\rm T}$.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+{\def\arraystretch{1.2}
+\begin{table}[t!]
+%  \begin{ruledtabular}
+  \begin{tabular}{ll}
+   Coefficient & Expression \\
+   \hline
+   $h_0$ & $\frac{1}{2}\left[(\mathbb{H}_2)_{11}+(\mathbb{H}_2)_{22}\right]$ \\
+   $h_1$ & ${\rm Re}\left[ (\mathbb{H}_2)_{12} \right]$ \\
+   $h_2$ & $-{\rm Im}\left[ (\mathbb{H}_2)_{12} \right]$ \\
+   $h_3$ & $\frac{1}{2}\left[(\mathbb{H}_2)_{11}-(\mathbb{H}_2)_{22}\right]$ \\
+  \end{tabular}
+  \caption{\label{tab:h2_coefficients}Coefficients in the expansion of the two-neutrino Hamiltonian $\mathbb{H}_2$ in \equ{h2_expansion}.  The coefficient $h_0$ does not take part in the calculation of the flavor-transition probability; we include it here for completeness.}
+%  \end{ruledtabular}
+\end{table}
+}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Thus, the evolution operator is $\mathbb{U}_2\left(L\right) = e^{-i \mathbb{H}_2 L} = e^{-i(h_0 \mathbb{1}+h_k\sigma^k)L}$.  We factorize\footnote{We can do this because the commutator $C_2\equiv\left[h_0 \mathbb{1},h_k\sigma^k\right]=0$, so that $\left[h_0 \mathbb{1}, C_2\right]=\left[h_k\sigma^k, C_2\right]=0$.  For analogous reasons, we can also do this in the three-neutrino case in Section \ref{section:three_flavors}.} this into $e^{-ih_0\mathbb{1}L} e^{-ih_k\sigma^kL}$.  The operator $e^{-ih_0\mathbb{1}L}$ introduces a global phase that does not affect the probability, \ie, $e^{-ih_0\mathbb{1}L}\nu =e^{-ih_0L}\nu$.  After discarding it, we are left with $\mathbb{U}_2(L) =  e^{-ih_k\sigma^kL}$. 
+
+To compute the action of $\mathbb{U}_2$, we use a well-known identity of Pauli matrices that generalizes Euler's formula,
+\begin{equation}
+ \label{equ:pauli_identity}
+ e^{\pm i a_k \sigma^k}
+ =
+ \cos\left(\left\vert a \right\vert \right) 
+ \pm 
+ i \hat{a}_k\sigma^k\sin\left(\left\vert a\right\vert \right) \;, 
+\end{equation}
+where $\hat{a}$ is a unit vector in the direction of the vector $a = (a_1, a_2, a_3)$ and $\lvert a \rvert$ is its modulus.  So we can write the evolution operator as in \Ref\ \cite{Ohlsson:1999xb},
+\begin{equation}
+ \label{equ:evol_op_2nu}
+ \mathbb{U}_2\left(L\right) 
+ =
+ \cos\left(\left\vert h\right\vert L\right) \mathbb{1}
+ -
+ i \frac{\sin\left(\left\vert h\right\vert L\right)}{\lvert h \rvert} h_k\sigma^k  \;,
+\end{equation}
+where $\lvert h \rvert^2 \equiv \lvert h_1 \rvert^2 + \lvert h_2 \rvert^2 + \lvert h_3 \rvert^2$.
+
+The evolved state $\nu_\alpha (L)$ of a neutrino that was created with flavor $\alpha$, \ie, with $f_\alpha(0) = 1$ and $f_\beta(0) = 0$, is $\nu_\alpha\left(L\right) = \mathbb{U}_2(L) \nu_\alpha$.  After some manipulation, the flavor-transition probability $P_{\nu_\alpha \to \nu_\beta}(L) = \lvert \nu_\beta^\dagger \mathbb{U}_2(L) \nu_\alpha \rvert^2$ is
+\begin{equation}
+ \label{equ:prob_2nu_general}
+ P_{\nu_\alpha \to \nu_\beta}(L)
+ = \frac{\left\vert h_1 \right\vert^2 + \left\vert h_2 \right\vert^2}
+ {\left\vert h\right\vert^2} \sin^2\left(\left\vert h\right\vert L\right) \;\; (\alpha \neq \beta) \;,
+\end{equation}
+where $\lvert h_1 \rvert^2 + \lvert h_2 \rvert^2 = \lvert (\mathbb{H}_2)_{12} \rvert^2$ and $\lvert h \rvert^2 = \lvert (\mathbb{H}_2)_{12} \rvert^2 + \lvert (\mathbb{H}_2)_{11} - (\mathbb{H}_2)_{22} \rvert^2 / 4$.  Because of the conservation of probability, $P_{\nu_\alpha \rightarrow \nu_\alpha}\left(L\right) = 1 - P_{\nu_\alpha \rightarrow \nu_\beta}\left(L\right)$.  \ref{appendix:derivation_prob_2nu_general} contains the derivation of \equ{prob_2nu_general}.  \ref{section:2nu_vacuum} shows a simple application to two-flavor oscillations in vacuum.  Equation (\ref{equ:prob_2nu_general}) is our final result in the two-neutrino case.  
+
+The key to the calculation of \equ{prob_2nu_general} was to expand the time-evolution operator via the Pauli-matrix identity, \equ{pauli_identity}.  Later, in the three-neutrino case, we use an analogous identity for the Gell-Mann matrices.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\section{Three-neutrino oscillations}
+\label{section:three_flavors}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+{\def\arraystretch{1.2}
+\begin{table}[t!]
+%  \begin{ruledtabular}
+  \begin{tabular}{ll}
+   Coefficient & Expression \\
+   \hline
+   $h_0$ & $\frac{1}{3}\left[\left(\mathbb{H}_3\right)_{11}+\left(\mathbb{H}_3\right)_{22}+\left(\mathbb{H}_3\right)_{33}\right]$ \\
+   $h_1$ & $\text{Re}\left[{\left(\mathbb{H}_3\right)_{12}}\right]$ \\
+   $h_2$ & $-\text{Im}\left[{\left(\mathbb{H}_3\right)_{12}}\right]$ \\
+   $h_3$ & $\frac{1}{2}\left[\left(\mathbb{H}_3\right)_{11}-\left(\mathbb{H}_3\right)_{22} \right]$ \\
+   $h_4$ & $\text{Re}\left[{\left(\mathbb{H}_3\right)_{13}}\right]$ \\
+   $h_5$ & $-\text{Im}\left[{\left(\mathbb{H}_3\right)_{13}}\right]$ \\
+   $h_6$ & $\text{Re}\left[{\left(\mathbb{H}_3\right)_{23}}\right]$ \\
+   $h_7$ & $-\text{Im}\left[{\left(\mathbb{H}_3\right)_{23}}\right]$ \\
+   $h_8$ & $\frac{\sqrt{3}}{6}\left[\left(\mathbb{H}_3\right)_{11}+\left(\mathbb{H}_3\right)_{22}-2\left(\mathbb{H}_3\right)_{33}\right]$ 
+  \end{tabular}
+  \caption{\label{tab:h3_coefficients}Coefficients in the expansion of the three-neutrino Hamiltonian $\mathbb{H}_3$ in \equ{h3_expansion}.  The coefficient $h_0$ does not take part in the calculation of the flavor-transition probability; we include it here for completeness.}
+%  \end{ruledtabular}
+\end{table}
+}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+We follow the steps that we used in the two-neutrino case closely.  We represent the three-neutrino Hamiltonian by a $3 \times 3$ matrix $\mathbb{H}_3$.  The eight traceless, Hermitian Gell-Mann matrices $\lambda^k$ ($k=1,\ldots,8$) --- with $\lambda^k/2$ the generators of the SU(3) algebra --- plus the identity matrix $\mathbb{1}$ make up the orthogonal basis of $3 \times 3$ matrices.  Thus, we expand the Hamiltonian as
+\begin{equation}
+ \label{equ:h3_expansion}
+ \mathbb{H}_3 = h_0 \mathbb{1} + h_k \lambda^k \;,
+\end{equation}
+where $h_0$ and $h_k$ are now functions of the components of $\mathbb{H}_3$; we show their explicit expressions in Table \ref{tab:h3_coefficients}.  The neutrino state at any time is $\nu(L) = f_e(L) \nu_e + f_\mu(L) \nu_\mu + f_\tau(L) \nu_\tau$, where $f_e$, $f_\mu$, and $f_\tau$ are, respectively, the probability amplitudes of measuring the state to be a $\nu_e$, $\nu_\mu$, or $\nu_\tau$.  We represent the neutrino state as a three-component column vector; the pure states are $\nu_e = \left(1~0~0\right)^{\rm T}$, $\nu_\mu=\left(0~1~0\right)^{\rm T}$, and $\nu_\tau=\left(0~0~1\right)^{\rm T}$. 
+
+The evolution operator is $\mathbb{U}_3\left(L\right) = e^{-i \mathbb{H}_3 L} = e^{-ih_0\mathbb{1}L}e^{-ih_k\lambda^kL}$.   Again, after discarding the global phase, we are left with $\mathbb{U}_3\left(L\right) = e^{-ih_k\lambda^kL}$.  
+
+Next we compute the action of $\mathbb{U}_3$ on a neutrino state.  We wish to expand $\mathbb{U}_3$ using an identity for the Gell-Mann matrices that is similar to the identity for the Pauli matrices, \equ{pauli_identity}, and that allows us to write
+\begin{equation}
+ \label{equ:u3_def}
+ \mathbb{U}_3\left(L\right) 
+ = 
+ u_0 \mathbb{1} + i u_k \lambda^k \;,
+\end{equation}
+where the complex coefficients $u_0$ and $u_k$ are functions of $L$ and the $h_k$.  Reference\ \cite{MacFarlane:1968vc} introduced and demonstrated such an identity; below, we make use of their results, leaving most of the proofs to the reference.  See also \Refs\ \cite{Lehrer-Ilamed:1964, Rosen:1971nt, Torruella:1975, Kusnezov:1995, Curtright:2015iba, VanKortryk:2015kua} for further details.
+
+The coefficients in \equ{u3_def} can be trivially written as $u_0=\frac{1}{3}\text{Tr}~\mathbb{U}_3$ and $u_k=-\frac{i}{2}\text{Tr}(\lambda^k \mathbb{U}_3)$; next we unpack these forms.  An application of Sylvester's formula\ \cite{Sylvester:1883} to $3 \times 3$ matrices allows us to express the coefficients in terms of the SU(3) invariants
+\begin{eqnarray*}
+ \label{equ:def_I2}
+ && L^2 \left\vert h \right\vert^2  \equiv L^2 h_kh^k \;, \\
+ \label{equ:def_I3}
+ && -L^3 \langle h \rangle \equiv -L^3 d_{ijk}h^ih^jh^k \;.
+\end{eqnarray*}
+The tensor $d_{ijk} = \frac{1}{4} \text{Tr} \left( \lbrace\lambda_i,\lambda_j\rbrace\lambda_k \right)$, where the brackets represent the anticommutator.  It appears in the product law of Gell-Mann matrices and its components are the structure constants of the SU(3) algebra.  Table \ref{tab:d_tensor} shows all non-zero components.
+
+Next, we solve the characteristic equation of $-h_k\lambda^kL$, \ie, $\phi^3-(L^2 \left\vert h \right\vert^2) \phi-\frac{2}{3} (-L^3 \langle h \rangle)=0$.  The equation follows from the Cayley-Hamilton theorem, written conveniently in terms of invariants\ \cite{MacFarlane:1968vc, Curtright:2015iba}.  Its three latent roots, or eigenvalues, are $\phi_m \equiv \psi_m L$ ($m=1,2,3$), with
+\begin{equation}
+ \label{equ:phi_alpha}
+ \psi_m
+ \equiv
+ \frac{2 \left\vert h \right\vert}{\sqrt{3}} \cos\left[\frac{1}{3}\left(\chi+2\pi m \right)\right] \;,
+\end{equation}
+where $\cos\left(\chi\right) = -\sqrt{3} \langle h \rangle / \lvert h \rvert^3$.  The step above is key: writing the eigenvalues in terms of the SU(3) invariants allows us to bypass an explicit diagonalization\ \cite{Curtright:2015iba}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+{\def\arraystretch{1.2}
+\begin{table}[t!]
+%  \begin{ruledtabular}
+  \begin{tabular}{lc}
+   Tensor component & Value \\
+   \hline
+   $d_{(118)} = d_{(228)} = d_{(338)}$                         & $\frac{1}{\sqrt{3}}$ \\
+   $d_{(146)} = d_{(157)} = d_{(256)} = d_{(344)} = d_{(355)}$ & $\frac{1}{2}$ \\
+   $d_{(247)} = d_{(366)} = d_{(377)}$                         & $-\frac{1}{2}$ \\
+   $d_{(448)} = d_{(558)} = d_{(668)} = d_{(778)}$             & $-\frac{1}{2\sqrt{3}}$ \\
+   $d_{888}$                                                   & $-\frac{1}{\sqrt{3}}$
+  \end{tabular}
+  \caption{\label{tab:d_tensor}All of the non-zero components of the tensor $d_{ijk}$, defined in the main text.  The tensor is completely symmetric in its indices.  Here, $i$, $j$, and $k$ can each take integer values between 1 and 8.  The notation $\left( ijk \right)$ represents all permutations of the indices in parentheses.  A component vanishes if the number of indices in the set $\left\{ 2,5,7 \right\}$ is odd.}
+%  \end{ruledtabular}
+\end{table}
+}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+With this, the coefficients in \equ{u3_def} are
+\begin{eqnarray}
+ && \label{equ:u0}
+ u_0=\frac{1}{3}\sum_{m=1}^3 e^{i L \psi_m} \;, \\
+ \label{equ:uk_expanded}
+ && u_k
+ =
+ \sum_{m=1}^3
+ e^{i L \psi_m} \frac{\psi_m h_k - \left(h \ast h\right)_k}{3\psi_m^2 - \left\vert h \right\vert^2} \;,
+\end{eqnarray}
+where $\left(h\ast h\right)_i \equiv d_{ijk}h^jh^k$.  \ref{appendix:derivation_uk_expanded} contains the derivation of \equ{uk_expanded}.  Using Eqs.\ (\ref{equ:phi_alpha}), (\ref{equ:u0}), and (\ref{equ:uk_expanded}), we write the evolution operator concisely as in \Ref\ \cite{Ohlsson:1999xb},
+\begin{equation}
+ \label{equ:u3_expanded}
+ \mathbb{U}_3(L)
+ =
+ \sum_{m=1}^3
+ e^{i L \psi_m}
+ \left[
+ \mathbb{1} 
+ +
+ \frac{\psi_m h_k - \left( h \ast h \right)_k}{3\psi_m^2-\lvert h \rvert^2} \lambda^k
+ \right] \;.
+\end{equation}
+Equation \ref{equ:u3_expanded} was introduced in \Refs \cite{Ohlsson:1999xb, Ohlsson:1999um, Ohlsson:2000zz}, and applied to find analytic expressions of the probabilities in the cases of oscillations in vacuum and matter.  For a numerical implementation of \equ{u3_expanded} it is convenient to calculate the coefficients $u_0$ and $u_k$ with Eqs.\ (\ref{equ:u0}) and (\ref{equ:uk_expanded}), and use them to directly expand $\mathbb{U}_3$ in \equ{u3_def}.  This is the strategy that we adopt in {\tt NuOscProbExact}\ \cite{NuOscProbExact}.  
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+{\def\arraystretch{1.3}
+\begin{table}[t!]
+%  \begin{ruledtabular}
+  \begin{tabular}{lc}
+   Three-neutrino probability & Expression \\
+   \hline 
+   $P_{\nu_e \to \nu_e}$        & $\left\vert u_0 + i u_3 + i \frac{u_8}{\sqrt{3}} \right\vert^2$ \\
+   $P_{\nu_e \to \nu_\mu}$      & $\left\vert i u_1 - u_2 \right\vert^2$ \\
+   $P_{\nu_e \to \nu_\tau}$     & $\left\vert i u_4 - u_5 \right\vert^2$ \\
+   $P_{\nu_\mu \to \nu_e}$      & $\left\vert i u_1 + u_2 \right\vert^2$ \\
+   $P_{\nu_\mu \to \nu_\mu}$    & $\left\vert u_0 - i u_3 + i \frac{u_8}{\sqrt{3}} \right\vert^2$ \\
+   $P_{\nu_\mu \to \nu_\tau}$   & $\left\vert i u_6 - u_7 \right\vert^2$ \\
+   $P_{\nu_\tau \to \nu_e}$     & $\left\vert i u_4 + u_5 \right\vert^2$ \\
+   $P_{\nu_\tau \to \nu_\mu}$   & $\left\vert i u_6 + u_7 \right\vert^2$ \\
+   $P_{\nu_\tau \to \nu_\tau}$  & $\left\vert u_0 - i \frac{2 u_8}{\sqrt{3}} \right\vert^2$ \\
+  \end{tabular}
+  \caption{\label{tab:prob_3nu}Exact three-neutrino oscillation probabilities, for an arbitrary time-independent Hamiltonian.  The complex coefficients $u_0$ and $u_k$ are computed in Eqs.\ (\ref{equ:u0}) and (\ref{equ:uk_expanded}).}
+%  \end{ruledtabular}
+\end{table}
+}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The evolved state of a neutrino created as $\nu_\alpha$ is $\nu_\alpha(L) = \mathbb{U}_3(L) \nu_\alpha$.  Therefore, the flavor-transition probability is $P_{\nu_\alpha \to \nu_\beta}(L) = \lvert \nu_\beta^\dagger \mathbb{U}_3(L) \nu_\alpha \rvert^2$.   Table \ref{tab:prob_3nu} shows the expressions for the probabilities in terms of the coefficients $u_0$ and $u_k$.  These are our final results in the three-neutrino case.  
+
+Because the algebra of Gell-Mann matrices is more complicated than that of Pauli matrices, the identity that expands the exponential of Gell-Mann matrices in \equ{u3_def} is notoriously more complicated than the identity that expands the exponential of Pauli matrices, \equ{evol_op_2nu}.  As pointed out by \Ref\ \cite{MacFarlane:1968vc}, this may seem a disappointing generalization of \equ{pauli_identity} to SU(3).  However, when constructing an exponential parametrization of SU(3), there is no way to avoid the solution of at least a cubic equation.  Regardless, following the procedure above yields exact three-neutrino flavor-transition probabilities for arbitrary time-independent Hamiltonians.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\section{Code description and examples}
+\label{section:code}
+
+{\it Description.---}  The code {\tt NuOscProbExact} that we provide is a lightweight numerical implementation of the OS method described above.  It computes exact oscillation probabilities in the often-studied two- and three-flavor cases, for arbitrary time-independent Hamiltonians.  (For more than three flavors and time-dependent Hamiltonians, see {\tt NuSQuIDS}\ \cite{NuSQuIDS}.)   {\tt NuOscProbExact} is fully written in {\tt Python 3.7}; it is open source, and publicly available in a GitHub repository\ \cite{NuOscProbExact}.  
+
+The main input to {\tt NuOscProbExact} is the Hamiltonian matrix $\mathbb{H}_2$ or $\mathbb{H}_3$, provided as a $2 \times 2$ or $3 \times 3$ list.  The code internally computes the $h_k$ coefficients using Table \ref{tab:h2_coefficients} in the two-neutrino case and Table \ref{tab:h3_coefficients} in the three-neutrino case.  To compute two-neutrino probabilities, the code evaluates \equ{prob_2nu_general}.  To compute three-neutrino probabilities, the code evaluates the expressions in Table \ref{tab:prob_3nu}.  
+
+\smallskip
+
+{\it Documentation.---}  Detailed documentation is in the GitHub repository\ \cite{NuOscProbExact}, and is bundled with the code.
+
+\smallskip
+
+{\it Examples.---}  Listing\ \ref{lst:3nu_examples} shows a basic code example of how to use {\tt NuOscProbExact} to compute three-neutrino probabilities in four representative oscillation scenarios: in vacuum, in matter of constant density, with non-standard interactions in matter, and with Lorentz invariance violation.  Bundled with the code we provide further examples, also for two-neutrino oscillations.
+
+Below, we introduce each scenario briefly; we do not explore their phenomenology, but we provide references.  Following our tenet, we do not derive analytic expression for the probabilities, only numerically evaluate them.  
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{lstlisting}[language=Python, caption={Code snippet to use {\tt NuOscProbExact} to compute three-neutrino oscillation probabilities in vacuum, matter of constant density, with non-standard interactions, and with CPT-odd Lorentz-violating background, for fixed neutrino energy $E = 1$~GeV and baseline $L = 1300$~km.  Constants --- with variable names in capitals --- are pulled from the {\tt globaldefs} module; see the main text for their values.}, label={lst:3nu_examples}, float]
+import numpy as np
+
+# NuOscProbExact modules
+import oscprob3nu         # Core functionality
+import hamiltonians3nu    # Sample Hamiltonians
+from globaldefs import *  # Constants (in capitals)
+
+energy = 1.e9     # Neutrino energy [eV]
+baseline = 1.3e3  # Baseline [km]
+
+# Vacuum Hamiltonian before multiplying by 1/energy
+# NO: "normal ordering"; IO: inverted ordering
+h_vacuum_energy_indep = hamiltonians3nu.\
+    hamiltonian_3nu_vacuum_energy_independent( \
+        S12_NO_BF, S23_NO_BF,
+        S13_NO_BF, DCP_NO_BF,
+        D21_NO_BF, D31_NO_BF)
+
+# Hamiltonian for oscillations in vacuum
+h_vacuum = np.multiply( 1./energy, 
+                        h_vacuum_energy_indep)
+
+# Hamiltonian for oscillations in matter                        
+# VCC_EARTH_CRUST: Potential [eV], density 3 g cm^{-3}
+h_matter = hamiltonians3nu.hamiltonian_3nu_matter( \
+    h_vacuum_energy_indep, energy, VCC_EARTH_CRUST)
+
+# Hamiltonian for non-standard interactions
+# EPS_3 is the list of NSI strength parameters
+# [EPS_EE, EPS_EM, EPS_ET, EPS_MM, EPS_MT, EPS_TT]
+h_nsi = hamiltonians3nu.hamiltonian_3nu_nsi( \
+    h_vacuum_energy_indep, energy, VCC_EARTH_CRUST, 
+    EPS_3)
+
+# Hamiltonian for Lorentz-invariance violation
+# LIV parameters: SXI12, SXI23, SXI13, DXICP, B1,
+# B2, B3, LAMBDA
+h_liv = hamiltonians3nu.hamiltonian_3nu_liv( \
+    h_vacuum_energy_indep, energy,
+    SXI12, SXI23, SXI13, DXICP, B1, B2, B3, LAMBDA)
+
+# The routine probabilities_3nu computes probabilities
+for h_matrix in [h_vacuum, h_matter, h_nsi, h_liv]:
+    # CONV_KM_TO_INV_EV converts km to eV^{-1}
+    Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = \
+        oscprob3nu.probabilities_3nu( \
+                            h_matrix,
+                            baseline*CONV_KM_TO_INV_EV)
+
+    print("Pee = %6.5f, Pem = %6.5f, Pet = %6.5f" \
+        % (Pee, Pem, Pet))
+    print("Pme = %6.5f, Pmm = %6.5f, Pmt = %6.5f" \
+        % (Pme, Pmm, Pmt))
+    print("Pte = %6.5f, Ptm = %6.5f, Ptt = %6.5f" \
+        % (Pte, Ptm, Ptt))
+    print()
+    
+# This returns:
+# Pee = 0.92768, Pem = 0.01432, Pet = 0.05800
+# Pme = 0.04023, Pmm = 0.37887, Pmt = 0.58090
+# Pte = 0.03210, Ptm = 0.60680, Ptt = 0.36110
+
+# Pee = 0.95262, Pem = 0.00623, Pet = 0.04115
+# Pme = 0.02590, Pmm = 0.37644, Pmt = 0.59766
+# Pte = 0.02148, Ptm = 0.61733, Ptt = 0.36119
+
+# Pee = 0.92494, Pem = 0.01758, Pet = 0.05749
+# Pme = 0.03652, Pmm = 0.32524, Pmt = 0.63824
+# Pte = 0.03855, Ptm = 0.65718, Ptt = 0.30427
+
+# Pee = 0.92721, Pem = 0.05299, Pet = 0.01980
+# Pme = 0.05609, Pmm = 0.25288, Pmt = 0.69103
+# Pte = 0.01670, Ptm = 0.69412, Ptt = 0.28917
+\end{lstlisting}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[t!]
+ \centering
+ \includegraphics[width=\columnwidth]{prob_3nu_vs_energy_compare.pdf}
+ \caption{\label{fig:prob_3nu}Three-neutrino oscillation probabilities $P_{\nu_e \to \nu_e}$ ({\it top}), $P_{\nu_\mu \to \nu_e}$ ({\it center}), and $P_{\nu_\mu \to \nu_\mu}$ ({\it bottom}), computed using {\tt NuOscProbExact}\ \cite{NuOscProbExact}.  The scenarios shown are for oscillations in vacuum, in matter of constant density, with non-standard interactions (NSI), and in a CPT-odd Lorentz-violating background (LIV).  In all cases, the baseline is $L = 1300$~km.  See the main text for details. \vspace*{-0.5cm}}
+ \vspace*{0.03cm}
+\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Figure \ref{fig:prob_3nu} shows the probabilities $P_{\nu_e \to \nu_e}$, $P_{\nu_\mu \to \nu_e}$, and $P_{\nu_\mu \to \nu_\mu}$ for the four scenarios, as a function of neutrino energy, computed using {\tt NuOscProbExact}\ \cite{NuOscProbExact}.  We set the baseline to $L = 1300$~km to match that of the far detector of the planned DUNE experiment\ \cite{Abi:2018dnh}.  The parameters and their values used in each example case are introduced below.  All of the Hamiltonians below are written in the flavor basis.  Figure \ref{fig:prob_3nu} can be generated by running the bundled example file {\tt oscprob3nu\_plotpaper.py}.
+
+\ref{appendix:sample_2nu_hamiltonians} shows the two-neutrino counterparts of the example three-neutrino scenarios presented below.  We provide implementations of these two-neutrino scenarios as part of {\tt NuOscProbExact}\ \cite{NuOscProbExact}.  
+
+
+\subsection{Oscillations in vacuum}
+
+The Hamiltonian that drives oscillations in vacuum is
+\begin{equation}
+ \label{equ:h3_vacuum}
+ \mathbb{H}_3^{\rm vac}(E)
+ = 
+ \frac{1}{2E} \left( \mathbb{R}_{3,\theta} \mathbb{M}_3^2 \mathbb{R}_{3,\theta}^\dagger \right) \;,
+\end{equation}
+where $\mathbb{M}_3^2 \equiv {\rm diag}(0, \Delta m_{21}^2, \Delta m_{31}^2)$ is the mass matrix, with $\Delta m_{21}^2 \equiv m_2^2-m_1^2$ and $\Delta m_{31}^2 \equiv m_3^2-m_1^2$, and the $3 \times 3$ complex rotation matrix $\mathbb{R}_{3,\theta}$ is the Pontecorvo-Maki-Nakagawa-Sakata (PMNS) mixing matrix.  We express it in terms of three mixing angles, $\theta_{13}$, $\theta_{12}$, $\theta_{23}$, and one CP-violation phase, $\delta_{\rm CP}$\ \cite{Tanabashi:2018oca}.  
+
+To compute the probabilities in \figu{prob_3nu}, we fix the mixing parameters to their best-fit values provided by the recent NuFit 4.0 global fit to oscillation data\ \cite{Esteban:2018azc, NuFit4.0}, assuming normal mass hierarchy, and including Super-Kamiokande atmospheric neutrino data: $\sin^2 \theta_{12} = 0.310$, $\sin^2 \theta_{23} = 0.582$, $\sin^2 \theta_{13} = 0.02240$, $\delta_{\rm CP} = 217^\circ$, $\Delta m_{21}^2 = 7.39 \cdot 10^{-5}$~eV$^2$, $\Delta m_{31}^2 = 2.525 \cdot 10^{-3}$~eV$^2$.
+
+
+\subsection{Oscillations in matter of constant density}
+\label{section:prob_3nu_matter}
+
+When neutrinos propagate in matter, $\nu_e$ and $\bar{\nu}_e$ scatter on electrons via charged-current interactions.  The interactions introduce potentials that shift the energies of the neutrinos.  As a result, the values of the mass-squared differences and mixing angles in matter differ from their values in vacuum, and depend on the number density of electrons\ \cite{Wolfenstein:1977ue, Mikheev:1986gs, Bethe:1986ej, Parke:1986jy, Rosen:1986jy}.  Computing oscillation probabilities in constant matter is integral to long-baseline experiments, where neutrinos traverse hundreds of kilometers in the crust of the Earth to reach the detectors\ \cite{Feldman:2013vca, Diwan:2016gmz}.
+
+The Hamiltonian that drives oscillations in matter is
+\begin{equation}
+ \label{equ:h3_matt}
+ \mathbb{H}_3^{\rm matt}(E)
+ = 
+ \mathbb{H}_3^{\rm vac}(E) + \mathbb{A}_3 \;.
+\end{equation}
+The term $\mathbb{A}_3 \equiv {\rm diag}(V_{\rm CC}, 0 ,0)$ is due to interactions with matter, where $V_{\rm CC} = \sqrt{2} G_{\rm F} n_e$ is the charged-current potential and $n_e$ is the number density of electrons.
+
+To compute the probabilities for oscillations in matter (and also with non-standard interactions) in \figu{prob_3nu}, we consider a constant matter density of $\rho = 3$~g~cm$^{-3}$, the average density of the crust of the Earth\ \cite{Dziewonski:1981xy}.  The number density of electrons is $n_e = Y_e \rho / [(m_p + m_n)/2]$, where $m_p$ and $m_n$ are the masses of the proton and neutron, respectively, and $Y_e = 0.5$ is the average electron fraction in the crust, which is electrically neutral.  See \Refs\ \cite{Ohlsson:1999xb, Ohlsson:1999um} for the analytic form of the probabilities in matter, deduced with the OS method, and \Ref\ \cite{Freund:2001pn} for a related approximation.  In long-baseline experiments, even if there are density changes along the trajectory of the neutrino beam, using the average density is a good approximation\ \cite{Petcov:1998su, Freund:1999gy}.  
+
+The result above can be extended to the case where neutrinos traverse multiple slabs of matter, each of constant, different density.  See, \eg, \Refs\ \cite{Chizhov:1999az, Chizhov:1999he}, for an overview of this scenario, and \Refs\ \cite{Ohlsson:1999um, Ohlsson:2001et, Merfeld:2014cha} for studies with the OS method.  This applies to long-baseline neutrino experiments that consider a non-uniform matter density profile\ \cite{Jacobsson:2001zk, Ohlsson:2003ip, Arguelles:2012nw, Roe:2017zdw, Kelly:2018kmb}, and to Earth-traversing neutrinos that cross multiple density layers inside Earth\ \cite{Freund:1999vc}.  The probability amplitudes obtained after traversing each slab need to be stitched together\ \cite{Giunti:2007ry}.  If a neutrino created as $\nu_\alpha$ traverses $N_{\rm slabs}$ slabs of constant-density matter, each of width $L_j$, then the evolved state is $\nu_\alpha(\left\{L_j\right\}) = \left[ \prod_{j=1}^{\rm N_{\rm slabs}} \mathbb{U}_3^{(j)}(L_j) \right] \nu_\alpha$, where $\mathbb{U}_3^{(j)}$ is \equ{u3_expanded} computed using the matter Hamiltonian evaluated with the matter density of the $j$-th slab.  The final oscillation probability is $P_{\nu_\alpha \to \nu_\beta}(\left\{ L_j \right\}) = \lvert \nu_\beta^\dagger \nu_\alpha(\left\{L_j\right\}) \rvert^2$.
+
+
+\subsection{Oscillations with non-standard interactions}
+
+Oscillations in matter might receive sub-leading contributions due to new neutrino interactions with the fermions of the medium that they propagate in.  These are known as non-standard interactions (NSI); see \Refs\ \cite{Ohlsson:2012kf, Miranda:2015dra, Farzan:2017xzy, Esteban:2018ppq} for reviews.  
+
+In this case, the Hamiltonian is
+\begin{equation}
+ \label{equ:h3_nsi}
+ \mathbb{H}_3^{\rm NSI}(E)
+ =
+ \mathbb{H}_3^{\rm vac}(E) + \mathbb{A}_3 + \mathbb{V}_3  \;,
+\end{equation}
+where $\mathbb{V}_3 \equiv V_{\rm CC} \epsilon_3$ is the matter potential due to NSI and $\epsilon_3$ is the matrix of NSI strength parameters, \ie,
+\begin{equation}
+ \label{equ:epsilon_3}
+ \epsilon_3
+ =
+ \left(
+  \begin{array}{ccc}
+   \epsilon_{ee}         & \epsilon_{e\mu}         & \epsilon_{e\tau} \\
+   \epsilon_{e\mu}^\ast  & \epsilon_{\mu\mu}       & \epsilon_{\mu\tau} \\
+   \epsilon_{e\tau}^\ast & \epsilon_{\mu\tau}^\ast & \epsilon_{\tau\tau} \\
+  \end{array}
+ \right) \;.
+\end{equation}
+The parameters $\epsilon_{\alpha\beta}$ represent the total strength of the NSI between leptons of flavors $\alpha$ and $\beta$ interacting with the electrons, $u$ quarks, and $d$ quarks that make up standard matter.  Following \Ref\ \cite{Esteban:2018ppq}, we write $\epsilon_{\alpha\beta} = \epsilon_{\alpha\beta}^e + (2+ Y_n)\epsilon_{\alpha\beta}^u + (1+2Y_n)\epsilon_{\alpha\beta}^d$, with the ratio of the number densities of neutrons to electrons $Y_n \equiv n_n/n_e \approx 1$ in the Earth.  In our simplified treatment, we do not consider separately interactions with each fermion type or each chiral projection of the fermion\ \cite{Ohlsson:2012kf, Miranda:2015dra, Farzan:2017xzy, Esteban:2018ppq}.  
+
+To compute the probabilities for NSI in \figu{prob_3nu}, we again consider propagation in the constant-density crust of the Earth, with $V_{\rm CC}$ evaluated as in Section \ref{section:prob_3nu_matter}.  Because NSI have not been observed, we choose arbitrary values for the strength parameters that are allowed at the $2\sigma$ level by a recent global fit to oscillation (LMA solution) plus COHERENT data\ \cite{Esteban:2018ppq} (see also \Refs\ \cite{Mitsuka:2011ty, Esmaili:2013fva, Salvado:2016uqu, Aartsen:2017xtt}): $\epsilon_{ee}^u = -\epsilon_{e\mu}^u = 0.01$, $\epsilon_{\mu\mu}^u = 0.2$, $\epsilon_{e\tau}^u = \epsilon_{\mu\tau}^u = \epsilon_{\tau\tau}^u = 0$, and the same for $d$ quarks.  Like in \Ref\ \cite{Esteban:2018ppq}, we set all $\epsilon_{\alpha\beta}^e = 0$.  Thus, for \figu{prob_3nu}, the NSI parameters in \equ{epsilon_3} are $\epsilon_{ee} = -\epsilon_{e\mu} = 0.06$, $\epsilon_{\mu\mu} = 1.2$, and $\epsilon_{e\tau} = \epsilon_{\mu\tau} = \epsilon_{\tau\tau} = 0$.
+
+
+\subsection{Oscillations in a Lorentz-violating background}
+
+Lorentz invariance is one of the linchpins of the Standard Model (SM), but is violated in proposed extensions, some related to quantum gravity; see \Refs\ \cite{Mavromatos:2004sz, Liberati:2009pf, Liberati:2013xla, Tasson:2014dfa} for reviews.  There is no experimental evidence for Lorentz-invariance violation (LIV), but there are stringent constraints on it\ \cite{Kostelecky:2008ts, Abbasi:2010kx, Abe:2014wla, Aartsen:2017ibm}.  The effects of LIV are numerous, \eg, changes in the properties and rates of processes of particles versus their anti-particles, introduction of anisotropies in particle angular distributions, and, in the case of neutrinos, changes to the effective mixing parameters and, thus, to the oscillation probabilities.
+
+To study LIV, we adopt the framework of the Standard Model Extension (SME)\ \cite{Colladay:1998fq}, an effective field theory that augments the SM by adding LIV parameters to all sectors, including neutrinos\ \cite{Coleman:1998ti, Kostelecky:2003xn, Kostelecky:2003cr,  GonzalezGarcia:2004wg, Hooper:2005jp, Kostelecky:2011gq, Diaz:2014yva}.  In the SME, LIV is suppressed by a high energy scale $\Lambda$, still undetermined.  We focus on CPT-odd LIV, where the CPT symmetry is also broken.  This is realized by means of a new vector coupling of neutrinos to a new LIV background field.  Unlike the other oscillation cases presented above, the contribution of CPT-odd LIV to the Hamiltonian grows with neutrino energy.  This makes high-energy atmospheric and astrophysical neutrinos ideal for testing LIV\ \cite{Coleman:1998ti, GonzalezGarcia:2004wg, GonzalezGarcia:2005xw, Anchordoqui:2005gj, Arguelles:2015dca, Bustamante:2015waa, Rasmussen:2017ert, Aartsen:2017ibm, Ahlers:2018mkf, Ackermann:2019cxh}.
+
+The Hamiltonian for CPT-odd LIV is\ \cite{Coleman:1998ti, Kostelecky:2003xn, Dighe:2008bu}
+\begin{equation}
+ \label{equ:h3_liv}
+ \mathbb{H}_3^{\rm LIV}(E)
+ = 
+ \mathbb{H}_3^{\rm vac}(E)
+ + 
+ \frac{E}{\Lambda} \mathbb{R}_{3,\xi} \mathbb{B}_3 \mathbb{R}_{3,\xi}^\dagger \;.
+\end{equation}
+The second term on the right-hand side is the effective Hamiltonian that introduces LIV.  Here, $\mathbb{B}_3 \equiv {\rm diag}(b_1, b_2, b_3)$, where $b_i$ ($i=1,2,3$) are the eigenvalues of the LIV operator $\mathbb{B}_3$, and $\mathbb{R}_{3,\xi}$ is the $3 \times 3$ mixing matrix that rotates it into the flavor basis.  It has the same structure as the PMNS matrix, but different values of the mixing angles and phase.  In general, there is a relative phase between $\mathbb{R}_{3,\xi}$ and $\mathbb{R}_{3,\theta}$ that cannot be rotated away\ \cite{GonzalezGarcia:2004wg, GonzalezGarcia:2005xw}; in our simplified treatment, we set it to zero.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{lstlisting}[language=Python, caption={Template to use {\tt NuOscProbExact} to compute probabilities for three-neutrino oscillations with an arbitrary, user-supplied Hamiltonian}, label={lst:3nu_arbitrary}, float]
+import numpy as np
+
+import oscprob3nu
+import hamiltonians3nu
+from globaldefs import *
+
+energy = 1.e9     # Neutrino energy [eV]
+baseline = 1.3e3  # Baseline [km]
+
+h_vacuum_energy_indep = hamiltonians3nu.\
+    hamiltonian_3nu_vacuum_energy_independent( \
+        S12_NO_BF, S23_NO_BF,
+        S13_NO_BF, DCP_NO_BF,
+        D21_NO_BF, D31_NO_BF)
+        
+h_vacuum = np.multiply( 1./energy, 
+                        h_vacuum_energy_indep)
+
+# The user-supplied routine hamiltonian_mymodel depends
+# on some parameters represented by mymodel_parameters,
+# and should return a 3x3 array
+h_mymodel = h_vacuum \
+            + hamiltonian_mymodel(mymodel_parameters)
+
+Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = \
+    oscprob3nu.probabilities_3nu(   \
+                            h_mymodel,
+                            baseline*CONV_KM_TO_INV_EV)
+\end{lstlisting}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Because LIV has not been observed, the values of the eigenvalues $b_i$ and of the LIV mixing parameters $\xi$ are undetermined.  Current upper limits\ \cite{Aartsen:2017ibm} set using high-energy atmospheric neutrinos imply that $b_i/\Lambda \lesssim 10^{-28}$ (this is $\mathring{c}^{(4)}$ in the notation of \Ref\ \cite{Aartsen:2017ibm}).  The LIV energy scale is believed to be at least $\Lambda = 1$~TeV.  However, to compute the probabilities for LIV in \figu{prob_3nu} such that they exhibit features at the lower energies used in the plot, we set artificially high values: $b_1/\Lambda = b_2/\Lambda = 10^{-21}$ and $b_3/\Lambda = 5 \cdot 10^{-21}$.  For simplicity, we set all mixing angles to zero, so that $\mathbb{R}_{3,\xi} = \mathbb{1}$.
+
+
+\subsection{Oscillations with arbitrary Hamiltonians}
+
+The usefulness of {\tt NuOscProbExact} stems in part from its ability to compute oscillation probabilities for any arbitrary time-independent Hamiltonian.   Listing \ref{lst:3nu_arbitrary} shows a code template to compute three-neutrino oscillation probabilities using a user-supplied Hamiltonian that is added to the Hamiltonian for oscillations in vacuum.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\section{Conclusions}
+\label{section:conclusions}
+
+We have provided the code {\tt NuOscProbExact}\ \cite{NuOscProbExact} to compute exact two-neutrino and three-neutrino oscillation probabilities for arbitrary time-independent Hamiltonians.  The code is a numerical implementation of the method developed by Ohlsson \& Snellman\ \cite{Barger:1980tf, Ohlsson:1999xb, Ohlsson:1999um, Ohlsson:2000zz} and uses exponential expansions of SU(2) and SU(3) matrices to bypass the diagonalization of the Hamiltonian.  It can be used to compute oscillation probabilities in many often-studied oscillation scenarios, including, but not limited to, oscillations in vacuum, in constant matter density, non-standard neutrino interactions, and new-physics scenarios, like Lorentz-invariance violation. 
+
+In developing {\tt NuOscProbExact}, our goal was to provide a general-purpose numerical code to compute exact oscillation probabilities that is also lightweight and can be easily incorporated into diverse oscillation analyses of standard and non-standard oscillations.  This is especially useful in the case of three-neutrino oscillations, where analytic expressions of the probabilities are often unavailable.  The code is suitable for exploring wide parameter spaces where approximate expressions of the probabilities are not available.  We provide it with this application in mind.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\section*{Acknowledgments}
+
+We thank Carlos Arg\"uelles, Peter Denton, Francisco De Zela, Joachim Kopp, Stephen Parke, Serguey Petcov, Jordi Salvad\'o, and Irene Tamborra for helpful discussion and suggestions.  We thank especially Shirley Li and Tommy Ohlsson for that and for carefully reading the manuscript, and the latter for pointing out the references of the Ohlsson-Snellman method.  MB is supported by the Villum Fonden project no.~13164.  Early phases of this work were supported by a High Energy Physics Latin American European Network (HELEN) grant and by a grant from the Direcci\'on Acad\'emica de Investigaci\'on of the Pontificia Universidad Cat\'olica del Per\'u. 
+
+\newpage
+
+\bibliographystyle{elsarticle-num}
+% \bibliography{refs.bib}
+% \input{paper.bbl}
+
+\begin{thebibliography}{100}
+\expandafter\ifx\csname url\endcsname\relax
+  \def\url#1{\texttt{#1}}\fi
+\expandafter\ifx\csname urlprefix\endcsname\relax\def\urlprefix{URL }\fi
+\expandafter\ifx\csname href\endcsname\relax
+  \def\href#1#2{#2} \def\path#1{#1}\fi
+
+\bibitem{Pontecorvo:1967fh}
+B.~Pontecorvo, {Neutrino Experiments and the Problem of Conservation of
+  Leptonic Charge}, Sov.\ Phys.\ JETP 26 (1968) 984, [Zh.\ Eksp.\ Teor.\ Fiz.\
+  53, 1717 (1967)].
+
+\bibitem{Barger:1980hs}
+V.~D. Barger, K.~Whisnant, R.~J.~N. Phillips, {Three Neutrino Oscillations and
+  Present Experimental Data}, Phys.\ Rev.\ D 22 (1980) 1636.
+\newblock \href {http://dx.doi.org/10.1103/PhysRevD.22.1636}
+  {\path{doi:10.1103/PhysRevD.22.1636}}.
+
+\bibitem{Bilenky:2004sn}
+S.~M. Bilenky, {Neutrino masses, mixing and oscillations}, Proc.\ Roy.\ Soc.\
+  Lond.\ A 460 (2004) 403.
+\newblock \href {http://dx.doi.org/10.1098/rspa.2003.1263}
+  {\path{doi:10.1098/rspa.2003.1263}}.
+
+\bibitem{Fantini:2018itu}
+G.~Fantini, A.~Gallo~Rosso, F.~Vissani, V.~Zema, {Introduction to the Formalism
+  of Neutrino Oscillations}, Adv.\ Ser.\ Direct.\ High Energy Phys. 28 (2018)
+  37.
+\newblock \href {http://arxiv.org/abs/1802.05781} {\path{arXiv:1802.05781}},
+  \href {http://dx.doi.org/10.1142/9789813226098_0002}
+  {\path{doi:10.1142/9789813226098_0002}}.
+
+\bibitem{Kajita:2016cak}
+T.~Kajita, {Nobel Lecture: Discovery of atmospheric neutrino oscillations},
+  Rev.\ Mod.\ Phys. 88~(3) (2016) 030501.
+\newblock \href {http://dx.doi.org/10.1103/RevModPhys.88.030501}
+  {\path{doi:10.1103/RevModPhys.88.030501}}.
+
+\bibitem{McDonald:2016ixn}
+A.~B. McDonald, {Nobel Lecture: The Sudbury Neutrino Observatory: Observation
+  of flavor change for solar neutrinos}, Rev. Mod. Phys. 88~(3) (2016) 030502.
+\newblock \href {http://dx.doi.org/10.1103/RevModPhys.88.030502}
+  {\path{doi:10.1103/RevModPhys.88.030502}}.
+
+\bibitem{Kayser:1981ye}
+B.~Kayser, {On the Quantum Mechanics of Neutrino Oscillation}, Phys.\ Rev.\ D
+  24 (1981) 110.
+\newblock \href {http://dx.doi.org/10.1103/PhysRevD.24.110}
+  {\path{doi:10.1103/PhysRevD.24.110}}.
+
+\bibitem{Giunti:2007ry}
+C.~Giunti, C.~W. Kim, {Fundamentals of Neutrino Physics and Astrophysics},
+  2007.
+
+\bibitem{Tanabashi:2018oca}
+M.~Tanabashi, et~al., {Review of Particle Physics}, Phys.\ Rev.\ D 98~(3)
+  (2018) 030001.
+\newblock \href {http://dx.doi.org/10.1103/PhysRevD.98.030001}
+  {\path{doi:10.1103/PhysRevD.98.030001}}.
+
+\bibitem{Barger:1980tf}
+V.~D. Barger, K.~Whisnant, S.~Pakvasa, R.~J.~N. Phillips, {Matter Effects on
+  Three-Neutrino Oscillations}, Phys.\ Rev.\ D 22 (1980) 2718, [, 300 (1980)].
+\newblock \href {http://dx.doi.org/10.1103/PhysRevD.22.2718}
+  {\path{doi:10.1103/PhysRevD.22.2718}}.
+
+\bibitem{Petcov:1987zj}
+S.~T. Petcov, {Exact analytic description of two neutrino oscillations in
+  matter with exponentially varying density}, Phys.\ Lett.\ B 200 (1988) 373.
+\newblock \href {http://dx.doi.org/10.1016/0370-2693(88)90791-5}
+  {\path{doi:10.1016/0370-2693(88)90791-5}}.
+
+\bibitem{Zaglauer:1988gz}
+H.~W. Zaglauer, K.~H. Schwarzer, {The Mixing Angles in Matter for Three
+  Generations of Neutrinos and the {MSW} Mechanism}, Z.\ Phys.\ C 40 (1988)
+  273.
+\newblock \href {http://dx.doi.org/10.1007/BF01555889}
+  {\path{doi:10.1007/BF01555889}}.
+
+\bibitem{TorrenteLujan:1995qi}
+E.~Torrente~Luj{\'a}n, {An Exact analytic description of neutrino oscillations
+  in matter with exponentially varying density for arbitrary number of neutrino
+  species}, Phys.\ Rev.\ D 53 (1996) 4030.
+\newblock \href {http://arxiv.org/abs/hep-ph/9505209}
+  {\path{arXiv:hep-ph/9505209}}, \href
+  {http://dx.doi.org/10.1103/PhysRevD.53.4030}
+  {\path{doi:10.1103/PhysRevD.53.4030}}.
+
+\bibitem{Balantekin:1997jp}
+A.~B. Balantekin, {Exact solutions for matter enhanced neutrino oscillations},
+  Phys.\ Rev.\ D 58 (1998) 013001.
+\newblock \href {http://arxiv.org/abs/hep-ph/9712304}
+  {\path{arXiv:hep-ph/9712304}}, \href
+  {http://dx.doi.org/10.1103/PhysRevD.58.013001}
+  {\path{doi:10.1103/PhysRevD.58.013001}}.
+
+\bibitem{Coleman:1998ti}
+S.~R. Coleman, S.~L. Glashow, {High-energy tests of Lorentz invariance}, Phys.\
+  Rev.\ D 59 (1999) 116008.
+\newblock \href {http://arxiv.org/abs/hep-ph/9812418}
+  {\path{arXiv:hep-ph/9812418}}, \href
+  {http://dx.doi.org/10.1103/PhysRevD.59.116008}
+  {\path{doi:10.1103/PhysRevD.59.116008}}.
+
+\bibitem{Gago:2001xg}
+A.~M. Gago, M.~M. Guzzo, H.~Nunokawa, W.~J.~C. Teves, R.~Zukanovich~Funchal,
+  {Probing flavor changing neutrino interactions using neutrino beams from a
+  muon storage ring}, Phys.\ Rev.\ D 64 (2001) 073003.
+\newblock \href {http://arxiv.org/abs/hep-ph/0105196}
+  {\path{arXiv:hep-ph/0105196}}, \href
+  {http://dx.doi.org/10.1103/PhysRevD.64.073003}
+  {\path{doi:10.1103/PhysRevD.64.073003}}.
+
+\bibitem{Kimura:2002wd}
+K.~Kimura, A.~Takamura, H.~Yokomakura, {Exact formulas and simple CP dependence
+  of neutrino oscillation probabilities in matter with constant density},
+  Phys.\ Rev.\ D 66 (2002) 073005.
+\newblock \href {http://arxiv.org/abs/hep-ph/0205295}
+  {\path{arXiv:hep-ph/0205295}}, \href
+  {http://dx.doi.org/10.1103/PhysRevD.66.073005}
+  {\path{doi:10.1103/PhysRevD.66.073005}}.
+
+\bibitem{Harrison:2003fi}
+P.~F. Harrison, W.~G. Scott, T.~J. Weiler, {Exact matter covariant formulation
+  of neutrino oscillation probabilities}, Phys.\ Lett.\ B 565 (2003) 159.
+\newblock \href {http://arxiv.org/abs/hep-ph/0305175}
+  {\path{arXiv:hep-ph/0305175}}, \href
+  {http://dx.doi.org/10.1016/S0370-2693(03)00749-4}
+  {\path{doi:10.1016/S0370-2693(03)00749-4}}.
+
+\bibitem{Kostelecky:2003xn}
+V.~A. Kostelecky, M.~Mewes, {Lorentz and CPT violation in the neutrino sector},
+  Phys.\ Rev.\ D 70 (2004) 031902.
+\newblock \href {http://arxiv.org/abs/hep-ph/0308300}
+  {\path{arXiv:hep-ph/0308300}}, \href
+  {http://dx.doi.org/10.1103/PhysRevD.70.031902}
+  {\path{doi:10.1103/PhysRevD.70.031902}}.
+
+\bibitem{Kostelecky:2003cr}
+V.~A. Kostelecky, M.~Mewes, {Lorentz and CPT violation in neutrinos}, Phys.\
+  Rev.\ D 69 (2004) 016005.
+\newblock \href {http://arxiv.org/abs/hep-ph/0309025}
+  {\path{arXiv:hep-ph/0309025}}, \href
+  {http://dx.doi.org/10.1103/PhysRevD.69.016005}
+  {\path{doi:10.1103/PhysRevD.69.016005}}.
+
+\bibitem{GonzalezGarcia:2004wg}
+M.~C. Gonz{\'a}lez-Garc{\'i}a, M.~Maltoni, {Atmospheric neutrino oscillations
+  and new physics}, Phys.\ Rev.\ D 70 (2004) 033010.
+\newblock \href {http://arxiv.org/abs/hep-ph/0404085}
+  {\path{arXiv:hep-ph/0404085}}, \href
+  {http://dx.doi.org/10.1103/PhysRevD.70.033010}
+  {\path{doi:10.1103/PhysRevD.70.033010}}.
+
+\bibitem{Blennow:2004qd}
+M.~Blennow, T.~Ohlsson, {Exact series solution to the two flavor neutrino
+  oscillation problem in matter}, J.\ Math.\ Phys. 45 (2004) 4053.
+\newblock \href {http://arxiv.org/abs/hep-ph/0405033}
+  {\path{arXiv:hep-ph/0405033}}, \href {http://dx.doi.org/10.1063/1.1793330}
+  {\path{doi:10.1063/1.1793330}}.
+
+\bibitem{Meloni:2009ia}
+D.~Meloni, T.~Ohlsson, H.~Zhang, {Exact and Approximate Formulas for Neutrino
+  Mixing and Oscillations with Non-Standard Interactions}, JHEP 04 (2009) 033.
+\newblock \href {http://arxiv.org/abs/0901.1784} {\path{arXiv:0901.1784}},
+  \href {http://dx.doi.org/10.1088/1126-6708/2009/04/033}
+  {\path{doi:10.1088/1126-6708/2009/04/033}}.
+
+\bibitem{Ando:2009ts}
+S.~Ando, M.~Kamionkowski, I.~Mocioiu, {Neutrino Oscillations, Lorentz/CPT
+  Violation, and Dark Energy}, Phys.\ Rev.\ D 80 (2009) 123522.
+\newblock \href {http://arxiv.org/abs/0910.4391} {\path{arXiv:0910.4391}},
+  \href {http://dx.doi.org/10.1103/PhysRevD.80.123522}
+  {\path{doi:10.1103/PhysRevD.80.123522}}.
+
+\bibitem{Abe:2014wla}
+K.~Abe, et~al., {Test of Lorentz invariance with atmospheric neutrinos}, Phys.\
+  Rev.\ D 91~(5) (2015) 052003.
+\newblock \href {http://arxiv.org/abs/1410.4267} {\path{arXiv:1410.4267}},
+  \href {http://dx.doi.org/10.1103/PhysRevD.91.052003}
+  {\path{doi:10.1103/PhysRevD.91.052003}}.
+
+\bibitem{Flores:2015mah}
+L.~J. Flores, O.~G. Miranda, {Constant matter neutrino oscillations in a
+  parametrization-free formulation}, Phys.\ Rev.\ D 93~(3) (2016) 033009.
+\newblock \href {http://arxiv.org/abs/1511.03343} {\path{arXiv:1511.03343}},
+  \href {http://dx.doi.org/10.1103/PhysRevD.93.033009}
+  {\path{doi:10.1103/PhysRevD.93.033009}}.
+
+\bibitem{Popov:2018seq}
+A.~Popov, A.~Studenikin, {Neutrino oscillations and exact eigenstates in
+  magnetic field}\href {http://arxiv.org/abs/1803.05755}
+  {\path{arXiv:1803.05755}}.
+
+\bibitem{Gago:2002na}
+A.~M. Gago, E.~M. Santos, W.~J.~C. Teves, R.~Zukanovich~Funchal, {A Study on
+  quantum decoherence phenomena with three generations of neutrinos}\href
+  {http://arxiv.org/abs/hep-ph/0208166} {\path{arXiv:hep-ph/0208166}}.
+
+\bibitem{Blennow:2008eb}
+M.~Blennow, T.~Ohlsson, {Approximative two-flavor framework for neutrino
+  oscillations with non-standard interactions}, Phys.\ Rev.\ D 78 (2008)
+  093002.
+\newblock \href {http://arxiv.org/abs/0805.2301} {\path{arXiv:0805.2301}},
+  \href {http://dx.doi.org/10.1103/PhysRevD.78.093002}
+  {\path{doi:10.1103/PhysRevD.78.093002}}.
+
+\bibitem{Diaz:2009qk}
+J.~S. D{\'i}az, V.~A. Kostelecky, M.~Mewes, {Perturbative Lorentz and CPT
+  violation for neutrino and antineutrino oscillations}, Phys.\ Rev.\ D 80
+  (2009) 076007.
+\newblock \href {http://arxiv.org/abs/0908.1401} {\path{arXiv:0908.1401}},
+  \href {http://dx.doi.org/10.1103/PhysRevD.80.076007}
+  {\path{doi:10.1103/PhysRevD.80.076007}}.
+
+\bibitem{Chaves:2018sih}
+M.~Esteves~Chaves, D.~R. Gratieri, O.~L.~G. Peres, {Improvements on
+  perturbative oscillation formulas including non-standard neutrino
+  Interactions}\href {http://arxiv.org/abs/1810.04979}
+  {\path{arXiv:1810.04979}}.
+
+\bibitem{Petcov:1986qg}
+S.~T. Petcov, S.~Toshev, {Three Neutrino Oscillations in Matter: Analytical
+  Results in the Adiabatic Approximation}, Phys.\ Lett.\ B 187 (1987) 120.
+\newblock \href {http://dx.doi.org/10.1016/0370-2693(87)90083-9}
+  {\path{doi:10.1016/0370-2693(87)90083-9}}.
+
+\bibitem{Hirota:1998wv}
+K.~Hirota, {Analytic formula of the transition probability for a neutrino
+  propagating through fluctuating matter}, Phys.\ Rev.\ D 57 (1998) 3140.
+\newblock \href {http://dx.doi.org/10.1103/PhysRevD.57.3140}
+  {\path{doi:10.1103/PhysRevD.57.3140}}.
+
+\bibitem{Cervera:2000kp}
+A.~Cervera, A.~Donini, M.~B. Gavela, J.~J. G{\'o}mez~Cadenas, P.~Hern{\'a}ndez,
+  O.~Mena, S.~Rigolin, {Golden measurements at a neutrino factory}, Nucl.\
+  Phys.\ B 579 (2000) 17, [Erratum: Nucl.\ Phys.\ B 593, 731 (2001)].
+\newblock \href {http://arxiv.org/abs/hep-ph/0002108}
+  {\path{arXiv:hep-ph/0002108}}, \href
+  {http://dx.doi.org/10.1016/S0550-3213(00)00606-4,
+  10.1016/S0550-3213(00)00221-2} {\path{doi:10.1016/S0550-3213(00)00606-4,
+  10.1016/S0550-3213(00)00221-2}}.
+
+\bibitem{Freund:2001pn}
+M.~Freund, {Analytic approximations for three neutrino oscillation parameters
+  and probabilities in matter}, Phys.\ Rev.\ D 64 (2001) 053003.
+\newblock \href {http://arxiv.org/abs/hep-ph/0103300}
+  {\path{arXiv:hep-ph/0103300}}, \href
+  {http://dx.doi.org/10.1103/PhysRevD.64.053003}
+  {\path{doi:10.1103/PhysRevD.64.053003}}.
+
+\bibitem{Akhmedov:2004ny}
+E.~K. Akhmedov, R.~Johansson, M.~Lindner, T.~Ohlsson, T.~Schwetz, {Series
+  expansions for three flavor neutrino oscillation probabilities in matter},
+  JHEP 04 (2004) 078.
+\newblock \href {http://arxiv.org/abs/hep-ph/0402175}
+  {\path{arXiv:hep-ph/0402175}}, \href
+  {http://dx.doi.org/10.1088/1126-6708/2004/04/078}
+  {\path{doi:10.1088/1126-6708/2004/04/078}}.
+
+\bibitem{Friedland:2006pi}
+A.~Friedland, C.~Lunardini, {Two modes of searching for new neutrino
+  interactions at MINOS}, Phys.\ Rev.\ D 74 (2006) 033012.
+\newblock \href {http://arxiv.org/abs/hep-ph/0606101}
+  {\path{arXiv:hep-ph/0606101}}, \href
+  {http://dx.doi.org/10.1103/PhysRevD.74.033012}
+  {\path{doi:10.1103/PhysRevD.74.033012}}.
+
+\bibitem{Ioannisian:2008ve}
+A.~N. Ioannisian, A.~{\relax Yu}. Smirnov, {Describing neutrino oscillations in
+  matter with Magnus expansion}, Nucl.\ Phys.\ B 816 (2009) 94.
+\newblock \href {http://arxiv.org/abs/0803.1967} {\path{arXiv:0803.1967}},
+  \href {http://dx.doi.org/10.1016/j.nuclphysb.2009.02.028}
+  {\path{doi:10.1016/j.nuclphysb.2009.02.028}}.
+
+\bibitem{Supanitsky:2008eq}
+A.~D. Supanitsky, J.~C. D'Olivo, G.~Medina-Tanco, {Perturbative exponential
+  expansion and matter neutrino oscillations}, Phys.\ Rev.\ D 78 (2008) 045024.
+\newblock \href {http://arxiv.org/abs/0804.1105} {\path{arXiv:0804.1105}},
+  \href {http://dx.doi.org/10.1103/PhysRevD.78.045024}
+  {\path{doi:10.1103/PhysRevD.78.045024}}.
+
+\bibitem{Minakata:2015gra}
+H.~Minakata, S.~J. Parke, {Simple and Compact Expressions for Neutrino
+  Oscillation Probabilities in Matter}, JHEP 01 (2016) 180.
+\newblock \href {http://arxiv.org/abs/1505.01826} {\path{arXiv:1505.01826}},
+  \href {http://dx.doi.org/10.1007/JHEP01(2016)180}
+  {\path{doi:10.1007/JHEP01(2016)180}}.
+
+\bibitem{Li:2016pzm}
+Y.-F. Li, J.~Zhang, S.~Zhou, J.-y. Zhu, {Looking into Analytical Approximations
+  for Three-flavor Neutrino Oscillation Probabilities in Matter}, JHEP 12
+  (2016) 109.
+\newblock \href {http://arxiv.org/abs/1610.04133} {\path{arXiv:1610.04133}},
+  \href {http://dx.doi.org/10.1007/JHEP12(2016)109}
+  {\path{doi:10.1007/JHEP12(2016)109}}.
+
+\bibitem{Denton:2016wmg}
+P.~B. Denton, H.~Minakata, S.~J. Parke, {Compact Perturbative Expressions For
+  Neutrino Oscillations in Matter}, JHEP 06 (2016) 051.
+\newblock \href {http://arxiv.org/abs/1604.08167} {\path{arXiv:1604.08167}},
+  \href {http://dx.doi.org/10.1007/JHEP06(2016)051}
+  {\path{doi:10.1007/JHEP06(2016)051}}.
+
+\bibitem{Parke:2019vbs}
+G.~Barenboim, P.~B. Denton, S.~J. Parke, C.~A. Ternes, {Neutrino oscillation
+  probabilities through the looking glass}, Phys.\ Lett.\ B 791 (2019) 351.
+\newblock \href {http://arxiv.org/abs/1902.00517} {\path{arXiv:1902.00517}},
+  \href {http://dx.doi.org/10.1016/j.physletb.2019.03.002}
+  {\path{doi:10.1016/j.physletb.2019.03.002}}.
+
+\bibitem{Denton:2018fex}
+P.~B. Denton, S.~J. Parke, X.~Zhang, {Rotations Versus Perturbative Expansions
+  for Calculating Neutrino Oscillation Probabilities in Matter}, Phys.\ Rev.\ D
+  98~(3) (2018) 033001.
+\newblock \href {http://arxiv.org/abs/1806.01277} {\path{arXiv:1806.01277}},
+  \href {http://dx.doi.org/10.1103/PhysRevD.98.033001}
+  {\path{doi:10.1103/PhysRevD.98.033001}}.
+
+\bibitem{Ohlsson:1999xb}
+T.~Ohlsson, H.~Snellman, {Three flavor neutrino oscillations in matter}, J.\
+  Math.\ Phys. 41 (2000) 2768, [Erratum: J.\ Math.\ Phys.\ 42, 2345 (2001)].
+\newblock \href {http://arxiv.org/abs/hep-ph/9910546}
+  {\path{arXiv:hep-ph/9910546}}, \href {http://dx.doi.org/10.1063/1.533270}
+  {\path{doi:10.1063/1.533270}}.
+
+\bibitem{Ohlsson:1999um}
+T.~Ohlsson, H.~Snellman, {Neutrino oscillations with three flavors in matter:
+  Applications to neutrinos traversing the Earth}, Phys.\ Lett.\ B 474 (2000)
+  153, [Erratum: Phys.\ Lett.\ B 480, 419 (2000)].
+\newblock \href {http://arxiv.org/abs/hep-ph/9912295}
+  {\path{arXiv:hep-ph/9912295}}, \href
+  {http://dx.doi.org/10.1016/S0370-2693(00)00445-7,
+  10.1016/S0370-2693(00)00008-3} {\path{doi:10.1016/S0370-2693(00)00445-7,
+  10.1016/S0370-2693(00)00008-3}}.
+
+\bibitem{Ohlsson:2000zz}
+T.~Ohlsson,
+  \href{http://www.diva-portal.org/smash/get/diva2:8735/FULLTEXT01.pdf}{{Dynamics
+  of Quarks and Leptons: Theoretical Studies of Baryons and Neutrinos}}, Ph.D.
+  thesis, Royal Inst. Tech., Stockholm (2000).
+\newline\urlprefix\url{http://www.diva-portal.org/smash/get/diva2:8735/FULLTEXT01.pdf}
+
+\bibitem{Ohlsson:2001et}
+T.~Ohlsson, H.~Snellman, {Neutrino oscillations with three flavors in matter of
+  varying density}, Eur.\ Phys.\ J.\ C 20 (2001) 507--515.
+\newblock \href {http://arxiv.org/abs/hep-ph/0103252}
+  {\path{arXiv:hep-ph/0103252}}, \href
+  {http://dx.doi.org/10.1007/s100520100687} {\path{doi:10.1007/s100520100687}}.
+
+\bibitem{Abazajian:2012ys}
+K.~N. Abazajian, et~al., {Light Sterile Neutrinos: A White Paper}\href
+  {http://arxiv.org/abs/1204.5379} {\path{arXiv:1204.5379}}.
+
+\bibitem{Palazzo:2013me}
+A.~Palazzo, {Phenomenology of light sterile neutrinos: a brief review}, Mod.\
+  Phys.\ Lett.\ A 28 (2013) 1330004.
+\newblock \href {http://arxiv.org/abs/1302.1102} {\path{arXiv:1302.1102}},
+  \href {http://dx.doi.org/10.1142/S0217732313300048}
+  {\path{doi:10.1142/S0217732313300048}}.
+
+\bibitem{Gariazzo:2015rra}
+S.~Gariazzo, C.~Giunti, M.~Laveder, Y.~F. Li, E.~M. Zavanin, {Light sterile
+  neutrinos}, J.\ Phys.\ G 43 (2016) 033001.
+\newblock \href {http://arxiv.org/abs/1507.08204} {\path{arXiv:1507.08204}},
+  \href {http://dx.doi.org/10.1088/0954-3899/43/3/033001}
+  {\path{doi:10.1088/0954-3899/43/3/033001}}.
+
+\bibitem{Dentler:2018sju}
+M.~Dentler, {\'A}.~Hern{\'a}ndez-Cabezudo, J.~Kopp, P.~A.~N. Machado,
+  M.~Maltoni, I.~Mart{\'i}nez-Soler, T.~Schwetz, {Updated Global Analysis of
+  Neutrino Oscillations in the Presence of eV-Scale Sterile Neutrinos}, JHEP 08
+  (2018) 010.
+\newblock \href {http://arxiv.org/abs/1803.10661} {\path{arXiv:1803.10661}},
+  \href {http://dx.doi.org/10.1007/JHEP08(2018)010}
+  {\path{doi:10.1007/JHEP08(2018)010}}.
+
+\bibitem{Giunti:2019aiy}
+C.~Giunti, T.~Lasserre, {eV-scale Sterile Neutrinos}\href
+  {http://arxiv.org/abs/1901.08330} {\path{arXiv:1901.08330}}.
+
+\bibitem{Joshipura:2002fb}
+A.~S. Joshipura, E.~Masso, S.~Mohanty, {Constraints on decay plus oscillation
+  solutions of the solar neutrino problem}, Phys.\ Rev.\ D 66 (2002) 113008.
+\newblock \href {http://arxiv.org/abs/hep-ph/0203181}
+  {\path{arXiv:hep-ph/0203181}}, \href
+  {http://dx.doi.org/10.1103/PhysRevD.66.113008}
+  {\path{doi:10.1103/PhysRevD.66.113008}}.
+
+\bibitem{Beacom:2002cb}
+J.~F. Beacom, N.~F. Bell, {Do solar neutrinos decay?}, Phys.\ Rev.\ D 65 (2002)
+  113009.
+\newblock \href {http://arxiv.org/abs/hep-ph/0204111}
+  {\path{arXiv:hep-ph/0204111}}, \href
+  {http://dx.doi.org/10.1103/PhysRevD.65.113009}
+  {\path{doi:10.1103/PhysRevD.65.113009}}.
+
+\bibitem{Beacom:2002vi}
+J.~F. Beacom, N.~F. Bell, D.~Hooper, S.~Pakvasa, T.~J. Weiler, {Decay of
+  High-Energy Astrophysical Neutrinos}, Phys.\ Rev.\ Lett. 90 (2003) 181301.
+\newblock \href {http://arxiv.org/abs/hep-ph/0211305}
+  {\path{arXiv:hep-ph/0211305}}, \href
+  {http://dx.doi.org/10.1103/PhysRevLett.90.181301}
+  {\path{doi:10.1103/PhysRevLett.90.181301}}.
+
+\bibitem{GonzalezGarcia:2008ru}
+M.~C. Gonz{\'a}lez-Garc{\'i}a, M.~Maltoni, {Status of Oscillation plus Decay of
+  Atmospheric and Long-Baseline Neutrinos}, Phys.\ Lett.\ B 663 (2008) 405.
+\newblock \href {http://arxiv.org/abs/0802.3699} {\path{arXiv:0802.3699}},
+  \href {http://dx.doi.org/10.1016/j.physletb.2008.04.041}
+  {\path{doi:10.1016/j.physletb.2008.04.041}}.
+
+\bibitem{Baerwald:2012kc}
+P.~Baerwald, M.~Bustamante, W.~Winter, {Neutrino Decays over Cosmological
+  Distances and the Implications for Neutrino Telescopes}, JCAP 1210 (2012)
+  020.
+\newblock \href {http://arxiv.org/abs/1208.4600} {\path{arXiv:1208.4600}},
+  \href {http://dx.doi.org/10.1088/1475-7516/2012/10/020}
+  {\path{doi:10.1088/1475-7516/2012/10/020}}.
+
+\bibitem{Berryman:2014yoa}
+J.~M. Berryman, A.~de~Gouv{\^e}a, D.~Hern{\'a}ndez, R.~L.~N. Oliveira,
+  {Non-Unitary Neutrino Propagation From Neutrino Decay}, Phys.\ Lett.\ B 742
+  (2015) 74.
+\newblock \href {http://arxiv.org/abs/1407.6631} {\path{arXiv:1407.6631}},
+  \href {http://dx.doi.org/10.1016/j.physletb.2015.01.002}
+  {\path{doi:10.1016/j.physletb.2015.01.002}}.
+
+\bibitem{Benatti:2000ph}
+F.~Benatti, R.~Floreanini, {Open system approach to neutrino oscillations},
+  JHEP 02 (2000) 032.
+\newblock \href {http://arxiv.org/abs/hep-ph/0002221}
+  {\path{arXiv:hep-ph/0002221}}, \href
+  {http://dx.doi.org/10.1088/1126-6708/2000/02/032}
+  {\path{doi:10.1088/1126-6708/2000/02/032}}.
+
+\bibitem{Lisi:2000zt}
+E.~Lisi, A.~Marrone, D.~Montanino, {Probing possible decoherence effects in
+  atmospheric neutrino oscillations}, Phys.\ Rev.\ Lett. 85 (2000) 1166.
+\newblock \href {http://arxiv.org/abs/hep-ph/0002053}
+  {\path{arXiv:hep-ph/0002053}}, \href
+  {http://dx.doi.org/10.1103/PhysRevLett.85.1166}
+  {\path{doi:10.1103/PhysRevLett.85.1166}}.
+
+\bibitem{Ohlsson:2000mj}
+T.~Ohlsson, {Equivalence between neutrino oscillations and neutrino
+  decoherence}, Phys.\ Lett.\ B 502 (2001) 159.
+\newblock \href {http://arxiv.org/abs/hep-ph/0012272}
+  {\path{arXiv:hep-ph/0012272}}, \href
+  {http://dx.doi.org/10.1016/S0370-2693(01)00178-2}
+  {\path{doi:10.1016/S0370-2693(01)00178-2}}.
+
+\bibitem{Carpio:2017nui}
+J.~A. Carpio, E.~Massoni, A.~M. Gago, {Revisiting quantum decoherence for
+  neutrino oscillations in matter with constant density}, Phys.\ Rev.\ D
+  97~(11) (2018) 115017.
+\newblock \href {http://arxiv.org/abs/1711.03680} {\path{arXiv:1711.03680}},
+  \href {http://dx.doi.org/10.1103/PhysRevD.97.115017}
+  {\path{doi:10.1103/PhysRevD.97.115017}}.
+
+\bibitem{Coloma:2018idr}
+P.~Coloma, J.~L{\'o}pez-Pav{\'o}n, I.~Mart{\'i}nez-Soler, H.~Nunokawa,
+  {Decoherence in Neutrino Propagation Through Matter, and Bounds from
+  IceCube/DeepCore}, Eur.\ Phys.\ J.\ C 78~(8) (2018) 614.
+\newblock \href {http://arxiv.org/abs/1803.04438} {\path{arXiv:1803.04438}},
+  \href {http://dx.doi.org/10.1140/epjc/s10052-018-6092-6}
+  {\path{doi:10.1140/epjc/s10052-018-6092-6}}.
+
+\bibitem{NuOscProbExact}
+M.~Bustamante, \url{https://github.com/mbustama/NuOscProbExact},
+  {{NuOscProbExact}}.
+
+\bibitem{McKellar:1992ja}
+B.~H.~J. McKellar, M.~J. Thomson, {Oscillating neutrinos in the early
+  Universe}, Phys.\ Rev.\ D 49 (1994) 2710.
+\newblock \href {http://dx.doi.org/10.1103/PhysRevD.49.2710}
+  {\path{doi:10.1103/PhysRevD.49.2710}}.
+
+\bibitem{Bell:1998ds}
+N.~F. Bell, R.~R. Volkas, Y.~Y.~Y. Wong, {Relic neutrino asymmetry evolution
+  from first principles}, Phys.\ Rev.\ D 59 (1999) 113001.
+\newblock \href {http://arxiv.org/abs/hep-ph/9809363}
+  {\path{arXiv:hep-ph/9809363}}, \href
+  {http://dx.doi.org/10.1103/PhysRevD.59.113001}
+  {\path{doi:10.1103/PhysRevD.59.113001}}.
+
+\bibitem{Hannestad:2001iy}
+S.~Hannestad, {Oscillation effects on neutrino decoupling in the early
+  universe}, Phys.\ Rev.\ D 65 (2002) 083006.
+\newblock \href {http://arxiv.org/abs/astro-ph/0111423}
+  {\path{arXiv:astro-ph/0111423}}, \href
+  {http://dx.doi.org/10.1103/PhysRevD.65.083006}
+  {\path{doi:10.1103/PhysRevD.65.083006}}.
+
+\bibitem{Wong:2002fa}
+Y.~Y.~Y. Wong, {Analytical treatment of neutrino asymmetry equilibration from
+  flavor oscillations in the early universe}, Phys.\ Rev.\ D 66 (2002) 025015.
+\newblock \href {http://arxiv.org/abs/hep-ph/0203180}
+  {\path{arXiv:hep-ph/0203180}}, \href
+  {http://dx.doi.org/10.1103/PhysRevD.66.025015}
+  {\path{doi:10.1103/PhysRevD.66.025015}}.
+
+\bibitem{Hannestad:2012ky}
+S.~Hannestad, I.~Tamborra, T.~Tram, {Thermalisation of light sterile neutrinos
+  in the early universe}, JCAP 1207 (2012) 025.
+\newblock \href {http://arxiv.org/abs/1204.5861} {\path{arXiv:1204.5861}},
+  \href {http://dx.doi.org/10.1088/1475-7516/2012/07/025}
+  {\path{doi:10.1088/1475-7516/2012/07/025}}.
+
+\bibitem{Boriero:2017tkh}
+D.~Boriero, D.~J. Schwarz, H.~Velten, {Flavour composition and entropy increase
+  of cosmological neutrinos after decoherence}\href
+  {http://arxiv.org/abs/1704.06139} {\path{arXiv:1704.06139}}.
+
+\bibitem{Pantaleone:1994ns}
+J.~T. Pantaleone, {Neutrino flavor evolution near a supernova's core}, Phys.\
+  Lett.\ B 342 (1995) 250.
+\newblock \href {http://arxiv.org/abs/astro-ph/9405008}
+  {\path{arXiv:astro-ph/9405008}}, \href
+  {http://dx.doi.org/10.1016/0370-2693(94)01369-N}
+  {\path{doi:10.1016/0370-2693(94)01369-N}}.
+
+\bibitem{Sigl:1994hc}
+G.~Sigl, {Neutrino mixing constraints and supernova nucleosynthesis}, Phys.\
+  Rev.\ D 51 (1995) 4035.
+\newblock \href {http://arxiv.org/abs/astro-ph/9410094}
+  {\path{arXiv:astro-ph/9410094}}, \href
+  {http://dx.doi.org/10.1103/PhysRevD.51.4035}
+  {\path{doi:10.1103/PhysRevD.51.4035}}.
+
+\bibitem{Pastor:2002we}
+S.~Pastor, G.~Raffelt, {Flavor oscillations in the supernova hot bubble region:
+  Nonlinear effects of neutrino background}, Phys.\ Rev.\ Lett. 89 (2002)
+  191101.
+\newblock \href {http://arxiv.org/abs/astro-ph/0207281}
+  {\path{arXiv:astro-ph/0207281}}, \href
+  {http://dx.doi.org/10.1103/PhysRevLett.89.191101}
+  {\path{doi:10.1103/PhysRevLett.89.191101}}.
+
+\bibitem{Balantekin:2004ug}
+A.~B. Balantekin, H.~Yuksel, {Neutrino mixing and nucleosynthesis in
+  core-collapse supernovae}, New J.\ Phys. 7 (2005) 51.
+\newblock \href {http://arxiv.org/abs/astro-ph/0411159}
+  {\path{arXiv:astro-ph/0411159}}, \href
+  {http://dx.doi.org/10.1088/1367-2630/7/1/051}
+  {\path{doi:10.1088/1367-2630/7/1/051}}.
+
+\bibitem{Fogli:2007bk}
+G.~L. Fogli, E.~Lisi, A.~Marrone, A.~Mirizzi, {Collective neutrino flavor
+  transitions in supernovae and the role of trajectory averaging}, JCAP 0712
+  (2007) 010.
+\newblock \href {http://arxiv.org/abs/0707.1998} {\path{arXiv:0707.1998}},
+  \href {http://dx.doi.org/10.1088/1475-7516/2007/12/010}
+  {\path{doi:10.1088/1475-7516/2007/12/010}}.
+
+\bibitem{Dasgupta:2007ws}
+B.~Dasgupta, A.~Dighe, {Collective three-flavor oscillations of supernova
+  neutrinos}, Phys.\ Rev.\ D 77 (2008) 113002.
+\newblock \href {http://arxiv.org/abs/0712.3798} {\path{arXiv:0712.3798}},
+  \href {http://dx.doi.org/10.1103/PhysRevD.77.113002}
+  {\path{doi:10.1103/PhysRevD.77.113002}}.
+
+\bibitem{Duan:2010bg}
+H.~Duan, G.~M. Fuller, Y.-Z. Qian, {Collective Neutrino Oscillations}, Ann.\
+  Rev.\ Nucl.\ Part.\ Sci. 60 (2010) 569.
+\newblock \href {http://arxiv.org/abs/1001.2799} {\path{arXiv:1001.2799}},
+  \href {http://dx.doi.org/10.1146/annurev.nucl.012809.104524}
+  {\path{doi:10.1146/annurev.nucl.012809.104524}}.
+
+\bibitem{Mirizzi:2015eza}
+A.~Mirizzi, I.~Tamborra, H.-T. Janka, N.~Saviano, K.~Scholberg, R.~Bollig,
+  L.~Hudepohl, S.~Chakraborty, {Supernova Neutrinos: Production, Oscillations
+  and Detection}, Riv.\ Nuovo Cim. 39~(1-2) (2016) 1.
+\newblock \href {http://arxiv.org/abs/1508.00785} {\path{arXiv:1508.00785}},
+  \href {http://dx.doi.org/10.1393/ncr/i2016-10120-8}
+  {\path{doi:10.1393/ncr/i2016-10120-8}}.
+
+\bibitem{MacFarlane:1968vc}
+A.~J. MacFarlane, A.~T. Sudbery, P.~H. Weisz, {On Gell-Mann's
+  $\lambda$-matrices, $d$- and $f$-tensors, octets, and parametrizations of
+  SU(3)}, Commun.\ Math.\ Phys. 11 (1968) 77.
+\newblock \href {http://dx.doi.org/10.1007/BF01654302}
+  {\path{doi:10.1007/BF01654302}}.
+
+\bibitem{Curtright:2015iba}
+T.~L. Curtright, C.~K. Zachos, {Elementary results for the fundamental
+  representation of SU(3)}, Rept.\ Math.\ Phys. 76 (2015) 401.
+\newblock \href {http://arxiv.org/abs/1508.00868} {\path{arXiv:1508.00868}},
+  \href {http://dx.doi.org/10.1016/S0034-4877(15)30040-9}
+  {\path{doi:10.1016/S0034-4877(15)30040-9}}.
+
+\bibitem{VanKortryk:2015kua}
+T.~S. Van~Kortryk, {Matrix exponentials, SU(N) group elements, and real
+  polynomial roots}, J.\ Math.\ Phys. 57~(2) (2016) 021701.
+\newblock \href {http://arxiv.org/abs/1508.05859} {\path{arXiv:1508.05859}},
+  \href {http://dx.doi.org/10.1063/1.4938418} {\path{doi:10.1063/1.4938418}}.
+
+\bibitem{GLoBES}
+P.~Huber, J.~Kopp, M.~Lindner, W.~Winter,
+  \url{https://www.mpi-hd.mpg.de/personalhomes/globes/}, {{GLoBES}}.
+
+\bibitem{nuCraft}
+M.~Wallraff, C.~Wiebusch, \url{https://nucraft.hepforge.org/}, {{nuCraft}}.
+
+\bibitem{NuSQuIDS}
+C.~A. Arg{\"u}elles~Delgado, J.~Salvad{\'o}, C.~N. Weaver,
+  \url{https://github.com/arguelles/nuSQuIDS}, {{NuSQuIDS}}.
+
+\bibitem{Prob3pp}
+R.~S.-K.~c. Wendell, \url{http://webhome.phy.duke.edu/~raw22/public/Prob3++/},
+  {{Prob3++}}.
+
+\bibitem{Delgado:2014kpa}
+C.~A. Arg{\"u}elles~Delgado, J.~Salvad{\'o}, C.~N. Weaver, {A Simple Quantum
+  Integro-Differential Solver (SQuIDS)}, Comput.\ Phys.\ Commun. 196 (2015)
+  569--591.
+\newblock \href {http://arxiv.org/abs/1412.3832} {\path{arXiv:1412.3832}},
+  \href {http://dx.doi.org/10.1016/j.cpc.2015.06.022}
+  {\path{doi:10.1016/j.cpc.2015.06.022}}.
+
+\bibitem{Kusnezov:1995}
+D.~Kusnezov, {Exact matrix expansions for group elements of SU(N)}, J.\ Mat.\
+  Phys. 36 (1995) 898.
+\newblock \href {http://dx.doi.org/10.1063/1.531165}
+  {\path{doi:10.1063/1.531165}}.
+
+\bibitem{Kamo:2002sj}
+Y.~Kamo, S.~Yajima, Y.~Higasida, S.-I. Kubota, S.~Tokuo, J.-I. Ichihara,
+  {Analytical calculations of four neutrino oscillations in matter}, Eur.\
+  Phys.\ J.\ C 28 (2003) 211--221.
+\newblock \href {http://arxiv.org/abs/hep-ph/0209097}
+  {\path{arXiv:hep-ph/0209097}}, \href
+  {http://dx.doi.org/10.1140/epjc/s2003-01138-0}
+  {\path{doi:10.1140/epjc/s2003-01138-0}}.
+
+\bibitem{Salvado:Private}
+J.~Salvad{\'o}, private communication.
+
+\bibitem{Kopp:2006wp}
+J.~Kopp, {Efficient numerical diagonalization of hermitian 3 x 3 matrices},
+  Int.\ J.\ Mod.\ Phys.\ D 19 (2008) 523.
+\newblock \href {http://arxiv.org/abs/physics/0610206}
+  {\path{arXiv:physics/0610206}}, \href
+  {http://dx.doi.org/10.1142/S0129183108012303}
+  {\path{doi:10.1142/S0129183108012303}}.
+
+\bibitem{Huber:2007ji}
+P.~Huber, J.~Kopp, M.~Lindner, M.~Rolinec, W.~Winter, {New features in the
+  simulation of neutrino oscillation experiments with GLoBES 3.0: General Long
+  Baseline Experiment Simulator}, Comput.\ Phys.\ Commun. 177 (2007) 432.
+\newblock \href {http://arxiv.org/abs/hep-ph/0701187}
+  {\path{arXiv:hep-ph/0701187}}, \href
+  {http://dx.doi.org/10.1016/j.cpc.2007.05.004}
+  {\path{doi:10.1016/j.cpc.2007.05.004}}.
+
+\bibitem{Lehrer-Ilamed:1964}
+Y.~Lehrer-Ilamed, {On the direct calculations of the representations of the
+  three-dimensional pure rotation group}, Proc.\ Camb.\ Phil.\ Soc 60 (1964)
+  61.
+\newblock \href {http://dx.doi.org/10.1017/S0305004100037452}
+  {\path{doi:10.1017/S0305004100037452}}.
+
+\bibitem{Rosen:1971nt}
+S.~P. Rosen, {Finite transformations in various representations of SU(3)}, J.\
+  Math.\ Phys. 12 (1971) 673.
+\newblock \href {http://dx.doi.org/10.1063/1.1665634}
+  {\path{doi:10.1063/1.1665634}}.
+
+\bibitem{Torruella:1975}
+A.~J. Torruella, {Representations of the three‐dimensional rotation group by
+  the direct method}, J.\ Mat.\ Phys. 16 (1975) 1637.
+\newblock \href {http://dx.doi.org/10.1063/1.522718}
+  {\path{doi:10.1063/1.522718}}.
+
+\bibitem{Sylvester:1883}
+J.~J. Sylvester, {On the equation to the secular inequalities in the planetary
+  theory}, Phil.\ Mag. 16 (1883) 267.
+
+\bibitem{Abi:2018dnh}
+B.~Abi, et~al., {The DUNE Far Detector Interim Design Report Volume 1: Physics,
+  Technology and Strategies}\href {http://arxiv.org/abs/1807.10334}
+  {\path{arXiv:1807.10334}}.
+
+\bibitem{Esteban:2018azc}
+I.~Esteban, M.~C. Gonz{\'a}lez-Garc{\'i}a, {\'A}.~Hern{\'a}ndez-Cabezudo,
+  M.~Maltoni, T.~Schwetz, {Global analysis of three-flavour neutrino
+  oscillations: synergies and tensions in the determination of $\theta_{23},
+  \delta_{\rm CP}$, and the mass ordering}, JHEP 01 (2019) 106.
+\newblock \href {http://arxiv.org/abs/1811.05487} {\path{arXiv:1811.05487}},
+  \href {http://dx.doi.org/10.1007/JHEP01(2019)106}
+  {\path{doi:10.1007/JHEP01(2019)106}}.
+
+\bibitem{NuFit4.0}
+NuFit, {Three-neutrino fit based on data available in November 2018}, {\tt
+  http://www.nu-fit.org/}.
+
+\bibitem{Wolfenstein:1977ue}
+L.~Wolfenstein, {Neutrino Oscillations in Matter}, Phys.\ Rev.\ D 17 (1978)
+  2369.
+\newblock \href {http://dx.doi.org/10.1103/PhysRevD.17.2369}
+  {\path{doi:10.1103/PhysRevD.17.2369}}.
+
+\bibitem{Mikheev:1986gs}
+S.~P. Mikheyev, A.~{\relax Yu}. Smirnov, {Resonance Amplification of
+  Oscillations in Matter and Spectroscopy of Solar Neutrinos}, Sov.\ J.\ Nucl.\
+  Phys. 42 (1985) 913.
+
+\bibitem{Bethe:1986ej}
+H.~A. Bethe, {A Possible Explanation of the Solar Neutrino Puzzle}, Phys.\
+  Rev.\ Lett. 56 (1986) 1305.
+\newblock \href {http://dx.doi.org/10.1103/PhysRevLett.56.1305}
+  {\path{doi:10.1103/PhysRevLett.56.1305}}.
+
+\bibitem{Parke:1986jy}
+S.~J. Parke, {Nonadiabatic Level Crossing in Resonant Neutrino Oscillations},
+  Phys.\ Rev.\ Lett. 57 (1986) 1275.
+\newblock \href {http://dx.doi.org/10.1103/PhysRevLett.57.1275}
+  {\path{doi:10.1103/PhysRevLett.57.1275}}.
+
+\bibitem{Rosen:1986jy}
+S.~P. Rosen, J.~M. Gelb, {Mikheev-Smirnov-Wolfenstein Enhancement of
+  Oscillations as a Possible Solution to the Solar Neutrino Problem}, Phys.\
+  Rev.\ D 34 (1986) 969.
+\newblock \href {http://dx.doi.org/10.1103/PhysRevD.34.969}
+  {\path{doi:10.1103/PhysRevD.34.969}}.
+
+\bibitem{Feldman:2013vca}
+G.~J. Feldman, J.~Hartnell, T.~Kobayashi, {Long-baseline neutrino oscillation
+  experiments}, Adv.\ High Energy Phys. 2013 (2013) 475749.
+\newblock \href {http://arxiv.org/abs/1210.1778} {\path{arXiv:1210.1778}},
+  \href {http://dx.doi.org/10.1155/2013/475749}
+  {\path{doi:10.1155/2013/475749}}.
+
+\bibitem{Diwan:2016gmz}
+M.~V. Diwan, V.~Galymov, X.~Qian, A.~Rubbia, {Long-Baseline Neutrino
+  Experiments}, Ann.\ Rev.\ Nucl.\ Part.\ Sci. 66 (2016) 47.
+\newblock \href {http://arxiv.org/abs/1608.06237} {\path{arXiv:1608.06237}},
+  \href {http://dx.doi.org/10.1146/annurev-nucl-102014-021939}
+  {\path{doi:10.1146/annurev-nucl-102014-021939}}.
+
+\bibitem{Dziewonski:1981xy}
+A.~M. Dziewonski, D.~L. Anderson, {Preliminary Reference Earth Model}, Phys.\
+  Earth Planet.\ Interiors 25 (1981) 297.
+\newblock \href {http://dx.doi.org/10.1016/0031-9201(81)90046-7}
+  {\path{doi:10.1016/0031-9201(81)90046-7}}.
+
+\bibitem{Petcov:1998su}
+S.~T. Petcov, {Diffractive - like (or parametric resonance - like?) enhancement
+  of the earth (day - night) effect for solar neutrinos crossing the earth
+  core}, Phys.\ Lett.\ B 434 (1998) 321.
+\newblock \href {http://arxiv.org/abs/hep-ph/9805262}
+  {\path{arXiv:hep-ph/9805262}}, \href
+  {http://dx.doi.org/10.1016/S0370-2693(98)00742-4,
+  10.1016/S0370-2693(98)01437-3} {\path{doi:10.1016/S0370-2693(98)00742-4,
+  10.1016/S0370-2693(98)01437-3}}.
+
+\bibitem{Freund:1999gy}
+M.~Freund, M.~Lindner, S.~T. Petcov, A.~Romanino, {Testing matter effects in
+  very long baseline neutrino oscillation experiments}, Nucl.\ Phys.\ B 578
+  (2000) 27.
+\newblock \href {http://arxiv.org/abs/hep-ph/9912457}
+  {\path{arXiv:hep-ph/9912457}}, \href
+  {http://dx.doi.org/10.1016/S0550-3213(00)00179-6}
+  {\path{doi:10.1016/S0550-3213(00)00179-6}}.
+
+\bibitem{Chizhov:1999az}
+M.~V. Chizhov, S.~T. Petcov, {New conditions for a total neutrino conversion in
+  a medium}, Phys.\ Rev.\ Lett. 83 (1999) 1096--1099.
+\newblock \href {http://arxiv.org/abs/hep-ph/9903399}
+  {\path{arXiv:hep-ph/9903399}}, \href
+  {http://dx.doi.org/10.1103/PhysRevLett.83.1096}
+  {\path{doi:10.1103/PhysRevLett.83.1096}}.
+
+\bibitem{Chizhov:1999he}
+M.~V. Chizhov, S.~T. Petcov, {Enhancing mechanisms of neutrino transitions in a
+  medium of nonperiodic constant density layers and in the earth}, Phys.\ Rev.\
+  D 63 (2001) 073003.
+\newblock \href {http://arxiv.org/abs/hep-ph/9903424}
+  {\path{arXiv:hep-ph/9903424}}, \href
+  {http://dx.doi.org/10.1103/PhysRevD.63.073003}
+  {\path{doi:10.1103/PhysRevD.63.073003}}.
+
+\bibitem{Merfeld:2014cha}
+K.~M. Merfeld, D.~C. Latimer, {Parametric enhancement of flavor oscillation in
+  a three-neutrino framework}, Phys.\ Rev.\ C 90~(6) (2014) 065502.
+\newblock \href {http://arxiv.org/abs/1412.2728} {\path{arXiv:1412.2728}},
+  \href {http://dx.doi.org/10.1103/PhysRevC.90.065502}
+  {\path{doi:10.1103/PhysRevC.90.065502}}.
+
+\bibitem{Jacobsson:2001zk}
+B.~Jacobsson, T.~Ohlsson, H.~Snellman, W.~Winter, {Effects of random matter
+  density fluctuations on the neutrino oscillation transition probabilities in
+  the Earth}, Phys.\ Lett.\ B 532 (2002) 259.
+\newblock \href {http://arxiv.org/abs/hep-ph/0112138}
+  {\path{arXiv:hep-ph/0112138}}, \href
+  {http://dx.doi.org/10.1016/S0370-2693(02)01580-0}
+  {\path{doi:10.1016/S0370-2693(02)01580-0}}.
+
+\bibitem{Ohlsson:2003ip}
+T.~Ohlsson, W.~Winter, {The Role of matter density uncertainties in the
+  analysis of future neutrino factory experiments}, Phys.\ Rev.\ D 68 (2003)
+  073007.
+\newblock \href {http://arxiv.org/abs/hep-ph/0307178}
+  {\path{arXiv:hep-ph/0307178}}, \href
+  {http://dx.doi.org/10.1103/PhysRevD.68.073007}
+  {\path{doi:10.1103/PhysRevD.68.073007}}.
+
+\bibitem{Arguelles:2012nw}
+C.~A. Arg{\"u}elles, M.~Bustamante, A.~M. Gago, {Searching for cavities of
+  various densities in the Earth's crust with a low-energy $\bar \nu_e$
+  $\beta$-beam}, Mod.\ Phys.\ Lett.\ A 30~(29) (2015) 1550146.
+\newblock \href {http://arxiv.org/abs/1201.6080} {\path{arXiv:1201.6080}},
+  \href {http://dx.doi.org/10.1142/S0217732315501461}
+  {\path{doi:10.1142/S0217732315501461}}.
+
+\bibitem{Roe:2017zdw}
+B.~Roe, {Matter density versus distance for the neutrino beam from Fermilab to
+  Lead, South Dakota, and comparison of oscillations with variable and constant
+  density}, Phys.\ Rev.\ D 95~(11) (2017) 113004.
+\newblock \href {http://arxiv.org/abs/1707.02322} {\path{arXiv:1707.02322}},
+  \href {http://dx.doi.org/10.1103/PhysRevD.95.113004}
+  {\path{doi:10.1103/PhysRevD.95.113004}}.
+
+\bibitem{Kelly:2018kmb}
+K.~J. Kelly, S.~J. Parke, {Matter Density Profile Shape Effects at DUNE},
+  Phys.\ Rev.\ D 98~(1) (2018) 015025.
+\newblock \href {http://arxiv.org/abs/1802.06784} {\path{arXiv:1802.06784}},
+  \href {http://dx.doi.org/10.1103/PhysRevD.98.015025}
+  {\path{doi:10.1103/PhysRevD.98.015025}}.
+
+\bibitem{Freund:1999vc}
+M.~Freund, T.~Ohlsson, {Matter enhanced neutrino oscillations with a realistic
+  earth density profile}, Mod.\ Phys.\ Lett.\ A 15 (2000) 867.
+\newblock \href {http://arxiv.org/abs/hep-ph/9909501}
+  {\path{arXiv:hep-ph/9909501}}, \href
+  {http://dx.doi.org/10.1016/S0217-7323(00)00086-4, 10.1142/S0217732300000864}
+  {\path{doi:10.1016/S0217-7323(00)00086-4, 10.1142/S0217732300000864}}.
+
+\bibitem{Ohlsson:2012kf}
+T.~Ohlsson, {Status of non-standard neutrino interactions}, Rept.\ Prog.\ Phys.
+  76 (2013) 044201.
+\newblock \href {http://arxiv.org/abs/1209.2710} {\path{arXiv:1209.2710}},
+  \href {http://dx.doi.org/10.1088/0034-4885/76/4/044201}
+  {\path{doi:10.1088/0034-4885/76/4/044201}}.
+
+\bibitem{Miranda:2015dra}
+O.~G. Miranda, H.~Nunokawa, {Non standard neutrino interactions: current status
+  and future prospects}, New J.\ Phys. 17~(9) (2015) 095002.
+\newblock \href {http://arxiv.org/abs/1505.06254} {\path{arXiv:1505.06254}},
+  \href {http://dx.doi.org/10.1088/1367-2630/17/9/095002}
+  {\path{doi:10.1088/1367-2630/17/9/095002}}.
+
+\bibitem{Farzan:2017xzy}
+Y.~Farzan, M.~T{\'o}rtola, {Neutrino oscillations and Non-Standard
+  Interactions}, Front.\ in Phys. 6 (2018) 10.
+\newblock \href {http://arxiv.org/abs/1710.09360} {\path{arXiv:1710.09360}},
+  \href {http://dx.doi.org/10.3389/fphy.2018.00010}
+  {\path{doi:10.3389/fphy.2018.00010}}.
+
+\bibitem{Esteban:2018ppq}
+I.~Esteban, M.~C. Gonz{\'a}lez-Garc{\'i}a, M.~Maltoni, I.~Mart{\'i}nez-Soler,
+  J.~Salvad{\'o}, {Updated Constraints on Non-Standard Interactions from Global
+  Analysis of Oscillation Data}, JHEP 08 (2018) 180.
+\newblock \href {http://arxiv.org/abs/1805.04530} {\path{arXiv:1805.04530}},
+  \href {http://dx.doi.org/10.1007/JHEP08(2018)180}
+  {\path{doi:10.1007/JHEP08(2018)180}}.
+
+\bibitem{Mitsuka:2011ty}
+G.~Mitsuka, et~al., {Study of Non-Standard Neutrino Interactions with
+  Atmospheric Neutrino Data in Super-Kamiokande I and II}, Phys.\ Rev.\ D 84
+  (2011) 113008.
+\newblock \href {http://arxiv.org/abs/1109.1889} {\path{arXiv:1109.1889}},
+  \href {http://dx.doi.org/10.1103/PhysRevD.84.113008}
+  {\path{doi:10.1103/PhysRevD.84.113008}}.
+
+\bibitem{Esmaili:2013fva}
+A.~Esmaili, A.~{\relax Yu}. Smirnov, {Probing Non-Standard Interaction of
+  Neutrinos with IceCube and DeepCore}, JHEP 06 (2013) 026.
+\newblock \href {http://arxiv.org/abs/1304.1042} {\path{arXiv:1304.1042}},
+  \href {http://dx.doi.org/10.1007/JHEP06(2013)026}
+  {\path{doi:10.1007/JHEP06(2013)026}}.
+
+\bibitem{Salvado:2016uqu}
+J.~Salvad{\'o}, O.~Mena, S.~Palomares-Ruiz, N.~Rius, {Non-standard interactions
+  with high-energy atmospheric neutrinos at IceCube}, JHEP 01 (2017) 141.
+\newblock \href {http://arxiv.org/abs/1609.03450} {\path{arXiv:1609.03450}},
+  \href {http://dx.doi.org/10.1007/JHEP01(2017)141}
+  {\path{doi:10.1007/JHEP01(2017)141}}.
+
+\bibitem{Aartsen:2017xtt}
+M.~G. Aartsen, et~al., {Search for Nonstandard Neutrino Interactions with
+  IceCube DeepCore}, Phys.\ Rev.\ D 97~(7) (2018) 072009.
+\newblock \href {http://arxiv.org/abs/1709.07079} {\path{arXiv:1709.07079}},
+  \href {http://dx.doi.org/10.1103/PhysRevD.97.072009}
+  {\path{doi:10.1103/PhysRevD.97.072009}}.
+
+\bibitem{Mavromatos:2004sz}
+N.~E. Mavromatos, {CPT violation and decoherence in quantum gravity}, Lect.\
+  Notes Phys. 669 (2005) 245.
+\newblock \href {http://arxiv.org/abs/gr-qc/0407005}
+  {\path{arXiv:gr-qc/0407005}}, \href {http://dx.doi.org/10.1007/11377306_8}
+  {\path{doi:10.1007/11377306_8}}.
+
+\bibitem{Liberati:2009pf}
+S.~Liberati, L.~Maccione, {Lorentz violation: Motivation and new constraints},
+  Ann.\ Rev.\ Nucl.\ Part.\ Sci. 59 (2009) 245.
+\newblock \href {http://arxiv.org/abs/0906.0681} {\path{arXiv:0906.0681}},
+  \href {http://dx.doi.org/10.1146/annurev.nucl.010909.083640}
+  {\path{doi:10.1146/annurev.nucl.010909.083640}}.
+
+\bibitem{Liberati:2013xla}
+S.~Liberati, {Tests of Lorentz invariance: a 2013 update}, Class.\ Quant.\
+  Grav. 30 (2013) 133001.
+\newblock \href {http://arxiv.org/abs/1304.5795} {\path{arXiv:1304.5795}},
+  \href {http://dx.doi.org/10.1088/0264-9381/30/13/133001}
+  {\path{doi:10.1088/0264-9381/30/13/133001}}.
+
+\bibitem{Tasson:2014dfa}
+J.~D. Tasson, {What Do We Know About Lorentz Invariance?}, Rept.\ Prog.\ Phys.
+  77 (2014) 062901.
+\newblock \href {http://arxiv.org/abs/1403.7785} {\path{arXiv:1403.7785}},
+  \href {http://dx.doi.org/10.1088/0034-4885/77/6/062901}
+  {\path{doi:10.1088/0034-4885/77/6/062901}}.
+
+\bibitem{Kostelecky:2008ts}
+V.~A. Kostelecky, N.~Russell, {Data Tables for Lorentz and CPT Violation},
+  Rev.\ Mod.\ Phys. 83 (2011) 11.
+\newblock \href {http://arxiv.org/abs/0801.0287} {\path{arXiv:0801.0287}},
+  \href {http://dx.doi.org/10.1103/RevModPhys.83.11}
+  {\path{doi:10.1103/RevModPhys.83.11}}.
+
+\bibitem{Abbasi:2010kx}
+R.~Abbasi, et~al., {Search for a Lorentz-violating sidereal signal with
+  atmospheric neutrinos in IceCube}, Phys.\ Rev.\ D 82 (2010) 112003.
+\newblock \href {http://arxiv.org/abs/1010.4096} {\path{arXiv:1010.4096}},
+  \href {http://dx.doi.org/10.1103/PhysRevD.82.112003}
+  {\path{doi:10.1103/PhysRevD.82.112003}}.
+
+\bibitem{Aartsen:2017ibm}
+M.~G. Aartsen, et~al., {Neutrino Interferometry for High-Precision Tests of
+  Lorentz Symmetry with IceCube}, Nature Phys. 14~(9) (2018) 961.
+\newblock \href {http://arxiv.org/abs/1709.03434} {\path{arXiv:1709.03434}},
+  \href {http://dx.doi.org/10.1038/s41567-018-0172-2}
+  {\path{doi:10.1038/s41567-018-0172-2}}.
+
+\bibitem{Colladay:1998fq}
+D.~Colladay, V.~A. Kostelecky, {Lorentz violating extension of the Standard
+  Model}, Phys.\ Rev.\ D 58 (1998) 116002.
+\newblock \href {http://arxiv.org/abs/hep-ph/9809521}
+  {\path{arXiv:hep-ph/9809521}}, \href
+  {http://dx.doi.org/10.1103/PhysRevD.58.116002}
+  {\path{doi:10.1103/PhysRevD.58.116002}}.
+
+\bibitem{Hooper:2005jp}
+D.~Hooper, D.~Morgan, E.~Winstanley, {Lorentz and CPT invariance violation in
+  high-energy neutrinos}, Phys.\ Rev.\ D 72 (2005) 065009.
+\newblock \href {http://arxiv.org/abs/hep-ph/0506091}
+  {\path{arXiv:hep-ph/0506091}}, \href
+  {http://dx.doi.org/10.1103/PhysRevD.72.065009}
+  {\path{doi:10.1103/PhysRevD.72.065009}}.
+
+\bibitem{Kostelecky:2011gq}
+A.~Kostelecky, M.~Mewes, {Neutrinos with Lorentz-violating operators of
+  arbitrary dimension}, Phys.\ Rev.\ D 85 (2012) 096005.
+\newblock \href {http://arxiv.org/abs/1112.6395} {\path{arXiv:1112.6395}},
+  \href {http://dx.doi.org/10.1103/PhysRevD.85.096005}
+  {\path{doi:10.1103/PhysRevD.85.096005}}.
+
+\bibitem{Diaz:2014yva}
+J.~S. D{\'i}az, {Neutrinos as probes of Lorentz invariance}, Adv. High Energy
+  Phys. 2014 (2014) 962410.
+\newblock \href {http://arxiv.org/abs/1406.6838} {\path{arXiv:1406.6838}},
+  \href {http://dx.doi.org/10.1155/2014/962410}
+  {\path{doi:10.1155/2014/962410}}.
+
+\bibitem{GonzalezGarcia:2005xw}
+M.~C. Gonz{\'a}lez-Garc{\'i}a, F.~Halzen, M.~Maltoni, {Physics reach of
+  high-energy and high-statistics icecube atmospheric neutrino data}, Phys.\
+  Rev.\ D 71 (2005) 093010.
+\newblock \href {http://arxiv.org/abs/hep-ph/0502223}
+  {\path{arXiv:hep-ph/0502223}}, \href
+  {http://dx.doi.org/10.1103/PhysRevD.71.093010}
+  {\path{doi:10.1103/PhysRevD.71.093010}}.
+
+\bibitem{Anchordoqui:2005gj}
+L.~A. Anchordoqui, H.~Goldberg, M.~C. Gonz{\'a}lez-Garc{\'i}a, F.~Halzen,
+  D.~Hooper, S.~Sarkar, T.~J. Weiler, {Probing Planck scale physics with
+  IceCube}, Phys.\ Rev.\ D 72 (2005) 065019.
+\newblock \href {http://arxiv.org/abs/hep-ph/0506168}
+  {\path{arXiv:hep-ph/0506168}}, \href
+  {http://dx.doi.org/10.1103/PhysRevD.72.065019}
+  {\path{doi:10.1103/PhysRevD.72.065019}}.
+
+\bibitem{Arguelles:2015dca}
+C.~A. Arg{\"u}elles, T.~Katori, J.~Salvad{\'o}, {New Physics in Astrophysical
+  Neutrino Flavor}, Phys.\ Rev.\ Lett. 115 (2015) 161303.
+\newblock \href {http://arxiv.org/abs/1506.02043} {\path{arXiv:1506.02043}},
+  \href {http://dx.doi.org/10.1103/PhysRevLett.115.161303}
+  {\path{doi:10.1103/PhysRevLett.115.161303}}.
+
+\bibitem{Bustamante:2015waa}
+M.~Bustamante, J.~F. Beacom, W.~Winter, {Theoretically palatable flavor
+  combinations of astrophysical neutrinos}, Phys.\ Rev.\ Lett. 115~(16) (2015)
+  161302.
+\newblock \href {http://arxiv.org/abs/1506.02645} {\path{arXiv:1506.02645}},
+  \href {http://dx.doi.org/10.1103/PhysRevLett.115.161302}
+  {\path{doi:10.1103/PhysRevLett.115.161302}}.
+
+\bibitem{Rasmussen:2017ert}
+R.~W. Rasmussen, L.~Lechner, M.~Ackermann, M.~Kowalski, W.~Winter,
+  {Astrophysical neutrinos flavored with Beyond the Standard Model physics},
+  Phys.\ Rev.\ D 96~(8) (2017) 083018.
+\newblock \href {http://arxiv.org/abs/1707.07684} {\path{arXiv:1707.07684}},
+  \href {http://dx.doi.org/10.1103/PhysRevD.96.083018}
+  {\path{doi:10.1103/PhysRevD.96.083018}}.
+
+\bibitem{Ahlers:2018mkf}
+M.~Ahlers, K.~Helbing, C.~P{\'e}rez de~los Heros, {Probing Particle Physics
+  with IceCube}, Eur.\ Phys.\ J.\ C 78~(11) (2018) 924.
+\newblock \href {http://arxiv.org/abs/1806.05696} {\path{arXiv:1806.05696}},
+  \href {http://dx.doi.org/10.1140/epjc/s10052-018-6369-9}
+  {\path{doi:10.1140/epjc/s10052-018-6369-9}}.
+
+\bibitem{Ackermann:2019cxh}
+M.~Ackermann, et~al., {Fundamental Physics with High-Energy Cosmic
+  Neutrinos}\href {http://arxiv.org/abs/1903.04333} {\path{arXiv:1903.04333}}.
+
+\bibitem{Dighe:2008bu}
+A.~Dighe, S.~Ray, {CPT violation in long baseline neutrino experiments: A three
+  flavor analysis}, Phys.\ Rev.\ D 78 (2008) 036002.
+\newblock \href {http://arxiv.org/abs/0802.0121} {\path{arXiv:0802.0121}},
+  \href {http://dx.doi.org/10.1103/PhysRevD.78.036002}
+  {\path{doi:10.1103/PhysRevD.78.036002}}.
+
+\end{thebibliography}
+
+
+
+\appendix
+
+\newpage
+
+\section{Pauli and Gell-Mann matrices}
+\label{appendix:matrices}
+
+For completeness, and to avoid any ambiguity in the method presented in the main text, we show here explicitly all the Pauli and Gell-Mann matrices.  
+
+The three Pauli matrices $\sigma_k = \sigma^k$ are:
+\begin{equation*}
+ \sigma_1
+ =
+ \left(\begin{array}{cc}
+  0 & 1 \\
+  1 & 0 \\
+ \end{array}\right)
+ \;, \;\;
+ \sigma_2
+ =
+ \left(\begin{array}{cc}
+  0 & -i \\
+  i & 0 \\
+ \end{array}\right)
+ \;, \;\;
+ \sigma_3
+ =
+ \left(\begin{array}{cc}
+  1 & 0 \\
+  0 & -1 \\
+ \end{array}\right) \;.
+\end{equation*}
+
+The eight Gell-Mann matrices $\lambda_k = \lambda^k$ are:
+\begin{eqnarray*}
+ &&
+ \lambda_1
+ =
+ \left(\begin{array}{ccc}
+  0 & 1 & 0 \\
+  1 & 0 & 0 \\
+  0 & 0 & 0 \\
+ \end{array}\right)
+ \;, \;\;
+ \lambda_2
+ =
+ \left(\begin{array}{ccc}
+  0 & -i & 0 \\
+  i &  0 & 0 \\
+  0 &  0 & 0 \\
+ \end{array}\right)
+ \;, \\
+ &&
+ \lambda_3
+ =
+ \left(\begin{array}{ccc}
+  1 &  0 & 0 \\
+  0 & -1 & 0 \\
+  0 &  0 & 0 \\
+ \end{array}\right)
+ \;, \;\;
+ \lambda_4
+ =
+ \left(\begin{array}{ccc}
+  0 & 0 & 1 \\
+  0 & 0 & 0 \\
+  1 & 0 & 0 \\
+ \end{array}\right)
+ \;, \\
+ &&
+ \lambda_5
+ =
+ \left(\begin{array}{ccc}
+  0 & 0 & -i \\
+  0 & 0 &  0 \\
+  i & 0 &  0 \\
+ \end{array}\right)
+ \;, \;\;
+ \lambda_6
+ =
+ \left(\begin{array}{ccc}
+  0 & 0 & 0 \\
+  0 & 0 & 1 \\
+  0 & 1 & 0 \\
+ \end{array}\right)
+ \;, \\
+ &&
+ \lambda_7
+ =
+ \left(\begin{array}{ccc}
+  0 & 0 &  0 \\
+  0 & 0 & -i \\
+  0 & i &  0 \\
+ \end{array}\right)
+ \;, \;\;
+ \lambda_8
+ =
+ \frac{1}{\sqrt{3}}
+ \left(\begin{array}{ccc}
+  1 & 0 &  0 \\
+  0 & 1 &  0 \\
+  0 & 0 & -2 \\
+ \end{array}\right)
+ \;.
+\end{eqnarray*}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\section{Derivation of \equ{prob_2nu_general}}
+\label{appendix:derivation_prob_2nu_general}
+
+We proceed by computing the survival probability $P_{\nu_\alpha \to \nu_\alpha} = \lvert \nu_\alpha^\dagger \mathbb{U}_2(L) \nu_\alpha \rvert^2$.  We start by operating on $\nu_\alpha$ with the linear combination $h_k \sigma^k$ that appears in the expansion of the time-evolution operator $\mathbb{U}_2(L)$, \equ{evol_op_2nu}, \ie, $(h_k \sigma^k) \nu_\alpha$.  In matrix form, with $\nu_\alpha = \left(1~0\right)^{\rm T}$, this is
+\begin{equation*}
+ \left(\begin{array}{cc}
+  h_3      & h_1-ih_2 \\
+  h_1+ih_2 & -h_3     \\
+ \end{array}\right)
+ \left(\begin{array}{c}
+  1 \\
+  0 \\
+ \end{array}\right)
+ =
+ \left(\begin{array}{c}
+  h_3      \\
+  h_1+ih_2 \\
+ \end{array}\right) \;.
+\end{equation*}
+So, using \equ{evol_op_2nu} for $\mathbb{U}_2(L)$, the survival probability amplitude is
+\begin{equation*}
+ \nu_\alpha^\dagger \mathbb{U}_2(L) \nu_\alpha
+ =
+ \cos\left(\left\vert h\right\vert L\right)
+ -
+ i \frac{h_3}{\lvert h \rvert} \sin\left(\left\vert h\right\vert L\right) \;,
+\end{equation*}
+where the coefficient $h_3 = [(\mathbb{H}_2)_{11} - (\mathbb{H}_2)_{22}]/2$; see Table \ref{tab:h2_coefficients}.  Since $\mathbb{H}_2$ is Hermitian, its diagonal elements are real, and, hence, $h_3$ is real.  Because of this, we can write the survival probability $\lvert \nu_\alpha^\dagger \mathbb{U}_2(L) \nu_\alpha \rvert^2$ as
+\begin{equation*}
+ P_{\nu_\alpha \to \nu_\alpha}(L)
+ =
+ \cos^2(\lvert h \rvert L)
+ +
+ \frac{\lvert h_3 \rvert^2}{\lvert h \rvert^2} \sin^2(\lvert h \rvert L) \;.
+\end{equation*}
+Now, because $\vert h_3 \rvert^2 = \vert h \rvert^2 - \vert h_1 \rvert^2 - \vert h_2 \rvert^2$, this becomes
+\begin{equation*}
+ P_{\nu_\alpha \to \nu_\alpha}(L)
+ =
+ 1
+ -
+ \frac{\lvert h_1 \rvert^2 + \lvert h_2 \rvert^2}{\lvert h \rvert^2} \sin^2(\lvert h \rvert L) \;.
+\end{equation*}
+Because of the conservation of probability, $P_{\nu_\alpha \to \nu_\beta} = 1 - P_{\nu_\alpha \to \nu_\alpha}$, with $\alpha \neq \beta$, which gives \equ{prob_2nu_general}.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\section{Two-flavor oscillations in vacuum}
+\label{section:2nu_vacuum}
+
+As a simple example and cross-check of the OS method, we consider two-flavor oscillations in vacuum.  These are driven by the mass-squared difference between two mass eigenstates $\nu_1$ and $\nu_2$, with masses $m_1$ and $m_2$, out of which the flavor states $\nu_e$ and $\nu_\mu$ are constructed (or $\nu_\mu$ and $\nu_\tau$).  The spaces of flavor and mass states are connected by a unitary rotation that is parametrized by a mixing angle $\theta$, \ie,
+\begin{equation}
+ \label{equ:u_rotation_2nu}
+ \mathbb{R}_{2,\theta}
+ =
+ \left(\begin{array}{cc}
+  \cos \theta  & \sin \theta \\
+  -\sin \theta & \cos \theta 
+ \end{array}\right) \;.
+\end{equation}
+In this case, the Hamiltonian in the flavor basis, for a neutrino of energy $E$, is
+\begin{equation}
+ \label{equ:h2_vacuum}
+ \mathbb{H}_2^{\rm vac}(E)
+ =
+ \frac{1}{2E}
+ \mathbb{R}_{2,\theta}
+ \mathbb{M}_2^2
+ \mathbb{R}_{2,\theta}^\dagger \;,
+\end{equation}
+where $\mathbb{M}_2^2~\equiv~{\rm diag}(\Delta m^2/2, -\Delta m^2/2)$ is the mass matrix, and $\Delta m^2\equiv m_2^2-m_1^2$.  Using Table \ref{tab:h2_coefficients}, we identify
+\begin{equation*}
+ \lvert h_1 \rvert^2 = \frac{\Delta m^2}{2E} \sin^2\left(2\theta\right) \;, \;\;
+ \lvert h_3 \rvert^2 = \frac{\Delta m^2}{2E} \cos^2\left(2\theta\right) \;,
+\end{equation*}
+and $\lvert h_2 \rvert^2 = 0$, so that $\lvert h_1 \rvert^2 / \lvert h \rvert^2  = \sin^2\left(2\theta\right)$.  From \equ{prob_2nu_general}, the probability is
+\begin{equation*}
+ P_{\nu_e \to \nu_\mu}^{\rm vac} (E, L)
+ =
+ \sin^2 \left(2\theta\right)
+ \sin^2\left(\frac{\Delta m^2}{4E}L\right) \;,
+\end{equation*}
+which is the standard expression for two-neutrino oscillations in vacuum; see, \eg, \Refs\ \cite{Giunti:2007ry, Tanabashi:2018oca}.  
+% See \Ref\ \cite{Ohlsson:1999xb} for a similar derivation to the one presented here.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\section{Derivation of \equ{uk_expanded}}
+\label{appendix:derivation_uk_expanded}
+
+First, we write 
+\begin{equation*}
+ u_k
+ = 
+ -\frac{1}{2}\sum_{m=1}^3 e^{i\phi_m} \frac{\partial\phi_m}{\partial \left(-h_kL\right)} \;, 
+\end{equation*}
+where
+\begin{equation*}
+ \frac{\partial\phi_m}{\partial\left(-h_kL\right)}
+ =
+ \frac{2\left[\phi_m\left(-h_kL\right)+d_{ijk}\left(-h^iL\right)\left(-h^jL\right)\right]}{3\phi_m^2-I_2} \;.
+\end{equation*}
+This can be expanded as
+\begin{eqnarray*}
+ u_k 
+ &=& -\frac{1}{2}\text{Tr}\frac{\partial}{\partial\left(-h_kL\right)}e^{-ih_k\lambda^kL}  \\
+ &=& -\frac{1}{2}\frac{\partial}{\partial\left(-h_kL\right)}\text{Tr}~\mathbb{U}_3 \\
+ &=& -\frac{1}{2}\sum_{m=1}^3 e^{i\phi_m} \frac{\partial\phi_m}{\partial\left(-h_kL\right)} \;.
+\end{eqnarray*}
+Thus, the coefficients $u_k$ can be written as 
+\begin{equation}
+ \label{equ:uk_short}
+ u_k = -L x h_k + L^2 y \left(h\ast h\right)_k \;,
+\end{equation}
+where
+\begin{eqnarray}
+ \label{equ:x_def}
+ && x = - \frac{1}{L} \sum_{m=1}^3 \frac{ \psi_m e^{i L \psi_m}} { 3\psi_m^2-\lvert h \rvert^2 } \;, \\
+ \label{equ:y_def}
+ && y = - \frac{1}{L^2} \sum_{m=1}^3 \frac{ e^{i L \psi_m} } { 3\psi_m^2-\lvert h \rvert^2 } \;.
+\end{eqnarray}
+Inserting Eqs.\ (\ref{equ:x_def}) and (\ref{equ:y_def}) into \equ{uk_short} results in \equ{uk_expanded} in the main text.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[t!]
+ \centering
+ \includegraphics[width=\columnwidth]{prob_2nu_vs_energy_compare.pdf}
+ \caption{\label{fig:prob_2nu}Two-neutrino oscillation probabilities $P_{\nu_e \to \nu_e}$ ({\it top}), $P_{\nu_\mu \to \nu_e}$ ({\it center}), and $P_{\nu_\mu \to \nu_\mu}$ ({\it bottom}), computed using the method presented here, via {\tt NuOscProbExact}\ \cite{NuOscProbExact}.  This figure is the two-neutrino counterpart of \figu{prob_3nu}.  See the main text and \ref{appendix:sample_2nu_hamiltonians} for details.}
+\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newpage
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\section{Sample two-neutrino Hamiltonians}
+\label{appendix:sample_2nu_hamiltonians}
+
+Here we present the two-neutrino Hamiltonians included as examples in {\tt NuOscProbExact}.  These are the two-neutrino counterparts of the three-neutrino examples presented in Section\ \ref{section:code}; we refer to that section for a description of each scenario.  All of the Hamiltonians below are written in the flavor basis.
+
+Figure \ref{fig:prob_2nu} shows the probabilities $P_{\nu_e \to \nu_e}$, $P_{\nu_\mu \to \nu_e}$, and $P_{\nu_\mu \to \nu_\mu}$ for the same four scenarios as in \figu{prob_3nu}, computed using {\tt NuOscProbExact}\ \cite{NuOscProbExact}.  Again, we set the baseline to $L = 1300$~km.  The parameters and their values used in each example case are introduced below; they are a selection of the ones used in \figu{prob_3nu}.
+
+For oscillations in vacuum, we use \equ{h2_vacuum}, \ie,
+\begin{equation*}
+ \mathbb{H}_2^{\rm vac}(E)
+ =
+ \frac{1}{2E}
+ \mathbb{R}_{2,\theta}
+ \mathbb{M}_2^2
+ \mathbb{R}_{2,\theta}^\dagger \;,
+\end{equation*}
+where the rotation matrix $\mathbb{R}_{2,\theta}$ is given in \equ{u_rotation_2nu}, in terms of the mixing angle $\theta$.  In \figu{prob_2nu}, we set $\theta$ and $\Delta m^2$, respectively, to the values of $\theta_{12}$ and $\Delta m_{21}^2$ used in \figu{prob_3nu}.
+
+For oscillations in matter, we use
+\begin{equation*}
+ \label{equ:h2_matt}
+ \mathbb{H}_2^{\rm matt}(E) 
+ = 
+ \mathbb{H}_2^{\rm vac}(E)  + \mathbb{A}_2 \;,
+\end{equation*}
+where $\mathbb{A}_2 \equiv {\rm diag}(V_{\rm CC}, 0)$ and $V_{\rm CC}$ is defined as before.  In \figu{prob_2nu}, we set $\rho = 3$~g~cm$^{-3}$.
+
+For oscillations in matter with non-standard interactions, we use\ \cite{GonzalezGarcia:2004wg, GonzalezGarcia:2005xw}
+\begin{equation*}
+ \label{equ:h2_nsi}
+ \mathbb{H}_2^{\rm NSI}(E) 
+ = 
+ \mathbb{H}_2^{\rm vac}(E) + \mathbb{A}_2 + \mathbb{V}_2 \;,
+\end{equation*}
+where $\mathbb{V}_2 \equiv V_{\rm CC} \epsilon_2$ and the matrix of NSI strength parameters is
+\begin{equation*}
+ \epsilon_2
+ =
+ \left(
+  \begin{array}{ccc}
+   \epsilon_{ee}         & \epsilon_{e\mu}         \\
+   \epsilon_{e\mu}^\ast  & \epsilon_{\mu\mu}       \\
+  \end{array}
+ \right) \;.
+\end{equation*}
+In \figu{prob_2nu}, we set $\epsilon_{ee} = -\epsilon_{e\mu} = 0.06$ and $\epsilon_{\mu\mu} = 1.2$.
+
+For oscillations in a CPT-odd Lorentz-violating background, we use\ \cite{GonzalezGarcia:2004wg, GonzalezGarcia:2005xw} 
+\begin{equation*}
+ \label{equ:h2_liv}
+ \mathbb{H}_2^{\rm LIV}(E) 
+ = 
+ \mathbb{H}_2^{\rm vac}(E) + \frac{E}{\Lambda} \mathbb{R}_{2,\xi} \mathbb{B}_2 \mathbb{R}_{2,\xi}^\dagger \;,
+\end{equation*}
+where $\mathbb{U}_{2,\xi}$ is a $2 \times 2$ rotation matrix, like \equ{u_rotation_2nu}, but evaluated at a different mixing angle $\xi$.  In \figu{prob_2nu}, we set $\mathbb{R}_{2,\xi} = \mathbb{1}$, $b_1/\Lambda = 10^{-21}$, and $b_2/\Lambda = 5 \cdot 10^{-21}$.
+
+\newpage
+
+\end{document}
