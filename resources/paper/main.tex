@@ -948,35 +948,39 @@ The Hamiltonian for CPT-odd LIV is\ \cite{Coleman:1998ti, Kostelecky:2003xn, Dig
 The second term on the right-hand side is the effective Hamiltonian that introduces LIV.  Here, $\mathbb{B}_3 \equiv {\rm diag}(b_1, b_2, b_3)$, where $b_i$ ($i=1,2,3$) are the eigenvalues of the LIV operator $\mathbb{B}_3$, and $\mathbb{R}_{3,\xi}$ is the $3 \times 3$ mixing matrix that rotates it into the flavor basis.  It has the same structure as the PMNS matrix, but different values of the mixing angles and phase.  In general, there is a relative phase between $\mathbb{R}_{3,\xi}$ and $\mathbb{R}_{3,\theta}$ that cannot be rotated away\ \cite{GonzalezGarcia:2004wg, GonzalezGarcia:2005xw}; in our simplified treatment, we set it to zero.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\begin{lstlisting}[language=Python, caption={Template to use {\tt NuOscProbExact} to compute probabilities for three-neutrino oscillations with an arbitrary, user-supplied Hamiltonian}, label={lst:3nu_arbitrary}, float]
+\begin{lstlisting}[language=Python, caption={Using {\tt NuOscProbExact} with an arbitrary, user-supplied Hamiltonian, here a long-range $L_e - L_\mu$ interaction sourced by the electrons of the Earth.  Notebook 20 builds {\tt v\_emu} in full and validates it}, label={lst:3nu_arbitrary}, float]
 import numpy as np
 
-import oscprob3nu
+import earth
+import slabs
 import hamiltonians3nu
 from globaldefs import *
 
-energy = 1.e9     # Neutrino energy [eV]
-baseline = 1.3e3  # Baseline [km]
+energy = 5.e9    # Neutrino energy [eV]
+costhz = -1.     # Straight through the core
 
-h_vacuum_energy_indep = hamiltonians3nu.\
-    hamiltonian_3nu_vacuum_energy_independent( \
+h_vac = hamiltonians3nu.\
+    hamiltonian_3nu_vacuum_energy_independent(
         S12_NO_BF, S23_NO_BF,
         S13_NO_BF, DCP_NO_BF,
         D21_NO_BF, D31_NO_BF)
-        
-h_vacuum = np.multiply( 1./energy, 
-                        h_vacuum_energy_indep)
 
-# The user-supplied routine hamiltonian_mymodel depends
-# on some parameters represented by mymodel_parameters,
-# and should return a 3x3 array
-h_mymodel = h_vacuum \
-            + hamiltonian_mymodel(mymodel_parameters)
+# One Hamiltonian per PREM slab along the chord
+widths, densities = earth.earth_slabs(costhz)
+h = hamiltonians3nu.hamiltonian_3nu_matter(
+        h_vac, energy,
+        earth.matter_potential(densities))
+
+# The electrons of the Earth source a Yukawa potential
+# v_emu [eV], evaluated at the radius of each slab, that
+# nu_e and nu_mu feel with opposite sign.  Any Hermitian
+# term will do here: none of it need be anticipated.
+q = np.diag([1., -1., 0.])
+h = h + v_emu[:, None, None]*q
 
 Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = \
-    oscprob3nu.probabilities_3nu(   \
-                            h_mymodel,
-                            baseline*CONV_KM_TO_INV_EV)
+    slabs.probabilities_3nu_slabs(
+        h, widths*CONV_KM_TO_INV_EV)
 \end{lstlisting}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -1068,7 +1072,23 @@ grid = oscprob4nu.probabilities_4nu( \
 
 \subsection{Oscillations with arbitrary Hamiltonians}
 
-The usefulness of {\tt NuOscProbExact} stems in part from its ability to compute oscillation probabilities for any arbitrary time-independent Hamiltonian.   Listing \ref{lst:3nu_arbitrary} shows a code template to compute three-neutrino oscillation probabilities using a user-supplied Hamiltonian that is added to the Hamiltonian for oscillations in vacuum.
+The usefulness of {\tt NuOscProbExact} stems in part from its ability to compute oscillation probabilities for any arbitrary time-independent Hamiltonian.   Listing \ref{lst:3nu_arbitrary} shows a code template to compute three-neutrino oscillation probabilities using a user-supplied Hamiltonian that is added to the Hamiltonian for oscillations in \del{vacuum}\add{matter}.
+
+\addstart
+The template is written around a concrete instance rather than a placeholder, because the placeholder hides what is being claimed.  The instance is a long-range interaction: a new neutral gauge boson $Z^\prime$ coupled to the anomaly-free combination $L_e - L_\mu$\ \cite{He:1991qd, Foot:1994vd}, under which the $\sim\!10^{51}$ electrons of the Earth source a Yukawa potential $V_{e\mu}(r)$ that $\nu_e$ and $\nu_\mu$ feel with opposite sign.  What makes it a useful example is that it is not merely a new number in an existing formula.  The potential is \emph{non-local}: at mediator masses light enough to matter, $m_{Z^\prime} \lesssim 1/R_\oplus$, its value at any radius is an integral over the whole electron distribution, so it depends on how many electrons there are and only weakly on where they sit\ \cite{Wise:2018rnb}.  It therefore cannot be absorbed into an effective density profile, and no specialized expression for it exists in any of the codes of Section \ref{section:comparison}.  The scenario and its phenomenology are developed in \Refs\ \cite{Joshipura:2003jj, Bandyopadhyay:2006uh, Bustamante:2018mzu, Agarwalla:2024lri}; here it is some thirty lines, and the probability that comes out is exact.
+
+\figu{lri_earth} shows the result for a neutrino crossing the full diameter of the Earth.  The two curves are the same PREM slab decomposition, evaluated with and without the extra term, and the only difference between the calculations that produced them is the single line that adds $V_{e\mu}$ to the matter Hamiltonian.  At $\alpha^\prime \equiv g^{\prime 2}/4\pi = 10^{-52}$ --- a coupling at which $V_{e\mu}$ at the center of the Earth is about $1\%$ of $V_{\rm CC}$ there --- the appearance probability is displaced by up to $0.10$ in absolute terms, with the largest effect near $4$~GeV, where the standard matter resonance sits.  The lower panel is that difference on its own scale.  The point of the figure is not the parameter value, which is chosen to make the effect visible rather than to bound anything; it is that a scenario none of the codes of Section \ref{section:comparison} anticipates costs the user one array and one addition.  Notebook 20 in the repository builds $V_{e\mu}$ from scratch, checks it against its short- and long-range limits, and scans $\alpha^\prime$ over three decades.
+\addend
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[t!]
+ \centering
+ \addstart
+ \includegraphics[width=\columnwidth]{lri_earth.pdf}
+ \caption{\label{fig:lri_earth}An interaction no code anticipates, at the cost of one extra term.  $P_{\nu_\mu \to \nu_e}$ for a neutrino crossing the Earth along a diameter ($\cos\theta_z = -1$), through the PREM profile, with and without a long-range $L_e - L_\mu$ interaction whose mediator has range $1/m_{Z^\prime} = R_\oplus$.  \emph{Top}: the probability.  \emph{Bottom}: the difference between them.  The Yukawa potential is sourced by the electrons of the whole Earth and evaluated at the radius of each slab; it is added to the matter Hamiltonian as $V_{e\mu}\,{\rm diag}(1,-1,0)$, which is the entirety of the modification.  Both curves are exact for their own Hamiltonian --- no expansion in $V_{e\mu}$ is made, and none is needed, since the construction does not care what the Hermitian matrix contains.  The coupling $\alpha^\prime = 10^{-52}$ is chosen for visibility.  Produced by notebook 10; notebook 20 develops and validates the potential.}
+ \addend
+\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 \addstart
@@ -2322,6 +2342,46 @@ M.~Bustamante, {NuOscProbExact documentation}.
 M.~Bustamante, {NuOscProbExact on the Python Package Index}.
 \newblock \href {https://pypi.org/project/nuoscprobexact/}
   {\path{https://pypi.org/project/nuoscprobexact/}}.
+
+\bibitem{He:1991qd}
+X.~G. He, G.~C. Joshi, H.~Lew, R.~R. Volkas, {New $Z^\prime$ Phenomenology},
+  Phys.\ Rev.\ D 43 (1991) 22.
+
+\bibitem{Foot:1994vd}
+R.~Foot, X.-G. He, H.~Lew, R.~R. Volkas, {Model for a light $Z^\prime$ boson},
+  Phys.\ Rev.\ D 50 (1994) 4571.
+\newblock \href {http://arxiv.org/abs/hep-ph/9401250}
+  {\path{arXiv:hep-ph/9401250}}.
+
+\bibitem{Joshipura:2003jj}
+A.~S. Joshipura, S.~Mohanty, {Constraints on flavor dependent long range forces
+  from atmospheric neutrino observations at Super-Kamiokande}, Phys.\ Lett.\ B
+  584 (2004) 103.
+\newblock \href {http://arxiv.org/abs/hep-ph/0310210}
+  {\path{arXiv:hep-ph/0310210}}.
+
+\bibitem{Bandyopadhyay:2006uh}
+A.~Bandyopadhyay, A.~Dighe, A.~S. Joshipura, {Constraints on flavor-dependent
+  long range forces from solar neutrinos and KamLAND}, Phys.\ Rev.\ D 75 (2007)
+  093005.
+\newblock \href {http://arxiv.org/abs/hep-ph/0610263}
+  {\path{arXiv:hep-ph/0610263}}.
+
+\bibitem{Wise:2018rnb}
+M.~B. Wise, Y.~Zhang, {Lepton Flavorful Fifth Force and Depth-dependent
+  Neutrino Matter Interactions}, JHEP 06 (2018) 053.
+\newblock \href {http://arxiv.org/abs/1803.00591} {\path{arXiv:1803.00591}}.
+
+\bibitem{Bustamante:2018mzu}
+M.~Bustamante, S.~K. Agarwalla, {Universe's Worth of Electrons to Probe
+  Long-Range Interactions of High-Energy Astrophysical Neutrinos}, Phys.\ Rev.\
+  Lett.\ 122 (2019) 061103.
+\newblock \href {http://arxiv.org/abs/1808.02042} {\path{arXiv:1808.02042}}.
+
+\bibitem{Agarwalla:2024lri}
+S.~K. Agarwalla, M.~Bustamante, M.~Singh, P.~Swain, {A plethora of long-range
+  neutrino interactions probed by DUNE and T2HK}.
+\newblock \href {http://arxiv.org/abs/2404.02775} {\path{arXiv:2404.02775}}.
 
 \end{thebibliography}
 

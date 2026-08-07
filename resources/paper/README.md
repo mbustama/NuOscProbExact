@@ -104,10 +104,9 @@ cited, which is the useful place.
 ## The figures
 
 All fifteen are in `figs/`, found through a single `\graphicspath{{figs/}}` so
-that no `\includegraphics` names the folder. Twelve are produced by
+that no `\includegraphics` names the folder. Fourteen are produced by
 `notebooks/10_paper_figures.ipynb`; `Notes_on_SU_n__probability_relations.pdf`
-is external, and `prob_3nu_vs_energy_compare.jpg` is an old raster that nothing
-includes — the `.pdf` beside it is what the paper uses.
+is the one exception, and is external.
 
 To rebuild them:
 
@@ -117,7 +116,7 @@ NUOSC_PAPER_FIGDIR=../resources/paper/figs jupyter nbconvert --to notebook \
     --execute --inplace --ExecutePreprocessor.timeout=2800 10_paper_figures.ipynb
 ```
 
-Three to five minutes. Note that this rewrites all twelve PDFs whether or not
+Three to five minutes. Note that this rewrites all fourteen PDFs whether or not
 anything changed, and the bytes differ between runs, so `git status` will show
 them as modified afterwards even when the figures are identical. That is
 expected; commit them only when a figure actually changed.
