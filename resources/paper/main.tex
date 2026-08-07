@@ -179,7 +179,7 @@ neutrino \sep oscillation \sep flavor \sep particle physics\add{ \sep sterile ne
 \end{frontmatter}
 
 \noindent
-{\bf Program summary}
+{\bf \del{Program summary}\add{New version program summary}}
 \smallskip
 
 \begin{small}
@@ -196,48 +196,45 @@ neutrino \sep oscillation \sep flavor \sep particle physics\add{ \sep sterile ne
 \add{\href{https://pypi.org/project/nuoscprobexact/}{\tt https://pypi.org/project/nuoscprobexact/}, or {\tt pip install nuoscprobexact}}  \\ \\
 \smallskip
 %%%%
-% {\em No.~of lines in distributed program, including test data, etc.:} XXXX \\
-% \smallskip
-%%%%
-% {\em No.~of bytes in distributed program, including test data, etc.:} XXXX \\
-% \smallskip
-%%%%
-\add{{\em Distribution format:} git or tar.gz \\
+\add{{\em Distribution format:} {\tt git} repository; source distribution and built wheel on the Python Package Index, installable with {\tt pip} \\
 \smallskip}
 %%%%
 {\em Programming language:} \del{Python 3.7}\add{Python 3.9 or later; tested on 3.9, 3.10, 3.11, 3.12, and 3.13}   \\
 \smallskip
 %%%%
-% {\em Computer:} CPU?   \\
-% \smallskip
-%%%%
-% {\em Operating system:} Independent   \\
-% \smallskip
-%%%%
-% {\em RAM:} Minimal?   \\
-% \smallskip
-%%%%
 \add{{\em Classification:} 11.1 General, High Energy Physics and Computing   \\
 \smallskip}
 %%%%
-{\em External routines:} \del{Python 3.7, numpy, scipy, matplotlib}\add{{\tt numpy}.  Nothing else is required: the library itself imports no other third-party package.  {\tt numba} is an optional extra, installed with {\tt pip install nuoscprobexact[fast]}, that enables a compiled backend}   \\
+{\em External routines:} \del{Python 3.7, numpy, scipy, matplotlib}\add{{\tt numpy} and {\tt numba}, both installed automatically.  The library imports nothing else; {\tt scipy} and {\tt matplotlib} are needed only to run the test suite and the notebooks}   \\
 \smallskip
 %%%%
+\add{{\em Journal reference of previous version:} [{\bf to be completed on submission}] \\
+\smallskip}
+%%%%
+\add{{\em Does the new version supersede the previous version?:} Yes. \\
+\smallskip}
+%%%%
+\add{{\em Reasons for the new version:} \\
+The published version was limited to two and three neutrino flavors in vacuum and in matter of a single constant density.  Three limitations of that scope were reached repeatedly in use.  Sterile-neutrino scenarios, now a standard part of the field, need four flavors, which the SU(3) expansion of the original method cannot express.  Neutrinos that cross the Earth see a density that varies along their path, so a single constant density is not enough.  And parameter scans and oscillograms need many probabilities at once, which a Python-level loop over one call per point makes impractical. \\ \\
+\smallskip}
+%%%%
+\add{{\em Summary of revisions:} \\
+Four flavors are now supported, through the spectral form of the evolution operator, of which the SU($n$) expansion of the original method is one projection; this brings $3+1$ sterile-neutrino systems within scope.  Matter of piece-wise constant density is treated by solving each slab exactly and composing the resulting evolution operators, and a dedicated module applies this to the density profile of the Earth, so that probabilities can be computed along any chord through it, with the slab count either given or chosen from a requested tolerance.  All core routines accept stacks of Hamiltonians and arrays of baselines and evaluate them without a Python-level loop, and a compiled backend is used automatically where it pays; together these are worth up to two orders of magnitude on a scan.  A Lorentz-violating four-flavor term and a Hermiticity check were added, the package is now on the Python Package Index, and the test suite now runs to 797 tests at complete line and branch coverage. \\ \\
+\smallskip}
+%%%%
 {\em Nature of problem:} \\
-Computation of exact neutrino flavor oscillation probabilities in arbitrary physical systems described by time-independent Hamiltonians.  Applicable to closed systems of two\del{ and}\add{,} three\add{, and four} neutrino flavors. \\ \\
+Computation of exact neutrino flavor oscillation probabilities in arbitrary physical systems described by time-independent Hamiltonians.  Applicable to closed systems of two\del{ and}\add{,} three\add{, and four} neutrino flavors\add{, in vacuum, in matter of constant density, and in matter whose density varies along the trajectory, including the Earth}. \\ \\
 \smallskip
 %%%%
 {\em Solution method:}\\
-Closed-form expansions of the time-evolution quantum operators using SU(2)\del{ and}\add{,} SU(3)\add{, and SU(4)} identities.  \del{The program is a lightweight implementation of the method introduced in Refs.\ [1, 2] to find the oscillation probabilities.}\add{For two and three flavors the program is a lightweight implementation of the method of Refs.\ [1, 2].  Those references treat only those two cases; the four-flavor case is obtained instead from the spectral form of the evolution operator, which holds at any number of flavors and of which their expansion is one projection, and is the largest case for which the eigenvalues are available in closed form.} \\ \\
+Closed-form expansions of the time-evolution quantum operators using SU(2)\del{ and}\add{,} SU(3)\add{, and SU(4)} identities.  \del{The program is a lightweight implementation of the method introduced in Refs.\ [1, 2] to find the oscillation probabilities.}\add{For two and three flavors the program is a lightweight implementation of the method of Refs.\ [1, 2].  Those references treat only those two cases; the four-flavor case is obtained instead from the spectral form of the evolution operator, which holds at any number of flavors and of which their expansion is one projection, and is the largest case for which the eigenvalues are available in closed form.  A varying density profile is cut into slabs of constant density, each solved exactly, and the operators composed in order.} \\ \\
 \smallskip
 %%%%
-{\em Additional comments:}\\
-\del{The program can be applied to the computation of oscillations in matter with piece-wise constant density, \eg, inside Earth.}\add{The program computes oscillations in matter of piece-wise constant density: each slab is solved exactly and the resulting evolution operators are composed.  A dedicated module implements the density profile of Earth, so that probabilities can be computed along any chord through it.  All core routines also accept stacks of Hamiltonians and arrays of baselines, and evaluate them without a Python-level loop.}   \\ \\
-% \medskip
+{\em Additional comments\add{, including restrictions and unusual features}:}\\
+\del{The program can be applied to the computation of oscillations in matter with piece-wise constant density, \eg, inside Earth.}\add{The Hamiltonian must be Hermitian and time-independent, and the system closed: interactions, absorption, decay and other non-unitary terms are outside the method, and a code that integrates the density matrix should be used for them.  Beyond four flavors no closed form for the eigenvalues exists, and the construction no longer applies.  Near a level crossing, where the spectrum is nearly degenerate, forming the characteristic polynomial costs accuracy that a backward-stable eigensolver would keep.  Where the density varies continuously, as in the Earth, the profile is discretised and the answer is exact only for the slabs it is given, so the slab count is a precision setting like any other; it can be set directly or chosen by the routine from a requested tolerance.  Unusually for a code of this kind, no approximation is made in the probability itself: the result is exact to round-off for the Hamiltonian supplied, at any number of flavors up to four and for any Hermitian Hamiltonian, including non-standard interactions and Lorentz-violating terms.} \\ \\
 %%%%
-% {\em Running time:}\\
-% Fast?
-  %    \\
+\add{{\em Running time:}\\
+Microseconds per probability, falling by up to two orders of magnitude when many are requested in one call.  See Section\ \ref{section:performance}, which states the machine.} \\
 
 \medskip
   
