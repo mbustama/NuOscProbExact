@@ -6,6 +6,7 @@
 [![Downloads](https://pepy.tech/badge/nuoscprobexact)](https://pepy.tech/project/nuoscprobexact)
 [![arXiv](https://img.shields.io/badge/arXiv-1904.12391-orange.svg)](https://arxiv.org/abs/1904.12391)
 [![DOI](https://zenodo.org/badge/182178323.svg)](https://zenodo.org/badge/latestdoi/182178323)
+[![INSPIRE](https://img.shields.io/badge/INSPIRE-cited%20by-003a6c.svg)](https://inspirehep.net/literature?sort=mostrecent&size=250&page=1&q=refersto%3Arecid%3A1731803&ui-citation-summary=true)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
@@ -694,7 +695,7 @@ This will print to screen a description of what the function does (in the exampl
 
 ## Citing
 
-If you use **NuOscProbExact** in your work, we ask you that you please cite the following paper: Mauricio Bustamante, *NuOscProbExact: a general-purpose code to compute exact two-flavor and three-flavor neutrino oscillation probabilities* ([arXiv:1904.12391](https://arxiv.org/abs/1904.12391)).
+If you use **NuOscProbExact** in your work, we ask you that you please cite the following paper: Mauricio Bustamante, *NuOscProbExact: a general-purpose code to compute exact two-flavor and three-flavor neutrino oscillation probabilities* ([arXiv:1904.12391](https://arxiv.org/abs/1904.12391)).  The papers that cite it are listed [on INSPIRE](https://inspirehep.net/literature?sort=mostrecent&size=250&page=1&q=refersto%3Arecid%3A1731803&ui-citation-summary=true).
 
 If you are citing **NuOscProbExact** in a document that will be uploaded to the arXiv, please consider using the LaTeX or BibTeX entries provided by INSPIRE ([link here](https://inspirehep.net/literature/1731803)):
 ```

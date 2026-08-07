@@ -5,7 +5,8 @@ Citing NuOscProbExact
 ---------------------
 
 If you use **NuOscProbExact** in your work, please cite
-:cite:`Bustamante:2019ggq`:
+:cite:`Bustamante:2019ggq`.  The papers that cite it are listed `on INSPIRE
+<https://inspirehep.net/literature?sort=mostrecent&size=250&page=1&q=refersto%3Arecid%3A1731803&ui-citation-summary=true>`_, with a citation summary:
 
 .. code-block:: bibtex
 

@@ -288,6 +288,24 @@ One Aberth sweep, also in double-double, carries the quartic's roots to that
 limit.  This is the default since 1.13.0, and
 :data:`oscprob4nu.ROOT_STRATEGY` chooses between the two.
 
+.. important::
+
+   **Four-flavor results moved in 1.13.0.**  The roots now come from a
+   different route, so any :func:`~oscprob4nu.probabilities_4nu` can differ
+   in its last digits from what 1.11.0 returned.  Measured on 3+1 spectra at
+   0.5, 1 and 10 GeV with :math:`\Delta m^2_{41}` of 0.1 and 1
+   eV\ :sup:`2`, over 1300 km: bit-identical in two of those six, and at
+   most :math:`1.2\times10^{-10}` in the rest.
+
+   The new values are the accurate ones --- the roots behind them are good to
+   :math:`3.6\times10^{-17}` where the older route reached
+   :math:`2.2\times10^{-7}` --- and both sit orders of magnitude below
+   anything an experiment resolves.  Neither setting of
+   :data:`oscprob4nu.ROOT_STRATEGY` reproduces 1.11.0 exactly, since
+   ``'eigensolver'`` is LAPACK rather than the closed form 1.11.0 used;
+   :func:`~oscprob4nu.psi_roots_4nu` still solves the quartic in closed form
+   for anyone who wants that specific computation.
+
 What each gains, and what the alternatives gain
 """""""""""""""""""""""""""""""""""""""""""""""
 
