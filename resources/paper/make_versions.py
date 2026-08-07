@@ -118,6 +118,164 @@ def clean(text):
     return text
 
 
+BIB = re.compile(r'\\begin\{thebibliography\}.*?\\end\{thebibliography\}',
+                 re.S)
+
+
+def hide_bibliography(text, store):
+    r"""Swaps the bibliography for a placeholder before diffing.
+
+    ``latexdiff`` marks up the arguments of ``\href`` and ``\path`` inside
+    ``\bibitem``, and a marked-up URL sends ``hyperref`` into a recursion
+    that exhausts TeX's input stack rather than failing cleanly ---
+    ``--append-safecmd`` does not reach it, and the compile simply hangs.
+
+    A diff does not need a coloured bibliography anyway: new references
+    show up where they are cited.  So the whole environment is held out of
+    the comparison and put back afterwards, from the *new* version, which
+    means the reference list in the diff is the current one and is not
+    marked as changed.
+    """
+    def swap(m):
+        store.append(m.group(0))
+        return '\\BIBPLACEHOLDER{%d}' % (len(store)-1)
+    # Every one of them: this document has two, a short list in the
+    # front matter and the real one, and replacing only the first left
+    # the real bibliography exposed to the diff.
+    return BIB.sub(swap, text)
+
+
+def restore_bibliography(text, bibliography):
+    r"""Puts it back, stripping any mark-up latexdiff wrapped around it."""
+    text = re.sub(r'\\DIFaddbegin\s*(\\BIBPLACEHOLDER\{\d+\})\s*\\DIFaddend',
+                  lambda m: m.group(1), text)
+    text = re.sub(r'\\DIF(?:add|del)\{\s*(\\BIBPLACEHOLDER\{\d+\})\s*\}',
+                  lambda m: m.group(1), text)
+    text = re.sub(r'%DIFDELCMD < *\\BIBPLACEHOLDER\{\d+\}[^\n]*\n', '', text)
+    return re.sub(r'\\BIBPLACEHOLDER\{(\d+)\}',
+                  lambda m: bibliography[int(m.group(1))], text)
+
+
+ENVS = ('equation*', 'equation', 'eqnarray*', 'eqnarray')
+
+
+def _group_end(text, i):
+    r"""Index just past the brace group that opens at ``text[i] == '{'``."""
+    depth = 0
+    while i < len(text):
+        if text[i] == '\\':
+            i += 2
+            continue
+        if text[i] == '{':
+            depth += 1
+        elif text[i] == '}':
+            depth -= 1
+            if depth == 0:
+                return i + 1
+        i += 1
+    return -1
+
+
+def _blocks(text):
+    r"""Every ``\DIFaddbegin`` ... ``\DIFaddend`` span, as index pairs."""
+    out = []
+    for m in re.finditer(r'\\DIFaddbegin\b', text):
+        stop = text.find('\\DIFaddend', m.end())
+        if stop >= 0:
+            out.append((m.end(), stop))
+    return out
+
+
+def detexorpdfstring(text):
+    r"""Defines ``\DIFadd``/``\DIFdel`` without ``\texorpdfstring``.
+
+    ``latexdiff`` notices ``hyperref`` and routes its two mark-up macros
+    through ``\texorpdfstring`` so that a bookmark gets the plain text.
+    Inside a ``\caption``, inside a ``minipage``, inside a ``figure*`` ---
+    which is where the two speed-accuracy planes now live --- that recurses
+    until TeX's input stack is exhausted.  The bookmarks are not worth it:
+    the macros are defined to their own ``tex`` variants instead, which is
+    what ``latexdiff`` uses when ``hyperref`` is absent.
+    """
+    text = text.replace(
+        r'\providecommand{\DIFadd}[1]{\texorpdfstring{\DIFaddtex{#1}}{#1}}',
+        r'\providecommand{\DIFadd}[1]{\DIFaddtex{#1}}')
+    text = text.replace(
+        r'\providecommand{\DIFdel}[1]{\texorpdfstring{\DIFdeltex{#1}}{}}',
+        r'\providecommand{\DIFdel}[1]{\DIFdeltex{#1}}')
+    return text
+
+
+def repair(text):
+    r"""Undoes the two ways ``latexdiff`` breaks this particular document.
+
+    Neither is anything the author did; both are what the tool emits on a
+    revision that moved whole environments around, and both are mechanical.
+
+    *A listing inside a macro argument.*  ``latexdiff`` wraps added text in
+    ``\DIFadd{...}``, and one span swallowed a ``lstlisting``.  That cannot
+    work: the environment reads its body verbatim, and a macro argument is
+    tokenised before it ever runs --- the same constraint that makes
+    ``main.tex`` mark listing changes in the caption rather than the body.
+    The wrapper comes off; the surrounding block still colours the listing.
+
+    *An environment split across two added blocks.*  A ``\begin{equation*}``
+    landed in one ``\DIFaddbegin`` block and its ``\end`` in another, which
+    leaves the first block with an unclosed environment and a stray ``}``,
+    and the second with an ``\end`` that opens nothing.  Both halves are
+    repaired: the missing ``\end`` is put back, the stray brace dropped, and
+    the orphaned ``\end`` removed.
+    """
+    out, i, unwrapped = [], 0, 0
+    while True:
+        m = re.compile(r'\\DIFadd\{').search(text, i)
+        if not m:
+            out.append(text[i:])
+            break
+        end = _group_end(text, m.end()-1)
+        if end < 0 or '\\begin{lstlisting}' not in text[m.end():end-1]:
+            out.append(text[i:m.end()])
+            i = m.end()
+            continue
+        out.append(text[i:m.start()])
+        out.append(text[m.end():end-1])
+        unwrapped += 1
+        i = end
+    text = ''.join(out)
+
+    closed = orphaned = 0
+    for env in ENVS:
+        begin, end_ = '\\begin{%s}' % env, '\\end{%s}' % env
+        while True:                                   # missing \end
+            for start, stop in _blocks(text):
+                block = text[start:stop]
+                if block.count(begin) <= block.count(end_):
+                    continue
+                head = text[:stop].rstrip()
+                if head.endswith('}}'):
+                    head = head[:-1]
+                text = head + end_ + '\n' + text[stop:]
+                closed += 1
+                break
+            else:
+                break
+        while True:                                   # orphaned \end
+            for start, stop in _blocks(text):
+                block = text[start:stop]
+                if block.count(end_) <= block.count(begin):
+                    continue
+                k = text.index(end_, start)
+                text = text[:k] + text[k+len(end_):]
+                orphaned += 1
+                break
+            else:
+                break
+
+    print('  repaired: %d listing wrapper(s), %d unclosed and %d orphaned '
+          'environment(s)' % (unwrapped, closed, orphaned))
+    return text
+
+
 def run(cmd, **kw):
     return subprocess.run(cmd, cwd=HERE, check=False,
                           capture_output=True, text=True, **kw)
@@ -163,13 +321,34 @@ def main():
               'main_clean.tex is written, the diff is skipped')
         compile_twice('main_clean')
         return 0
+    old_bib, new_bib = [], []
+    tmp_old = os.path.join(HERE, '.diff_old.tex')
+    tmp_new = os.path.join(HERE, '.diff_new.tex')
+    open(tmp_old, 'w').write(
+        hide_bibliography(open(BASELINE).read(), old_bib))
+    open(tmp_new, 'w').write(hide_bibliography(resolved, new_bib))
+    # --graphics-markup=none: latexdiff's default highlighting redefines
+    # \includegraphics through \LetLtxMacro so it can box changed figures.
+    # In this document that redefinition recurses, and TeX reports it as an
+    # exhausted input stack -- after several minutes, at an
+    # \includegraphics line, rather than as a syntax error, which is what
+    # made it hard to place.
+    #
+    # --disable-citation-markup: latexdiff otherwise rewrites every \cite
+    # into an \hspace{0pt}%DIFAUXCMD construction, which is noise inside a
+    # float caption and buys nothing here.
     r = run(['perl', LATEXDIFF, '--type=CFONT', '--math-markup=off',
-             '--flatten', BASELINE, 'main_clean.tex'])
+             '--disable-citation-markup', '--graphics-markup=none',
+             '--flatten', '.diff_old.tex', '.diff_new.tex'])
+    for tmp in (tmp_old, tmp_new):
+        os.remove(tmp)
     if r.returncode != 0:
         print('latexdiff failed:', r.stderr[-400:])
         return 1
-    open(os.path.join(HERE, 'main_diff.tex'), 'w').write(r.stdout)
-    print('main_diff.tex written (%d bytes)' % len(r.stdout))
+    diffed = repair(detexorpdfstring(
+        restore_bibliography(r.stdout, new_bib)))
+    open(os.path.join(HERE, 'main_diff.tex'), 'w').write(diffed)
+    print('main_diff.tex written (%d bytes)' % len(diffed))
 
     compile_twice('main_clean')
     compile_twice('main_diff')

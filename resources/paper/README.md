@@ -59,14 +59,41 @@ needs its own `\addstart` after `\begin{table}`.
   one of them is wrong, which is the point of having both. Needs `latexdiff` on
   the `PATH`, or its location in `$LATEXDIFF`.
 
-**`main_diff.tex` does not currently compile.** It is generated, but
-`latexdiff` splits inline-math spans in the appendices across its own
-`\DIFadd{}` boundaries and breaks the surrounding `$...$`. `--type=CFONT` takes
-it from 147 LaTeX errors down to 8; `--math-markup=off`, `--math-markup=whole`,
-and forcing the array and equation environments through `PICTUREENV` do not
-clear the rest, which move around the appendices rather than disappearing. The
-eight need hand-patching in the generated file, or a different tool. The clean
-version is unaffected.
+Both compile: `main_clean.pdf` at 27 pages, `main_diff.pdf` at 28, neither
+with errors. `main_diff.tex` is the file to send a journal alongside the
+clean one.
+
+Four things had to be worked around to get `latexdiff` through this document,
+and `make_versions.py` does all four. They are recorded here because each one
+failed in a way that did not point at its own cause:
+
+- **The bibliography is held out of the diff entirely.** `latexdiff` marks up
+  the arguments of `\href` and `\path` inside `\bibitem`, and a marked-up URL
+  sends `hyperref` into a recursion that exhausts TeX's input stack — reported
+  after several minutes as a capacity error, at whatever line it happened to
+  be reading. Note that this document has *two* `thebibliography`
+  environments, a short one in the front matter and the real one; holding out
+  only the first leaves the real one exposed, which is what took longest to
+  see.
+- **`\texorpdfstring` comes out of the two mark-up macros.** `latexdiff`
+  routes them through it when `hyperref` is present, so bookmarks get plain
+  text; inside a `\caption` inside a `minipage` inside a `figure*` — which is
+  where the two speed-accuracy planes live — that recurses.
+- **`--graphics-markup=none`**, since the default redefines `\includegraphics`
+  through `\LetLtxMacro` to box changed figures, and that recurses here too.
+- **`--disable-citation-markup`**, which is cosmetic rather than fatal: it
+  otherwise rewrites every `\cite` into an `\hspace{0pt}%DIFAUXCMD`
+  construction that is noise inside a float caption.
+
+`repair()` also fixes two things `latexdiff` emits on a revision that moved
+whole environments around — a `lstlisting` swallowed by a `\DIFadd{}`, and an
+environment whose `\begin` and `\end` land in different added blocks. Both
+report zero on the current source; they are kept because they cost nothing and
+the next revision may reintroduce either.
+
+A consequence worth knowing: because the bibliography is held out, **new
+references are not marked as added in the diff**. They show where they are
+cited, which is the useful place.
 
 ## The figures
 
