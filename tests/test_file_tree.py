@@ -232,6 +232,8 @@ TREE = [
      'Regenerates the two Earth speed-accuracy planes'),
     ('tests/prem_speed_accuracy.json',
      'Those planes, at three flavors and at 3+1'),
+    ('tests/const_density_scan.json',
+     'The exact reference for the comparison figure'),
     ('tests/external_drivers/',
      'Drivers for the codes that cannot be called from Python'),
     ('tests/external_drivers/README.md',
@@ -252,6 +254,12 @@ TREE = [
      'Prob3++ on the same scan'),
     ('tests/external_drivers/nufast_lbl_perf.cpp',
      'NuFast-LBL at two Newton settings'),
+    ('tests/external_drivers/const_scan.py',
+     'The 50-digit reference for the comparison figure'),
+    ('tests/external_drivers/globes_scan.c',
+     'GLoBES on that comparison'),
+    ('tests/external_drivers/prob3_scan.cpp',
+     'Prob3++ on that comparison'),
     ('tests/test_file_tree.py', 'Keeps this tree in step with the repository'),
 
 ]

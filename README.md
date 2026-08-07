@@ -317,6 +317,7 @@ NuOscProbExact/
     ├── timing_other_codes.json      # Timings behind the performance figure
     ├── prem_scan.py                 # Regenerates the two Earth speed-accuracy planes
     ├── prem_speed_accuracy.json     # Those planes, at three flavors and at 3+1
+    ├── const_density_scan.json      # The exact reference for the comparison figure
     ├── external_drivers/            # Drivers for the codes that cannot be called from Python
     │   ├── README.md                # Every convention each one had to be told, and why
     │   ├── gen_prem_header.py       # Emits this library's PREM as a C header
@@ -329,7 +330,10 @@ NuOscProbExact/
     │   ├── perf_nusquids.py         # nuSQuIDS on the constant-density scan
     │   ├── globes_perf.c            # GLoBES on the same scan
     │   ├── prob3_perf.cpp           # Prob3++ on the same scan
-    │   └── nufast_lbl_perf.cpp      # NuFast-LBL at two Newton settings
+    │   ├── nufast_lbl_perf.cpp      # NuFast-LBL at two Newton settings
+    │   ├── const_scan.py            # The 50-digit reference for the comparison figure
+    │   ├── globes_scan.c            # GLoBES on that comparison
+    │   └── prob3_scan.cpp           # Prob3++ on that comparison
     └── test_file_tree.py            # Keeps this tree in step with the repository
 ```
 

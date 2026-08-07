@@ -2435,42 +2435,47 @@ rho = ref['density_g_cm3']
 L = L_km*KM
 vcc = earth.matter_potential(rho)
 
+# Every curve is refereed by the same 50-digit matrix exponential as the
+# speed-accuracy plane, so that this library is not its own referee here
+# either.  The reference, and the GLoBES and Prob3++ scans, are frozen in
+# tests/const_density_scan.json.
+with open(os.path.join('..', 'tests', 'const_density_scan.json')) as handle:
+    cd = json.load(handle)
+
+reference = np.array(cd['probability_reference'])
 exact = oscprob3nu.probabilities_3nu(
     hamiltonians3nu.hamiltonian_3nu_matter(H_VAC_3NU, E, vcc), L)[:, 3]
-nusq = np.array(ref['probability'])
-nufast = np.array(nuf['probability_N_Newton_0'])
-approx = p_mue_expansion(E, L, gd.S12_NO_BF, gd.S13_NO_BF, gd.S23_NO_BF,
-                         gd.DCP_NO_BF, gd.D21_NO_BF, gd.D31_NO_BF, vcc)
+curves = [
+    ("NuOscProbExact", "-", "C3", exact),
+    ("nuSQuIDS", "-", "C2", np.array(ref['probability'])),
+    ("NuFast-LBL", "-", "C4", np.array(nuf['probability_N_Newton_2'])),
+    ("GLoBES", "-", "C6", np.array(cd['probability_globes'])),
+    ("Prob3++", "-", "C5", np.array(cd['probability_prob3pp'])),
+    (r"$\alpha$--$s_{13}$ expansion", "--", "C1",
+     p_mue_expansion(E, L, gd.S12_NO_BF, gd.S13_NO_BF, gd.S23_NO_BF,
+                     gd.DCP_NO_BF, gd.D21_NO_BF, gd.D31_NO_BF, vcc)),
+]
 
-print("max |exact - nuSQuIDS|  = %.1e" % np.abs(exact-nusq).max())
-print("max |exact - NuFast|    = %.1e" % np.abs(exact-nufast).max())
-print("max |exact - expansion| = %.1e" % np.abs(exact-approx).max())
+for name, _, _, values in curves:
+    print("max |%-24s - reference| = %.1e"
+          % (name, np.abs(values-reference).max()))
 
 fig, (ax, axr) = plt.subplots(
     2, 1, figsize=(COLW, COLW*1.06), sharex=True,
     gridspec_kw={"height_ratios": [2.4, 1.2], "hspace": 0.06})
 
-ax.semilogx(E_gev, exact, "-", color="C0", label="NuOscProbExact")
-ax.semilogx(E_gev[::4], nusq[::4], "o", color="C2", ms=2.4, mfc="none",
-            mew=0.7, label="nuSQuIDS")
-ax.semilogx(E_gev[::4], nufast[::4], "s", color="C4", ms=2.2, mfc="none",
-            mew=0.7, label="NuFast-LBL")
-ax.semilogx(E_gev, approx, "--", color="C1", label=r"$\alpha$--$s_{13}$ expansion")
+for name, dash, colour, values in curves:
+    ax.semilogx(E_gev, values, dash, color=colour, lw=0.9, label=name)
+    axr.loglog(E_gev, np.abs(values-reference), dash, color=colour, lw=0.9)
 ax.set_ylabel(r"$P_{\nu_\mu \to \nu_e}$")
 ax.set_ylim(0.0, 0.16)
 framed(ax, loc="upper right", ncol=1)
 
-axr.loglog(E_gev, np.abs(exact-nusq), "-", color="C2", lw=0.9,
-           label="nuSQuIDS")
-axr.loglog(E_gev, np.abs(exact-nufast), "-.", color="C4", lw=0.9,
-           label="NuFast-LBL")
-axr.loglog(E_gev, np.abs(exact-approx), "--", color="C1", lw=0.9,
-           label="expansion")
-axr.set_ylabel(r"$|\Delta P|$")
+axr.set_ylabel(r"$|\Delta P|$ vs.\ reference")
 axr.set_xlabel("Neutrino energy [GeV]")
 axr.set_xlim(E_gev[0], E_gev[-1])
-axr.set_ylim(1.0e-10, 1.0e-1)
-axr.set_yticks([1.0e-9, 1.0e-6, 1.0e-3])
+axr.set_ylim(1.0e-16, 1.0e-1)
+axr.set_yticks([1.0e-14, 1.0e-10, 1.0e-6, 1.0e-2])
 fig.savefig(os.path.join(FIGDIR, "exact_vs_approximations.pdf"))
 plt.show()'''),
         md(r'''## Two flavors, four scenarios

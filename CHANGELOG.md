@@ -31,6 +31,18 @@ and the project uses [Semantic Versioning](https://semver.org/).
   cost *fell* between 64 and 128 slabs per segment, so the timer now
   autoranges the way `timeit` does.
 
+### Added
+
+- **`tests/const_density_scan.json`**, the exact reference for the
+  constant-density comparison figure, with GLoBES and Prob3++ on the same
+  150-energy grid.  That figure had been plotting every code's residual
+  against this library's own answer, which made it its own referee; it is
+  now refereed the same way the speed-accuracy plane is, by a 50-digit
+  `mpmath` matrix exponential of the same Hamiltonian.  Against it this
+  library sits at 1e-15, GLoBES at 3e-8, NuFast-LBL at two Newton steps at
+  2e-8, nuSQuIDS at 9e-8, Prob3++ at 3e-5, and the second-order expansion at
+  7e-3.
+
 ### Changed
 
 - **`performance.pdf` gains NuFast-LBL at two Newton steps.**  It had only
