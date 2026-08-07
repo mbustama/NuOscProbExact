@@ -34,14 +34,16 @@ want to do:
 against an independent matrix exponential.  The library itself never imports
 it.
 
-``numba`` is a base dependency as of 1.13.0, not an optional extra, so the
-compiled path is what a plain install gets.  It brings a ceiling with it:
-``numba`` declares an upper bound on ``numpy`` (0.66.0 requires
-``numpy<2.5``), and installing into an environment holding a newer ``numpy``
-than that will downgrade it.  The bound is ``numba``'s own and cannot be
-avoided from this side.  If the newest ``numpy`` matters more than the speed,
-install with ``--no-deps`` and add ``numpy`` yourself, or leave ``numba``
-installed and set :data:`fastkernels.USE_NUMBA` to ``False``.
+.. important::
+
+   ``numba`` is a base dependency as of 1.13.0, not an optional extra, so the
+   compiled path is what a plain install gets.  It brings a ceiling with it:
+   ``numba`` declares an upper bound on ``numpy`` (0.66.0 requires
+   ``numpy<2.5``), and installing into an environment holding a newer ``numpy``
+   than that will downgrade it.  The bound is ``numba``'s own and cannot be
+   avoided from this side.  If the newest ``numpy`` matters more than the speed,
+   install with ``--no-deps`` and add ``numpy`` yourself, or leave ``numba``
+   installed and set :data:`fastkernels.USE_NUMBA` to ``False``.
 
 **NuOscProbExact** requires Python 3.9 or newer, and every release is tested
 on 3.9, 3.10, 3.11, 3.12, and 3.13.  The floor comes from
