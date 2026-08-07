@@ -546,5 +546,5 @@ Where to go next
   --- the same probabilities cross-checked against an independent external
   code, and against a published closed form, with the conventions that have
   to be matched first.
-* The `notebooks <https://github.com/mbustama/NuOscProbExact/tree/main/notebooks>`_
-  --- eighteen of them, carrying their figures inline.
+* :doc:`notebooks` --- twenty of them, carrying their figures inline, in
+  reading order.

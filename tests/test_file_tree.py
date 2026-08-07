@@ -24,7 +24,10 @@ changed.  Running it with no arguments reports whether they are current
 without touching anything.
 """
 
+import ast
 import os
+import pathlib
+import re
 import subprocess
 import sys
 
@@ -84,6 +87,8 @@ TREE = [
     ('docs/source/quickstart.rst', 'Shortest path to a probability'),
     ('docs/source/recipes.rst',
      'Numerical recipes, with pre-generated figures'),
+    ('docs/source/notebooks.rst',
+     'The twenty tutorial notebooks, in reading order'),
     ('docs/source/methodology.rst', 'The SU(2), SU(3) and SU(4) expansions'),
     ('docs/source/functions.rst', 'API reference, from the docstrings'),
     ('docs/source/references.rst', 'Bibliography'),
@@ -417,3 +422,46 @@ if __name__ == '__main__':
             print('run `python tests/test_file_tree.py --write` to update')
             sys.exit(1)
         print('both documents are up to date')
+
+
+def test_the_notebook_page_lists_every_notebook_in_reading_order():
+    r"""``docs/source/notebooks.rst`` matches ``READING_ORDER``.
+
+    The page is a second place where the notebooks are named, which is the
+    situation `READING_ORDER` was declared to avoid --- it exists so that
+    adding a notebook is one edit and cannot leave a dangling link.  A
+    documentation page written by hand would reintroduce exactly that drift,
+    one release later and somewhere nobody looks.
+
+    So the page is generated from that list, and this checks it still
+    agrees: every notebook present, in order, with its title, its blurb and
+    a link that resolves.  The list itself is already checked against the
+    notebooks that exist, by the assertion in ``add_footers``.
+    """
+    generator = (pathlib.Path(__file__).resolve().parent.parent
+                 / 'notebooks' / 'make_notebooks.py').read_text()
+    block = re.search(r'READING_ORDER = (\[.*?\n\])\n', generator, re.S)
+    assert block, 'READING_ORDER not found in make_notebooks.py'
+    order = ast.literal_eval(block.group(1))
+
+    page = (pathlib.Path(__file__).resolve().parent.parent
+            / 'docs' / 'source' / 'notebooks.rst').read_text()
+
+    assert len(order) == 20, len(order)
+    assert 'Twenty worked notebooks' in page, (
+        'the page states a count, which has to match len(READING_ORDER)')
+
+    position = 0
+    for number, (name, title, blurb) in enumerate(order, start=1):
+        link = '`%02d. %s <%s%s>`_' % (
+            number, title,
+            'https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/',
+            name)
+        found = page.find(link, position)
+        assert found >= 0, 'missing, or out of reading order: %s' % link
+        position = found
+
+        # The blurb travels with the entry; wrapping may have split it
+        flattened = ' '.join(page[found:found+400].split())
+        wanted = blurb[0].upper() + blurb[1:]
+        assert wanted in flattened, 'blurb missing for %s: %s' % (name, wanted)

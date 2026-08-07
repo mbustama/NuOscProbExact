@@ -213,6 +213,7 @@ NuOscProbExact/
 │       ├── installation.rst         # Requirements, installation, file tree
 │       ├── quickstart.rst           # Shortest path to a probability
 │       ├── recipes.rst              # Numerical recipes, with pre-generated figures
+│       ├── notebooks.rst            # The twenty tutorial notebooks, in reading order
 │       ├── methodology.rst          # The SU(2), SU(3) and SU(4) expansions
 │       ├── functions.rst            # API reference, from the docstrings
 │       ├── references.rst           # Bibliography

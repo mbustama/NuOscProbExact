@@ -408,6 +408,7 @@ See :doc:`installation` and :doc:`quickstart` for the longer version.
    installation
    quickstart
    recipes
+   notebooks
    methodology
    functions
    references
