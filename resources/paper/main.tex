@@ -527,8 +527,8 @@ where the complex coefficients $u_0$ and $u_k$ are functions of $L$ and the $h_k
 
 The coefficients in \equ{u3_def} can be trivially written as $u_0=\frac{1}{3}\text{Tr}~\mathbb{U}_3$ and $u_k=-\frac{i}{2}\text{Tr}(\lambda^k \mathbb{U}_3)$; next we unpack these forms.  An application of Sylvester's formula\ \cite{Sylvester:1883} to $3 \times 3$ matrices --- that is, of \equ{ua_general} at $n = 3$ --- allows us to express the coefficients in terms of the two SU(3) invariants,
 \begin{eqnarray*}
- && I_2 \equiv \left\vert h \right\vert^2 = h_kh^k \;, \\
- && I_3 \equiv \langle h \rangle = d_{ijk}h^ih^jh^k \;,
+ && I_2 \equiv \left\vert h \right\vert^2 = h_kh^k = \tfrac{1}{2}{\rm Tr}\,\tilde{\mathbb{H}}_3^2 \;, \\
+ && I_3 \equiv \langle h \rangle = d_{ijk}h^ih^jh^k = \tfrac{1}{2}{\rm Tr}\,\tilde{\mathbb{H}}_3^3 \;,
 \end{eqnarray*}
 The tensor $d_{ijk} = \frac{1}{4} \text{Tr} \left( \lbrace\lambda_i,\lambda_j\rbrace\lambda_k \right)$, where the brackets represent the anticommutator.  It is totally symmetric, and appears in the product law of Gell-Mann matrices alongside the antisymmetric structure constants $f_{ijk}$, which come from the commutator instead; see \equ{star}.  Table \ref{tab:d_tensor} shows all non-zero components.
 
@@ -622,7 +622,7 @@ Because the algebra of Gell-Mann matrices is more complicated than that of Pauli
 \section{Four-flavor oscillations}
 \label{section:four_flavors}
 
-Sections \ref{section:two_flavors} and \ref{section:three_flavors} are \equ{sylvester} at $n=2$ and $n=3$; the expansions there, and the closed forms built on them, are due to OS.  This section is the same construction at $n=4$ --- which their own remark identifies as reachable without carrying it out, as Section \ref{section:scope} describes --- and which is the last value for which the eigenvalues can be written down in closed form.
+Sections \ref{section:two_flavors} and \ref{section:three_flavors} are \equ{sylvester} at $n=2$ and $n=3$; the expansions there, and the closed forms built on them, are due to OS.  This section is the same construction at $n=4$ --- which their own remark on the solvability of the characteristic equation identifies as reachable without carrying it out; see Section \ref{section:scope} --- and which is the last value for which the eigenvalues can be written down in closed form.
 
 \subsection{The four-flavor case}
 \label{section:4nu_case}
@@ -630,11 +630,9 @@ Sections \ref{section:two_flavors} and \ref{section:three_flavors} are \equ{sylv
 SU(4) has rank three, so $\tilde{\mathbb{H}}_4$ carries three invariants, all obtainable from traces,
 \begin{equation}
  \label{equ:invariants_4nu}
- I_2 = \lvert h \rvert^2 = \tfrac{1}{2}{\rm Tr}\,\tilde{\mathbb{H}}_4^2 \;, \quad
- I_3 = \langle h \rangle = \tfrac{1}{2}{\rm Tr}\,\tilde{\mathbb{H}}_4^3 \;, \quad
- I_4 = \tfrac{1}{2}\left({\rm Tr}\,\tilde{\mathbb{H}}_4^4 - I_2^2\right) \;,
+ I_2 \;, \quad I_3 \;, \quad I_4 = \tfrac{1}{2}\left({\rm Tr}\,\tilde{\mathbb{H}}_4^4 - I_2^2\right) \;,
 \end{equation}
-the first two being those of the three-flavor case.  The characteristic equation is the depressed quartic $\chi(\psi) = \psi^4 - I_2\psi^2 + \frac{2}{3}I_3\psi + \frac{1}{4}(I_2^2 - 2I_4) = 0$, which Ferrari-Euler reduction turns into the resolvent cubic
+the first two defined as in Section \ref{section:three_flavors}, with $\tilde{\mathbb{H}}_3$ replaced by $\tilde{\mathbb{H}}_4$, and $I_4$ the one SU(4) adds.  The characteristic equation is the depressed quartic $\chi(\psi) = \psi^4 - I_2\psi^2 + \frac{2}{3}I_3\psi + \frac{1}{4}(I_2^2 - 2I_4) = 0$, which Ferrari-Euler reduction turns into the resolvent cubic
 \begin{equation}
  \label{equ:resolvent_cubic}
  z^3 - 2I_2 z^2 + 2I_4 z - \tfrac{4}{9}I_3^2 = 0 \;.
