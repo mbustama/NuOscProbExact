@@ -710,14 +710,7 @@ The closed-form SU(4) exponential is not new outside neutrino physics: \Refs\ \c
 
 Fixing the generator basis, the probabilities take the same shape at every $n$.  For each unordered flavor pair exactly two generators are supported, one symmetric and one antisymmetric; the remaining $n-1$ are the Cartan generators.  Table \ref{tab:prob_4nu} gives the result at $n=4$.  Three structural features follow for any $n$, and are useful as run-time checks: the off-diagonal entries come in $T$-conjugate pairs differing only in the sign of the antisymmetric coefficient, so that $T$ violation resides entirely there; unitarity is inherited rather than imposed, appearing as the constraints $\sum_\beta P_{\nu_\alpha \to \nu_\beta} = 1$; and the number of physical Dirac phases entering the off-diagonal entries is $(n-1)(n-2)/2$ --- none at $n=2$, one at $n=3$, and three at $n=4$.
 
-Because \equ{uk_4nu} takes an arbitrary Hermitian $\mathbb{H}_4$, it covers short-baseline 3+1 fits, the sterile matter resonance for Earth-crossing neutrinos, and 3+1 combined with NSI or LIV, with no further derivation.  In constant matter, after removing the flavor-universal neutral-current potential as a global phase, the potential matrix is
-\begin{equation}
- \label{equ:a4}
- \mathbb{A}_4 = {\rm diag}\left(V_{\rm CC}, 0, 0, V_s\right) \;,
- \quad
- V_s = -V_{\rm NC} = \frac{G_{\rm F} n_n}{\sqrt{2}} \;,
-\end{equation}
-so that $V_s \simeq V_{\rm CC}/2$ in the crust.  The sterile state does not feel the charged-current potential, but the other three do not feel $V_s$; it is that difference that drives the resonance shown later in \figu{sterile_earth}.
+Because \equ{uk_4nu} takes an arbitrary Hermitian $\mathbb{H}_4$, it covers short-baseline 3+1 fits, the sterile matter resonance for Earth-crossing neutrinos, and 3+1 combined with NSI or LIV, with no further derivation.  The Hamiltonians themselves are collected in \ref{appendix:sample_2nu_hamiltonians}.
 
 \section{Code description}
 \label{section:code}
@@ -1737,7 +1730,14 @@ For oscillations in matter, we use
  \qquad
  \mathbb{A}_4 \equiv {\rm diag}\left(V_{\rm CC}, 0, 0, -V_{\rm NC}\right) \;,
 \end{equation*}
-which is \equ{a4}, whose last entry is the one feature with no two- or three-flavor counterpart; Section\ \ref{section:four_flavors} explains where it comes from.  In \figu{sterile_earth} the density is the PREM profile\ \cite{Dziewonski:1981xy} along the chord, so both $V_{\rm CC}$ and $V_{\rm NC}$ vary from slab to slab.
+or, written out,
+\begin{equation}
+ \label{equ:a4}
+ \mathbb{A}_4 = {\rm diag}\left(V_{\rm CC}, 0, 0, V_s\right) \;,
+ \quad
+ V_s = -V_{\rm NC} = \frac{G_{\rm F} n_n}{\sqrt{2}} \;,
+\end{equation}
+so that $V_s \simeq V_{\rm CC}/2$ in the crust.  That last entry is the one feature with no two- or three-flavor counterpart, and it is not a convention: the neutral-current potential is common to the three active flavors and may be removed as a global phase, but the sterile state never had it, and subtracting a term it does not feel leaves $-V_{\rm NC}$ behind.  The sterile state does not feel the charged-current potential either, while the other three do not feel $V_s$; it is that difference that drives the resonance of \figu{sterile_earth}.  A 3+1 system is therefore sensitive to the neutron density as well as the electron density, which no active-only scenario is.  In \figu{sterile_earth} the density is the PREM profile\ \cite{Dziewonski:1981xy} along the chord, so both $V_{\rm CC}$ and $V_{\rm NC}$ vary from slab to slab.
 
 For oscillations in matter with non-standard interactions, we use
 \begin{equation*}
