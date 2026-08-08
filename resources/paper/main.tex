@@ -301,6 +301,9 @@ In \equ{evolved_state}, to compute the action of the evolution operator, $\nu_\a
 \section{The general-$n$ method}
 \label{section:general_n}
 
+\subsection{The evolution operator}
+\label{section:evolution_operator}
+
 Let $\mathbb{H}$ be an arbitrary Hermitian $n \times n$ Hamiltonian in the flavor basis, constant over a baseline $L$, and let $\tilde{\mathbb{H}}$ be its traceless part, whose eigenvalues we write as $\psi_m$ and whose characteristic polynomial is $\chi(\psi) = \det(\psi \mathbb{1} - \tilde{\mathbb{H}})$.  For a non-degenerate spectrum, the evolution operator is
 \begin{equation}
  \label{equ:sylvester}
@@ -316,7 +319,10 @@ with $\mathbb{P}_m$ the orthogonal projector onto the $m$-th eigenspace, and ${\
 % --- already invoked in Section \ref{section:three_flavors} for the $3 \times 3$ case --- 
 and $\mathbb{P}_m$ are the Frobenius covariants; the underlying statements are nineteenth-century.
 
-Equation (\ref{equ:sylvester}) is one object, and several methods in the oscillation literature are readings of it.  Contracting it with the trace metric, $u_0 = \frac{1}{n}{\rm Tr}\,\mathbb{U}$ and $u_a = \frac{1}{2}{\rm Tr}(\lambda^a \mathbb{U})$, keeps the whole matrix in the generator basis and gives the OS expansion.  Keeping instead its columns gives the adjugate method\ \cite{Sylvester:1883}; keeping its diagonal gives the eigenvector-eigenvalue identity; writing it as a polynomial with Vandermonde-determined coefficients gives the Cayley-Hamilton form in \Ref\ \cite{Ohlsson:1999xb}.  What differs between them is which slice is kept, and in which basis.  Seen this way, the OS coefficients are the SU($n$)-basis components of the adjugate; the extension to another value of $n$ requires no new idea.
+\subsection{One object, several readings}
+\label{section:readings}
+
+Equation (\ref{equ:sylvester}) is one object, and several methods in the oscillation literature are readings of it.  Contracting it with the trace metric, $u_0 = \frac{1}{n}{\rm Tr}\,\mathbb{U}$ and $u_a = -\frac{i}{2}{\rm Tr}(\lambda^a \mathbb{U})$ --- in the convention $\mathbb{U} = u_0 \mathbb{1} + i u_a \lambda^a$ used throughout, \equ{u3_def} --- keeps the whole matrix in the generator basis and gives the OS expansion.  Keeping instead its columns gives the adjugate method\ \cite{Sylvester:1883}; keeping its diagonal gives the eigenvector-eigenvalue identity; writing it as a polynomial with Vandermonde-determined coefficients gives the Cayley-Hamilton form in \Ref\ \cite{Ohlsson:1999xb}.  What differs between them is which slice is kept, and in which basis.  Seen this way, the OS coefficients are the SU($n$)-basis components of the adjugate; the extension to another value of $n$ requires no new idea.
 
 Carrying this out, $u_0 = \frac{1}{n}\sum_m e^{-i\psi_m L}$ and
 \begin{equation}
@@ -325,23 +331,23 @@ Carrying this out, $u_0 = \frac{1}{n}\sum_m e^{-i\psi_m L}$ and
  =
  \sum_{m=1}^n e^{-i\psi_m L}
  \frac{N_a\left(\psi_m\right)}{\chi^\prime\left(\psi_m\right)} \;,~~
- N_a(\psi) \equiv \tfrac{1}{2}{\rm Tr}\!\left[\lambda^a\,{\rm adj}\left(\psi\mathbb{1}-\tilde{\mathbb{H}}\right)\right] \;.
+ N_a(\psi) \equiv -\tfrac{i}{2}{\rm Tr}\!\left[\lambda^a\,{\rm adj}\left(\psi\mathbb{1}-\tilde{\mathbb{H}}\right)\right] \;.
 \end{equation}
-Here $h^a = \frac{1}{2}{\rm Tr}\left(\lambda^a \tilde{\mathbb{H}}\right)$ are the components of the Hamiltonian in the generator basis, so that $\tilde{\mathbb{H}} = h_a \lambda^a$, and $\ast$ is the symmetric product those components inherit from the algebra of the generators,
+Here $h^a = \frac{1}{2}{\rm Tr}\left(\lambda^a \tilde{\mathbb{H}}\right)$ are the components of the Hamiltonian in the generator basis, so that $\tilde{\mathbb{H}} = h_a \lambda^a$, and $\ast$ is the symmetric product those components inherit from the generator algebra,
 \begin{equation}
  \label{equ:star}
  \lambda^a \lambda^b
  =
  \frac{2}{n} \delta^{ab} \mathbb{1}
  + \left(d^{abc} + i f^{abc}\right) \lambda^c \;,
- \qquad
+ \quad
  \left(x \ast y\right)^a
  \equiv
  d^{abc} x^b y^c \;,
 \end{equation}
 with $f^{abc}$ the antisymmetric structure constants and $d^{abc} = \frac{1}{4}{\rm Tr}\left(\left\{\lambda^a,\lambda^b\right\}\lambda^c\right)$ the totally symmetric $d$ tensor.  For SU(2) the anticommutator of two generators is proportional to the identity, so $d^{abc}$ vanishes identically and the star product with it; this is why the two-flavor case of Section \ref{section:two_flavors} carries none.
 
-The numerator $N_a$ has degree $n-2$ in $\psi$, and its coefficients are $h$, $h \ast h$, $\left(h \ast h\right) \ast h$, and so on: a star-product tower of length $n-1$, terminated by the Cayley-Hamilton theorem.  Everything follows from traces of powers of $\tilde{\mathbb{H}}$; the $d$ tensor is never built at runtime, and \textbf{no eigenvectors are ever required}---this is where the method derives its speed from. 
+The numerator $N_a$ has degree $n-2$ in $\psi$ --- the leading $\psi^{n-1}$ of the adjugate multiplies the identity, which $\lambda^a$ traces away --- and its coefficients are, up to normalization, $h$, $h \ast h$, $\left(h \ast h\right) \ast h$, and so on: a star-product tower of length $n-1$, terminated by the Cayley-Hamilton theorem.  Everything follows from traces of powers of $\tilde{\mathbb{H}}$; the $d$ tensor is never built at runtime, and \textbf{no eigenvectors are ever required}---this is where the method derives its speed from. 
 % The eigenvalues are the only non-polynomial input.
 
 The eigenvalues are the only quantity in \equ{sylvester} that is not a polynomial in the Hamiltonian.  Everything else---the projectors, the probabilities---is rational in them.  That is why the construction extends to any $n$ for which the eigenvalues can be had, why it stops where they cannot be had in closed form ($n \geq 5$), and why the accuracy of the whole procedure is set by the accuracy of the roots, $\psi_m$.  We return to these points later.
@@ -350,7 +356,7 @@ The eigenvalues are the only quantity in \equ{sylvester} that is not a polynomia
 \subsection{Piece-wise constant Hamiltonians}
 \label{section:composition}
 
-Nothing above requires that $\mathbb{H}$ be the same everywhere along the path.  If the path divides into $N$ regions, in the $j$-th of which a Hamiltonian $\mathbb{H}_j$ is constant over a length $L_j$, then \equ{sylvester} applies within each region separately, and the evolution operator for the whole path is their ordered product,
+Equation (\ref{equ:sylvester}) does require a constant $\mathbb{H}$, as Section \ref{Section_Introduction} states, but only over the interval to which it is applied, and nothing ties that interval to the whole path.  If the path divides into $N$ regions, in the $j$-th of which a Hamiltonian $\mathbb{H}_j$ is constant over a length $L_j$, then \equ{sylvester} applies within each region separately, and the evolution operator for the whole path is their ordered product,
 \begin{equation}
  \label{equ:composition}
  \mathbb{U}\left(\left\{L_j\right\}\right)
@@ -363,7 +369,7 @@ so that a neutrino created as $\nu_\alpha$ is detected as $\nu_\beta$ with proba
 
 Two things about \equ{composition} are worth stating plainly, because they are what make it more than a convenience.  It is \emph{exact}: each region is solved exactly by \equ{sylvester} and the operators are composed exactly, so nothing is approximated in the stitching.  And it is indifferent to \emph{why} the Hamiltonians differ.  The familiar case is a change in matter density, but a non-standard interaction that switches on in part of the path, a long-range potential that varies with radius, or any combination of these is the same statement and the same product.
 
-An approximation enters only when the true Hamiltonian varies \emph{continuously} and is replaced by a piece-wise constant one --- as for a neutrino crossing Earth, whose density profile is smooth within each shell.  The approximation is then in the profile, never in the propagation through it, which is why the number of regions is a precision setting rather than a modelling choice, and why refining it converges.  Section \ref{section:code} treats that case, which is by far the most common in practice.
+An approximation enters only when the true Hamiltonian varies \emph{continuously} and is replaced by a piece-wise constant one---as for a neutrino crossing Earth, whose density profile is smoothly varying within each shell.  The approximation is then in the profile, never in the propagation through it, which is why the number of regions is a precision setting rather than a modelling choice, and why refining it converges.  Section \ref{section:code} treats that case, which is by far the most common in practice.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
