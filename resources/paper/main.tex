@@ -353,6 +353,14 @@ The numerator $N_a$ has degree $n-2$ in $\psi$ --- the leading $\psi^{n-1}$ of t
 The eigenvalues are the only quantity in \equ{sylvester} that is not a polynomial in the Hamiltonian.  Everything else---the projectors, the probabilities---is rational in them.  That is why the construction extends to any $n$ for which the eigenvalues can be had, why it stops where they cannot be had in closed form ($n \geq 5$), and why the accuracy of the whole procedure is set by the accuracy of the roots, $\psi_m$.  We return to these points later.
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[t!]
+ \centering
+ \includegraphics[width=\columnwidth]{slabs_composition.pdf}
+ \caption{\label{fig:slabs}Composition of the evolution operators of \equ{composition}, for a neutrino crossing a path divided into regions of constant Hamiltonian.  A neutrino enters as $\nu_\alpha$ on the left and leaves as $\nu_\beta$ on the right.  Each region $k$ has its own width $L_k$ and Hamiltonian $\mathbb{H}_k$, and is solved exactly to give its own evolution operator $\mathbb{U}_k(L_k)$; the operators are then multiplied.  Drawn here for the commonest case, in which what changes from one region to the next is the matter density $\rho_k$, though nothing in the construction requires that.  Note the order, indicated by the crossing dashed lines: because the operators act to the left on the initial state, the region crossed \emph{first} is applied first and so appears \emph{rightmost} in the product, $\mathbb{U} = \mathbb{U}_4(L_4) \, \mathbb{U}_3(L_3) \, \mathbb{U}_2(L_2) \, \mathbb{U}_1(L_1)$.  Reversing the order describes a neutrino crossing the same path in the opposite direction, and gives different probabilities.}
+\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \subsection{Piece-wise constant Hamiltonians}
 \label{section:composition}
 
@@ -877,19 +885,14 @@ To compute the probabilities for oscillations in matter (and also with non-stand
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\begin{figure}[t!]
- \centering
- \includegraphics[width=\columnwidth]{slabs_composition.pdf}
- \caption{\label{fig:slabs}Composition of the evolution operators for a neutrino crossing slabs of matter of constant but different density.  A neutrino enters as $\nu_\alpha$ on the left and leaves as $\nu_\beta$ on the right.  Each slab $k$ has its own width $L_k$, density $\rho_k$, and Hamiltonian $\mathbb{H}_k$, and is solved exactly to give its own evolution operator $\mathbb{U}_k(L_k)$.  The operators are then multiplied.  Note the order, indicated by the crossing dashed lines: because the operators act to the left on the initial state, the slab crossed \emph{first} is applied first and so appears \emph{rightmost} in the product, $\mathbb{U} = \mathbb{U}_4(L_4) \, \mathbb{U}_3(L_3) \, \mathbb{U}_2(L_2) \, \mathbb{U}_1(L_1)$.  Reversing the order describes a neutrino crossing the same profile in the opposite direction, and gives different probabilities.  See \equ{composition}.}
-\end{figure}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The case that the code meets most often is the one in which the regions of Section \ref{section:composition} are slabs of matter, each of constant but different density.  See, \eg, \Refs\ \cite{Chizhov:1999az, Chizhov:1999he} for an overview of this scenario, and \Refs\ \cite{Ohlsson:1999um, Ohlsson:2001et, Merfeld:2014cha} for studies with the OS method.  It applies to long-baseline experiments that consider a non-uniform matter density profile\ \cite{Jacobsson:2001zk, Ohlsson:2003ip, Arguelles:2012nw, Roe:2017zdw, Kelly:2018kmb}, and to neutrinos crossing the several density layers inside Earth\ \cite{Freund:1999vc}; the amplitudes from the successive slabs are stitched together\ \cite{Giunti:2007ry} exactly as in \equ{composition}.  At three flavors each factor $\mathbb{U}^{(j)}$ is \equ{u3_expanded}, evaluated with the matter Hamiltonian at the density of the $j$-th slab.
 
-The one practical warning is the order of the factors, which \equ{composition} fixes but which is easy to get wrong by hand: the slab crossed first stands rightmost, and reversing the product sends the neutrino through the profile backwards.  This is the most common mistake made when implementing the procedure directly, and \figu{slabs} is drawn to make the ordering visible.
+The one practical warning is the order of the factors, which \equ{composition} fixes and \figu{slabs} draws, but which is easy to get wrong by hand: the slab crossed first stands rightmost, and reversing the product sends the neutrino through the profile backwards.  This is the most common mistake made when implementing the procedure directly.
 
-Figure \ref{fig:slabs} shows the procedure in full: a neutrino entering a sequence of slabs of differing width and density, the Hamiltonian and the exactly-solved evolution operator belonging to each, and the order in which those operators are multiplied.  It is implemented in the {\tt slabs} module, which takes arbitrary lists of widths and densities, solves each slab exactly, and composes the resulting operators in the order above.  The {\tt earth} module builds on it, using the PREM density profile\ \cite{Dziewonski:1981xy} to generate the slabs crossed along any chord through Earth.
+It is implemented in the {\tt slabs} module, which takes arbitrary lists of widths and densities, solves each slab exactly, and composes the resulting operators in the order above.  The {\tt earth} module builds on it, using the PREM density profile\ \cite{Dziewonski:1981xy} to generate the slabs crossed along any chord through Earth.
 
 
 \subsection{Oscillations with non-standard interactions}
