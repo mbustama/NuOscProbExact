@@ -301,36 +301,83 @@ In \equ{evolved_state}, to compute the action of the evolution operator, $\nu_\a
 \section{The general-$n$ method}
 \label{section:general_n}
 
-Let $\mathbb{H}$ be an arbitrary Hermitian $n \times n$ Hamiltonian in the flavor basis, constant over a baseline $L$, and let $\tilde{\mathbb{H}}$ be its traceless part, whose eigenvalues we write as $\psi_m$ and whose characteristic polynomial is $\chi(\psi) = \det(\psi \mathbb{1} - \tilde{\mathbb{H}})$.  For a non-degenerate spectrum, the evolution operator is
+\subsection{The evolution operator}
+\label{section:evolution_operator}
+
+Let $\mathbb{H}$ be an arbitrary Hermitian $n \times n$ Hamiltonian in the flavor basis, constant over a baseline $L$, and let $\tilde{\mathbb{H}}$ be its traceless part.  We write $\psi_m$ for the eigenvalues of $-\tilde{\mathbb{H}}$, the \emph{latent roots}, and $\chi(\psi) = \det(\psi \mathbb{1} + \tilde{\mathbb{H}})$ for their characteristic polynomial.  That sign is a convention and nothing more --- it is the one used in the rest of this paper and in the code, and it puts the phases in the form $e^{+i \psi_m L}$.  For a non-degenerate spectrum, the evolution operator is
 \begin{equation}
  \label{equ:sylvester}
  \mathbb{U}(L)
  =
- \sum_{m=1}^n e^{-i\psi_m L} \mathbb{P}_m \;,
+ \sum_{m=1}^n e^{i\psi_m L} \mathbb{P}_m \;,
  \qquad
  \mathbb{P}_m
  =
- \frac{{\rm adj}\left(\psi_m \mathbb{1} - \tilde{\mathbb{H}}\right)}{\chi^\prime\left(\psi_m\right)} \;,
+ \frac{{\rm adj}\left(\psi_m \mathbb{1} + \tilde{\mathbb{H}}\right)}{\chi^\prime\left(\psi_m\right)} \;,
 \end{equation}
 with $\mathbb{P}_m$ the orthogonal projector onto the $m$-th eigenspace, and ${\rm adj}(\mathbb{A})$ the adjugate of matrix $\mathbb{A}$ (\ie, the transpose of the cofactor matrix of $\mathbb{A}$).  This is Sylvester's interpolation formula\ \cite{Sylvester:1883} 
 % --- already invoked in Section \ref{section:three_flavors} for the $3 \times 3$ case --- 
 and $\mathbb{P}_m$ are the Frobenius covariants; the underlying statements are nineteenth-century.
 
-Equation (\ref{equ:sylvester}) is one object, and several methods in the oscillation literature are readings of it.  Contracting it with the trace metric, $u_0 = \frac{1}{n}{\rm Tr}\,\mathbb{U}$ and $u_a = \frac{1}{2}{\rm Tr}(\lambda^a \mathbb{U})$, keeps the whole matrix in the generator basis and gives the OS expansion.  Keeping instead its columns gives the adjugate method\ \cite{Sylvester:1883}; keeping its diagonal gives the eigenvector-eigenvalue identity; writing it as a polynomial with Vandermonde-determined coefficients gives the Cayley-Hamilton form in \Ref\ \cite{Ohlsson:1999xb}.  What differs between them is which slice is kept, and in which basis.  Seen this way, the OS coefficients are the SU($n$)-basis components of the adjugate; the extension to another value of $n$ requires no new idea.
+\subsection{One object, several readings}
+\label{section:readings}
 
-Carrying this out, $u_0 = \frac{1}{n}\sum_m e^{-i\psi_m L}$ and
+Equation (\ref{equ:sylvester}) is one object, and several methods in the oscillation literature are readings of it.  Contracting it with the trace metric, $u_0 = \frac{1}{n}{\rm Tr}\,\mathbb{U}$ and $u_a = -\frac{i}{2}{\rm Tr}(\lambda^a \mathbb{U})$ --- in the convention $\mathbb{U} = u_0 \mathbb{1} + i u_a \lambda^a$ used throughout, \equ{u3_def} --- keeps the whole matrix in the generator basis and gives the OS expansion.  Keeping instead its columns gives the adjugate method\ \cite{Sylvester:1883}; keeping its diagonal gives the eigenvector-eigenvalue identity; writing it as a polynomial with Vandermonde-determined coefficients gives the Cayley-Hamilton form in \Ref\ \cite{Ohlsson:1999xb}.  What differs between them is which slice is kept, and in which basis.  Seen this way, the OS coefficients are the SU($n$)-basis components of the adjugate; the extension to another value of $n$ requires no new idea.
+
+Carrying this out, $u_0 = \frac{1}{n}\sum_m e^{i\psi_m L}$ and
 \begin{equation}
  \label{equ:ua_general}
  u_a
  =
- \sum_{m=1}^n e^{-i\psi_m L}
+ \sum_{m=1}^n e^{i\psi_m L}
  \frac{N_a\left(\psi_m\right)}{\chi^\prime\left(\psi_m\right)} \;,~~
- N_a(\psi) \equiv \tfrac{1}{2}{\rm Tr}\!\left[\lambda^a\,{\rm adj}\left(\psi\mathbb{1}-\tilde{\mathbb{H}}\right)\right] \;.
+ N_a(\psi) \equiv -\tfrac{i}{2}{\rm Tr}\!\left[\lambda^a\,{\rm adj}\left(\psi\mathbb{1}+\tilde{\mathbb{H}}\right)\right] \;.
 \end{equation}
-The numerator $N_a$ has degree $n-2$ in $\psi$, and its coefficients are $h$, $h \ast h$, $\left(h \ast h\right) \ast h$, and so on: a star-product tower of length $n-1$, terminated by the Cayley-Hamilton theorem.  Everything follows from traces of powers of $\tilde{\mathbb{H}}$; the $d$ tensor is never built at runtime, and \textbf{no eigenvectors are ever required}---this is where the method derives its speed from. 
+Here $h^a = \frac{1}{2}{\rm Tr}\left(\lambda^a \tilde{\mathbb{H}}\right)$ are the components of the Hamiltonian in the generator basis, so that $\tilde{\mathbb{H}} = h_a \lambda^a$, and $\ast$ is the symmetric product those components inherit from the generator algebra,
+\begin{equation}
+ \label{equ:star}
+ \lambda^a \lambda^b
+ =
+ \frac{2}{n} \delta^{ab} \mathbb{1}
+ + \left(d^{abc} + i f^{abc}\right) \lambda^c \;,
+ \quad
+ \left(x \ast y\right)^a
+ \equiv
+ d^{abc} x^b y^c \;,
+\end{equation}
+with $f^{abc}$ the antisymmetric structure constants and $d^{abc} = \frac{1}{4}{\rm Tr}\left(\left\{\lambda^a,\lambda^b\right\}\lambda^c\right)$ the totally symmetric $d$ tensor.  For SU(2) the anticommutator of two generators is proportional to the identity, so $d^{abc}$ vanishes identically and the star product with it; this is why the two-flavor case of Section \ref{section:two_flavors} carries none.
+
+The numerator $N_a$ has degree $n-2$ in $\psi$ --- the leading $\psi^{n-1}$ of the adjugate multiplies the identity, which $\lambda^a$ traces away --- and its coefficients are, up to normalization, $h$, $h \ast h$, $\left(h \ast h\right) \ast h$, and so on: a star-product tower of length $n-1$, terminated by the Cayley-Hamilton theorem.  Everything needed is a trace: the latent roots follow from traces of powers of $\tilde{\mathbb{H}}$, through the invariants, and the coefficients from traces against the generators.  The $d$ tensor is never contracted at runtime --- its non-zero entries are written out in closed form --- and, above all, \textbf{no eigenvectors are ever required}; this is where the method derives its speed from.
 % The eigenvalues are the only non-polynomial input.
 
 The eigenvalues are the only quantity in \equ{sylvester} that is not a polynomial in the Hamiltonian.  Everything else---the projectors, the probabilities---is rational in them.  That is why the construction extends to any $n$ for which the eigenvalues can be had, why it stops where they cannot be had in closed form ($n \geq 5$), and why the accuracy of the whole procedure is set by the accuracy of the roots, $\psi_m$.  We return to these points later.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[t!]
+ \centering
+ \includegraphics[width=\columnwidth]{slabs_composition.pdf}
+ \caption{\label{fig:slabs}Composition of the evolution operators of \equ{composition}, for a neutrino crossing a path divided into regions of constant Hamiltonian.  A neutrino enters as $\nu_\alpha$ on the left and leaves as $\nu_\beta$ on the right.  Each region $k$ has its own width $L_k$ and Hamiltonian $\mathbb{H}_k$, and is solved exactly to give its own evolution operator $\mathbb{U}_k(L_k)$; the operators are then multiplied.  Drawn here for the commonest case, in which what changes from one region to the next is the matter density $\rho_k$, though nothing in the construction requires that.  Note the order, indicated by the crossing dashed lines: because the operators act to the left on the initial state, the region crossed \emph{first} is applied first and so appears \emph{rightmost} in the product, $\mathbb{U} = \mathbb{U}_4(L_4) \, \mathbb{U}_3(L_3) \, \mathbb{U}_2(L_2) \, \mathbb{U}_1(L_1)$.  Reversing the order describes a neutrino crossing the same path in the opposite direction, and gives different probabilities.}
+\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Piece-wise constant Hamiltonians}
+\label{section:composition}
+
+Equation (\ref{equ:sylvester}) does require a constant $\mathbb{H}$, as Section \ref{Section_Introduction} states, but only over the interval to which it is applied, and nothing ties that interval to the whole path.  If the path divides into $N$ regions, in the $j$-th of which a Hamiltonian $\mathbb{H}_j$ is constant over a length $L_j$, then \equ{sylvester} applies within each region separately, and the evolution operator for the whole path is their ordered product,
+\begin{equation}
+ \label{equ:composition}
+ \mathbb{U}\left(\left\{L_j\right\}\right)
+ =
+ \mathbb{U}_N\left(L_N\right) \cdots
+ \mathbb{U}_2\left(L_2\right) \,
+ \mathbb{U}_1\left(L_1\right) \;,
+\end{equation}
+so that a neutrino created as $\nu_\alpha$ is detected as $\nu_\beta$ with probability $P_{\nu_\alpha \to \nu_\beta}(\{L_j\}) = \lvert \nu_\beta^\dagger \, \mathbb{U}(\{L_j\}) \, \nu_\alpha \rvert^2$.  The region crossed \emph{first} stands \emph{rightmost}, since the operators act on the state to their right.  Because the $\mathbb{U}_j$ do not commute in general, writing the product in the opposite order describes a neutrino crossing the same path backwards, and gives a different answer.
+
+Two things about \equ{composition} are worth stating plainly, because they are what make it more than a convenience.  It is \emph{exact}: each region is solved exactly by \equ{sylvester} and the operators are composed exactly, so nothing is approximated in the stitching.  And it is indifferent to \emph{why} the Hamiltonians differ.  The familiar case is a change in matter density, but a non-standard interaction that switches on in part of the path, a long-range potential that varies with radius, or any combination of these is the same statement and the same product.
+
+An approximation enters only when the true Hamiltonian varies \emph{continuously} and is replaced by a piece-wise constant one---as for a neutrino crossing Earth, whose density profile is smoothly varying within each shell.  The approximation is then in the profile, never in the propagation through it, which is why the number of regions is a precision setting rather than a modelling choice, and why refining it converges.  Section \ref{section:code} treats that case, which is by far the most common in practice.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -502,7 +549,7 @@ With this, the coefficients in \equ{u3_def} are
  \label{equ:uk_expanded}
  && u_k
  =
- \sum_{m=1}^3
+ i\sum_{m=1}^3
  e^{i L \psi_m} \frac{\psi_m h_k - \left(h \ast h\right)_k}{3\psi_m^2 - \left\vert h \right\vert^2} \;,
 \end{eqnarray}
 where $\left(h\ast h\right)_i \equiv d_{ijk}h^jh^k$.  \ref{appendix:derivation_uk_expanded} contains the derivation of \equ{uk_expanded}.  Using Eqs.\ (\ref{equ:phi_alpha}), (\ref{equ:u0}), and (\ref{equ:uk_expanded}), we write the evolution operator concisely as in \Ref\ \cite{Ohlsson:1999xb},
@@ -597,7 +644,7 @@ Two accidents that make $n=3$ compact both fail here.  The rank is three rather 
  \frac{\left(\psi_m^2 - \frac{1}{2}I_2\right)h_k - \psi_m \left(h \ast h\right)_k + \left(\left(h \ast h\right)\ast h\right)_k}
       {4\psi_m^3 - 2I_2\psi_m + \frac{2}{3}I_3} \;,
 \end{eqnarray}
-in the same convention as Section \ref{section:three_flavors}: the $\psi_m$ are the latent roots of $-h_k\lambda^kL$ divided by $L$, and $\mathbb{U}_4 = u_0\mathbb{1} + iu_k\lambda^k$ as in \equ{u3_def}.  The denominator is $\chi^\prime(\psi_m)$, exactly as the $3\psi_m^2 - \lvert h \rvert^2$ of \equ{uk_expanded} is.  Comparing the two makes the pattern of \equ{ua_general} concrete: one more power of $\psi_m$ in the numerator, and one more rung of the star tower.
+in the convention of Section \ref{section:evolution_operator}, kept throughout: the $\psi_m$ are the latent roots, the eigenvalues of $-\tilde{\mathbb{H}}_4$, and $\mathbb{U}_4 = u_0\mathbb{1} + iu_k\lambda^k$ as in \equ{u3_def}.  The denominator is $\chi^\prime(\psi_m)$, exactly as the $3\psi_m^2 - \lvert h \rvert^2$ of \equ{uk_expanded} is.  Comparing the two makes the pattern of \equ{ua_general} concrete: one more power of $\psi_m$ in the numerator, and one more rung of the star tower.
 
 The closed-form SU(4) exponential is not new outside neutrino physics: \Refs\ \cite{VanKortryk:2015kua} give the SU(4) and SU(5) exponentials directly in the trace invariants of \equ{invariants_4nu}.  Within the four-flavor oscillation problem, the characteristic quartic has been arrived at more than once\ \cite{Kamo:2002sj}.  What we add is the implementation, and the probability table below.
 
@@ -838,32 +885,14 @@ To compute the probabilities for oscillations in matter (and also with non-stand
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\begin{figure}[t!]
- \centering
- \includegraphics[width=\columnwidth]{slabs_composition.pdf}
- \caption{\label{fig:slabs}Composition of the evolution operators for a neutrino crossing slabs of matter of constant but different density.  A neutrino enters as $\nu_\alpha$ on the left and leaves as $\nu_\beta$ on the right.  Each slab $k$ has its own width $L_k$, density $\rho_k$, and Hamiltonian $\mathbb{H}_k$, and is solved exactly to give its own evolution operator $\mathbb{U}_k(L_k)$.  The operators are then multiplied.  Note the order, indicated by the crossing dashed lines: because the operators act to the left on the initial state, the slab crossed \emph{first} is applied first and so appears \emph{rightmost} in the product, $\mathbb{U} = \mathbb{U}_4(L_4) \, \mathbb{U}_3(L_3) \, \mathbb{U}_2(L_2) \, \mathbb{U}_1(L_1)$.  Reversing the order describes a neutrino crossing the same profile in the opposite direction, and gives different probabilities.  See \equ{slabs_product}.}
-\end{figure}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The result above can be extended to the case where neutrinos traverse multiple slabs of matter, each of constant, different density.  See, \eg, \Refs\ \cite{Chizhov:1999az, Chizhov:1999he}, for an overview of this scenario, and \Refs\ \cite{Ohlsson:1999um, Ohlsson:2001et, Merfeld:2014cha} for studies with the OS method.  This applies to long-baseline neutrino experiments that consider a non-uniform matter density profile\ \cite{Jacobsson:2001zk, Ohlsson:2003ip, Arguelles:2012nw, Roe:2017zdw, Kelly:2018kmb}, and to Earth-traversing neutrinos that cross multiple density layers inside Earth\ \cite{Freund:1999vc}.  The probability amplitudes obtained after traversing each slab need to be stitched together\ \cite{Giunti:2007ry}.  If a neutrino created as $\nu_\alpha$ traverses $N_{\rm slabs}$ slabs of constant-density matter, each of width $L_j$, then the evolved state is
+The case that the code meets most often is the one in which the regions of Section \ref{section:composition} are slabs of matter, each of constant but different density.  See, \eg, \Refs\ \cite{Chizhov:1999az, Chizhov:1999he} for an overview of this scenario, and \Refs\ \cite{Ohlsson:1999um, Ohlsson:2001et, Merfeld:2014cha} for studies with the OS method.  It applies to long-baseline experiments that consider a non-uniform matter density profile\ \cite{Jacobsson:2001zk, Ohlsson:2003ip, Arguelles:2012nw, Roe:2017zdw, Kelly:2018kmb}, and to neutrinos crossing the several density layers inside Earth\ \cite{Freund:1999vc}; the amplitudes from the successive slabs are stitched together\ \cite{Giunti:2007ry} exactly as in \equ{composition}.  At three flavors each factor $\mathbb{U}^{(j)}$ is \equ{u3_expanded}, evaluated with the matter Hamiltonian at the density of the $j$-th slab.
 
+The one practical warning is the order of the factors, which \equ{composition} fixes and \figu{slabs} draws, but which is easy to get wrong by hand: the slab crossed first stands rightmost, and reversing the product sends the neutrino through the profile backwards.  This is the most common mistake made when implementing the procedure directly.
 
-\begin{equation}
- \label{equ:slabs_product}
- \nu_\alpha\left(\left\{L_j\right\}\right)
- =
- \left[
-  \mathbb{U}_3^{\left(N_{\rm slabs}\right)}\left(L_{N_{\rm slabs}}\right) \cdots
-  \mathbb{U}_3^{\left(2\right)}\left(L_2\right) \,
-  \mathbb{U}_3^{\left(1\right)}\left(L_1\right)
- \right]
- \nu_\alpha \;,
-\end{equation}
-
-where $\mathbb{U}_3^{(j)}$ is \equ{u3_expanded} computed using the matter Hamiltonian evaluated with the matter density of the $j$-th slab.  The order of the factors matters, and is fixed by the fact that the operators act to the left on the initial state: the slab that the neutrino crosses \emph{first} is applied first and therefore stands \emph{rightmost} in the product.  Because the $\mathbb{U}_3^{(j)}$ do not commute in general, writing the product in the opposite order corresponds to sending the neutrino through the profile backwards, and gives a different answer.  This is the most common mistake made when implementing the procedure by hand.  The final oscillation probability is $P_{\nu_\alpha \to \nu_\beta}\left(\left\{ L_j \right\}\right) = \lvert \nu_\beta^\dagger \nu_\alpha\left(\left\{L_j\right\}\right) \rvert^2$.
-
-Figure \ref{fig:slabs} shows the procedure in full: a neutrino entering a sequence of slabs of differing width and density, the Hamiltonian and the exactly-solved evolution operator belonging to each, and the order in which those operators are multiplied.  It is implemented in the {\tt slabs} module, which takes arbitrary lists of widths and densities, solves each slab exactly, and composes the resulting operators in the order above.  The {\tt earth} module builds on it, using the PREM density profile\ \cite{Dziewonski:1981xy} to generate the slabs crossed along any chord through Earth.
+It is implemented in the {\tt slabs} module, which takes arbitrary lists of widths and densities, solves each slab exactly, and composes the resulting operators in the order above.  The {\tt earth} module builds on it, using the PREM density profile\ \cite{Dziewonski:1981xy} to generate the slabs crossed along any chord through Earth.
 
 
 \subsection{Oscillations with non-standard interactions}
@@ -962,7 +991,7 @@ Because LIV has not been observed, the values of the eigenvalues $b_i$ and of th
 \begin{figure}[t!]
  \centering
  \includegraphics[width=\columnwidth]{earth_oscillogram.pdf}
- \caption{\label{fig:earth_oscillogram}{\it Top}: Earth, with a quarter cut away to show the interior.  The exposed layers are shaded by the PREM density\ \cite{Dziewonski:1981xy}, from $1$~g~cm$^{-3}$ in the ocean layer, pale, to $13$~g~cm$^{-3}$ in the inner core, dark red; the intact surface shows land and ocean.  The colored lines are the chords travelled by neutrinos reaching the detector (triangle) from four directions.  A neutrino with $\cos\theta_z = -1$ crosses the core; one with $\cos\theta_z = -0.2$ grazes the crust.  {\it Bottom}: muon-neutrino survival probability for neutrinos crossing Earth, as a function of energy and arrival direction, computed with {\tt NuOscProbExact}\ \cite{NuOscProbExact}.  Each chord is decomposed into slabs following the PREM density profile\ \cite{Dziewonski:1981xy}, and each slab is solved exactly and composed as in \equ{slabs_product}.  The sharp change in structure near $\cos\theta_z = -0.84$ is the core-mantle boundary, visible in the upper panel as the edge of the dark disc.}
+ \caption{\label{fig:earth_oscillogram}{\it Top}: Earth, with a quarter cut away to show the interior.  The exposed layers are shaded by the PREM density\ \cite{Dziewonski:1981xy}, from $1$~g~cm$^{-3}$ in the ocean layer, pale, to $13$~g~cm$^{-3}$ in the inner core, dark red; the intact surface shows land and ocean.  The colored lines are the chords travelled by neutrinos reaching the detector (triangle) from four directions.  A neutrino with $\cos\theta_z = -1$ crosses the core; one with $\cos\theta_z = -0.2$ grazes the crust.  {\it Bottom}: muon-neutrino survival probability for neutrinos crossing Earth, as a function of energy and arrival direction, computed with {\tt NuOscProbExact}\ \cite{NuOscProbExact}.  Each chord is decomposed into slabs following the PREM density profile\ \cite{Dziewonski:1981xy}, and each slab is solved exactly and composed as in \equ{composition}.  The sharp change in structure near $\cos\theta_z = -0.84$ is the core-mantle boundary, visible in the upper panel as the edge of the dark disc.}
 \end{figure}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -987,7 +1016,7 @@ Because LIV has not been observed, the values of the eigenvalues $b_i$ and of th
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-These capabilities are best shown by example.  \figu{earth_oscillogram} shows a standard three-flavor oscillogram for neutrinos crossing Earth: the survival probability $P_{\nu_\mu \to \nu_\mu}$ over energy and arrival direction, with each trajectory decomposed into slabs of the PREM profile and each slab solved exactly.  Computing it requires the slab composition of \equ{slabs_product} and the batched evaluation described above; the grid is a single sweep rather than a loop over Hamiltonians.
+These capabilities are best shown by example.  \figu{earth_oscillogram} shows a standard three-flavor oscillogram for neutrinos crossing Earth: the survival probability $P_{\nu_\mu \to \nu_\mu}$ over energy and arrival direction, with each trajectory decomposed into slabs of the PREM profile and each slab solved exactly.  Computing it requires the slab composition of \equ{composition} and the batched evaluation described above; the grid is a single sweep rather than a loop over Hamiltonians.
 
 Figure \ref{fig:density_arrangement} makes a point that the slab machinery exists to capture.  It compares four density profiles that have the same mean density --- and, in fact, exactly the same collection of slabs, permuted --- and shows that the resulting probabilities differ.  Because the evolution operators of the individual slabs do not commute, the arrangement of matter along the trajectory matters, not only its average.  Replacing a structured profile by a uniform one of the same mean density is an approximation, and \figu{density_arrangement} shows where it fails.
 
@@ -1374,7 +1403,7 @@ Three properties motivate this choice.  Deleting the pairs that involve the four
 
 Figure~\ref{fig:architecture} shows the structure of {\tt NuOscrProbExact}: ten modules and some $8900$ lines, with no inheritance and no state carried between calls. 
 
-Table \ref{tab:modules} says what each module is for.  The division is along one line: a module either builds a Hamiltonian or consumes one.  Everything in the first group is a convenience---the scenarios of Section \ref{section:code} are common enough to be worth shipping, but nothing in the second group knows or cares where its input came from, which is what makes an arbitrary Hamiltonian a first-class case rather than an escape hatch.
+Table \ref{tab:modules} says what each module is for.  The division is along one line: a module either builds a Hamiltonian or consumes one.  Everything in the first group is a convenience---the scenarios of Section \ref{section:code} are common enough to be worth shipping, but nothing in the second group knows or cares where its input came from, which is what makes an arbitrary Hamiltonian a first-class case rather than an escape hatch.  (Two sign conventions are in use internally in the code: {\tt oscprob3nu} works with the latent roots of Section \ref{section:evolution_operator}, whereas {\tt oscprob4nu} uses the eigenvalues of $\tilde{\mathbb{H}}$ and the opposite sign in the exponent.  The two are equivalent, both reproduce \equ{sylvester} to round-off, and neither is visible outside its module.)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 {\def\arraystretch{1.2}
@@ -1676,7 +1705,7 @@ where $\mathbb{R}_{2,\xi}$ is a $2 \times 2$ rotation matrix, like \equ{u_rotati
 
 \figu{plane} measures how exactly a code evaluates the probability for a Hamiltonian it is given.  Through the Earth that question cannot be asked, because no code is given the Hamiltonian: the density varies continuously along the trajectory, and every code, this one included, replaces the profile with something it can propagate through.  Figures\ \ref{fig:prem_plane} and\ \ref{fig:prem_plane_3plus1} therefore measure something else, and it is worth being explicit about what.
 
-The reference is a \emph{converged} PREM solution rather than an exact one.  The slab product of \equ{slabs_product} converges at second order in the slab width --- the density is sampled at slab midpoints and the PREM shell boundaries are cut exactly, so the leading error is $\mathcal{O}(h^2)$, with measured exponents of $2.000$ at $3$, $10$, and $40$~GeV.  The reference is the second-order Richardson extrapolation $\left[4 P(256) - P(128)\right]/3$ of a $30$-digit slab product.  That extrapolation shares its discretisation with the code it is meant to judge, so it is itself refereed, by an adaptive integration of $d\psi/dx = -i \mathbb{H}(x) \psi$ through the continuous profile, restarted at every shell boundary so that no step straddles a discontinuity.  The two share nothing but the definition of PREM, and they agree to $2 \cdot 10^{-11}$ at three flavors and $1 \cdot 10^{-9}$ at $3+1$ --- four decades below the finest point plotted.
+The reference is a \emph{converged} PREM solution rather than an exact one.  The slab product of \equ{composition} converges at second order in the slab width --- the density is sampled at slab midpoints and the PREM shell boundaries are cut exactly, so the leading error is $\mathcal{O}(h^2)$, with measured exponents of $2.000$ at $3$, $10$, and $40$~GeV.  The reference is the second-order Richardson extrapolation $\left[4 P(256) - P(128)\right]/3$ of a $30$-digit slab product.  That extrapolation shares its discretisation with the code it is meant to judge, so it is itself refereed, by an adaptive integration of $d\psi/dx = -i \mathbb{H}(x) \psi$ through the continuous profile, restarted at every shell boundary so that no step straddles a discontinuity.  The two share nothing but the definition of PREM, and they agree to $2 \cdot 10^{-11}$ at three flavors and $1 \cdot 10^{-9}$ at $3+1$ --- four decades below the finest point plotted.
 
 The second consequence is that {\tt NuOscProbExact} is a curve here and not the horizontal line of \figu{plane}, and it is worth being clear about why the tolerances exist at all.  In vacuum, and in matter of constant density, this code has no tolerance and needs none: the evolution operator is a closed-form function of the Hamiltonian, evaluated once, and the answer is exact to round-off --- which is what \figu{plane} shows, and why {\tt rtol} and {\tt atol} are absent from every example in Section\ \ref{section:code}.  The same is true of a chord through layered matter of piece-wise constant density: each slab is solved exactly and the operators are composed exactly, so nothing is approximated there either.  What PREM adds is that the density inside a segment is \emph{not} constant.  The profile has to be replaced by slabs that are, and only then does a discretisation exist to be traded against time.  Through the Earth it has a precision setting like everything else, and in fact two: the number of slabs per chord segment, and a relative tolerance from which the routine chooses that number itself, doubling until the answer settles.  Both are drawn.  The tolerance is the one to read first, because it is the only dial on any of these curves where the user states the quantity the vertical axis measures; a slab count is a number whose accuracy consequence one cannot know in advance, which is why the documentation's advice is to raise it and watch the result settle --- exactly what the tolerance automates.  The price of that convenience is visible as the gap between the two red curves, and it is about a factor of two: reaching $6.3 \cdot 10^{-7}$ costs $134$~$\mu$s when the code is told to use $256$ slabs and $252$~$\mu$s when it is asked to find that number, because the search evaluates at $1, 2, 4, \ldots$ and keeps only the last.  What each code's position measures, either way, is how finely it slices or integrates the profile, not the accuracy of its probability formula.
 

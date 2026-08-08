@@ -276,10 +276,10 @@ File tree
    ├── resources/                       # Things the repository carries but does not install
    │   └── paper/                       # Source of the paper that documents this library
    │       ├── README.md                # How to build it, and what each file is
-   │       ├── main.tex                 # The paper, with the revision marked up
+   │       ├── main.tex                 # The paper; BibTeX, no inlined bibliography
    │       ├── make_versions.py         # Derives the clean and the diffed versions
    │       ├── baseline_cpc_v1.tex      # The published version, for the diff
-   │       ├── refs.bib                 # Kept for reference; the .bbl is inlined
+   │       ├── refs.bib                 # The bibliography, read by BibTeX at build
    │       ├── elsarticle.cls
    │       ├── elsarticle-num.bst
    │       └── figs/                    # Every figure, fourteen of them from notebook 10
