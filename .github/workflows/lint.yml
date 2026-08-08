@@ -73,7 +73,11 @@ jobs:
 
   lint:
     name: Run Ruff Linter
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    # `always()` so that a failure of the `changes` job cannot withdraw this
+    # check: a required check that never reports blocks a pull request
+    # instead of failing it.  The step guards below then fall back to
+    # running everything, since an absent output is not 'false'.
+    if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository)
     needs: changes
     runs-on: ubuntu-latest
     steps:
@@ -81,17 +85,17 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up Python
-        if: needs.changes.outputs.code == 'true'
+        if: needs.changes.outputs.code != 'false'
         uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
       - name: Install Ruff
-        if: needs.changes.outputs.code == 'true'
+        if: needs.changes.outputs.code != 'false'
         run: pip install ruff
 
       - name: Run Ruff Linter
-        if: needs.changes.outputs.code == 'true'
+        if: needs.changes.outputs.code != 'false'
         # Undefined names, unused imports, comparison and except-clause mistakes.  The rule
         # selection, the two codebase-wide exemptions (E741 for `l`, E701 for the d_ijk
         # lookup table) and the star-import exemption for the paper's worked examples all
@@ -104,7 +108,7 @@ jobs:
         run: ruff check src/ tests/ examples/ docs/ notebooks/
 
       - name: Run Ruff Formatter (Check Only)
-        if: needs.changes.outputs.code == 'true'
+        if: needs.changes.outputs.code != 'false'
         # Informational, and expected to stay that way.  The codebase predates ruff format
         # and does not follow it -- 35 of 39 files would be reformatted -- and running it
         # would rewrite the alignment of the SU(3) coefficient blocks and the d_ijk table,
@@ -115,7 +119,11 @@ jobs:
 
   docs:
     name: Documentation builds
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    # `always()` so that a failure of the `changes` job cannot withdraw this
+    # check: a required check that never reports blocks a pull request
+    # instead of failing it.  The step guards below then fall back to
+    # running everything, since an absent output is not 'false'.
+    if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository)
     needs: changes
     runs-on: ubuntu-latest
     steps:
@@ -123,14 +131,14 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up Python
-        if: needs.changes.outputs.code == 'true'
+        if: needs.changes.outputs.code != 'false'
         uses: actions/setup-python@v7
         with:
           # Matches pages.yml, so what is checked here is what gets deployed.
           python-version: "3.12"
 
       - name: Install documentation dependencies and the package
-        if: needs.changes.outputs.code == 'true'
+        if: needs.changes.outputs.code != 'false'
         # docs/requirements.txt is `-e .[docs]`, so this installs the package
         # editable along with the documentation dependencies.  The editable
         # install is required, not merely convenient: jupyter-sphinx executes
@@ -140,11 +148,11 @@ jobs:
         run: pip install -r docs/requirements.txt
 
       - name: Register the Jupyter kernel used by jupyter-sphinx
-        if: needs.changes.outputs.code == 'true'
+        if: needs.changes.outputs.code != 'false'
         run: python -m ipykernel install --user --name python3 --display-name "Python 3"
 
       - name: Build HTML documentation
-        if: needs.changes.outputs.code == 'true'
+        if: needs.changes.outputs.code != 'false'
         # Stricter than pages.yml on purpose.  -W turns Sphinx warnings into errors, which
         # is what catches a broken cross-reference, a page missing from the toctree, a
         # numpydoc section that does not parse, or an autodoc target that has been renamed
@@ -160,7 +168,11 @@ jobs:
 
   notebooks:
     name: Notebooks execute
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    # `always()` so that a failure of the `changes` job cannot withdraw this
+    # check: a required check that never reports blocks a pull request
+    # instead of failing it.  The step guards below then fall back to
+    # running everything, since an absent output is not 'false'.
+    if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository)
     needs: changes
     runs-on: ubuntu-latest
     steps:
@@ -168,13 +180,13 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up Python
-        if: needs.changes.outputs.code == 'true'
+        if: needs.changes.outputs.code != 'false'
         uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
       - name: Install dependencies
-        if: needs.changes.outputs.code == 'true'
+        if: needs.changes.outputs.code != 'false'
         # The `fast` extra is included so the notebooks run against the compiled
         # backend, which is what a reader following the Performance section will have.
         run: |
@@ -182,7 +194,7 @@ jobs:
           pip install -e '.[notebooks,fast]'
 
       - name: Execute every notebook
-        if: needs.changes.outputs.code == 'true'
+        if: needs.changes.outputs.code != 'false'
         # Blocking, and the reason is the whole point of the job: a notebook is
         # documentation that claims to work.  The stored outputs make that claim
         # persuasive without being evidence -- they were true whenever the notebook was
@@ -219,7 +231,7 @@ jobs:
           PY
 
       - name: Run the worked examples
-        if: needs.changes.outputs.code == 'true'
+        if: needs.changes.outputs.code != 'false'
         # The nine scripts in examples/ are the ones the paper walks through and the
         # ones README.md walks through line by line.  Nothing executed them, so
         # they could rot silently -- and had: two were referenced under names
@@ -235,7 +247,7 @@ jobs:
           echo "all worked examples ran"
 
       - name: Check every notebook ships its figures
-        if: needs.changes.outputs.code == 'true'
+        if: needs.changes.outputs.code != 'false'
         # The notebooks are committed with their outputs, so that GitHub renders them
         # without anyone having to run anything.  A notebook stripped of its outputs
         # still executes and would pass the step above while showing a reader nothing.
