@@ -683,6 +683,12 @@ def psi_roots(h2: Union[int, float], h3: Union[int, float]) -> List[float]:
     = 0`, which are the eigenvalues of minus the traceless part of the
     Hamiltonian.  The roots are independent of the baseline.
 
+    Note the sign: :func:`oscprob4nu.psi_roots_4nu` returns the
+    eigenvalues of the traceless part *itself*.  Each module is
+    consistent within itself and the difference cannot be seen from
+    outside, but an expression moved between them needs the sign of its
+    odd-order terms changed.
+
     .. versionadded:: 1.0.0
 
     .. versionchanged:: 1.1.0

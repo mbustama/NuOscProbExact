@@ -43,6 +43,16 @@ Three ingredients have no counterpart in :mod:`oscprob3nu`:
      \psi^4 - I_2 \psi^2 - \tfrac23 I_3 \psi
      + \tfrac14 \left(I_2^2 - 2 I_4\right) = 0 .
 
+  **Sign convention, and a trap.**  Here the :math:`\psi_m` are the
+  eigenvalues of :math:`\tilde{H}` itself.  :func:`oscprob3nu.psi_roots`
+  returns those of :math:`-\tilde{H}`, the opposite sign.  Both modules
+  are internally consistent and the choice is invisible from outside
+  either, but the quartic above depends on it: under
+  :math:`\psi \to -\psi` the linear term is the only one that flips.
+  The expression is therefore right as written and wrong if carried into
+  the other convention -- which has twice produced an error in the
+  accompanying paper, precisely because it looks correct on its own.
+
 * **A quartic that still solves in closed form.**  Euler's method
   reduces it to a *resolvent cubic* whose three roots are real and
   non-negative because :math:`\tilde{H}` is Hermitian, so the same
