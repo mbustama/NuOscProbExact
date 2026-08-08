@@ -394,12 +394,12 @@ An approximation enters only when the true Hamiltonian varies \emph{continuously
 \section{Two-flavor oscillations}
 \label{section:two_flavors}
 
-We consider first oscillations between only two neutrino flavors; later, we consider three flavors.  This is a good approximation when describing reactor, accelerator, and atmospheric neutrinos.  We represent the two-neutrino Hamiltonian operator by a $2 \times 2$ matrix $\mathbb{H}_2$.  The three traceless, Hermitian Pauli matrices $\sigma^k$ ($k=1,2,3$) --- the generators of the SU(2) algebra --- plus the identity matrix $\mathbb{1}$ make up the orthogonal basis of $2 \times 2$ matrices.  Thus, we expand the Hamiltonian as
+We consider first oscillations between only two neutrino flavors; later, we consider three flavors.  It is a good approximation wherever one mass-squared splitting dominates, as in short-baseline reactor experiments and in accelerator and atmospheric analyses restricted to the leading oscillation; CP violation and the matter resonance need the three-flavor treatment of Section \ref{section:three_flavors}.  We represent the two-neutrino Hamiltonian operator by a $2 \times 2$ matrix $\mathbb{H}_2$.  The three traceless, Hermitian Pauli matrices $\sigma^k$ ($k=1,2,3$) --- the generators of the SU(2) algebra --- plus the identity matrix $\mathbb{1}$ make up the orthogonal basis of $2 \times 2$ matrices.  Thus, we expand the Hamiltonian as
 \begin{equation}
  \label{equ:h2_expansion}
  \mathbb{H}_2 = h_0 \mathbb{1} + h_k \sigma^k \;,
 \end{equation}
-where, here and below, we assume the Einstein convention of summing over repeated indices.  The coefficients $h_0$ and $h_k$ are functions of the components of the Hamiltonian; we show their explicit expressions in Table \ref{tab:h2_coefficients}.  In the two-neutrino case, the neutrino state at any time is $\nu(L) = f_\alpha(L) \nu_\alpha + f_\beta(L) \nu_\beta$, where $f_\alpha$ and $f_\beta$ are, respectively, the probability amplitudes of measuring the state to be a $\nu_\alpha$ or a $\nu_\beta$ (with $\alpha \neq \beta$).  We represent the neutrino state as a two-component column vector; the pure states are $\nu_\alpha = \left(1~0\right)^{\rm T}$ and $\nu_\beta = \left(0~1\right)^{\rm T}$.
+where, here and below, we assume the Einstein convention of summing over repeated indices.  The coefficients $h_0$ and $h_k$ are functions of the components of the Hamiltonian, and are real because $\mathbb{H}_2$ is Hermitian; we show their explicit expressions in Table \ref{tab:h2_coefficients}.  In the two-neutrino case, the neutrino state at any time is $\nu(L) = f_\alpha(L) \nu_\alpha + f_\beta(L) \nu_\beta$, where $f_\alpha$ and $f_\beta$ are, respectively, the probability amplitudes of measuring the state to be a $\nu_\alpha$ or a $\nu_\beta$ (with $\alpha \neq \beta$).  We represent the neutrino state as a two-component column vector; the pure states are $\nu_\alpha = \left(1~0\right)^{\rm T}$ and $\nu_\beta = \left(0~1\right)^{\rm T}$.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 {\def\arraystretch{1.2}
@@ -426,11 +426,11 @@ To compute the action of $\mathbb{U}_2$, we use a well-known identity of Pauli m
  \label{equ:pauli_identity}
  e^{\pm i a_k \sigma^k}
  =
- \cos\left(\left\vert a \right\vert \right) 
+ \cos\left(\left\vert a \right\vert \right) \mathbb{1}
  \pm 
  i \hat{a}_k\sigma^k\sin\left(\left\vert a\right\vert \right) \;, 
 \end{equation}
-where $\hat{a}$ is a unit vector in the direction of the vector $a = (a_1, a_2, a_3)$ and $\lvert a \rvert$ is its modulus.  So we can write the evolution operator as in \Ref\ \cite{Ohlsson:1999xb},
+valid for real $a_k$, where $\hat{a}$ is a unit vector in the direction of the vector $a = (a_1, a_2, a_3)$ and $\lvert a \rvert$ is its modulus.  So we can write the evolution operator as in \Ref\ \cite{Ohlsson:1999xb},
 \begin{equation}
  \label{equ:evol_op_2nu}
  \mathbb{U}_2\left(L\right) 
@@ -439,18 +439,18 @@ where $\hat{a}$ is a unit vector in the direction of the vector $a = (a_1, a_2, 
  -
  i \frac{\sin\left(\left\vert h\right\vert L\right)}{\lvert h \rvert} h_k\sigma^k  \;,
 \end{equation}
-where $\lvert h \rvert^2 \equiv \lvert h_1 \rvert^2 + \lvert h_2 \rvert^2 + \lvert h_3 \rvert^2$.
+where $\lvert h \rvert^2 \equiv h_1^2 + h_2^2 + h_3^2$ is the squared modulus of the vector $h$.
 
 The evolved state $\nu_\alpha (L)$ of a neutrino that was created with flavor $\alpha$, \ie, with $f_\alpha(0) = 1$ and $f_\beta(0) = 0$, is $\nu_\alpha\left(L\right) = \mathbb{U}_2(L) \nu_\alpha$.  After some manipulation, the flavor-transition probability $P_{\nu_\alpha \to \nu_\beta}(L) = \lvert \nu_\beta^\dagger \mathbb{U}_2(L) \nu_\alpha \rvert^2$ is
 \begin{equation}
  \label{equ:prob_2nu_general}
  P_{\nu_\alpha \to \nu_\beta}(L)
- = \frac{\left\vert h_1 \right\vert^2 + \left\vert h_2 \right\vert^2}
+ = \frac{h_1^2 + h_2^2}
  {\left\vert h\right\vert^2} \sin^2\left(\left\vert h\right\vert L\right) \;\; (\alpha \neq \beta) \;,
 \end{equation}
-where $\lvert h_1 \rvert^2 + \lvert h_2 \rvert^2 = \lvert (\mathbb{H}_2)_{12} \rvert^2$ and $\lvert h \rvert^2 = \lvert (\mathbb{H}_2)_{12} \rvert^2 + \lvert (\mathbb{H}_2)_{11} - (\mathbb{H}_2)_{22} \rvert^2 / 4$.  Because of the conservation of probability, $P_{\nu_\alpha \rightarrow \nu_\alpha}\left(L\right) = 1 - P_{\nu_\alpha \rightarrow \nu_\beta}\left(L\right)$.  \ref{appendix:derivation_prob_2nu_general} contains the derivation of \equ{prob_2nu_general}.  \ref{section:2nu_vacuum} shows a simple application to two-flavor oscillations in vacuum.  Equation (\ref{equ:prob_2nu_general}) is our final result in the two-neutrino case.  
+where $h_1^2 + h_2^2 = \lvert (\mathbb{H}_2)_{12} \rvert^2$ and $\lvert h \rvert^2 = \lvert (\mathbb{H}_2)_{12} \rvert^2 + \left[ (\mathbb{H}_2)_{11} - (\mathbb{H}_2)_{22} \right]^2 / 4$.  Because of the conservation of probability, $P_{\nu_\alpha \rightarrow \nu_\alpha}\left(L\right) = 1 - P_{\nu_\alpha \rightarrow \nu_\beta}\left(L\right)$.  \ref{appendix:derivation_prob_2nu_general} contains the derivation of \equ{prob_2nu_general}.  \ref{appendix:2nu_vacuum} shows a simple application to two-flavor oscillations in vacuum.  Equation (\ref{equ:prob_2nu_general}) is our final result in the two-neutrino case.  \ref{appendix:sample_2nu_hamiltonians} gives the two-flavor Hamiltonians for vacuum, matter, non-standard interactions, and a Lorentz-violating background, with the parameter values used in \figu{prob_2nu}.  
 
-The key to the calculation of \equ{prob_2nu_general} was to expand the time-evolution operator via the Pauli-matrix identity, \equ{pauli_identity}.  Later, in the three-neutrino case, we use an analogous identity for the Gell-Mann matrices.
+The key to the calculation of \equ{prob_2nu_general} was to expand the evolution operator via the Pauli-matrix identity, \equ{pauli_identity}.  Later, in the three-neutrino case, we use an analogous identity for the Gell-Mann matrices.
 
 \subsection{Antineutrinos}
 
@@ -461,7 +461,7 @@ Antineutrinos need no separate construction: conjugating the vacuum term and rev
  =
  \left[\mathbb{H}^{\rm vac}\right]^\ast - \mathbb{A} - \mathbb{V} \;,
 \end{equation}
-gives a Hamiltonian that \equ{sylvester} then treats like any other.  The conjugation reverses the sign of $\delta_{\rm CP}$, and with it every $T$-odd term; the reversal of $\mathbb{A}$ and $\mathbb{V}$ is what makes the matter resonance appear for one sign of $\Delta m_{31}^2$ in neutrinos and the other in antineutrinos.  Both halves are needed, and applying only one of them is the commonest error in this kind of calculation.  In the coefficient language the rule is simpler still: $h_a$ is unchanged for the symmetric generators and reversed for the antisymmetric ones, so the antineutrino probabilities are read off the tables below by exchanging each entry with its transpose.
+gives a Hamiltonian that \equ{sylvester} then treats like any other.  The conjugation reverses the sign of $\delta_{\rm CP}$, and with it every $T$-odd term; the reversal of $\mathbb{A}$ and $\mathbb{V}$ is what makes the matter resonance appear for one sign of $\Delta m_{31}^2$ in neutrinos and the other in antineutrinos.  Both halves are needed, and applying only one of them is the commonest error in this kind of calculation.  In vacuum, where the conjugation is the whole of it, the rule is simpler still: $h_a$ is unchanged for the symmetric generators and reversed for the antisymmetric ones, so the antineutrino probabilities are read off the tables below by exchanging each entry with its transpose.  In matter both terms act, and the Hamiltonian of \equ{antineutrino} has to be built and expanded in its own right.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1497,7 +1497,7 @@ The suite is not only a regression net.  Roughly half of it checks the physics a
 \section{Derivation of \equ{prob_2nu_general}}
 \label{appendix:derivation_prob_2nu_general}
 
-We proceed by computing the survival probability $P_{\nu_\alpha \to \nu_\alpha} = \lvert \nu_\alpha^\dagger \mathbb{U}_2(L) \nu_\alpha \rvert^2$.  We start by operating on $\nu_\alpha$ with the linear combination $h_k \sigma^k$ that appears in the expansion of the time-evolution operator $\mathbb{U}_2(L)$, \equ{evol_op_2nu}, \ie, $(h_k \sigma^k) \nu_\alpha$.  In matrix form, with $\nu_\alpha = \left(1~0\right)^{\rm T}$, this is
+We proceed by computing the survival probability $P_{\nu_\alpha \to \nu_\alpha} = \lvert \nu_\alpha^\dagger \mathbb{U}_2(L) \nu_\alpha \rvert^2$.  We start by operating on $\nu_\alpha$ with the linear combination $h_k \sigma^k$ that appears in the expansion of the evolution operator $\mathbb{U}_2(L)$, \equ{evol_op_2nu}, \ie, $(h_k \sigma^k) \nu_\alpha$.  In matrix form, with $\nu_\alpha = \left(1~0\right)^{\rm T}$, this is
 \begin{equation}
  \left(\begin{array}{cc}
   h_3      & h_1-ih_2 \\
@@ -1545,7 +1545,7 @@ Because of the conservation of probability, $P_{\nu_\alpha \to \nu_\beta} = 1 - 
 
 
 \section{Two-flavor oscillations in vacuum}
-\label{section:2nu_vacuum}
+\label{appendix:2nu_vacuum}
 
 As a simple example and cross-check of the OS method, we consider two-flavor oscillations in vacuum.  These are driven by the mass-squared difference between two mass eigenstates, $\nu_1$ and $\nu_2$, with masses $m_1$ and $m_2$, out of which the flavor states $\nu_e$ and $\nu_\mu$ are constructed (or $\nu_2$ and $\nu_3$ for the case of $\nu_\mu$ and $\nu_\tau$).  The spaces of flavor and mass states are connected by a unitary rotation that is parametrized by a mixing angle $\theta$, \ie,
 \begin{equation}
