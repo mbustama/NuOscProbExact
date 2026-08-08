@@ -532,14 +532,14 @@ The coefficients in \equ{u3_def} can be trivially written as $u_0=\frac{1}{3}\te
 \end{eqnarray*}
 The tensor $d_{ijk} = \frac{1}{4} \text{Tr} \left( \lbrace\lambda_i,\lambda_j\rbrace\lambda_k \right)$, where the brackets represent the anticommutator.  It is totally symmetric, and appears in the product law of Gell-Mann matrices alongside the antisymmetric structure constants $f_{ijk}$, which come from the commutator instead; see \equ{star}.  Table \ref{tab:d_tensor} shows all non-zero components.
 
-Next, we solve the characteristic equation of $-h_k\lambda^kL$, \ie, $\phi^3 - L^2 I_2 \phi + \frac{2}{3} L^3 I_3 = 0$.  The equation follows from the Cayley-Hamilton theorem, written conveniently in terms of invariants\ \cite{MacFarlane:1968vc, Curtright:2015iba}.  Its three latent roots, or eigenvalues, are $\phi_m \equiv \psi_m L$ ($m=1,2,3$), with
+Next, we solve the characteristic equation of $-h_k\lambda^kL$, \ie, $\phi^3 - L^2 \left\vert h \right\vert^2 \phi + \frac{2}{3} L^3 \langle h \rangle = 0$.  The equation follows from the Cayley-Hamilton theorem, written conveniently in terms of invariants\ \cite{MacFarlane:1968vc, Curtright:2015iba}.  Its three latent roots, or eigenvalues, are $\phi_m \equiv \psi_m L$ ($m=1,2,3$), with
 \begin{equation}
  \label{equ:phi_alpha}
  \psi_m
  \equiv
  \frac{2 \left\vert h \right\vert}{\sqrt{3}} \cos\left[\frac{1}{3}\left(\chi+2\pi m \right)\right] \;,
 \end{equation}
-where $\cos\left(\chi\right) = -\sqrt{3} I_3 / I_2^{3/2}$.  The step above is key: writing the eigenvalues in terms of the SU(3) invariants allows us to bypass an explicit diagonalization\ \cite{Curtright:2015iba}.
+where $\cos\left(\chi\right) = -\sqrt{3} \langle h \rangle / \lvert h \rvert^3$.  The step above is key: writing the eigenvalues in terms of the SU(3) invariants allows us to bypass an explicit diagonalization\ \cite{Curtright:2015iba}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 {\def\arraystretch{1.2}
@@ -570,7 +570,7 @@ With this, the coefficients in \equ{u3_def} are
  i\sum_{m=1}^3
  e^{i L \psi_m} \frac{\psi_m h_k - \left(h \ast h\right)_k}{3\psi_m^2 - \left\vert h \right\vert^2} \;,
 \end{eqnarray}
-where $\left(h\ast h\right)_i \equiv d_{ijk}h^jh^k$.  \ref{appendix:derivation_uk_expanded} contains the derivation of \equ{uk_expanded}.  The denominator is $\chi^\prime(\psi_m)$, so \equ{uk_expanded}, like \equ{sylvester}, holds for a non-degenerate spectrum: it vanishes wherever the cubic has a repeated root, that is wherever its discriminant does.  That is a surface in parameter space and not an isolated point --- the totally degenerate case $\lvert h \rvert = 0$ lies on it, but so does every $\tilde{\mathbb{H}}_3$ with two coincident eigenvalues at any $\lvert h \rvert$, and a level crossing is an approach to it.  The interpolation must then be taken over the distinct roots only, which is what {\tt NuOscProbExact} does; Section \ref{section:limitations} describes how.  Using Eqs.\ (\ref{equ:phi_alpha}), (\ref{equ:u0}), and (\ref{equ:uk_expanded}), we write the evolution operator concisely as in \Ref\ \cite{Ohlsson:1999xb},
+where $\left(h\ast h\right)_i \equiv d_{ijk}h^jh^k$.  \ref{appendix:derivation_uk_expanded} contains the derivation of \equ{uk_expanded}.  Using Eqs.\ (\ref{equ:phi_alpha}), (\ref{equ:u0}), and (\ref{equ:uk_expanded}), we write the evolution operator concisely as in \Ref\ \cite{Ohlsson:1999xb},
 \begin{equation}
  \label{equ:u3_expanded}
  \mathbb{U}_3(L)
@@ -583,7 +583,9 @@ where $\left(h\ast h\right)_i \equiv d_{ijk}h^jh^k$.  \ref{appendix:derivation_u
  \frac{\psi_m h_k - \left( h \ast h \right)_k}{3\psi_m^2-\lvert h \rvert^2} \lambda^k
  \right] \;.
 \end{equation}
-\equ{u3_expanded} was introduced in \Refs\ \cite{Ohlsson:1999xb, Ohlsson:1999um, Ohlsson:2000zz}, and applied to find analytic expressions of the probabilities in the cases of oscillations in vacuum and matter.  For a numerical implementation of \equ{u3_expanded} it is convenient to calculate the coefficients $u_0$ and $u_k$ with Eqs.\ (\ref{equ:u0}) and (\ref{equ:uk_expanded}), and use them to directly expand $\mathbb{U}_3$ in \equ{u3_def}.  This is the strategy that we adopt in {\tt NuOscProbExact}\ \cite{NuOscProbExact}.  
+\equ{u3_expanded} was introduced in \Refs\ \cite{Ohlsson:1999xb, Ohlsson:1999um, Ohlsson:2000zz}, and applied to find analytic expressions of the probabilities in the cases of oscillations in vacuum and matter.  For a numerical implementation of \equ{u3_expanded} it is convenient to calculate the coefficients $u_0$ and $u_k$ with Eqs.\ (\ref{equ:u0}) and (\ref{equ:uk_expanded}), and use them to directly expand $\mathbb{U}_3$ in \equ{u3_def}.  This is the strategy that we adopt in {\tt NuOscProbExact}\ \cite{NuOscProbExact}.
+
+One condition attaches to both expressions.  Their denominator is $\chi^\prime(\psi_m)$, which vanishes when two latent roots coincide, so they hold for a non-degenerate spectrum, as \equ{sylvester} does.  That is not only the trivial case $\lvert h \rvert = 0$, where all three roots vanish together: any two eigenvalues of $\tilde{\mathbb{H}}_3$ may meet at any $\lvert h \rvert$, and a level crossing --- where resonances live, and where the physics is most interesting --- is an approach to it.  The interpolation is then taken over the distinct roots instead, which {\tt NuOscProbExact} does exactly and automatically; Section \ref{section:limitations} gives the details.  
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 {\def\arraystretch{1.3}
