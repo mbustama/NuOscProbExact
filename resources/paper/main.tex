@@ -304,16 +304,16 @@ In \equ{evolved_state}, to compute the action of the evolution operator, $\nu_\a
 \subsection{The evolution operator}
 \label{section:evolution_operator}
 
-Let $\mathbb{H}$ be an arbitrary Hermitian $n \times n$ Hamiltonian in the flavor basis, constant over a baseline $L$, and let $\tilde{\mathbb{H}}$ be its traceless part, whose eigenvalues we write as $\psi_m$ and whose characteristic polynomial is $\chi(\psi) = \det(\psi \mathbb{1} - \tilde{\mathbb{H}})$.  For a non-degenerate spectrum, the evolution operator is
+Let $\mathbb{H}$ be an arbitrary Hermitian $n \times n$ Hamiltonian in the flavor basis, constant over a baseline $L$, and let $\tilde{\mathbb{H}}$ be its traceless part.  We write $\psi_m$ for the eigenvalues of $-\tilde{\mathbb{H}}$, the \emph{latent roots}, and $\chi(\psi) = \det(\psi \mathbb{1} + \tilde{\mathbb{H}})$ for their characteristic polynomial.  That sign is a convention and nothing more --- it is the one used in the rest of this paper and in the code, and it puts the phases in the form $e^{+i \psi_m L}$.  For a non-degenerate spectrum, the evolution operator is
 \begin{equation}
  \label{equ:sylvester}
  \mathbb{U}(L)
  =
- \sum_{m=1}^n e^{-i\psi_m L} \mathbb{P}_m \;,
+ \sum_{m=1}^n e^{i\psi_m L} \mathbb{P}_m \;,
  \qquad
  \mathbb{P}_m
  =
- \frac{{\rm adj}\left(\psi_m \mathbb{1} - \tilde{\mathbb{H}}\right)}{\chi^\prime\left(\psi_m\right)} \;,
+ \frac{{\rm adj}\left(\psi_m \mathbb{1} + \tilde{\mathbb{H}}\right)}{\chi^\prime\left(\psi_m\right)} \;,
 \end{equation}
 with $\mathbb{P}_m$ the orthogonal projector onto the $m$-th eigenspace, and ${\rm adj}(\mathbb{A})$ the adjugate of matrix $\mathbb{A}$ (\ie, the transpose of the cofactor matrix of $\mathbb{A}$).  This is Sylvester's interpolation formula\ \cite{Sylvester:1883} 
 % --- already invoked in Section \ref{section:three_flavors} for the $3 \times 3$ case --- 
@@ -324,14 +324,14 @@ and $\mathbb{P}_m$ are the Frobenius covariants; the underlying statements are n
 
 Equation (\ref{equ:sylvester}) is one object, and several methods in the oscillation literature are readings of it.  Contracting it with the trace metric, $u_0 = \frac{1}{n}{\rm Tr}\,\mathbb{U}$ and $u_a = -\frac{i}{2}{\rm Tr}(\lambda^a \mathbb{U})$ --- in the convention $\mathbb{U} = u_0 \mathbb{1} + i u_a \lambda^a$ used throughout, \equ{u3_def} --- keeps the whole matrix in the generator basis and gives the OS expansion.  Keeping instead its columns gives the adjugate method\ \cite{Sylvester:1883}; keeping its diagonal gives the eigenvector-eigenvalue identity; writing it as a polynomial with Vandermonde-determined coefficients gives the Cayley-Hamilton form in \Ref\ \cite{Ohlsson:1999xb}.  What differs between them is which slice is kept, and in which basis.  Seen this way, the OS coefficients are the SU($n$)-basis components of the adjugate; the extension to another value of $n$ requires no new idea.
 
-Carrying this out, $u_0 = \frac{1}{n}\sum_m e^{-i\psi_m L}$ and
+Carrying this out, $u_0 = \frac{1}{n}\sum_m e^{i\psi_m L}$ and
 \begin{equation}
  \label{equ:ua_general}
  u_a
  =
- \sum_{m=1}^n e^{-i\psi_m L}
+ \sum_{m=1}^n e^{i\psi_m L}
  \frac{N_a\left(\psi_m\right)}{\chi^\prime\left(\psi_m\right)} \;,~~
- N_a(\psi) \equiv -\tfrac{i}{2}{\rm Tr}\!\left[\lambda^a\,{\rm adj}\left(\psi\mathbb{1}-\tilde{\mathbb{H}}\right)\right] \;.
+ N_a(\psi) \equiv -\tfrac{i}{2}{\rm Tr}\!\left[\lambda^a\,{\rm adj}\left(\psi\mathbb{1}+\tilde{\mathbb{H}}\right)\right] \;.
 \end{equation}
 Here $h^a = \frac{1}{2}{\rm Tr}\left(\lambda^a \tilde{\mathbb{H}}\right)$ are the components of the Hamiltonian in the generator basis, so that $\tilde{\mathbb{H}} = h_a \lambda^a$, and $\ast$ is the symmetric product those components inherit from the generator algebra,
 \begin{equation}
@@ -541,7 +541,7 @@ With this, the coefficients in \equ{u3_def} are
  \label{equ:uk_expanded}
  && u_k
  =
- \sum_{m=1}^3
+ i\sum_{m=1}^3
  e^{i L \psi_m} \frac{\psi_m h_k - \left(h \ast h\right)_k}{3\psi_m^2 - \left\vert h \right\vert^2} \;,
 \end{eqnarray}
 where $\left(h\ast h\right)_i \equiv d_{ijk}h^jh^k$.  \ref{appendix:derivation_uk_expanded} contains the derivation of \equ{uk_expanded}.  Using Eqs.\ (\ref{equ:phi_alpha}), (\ref{equ:u0}), and (\ref{equ:uk_expanded}), we write the evolution operator concisely as in \Ref\ \cite{Ohlsson:1999xb},
