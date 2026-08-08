@@ -1716,6 +1716,54 @@ where $\mathbb{R}_{2,\xi}$ is a $2 \times 2$ rotation matrix, like \equ{u_rotati
 
 \subsection{Four-flavor Hamiltonians}
 
+The four-flavor examples are 3+1 systems: the three active flavors, plus one sterile state $\nu_s$ that has no standard-model interactions.  \figu{validation} shows one such case and \figu{sterile_earth} another; in both, $\Delta m_{41}^2 = 1$~eV$^2$ and $\sin^2\theta_{14} = \sin^2\theta_{24} = 0.1$, with $\theta_{34} = 0$, and the three active parameters keep the values used elsewhere in this paper.
+
+For oscillations in vacuum, we use
+\begin{equation*}
+ \mathbb{H}_4^{\rm vac}(E)
+ =
+ \frac{1}{2E}
+ \mathbb{R}_4
+ \mathbb{M}_4^2
+ \mathbb{R}_4^\dagger \;,
+\end{equation*}
+where $\mathbb{M}_4^2 = {\rm diag}\left(0, \Delta m_{21}^2, \Delta m_{31}^2, \Delta m_{41}^2\right)$ and $\mathbb{R}_4$ is the $4 \times 4$ mixing matrix, built from the six angles $\theta_{12}$, $\theta_{13}$, $\theta_{23}$, $\theta_{14}$, $\theta_{24}$, $\theta_{34}$ and, in general, three phases; the code takes $\delta_{\rm CP}$ together with $\delta_{14}$ and $\delta_{24}$, both zero by default.  Setting the three new angles to zero returns $\mathbb{H}_3^{\rm vac}$ in the active block and decouples $\nu_s$.
+
+For oscillations in matter, we use
+\begin{equation*}
+ \mathbb{H}_4^{\rm matt}(E)
+ =
+ \mathbb{H}_4^{\rm vac}(E) + \mathbb{A}_4 \;,
+ \qquad
+ \mathbb{A}_4 \equiv {\rm diag}\left(V_{\rm CC}, 0, 0, -V_{\rm NC}\right) \;,
+\end{equation*}
+which is \equ{a4}, whose last entry is the one feature with no two- or three-flavor counterpart; Section\ \ref{section:four_flavors} explains where it comes from.  In \figu{sterile_earth} the density is the PREM profile\ \cite{Dziewonski:1981xy} along the chord, so both $V_{\rm CC}$ and $V_{\rm NC}$ vary from slab to slab.
+
+For oscillations in matter with non-standard interactions, we use
+\begin{equation*}
+ \mathbb{H}_4^{\rm NSI}(E)
+ =
+ \mathbb{H}_4^{\rm vac}(E) + \mathbb{A}_4 + \mathbb{V}_4 \;,
+ \qquad
+ \mathbb{V}_4 \equiv V_{\rm CC}
+ \left(
+  \begin{array}{cc}
+   \epsilon_3 & 0 \\
+   0          & 0 \\
+  \end{array}
+ \right) \;,
+\end{equation*}
+where $\epsilon_3$ is the $3 \times 3$ matrix of Section\ \ref{section:code}.  The sterile row and column vanish for the same reason as above, and by the same logic: a state with no standard-model interactions has no non-standard ones either.  The sterile entry keeps the $-V_{\rm NC}$ of $\mathbb{A}_4$.
+
+For oscillations in a CPT-odd Lorentz-violating background, we use
+\begin{equation*}
+ \mathbb{H}_4^{\rm LIV}(E)
+ =
+ \mathbb{H}_4^{\rm vac}(E) + \frac{E}{\Lambda} \mathbb{R}_{4,\xi} \mathbb{B}_4 \mathbb{R}_{4,\xi}^\dagger \;,
+\end{equation*}
+with $\mathbb{B}_4 = {\rm diag}\left(b_1, b_2, b_3, b_4\right)$ and $\mathbb{R}_{4,\xi}$ a $4 \times 4$ rotation carrying its own angles.  Here, unlike in $\mathbb{A}_4$ and $\mathbb{V}_4$, nothing privileges the fourth state: $b_4$ is an eigenvalue like the others, so the sterile neutrino may couple to the Lorentz-violating background even though it is blind to matter.  Setting the new angles to zero and $b_4$ to the trace-shifted value recovers the three-flavor case.
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
