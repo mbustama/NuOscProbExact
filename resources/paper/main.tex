@@ -427,7 +427,7 @@ where, here and below, we assume the Einstein convention of summing over repeate
    $h_2$ & $-{\rm Im}\left[ (\mathbb{H}_2)_{12} \right]$ \\
    $h_3$ & $\frac{1}{2}\left[(\mathbb{H}_2)_{11}-(\mathbb{H}_2)_{22}\right]$ \\
   \end{tabular}
-  \caption{\label{tab:h2_coefficients}Coefficients in the expansion of the two-neutrino Hamiltonian $\mathbb{H}_2$ in \equ{h2_expansion}.  The coefficient $h_0$ is the global phase discarded in Section \ref{section:general_remarks}; we include it here for completeness.}
+  \caption{\label{tab:h2_coefficients}Coefficients in the expansion of the two-neutrino Hamiltonian $\mathbb{H}_2$ in \equ{h2_expansion}.  The coefficient $h_0$ contributes only the global phase, and is included for completeness.}
 %  \end{ruledtabular}
 \end{table}
 }
@@ -435,7 +435,7 @@ where, here and below, we assume the Einstein convention of summing over repeate
 
 Thus, the evolution operator is $\mathbb{U}_2\left(L\right) = e^{-i \mathbb{H}_2 L}$, and, discarding the global phase as in Section \ref{section:general_remarks}, $\mathbb{U}_2\left(L\right) = e^{-ih_k\sigma^kL}$.
 
-To compute the action of $\mathbb{U}_2$, we use a well-known identity of Pauli matrices that generalizes Euler's formula,
+To compute the action of $\mathbb{U}_2$, we use a well-known identity of Pauli matrices that generalizes Euler's formula --- and which is \equ{sylvester} at $n = 2$, the two projectors being $\mathbb{P}_\pm = \frac{1}{2}\left(\mathbb{1} \pm \hat{a}_k \sigma^k\right)$ ---
 \begin{equation}
  \label{equ:pauli_identity}
  e^{\pm i a_k \sigma^k}
@@ -453,7 +453,7 @@ valid for real $a_k$, where $\hat{a}$ is a unit vector in the direction of the v
  -
  i \frac{\sin\left(\left\vert h\right\vert L\right)}{\lvert h \rvert} h_k\sigma^k  \;,
 \end{equation}
-where $\lvert h \rvert^2 \equiv h_1^2 + h_2^2 + h_3^2$ is the squared modulus of the vector $h$.  These are the latent roots of Section \ref{section:evolution_operator} in their simplest case: at $n = 2$ the traceless part has eigenvalues $\pm \lvert h \rvert$, and \equ{evol_op_2nu} is \equ{sylvester} written out for them.
+where $\lvert h \rvert^2 \equiv h_1^2 + h_2^2 + h_3^2$ is the squared modulus of the vector $h$.  At $n = 2$ the latent roots of Section \ref{section:evolution_operator} are simply $\pm \lvert h \rvert$, the eigenvalues of the traceless part.
 
 The evolved state $\nu_\alpha (L)$ of a neutrino that was created with flavor $\alpha$, \ie, with $f_\alpha(0) = 1$ and $f_\beta(0) = 0$, is $\nu_\alpha\left(L\right) = \mathbb{U}_2(L) \nu_\alpha$.  After some manipulation, the flavor-transition probability $P_{\nu_\alpha \to \nu_\beta}(L) = \lvert \nu_\beta^\dagger \mathbb{U}_2(L) \nu_\alpha \rvert^2$ is
 \begin{equation}
@@ -462,9 +462,9 @@ The evolved state $\nu_\alpha (L)$ of a neutrino that was created with flavor $\
  = \frac{h_1^2 + h_2^2}
  {\left\vert h\right\vert^2} \sin^2\left(\left\vert h\right\vert L\right) \;\; (\alpha \neq \beta) \;,
 \end{equation}
-where $h_1^2 + h_2^2 = \lvert (\mathbb{H}_2)_{12} \rvert^2$ and $\lvert h \rvert^2 = \lvert (\mathbb{H}_2)_{12} \rvert^2 + \left[ (\mathbb{H}_2)_{11} - (\mathbb{H}_2)_{22} \right]^2 / 4$.  Because of the conservation of probability, $P_{\nu_\alpha \rightarrow \nu_\alpha}\left(L\right) = 1 - P_{\nu_\alpha \rightarrow \nu_\beta}\left(L\right)$.  Equation (\ref{equ:prob_2nu_general}) is symmetric under $\alpha \leftrightarrow \beta$, which is \equ{conjugation} acting trivially, and is why CP violation requires three flavors.  \ref{appendix:derivation_prob_2nu_general} contains the derivation of \equ{prob_2nu_general}.  \ref{appendix:2nu_vacuum} shows a simple application to two-flavor oscillations in vacuum.  Equation (\ref{equ:prob_2nu_general}) is our final result in the two-neutrino case.  \ref{appendix:sample_2nu_hamiltonians} gives the two-flavor Hamiltonians for vacuum, matter, non-standard interactions, and a Lorentz-violating background, with the parameter values used in \figu{prob_2nu}.  
+where $h_1^2 + h_2^2 = \lvert (\mathbb{H}_2)_{12} \rvert^2$ and $\lvert h \rvert^2 = \lvert (\mathbb{H}_2)_{12} \rvert^2 + \left[ (\mathbb{H}_2)_{11} - (\mathbb{H}_2)_{22} \right]^2 / 4$.  Because of the conservation of probability, $P_{\nu_\alpha \rightarrow \nu_\alpha}\left(L\right) = 1 - P_{\nu_\alpha \rightarrow \nu_\beta}\left(L\right)$.  Equation (\ref{equ:prob_2nu_general}) is symmetric under $\alpha \leftrightarrow \beta$: a rephasing of the two states removes $h_2$, so $\mathbb{H}_2$ can always be taken real and is then unchanged by the conjugation of \equ{conjugation}, which returns the probabilities transposed.  This is why CP violation requires three flavors.  \ref{appendix:derivation_prob_2nu_general} contains the derivation of \equ{prob_2nu_general}.  \ref{appendix:2nu_vacuum} shows a simple application to two-flavor oscillations in vacuum.  Equation (\ref{equ:prob_2nu_general}) is our final result in the two-neutrino case.  \ref{appendix:sample_2nu_hamiltonians} gives the two-flavor Hamiltonians for vacuum, matter, non-standard interactions, and a Lorentz-violating background, with the parameter values used in \figu{prob_2nu}.  
 
-What made \equ{prob_2nu_general} short was the Pauli-matrix identity, \equ{pauli_identity}, which is what \equ{sylvester} reduces to at $n = 2$.  The three-flavor case in Section \ref{section:three_flavors} proceeds the same way, through the analogous identity for the Gell-Mann matrices.
+What made \equ{prob_2nu_general} short was the Pauli-matrix identity, \equ{pauli_identity}.  The three-flavor case in Section \ref{section:three_flavors} proceeds the same way, through the analogous identity for the Gell-Mann matrices.
 
 \subsection{Antineutrinos}
 
