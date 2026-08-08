@@ -367,6 +367,20 @@ The eigenvalues are the only quantity in \equ{sylvester} that is not a polynomia
 \end{figure}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\subsection{Conjugate Hamiltonians}
+\label{section:conjugation}
+
+One symmetry of the construction is worth recording separately, because it saves repeating the whole of it for conjugated Hamiltonians.  Under $\mathbb{H} \to \mathbb{H}^\ast$ the generators divide: those that are real and symmetric are unchanged, those that are imaginary and antisymmetric change sign.  The coefficients follow, $h_a \to h_a$ on the first set and $h_a \to -h_a$ on the second.
+
+The latent roots do not move at all.  The characteristic polynomial of a Hermitian matrix has real coefficients, and conjugation leaves them alone, so $\chi$ and every $\psi_m$ are the same for $\mathbb{H}$ and $\mathbb{H}^\ast$; only the numerators $N_a$ of \equ{ua_general} feel the change, and they feel it as those signs.  What comes out is that the probabilities for $\mathbb{H}^\ast$ are those for $\mathbb{H}$ with each channel exchanged for its reverse,
+\begin{equation}
+ \label{equ:conjugation}
+ P_{\nu_\alpha \to \nu_\beta}\!\left(\mathbb{H}^\ast\right)
+ =
+ P_{\nu_\beta \to \nu_\alpha}\!\left(\mathbb{H}\right) \;,
+\end{equation}
+so a conjugated Hamiltonian needs no new calculation: the tables of Sections \ref{section:three_flavors} and \ref{section:four_flavors} are read transposed.  Section \ref{section:code} puts this to use, since conjugation is one of the two operations that turn a neutrino Hamiltonian into an antineutrino one.
+
 \subsection{Piece-wise constant Hamiltonians}
 \label{section:composition}
 
@@ -461,7 +475,7 @@ Antineutrinos need no separate construction: conjugating the vacuum term and rev
  =
  \left[\mathbb{H}^{\rm vac}\right]^\ast - \mathbb{A} - \mathbb{V} \;,
 \end{equation}
-gives a Hamiltonian that \equ{sylvester} then treats like any other.  The conjugation reverses the sign of $\delta_{\rm CP}$, and with it every $T$-odd term; the reversal of $\mathbb{A}$ and $\mathbb{V}$ is what makes the matter resonance appear for one sign of $\Delta m_{31}^2$ in neutrinos and the other in antineutrinos.  Both halves are needed, and applying only one of them is the commonest error in this kind of calculation.  In vacuum, where the conjugation is the whole of it, the rule is simpler still: $h_a$ is unchanged for the symmetric generators and reversed for the antisymmetric ones, so the antineutrino probabilities are read off the tables below by exchanging each entry with its transpose.  In matter both terms act, and the Hamiltonian of \equ{antineutrino} has to be built and expanded in its own right.
+gives a Hamiltonian that \equ{sylvester} then treats like any other.  The two operations do different work and both are needed; applying only one is the commonest error in this kind of calculation.  The conjugation reverses the sign of $\delta_{\rm CP}$, and with it every $T$-odd term --- its effect on the probabilities is the transposition of \equ{conjugation}, so in vacuum, where it is the whole of the story, no new calculation is required.  The reversal of $\mathbb{A}$ and $\mathbb{V}$ is what makes the matter resonance appear for one sign of $\Delta m_{31}^2$ in neutrinos and the other in antineutrinos; it changes the spectrum, so in matter the Hamiltonian of \equ{antineutrino} has to be built and expanded in its own right.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
