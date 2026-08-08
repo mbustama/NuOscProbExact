@@ -280,7 +280,7 @@ Let $\nu$ represent the flavor state of a neutrino.  The state evolves according
  \label{equ:evolution_eq}
  i \frac{d\nu}{dt} = H \nu \;,
 \end{equation}
-where $t$ is the time elapsed since the creation of the neutrino and $\mathbb{H}$ is the Hamiltonian written in flavor space.  We use units where $c = \hbar = 1$.  We take $\mathbb{H}$ to be Hermitian, which is what makes the evolution unitary and conserves the number of neutrinos summed over flavors; Section \ref{section:limitations} takes up what survives when it is not.  In a system of $n$ neutrinos, we represent $\mathbb{H}$ by an $n \times n$ matrix and $\nu$ by a column vector with $n$ entries.  Below, we consider the cases $n = 2$, 3, and 4; we write $\alpha, \beta$ for flavor labels, which run over $e, \mu$ at $n = 2$, over $e, \mu, \tau$ at $n = 3$, and over $e, \mu, \tau, s$ at $n = 4$, the last being a sterile state.
+where $t$ is the time elapsed since the creation of the neutrino and $\mathbb{H}$ is the Hamiltonian written in flavor space.  We use units where $c = \hbar = 1$.  We take $\mathbb{H}$ to be Hermitian, which is what makes the evolution unitary and conserves the number of neutrinos summed over flavors; Section \ref{section:limitations} takes up what survives when it is not.  In a system of $n$ neutrinos, we represent $\mathbb{H}$ by an $n \times n$ matrix and $\nu$ by a column vector with $n$ entries.  Below, we consider the cases $n = 2$, 3, and 4; we write $\alpha, \beta$ for flavor labels, which run over $e, \mu, \tau$ at $n = 3$ and over $e, \mu, \tau, s$ at $n = 4$, the last being a sterile state.  At $n = 2$ the pair is a matter of naming: a two-flavor system is fixed by one mixing angle and one mass-squared splitting whichever two states are meant, and we call them $e$ and $\mu$ throughout, as the code does.
 
 We restrict the discussion to time- or position-independent Hamiltonians, so that the corresponding evolution operator is $\mathbb{U}\left(t\right) = e^{-i \mathbb{H} t}$.  Hamiltonians of this type describe, for instance, neutrino propagation in vacuum and in matter of constant density; Section \ref{section:composition} extends this to a path divided into regions, each with its own constant Hamiltonian.  Because neutrinos are relativistic, we approximate the propagated distance $L \simeq t$.  Thus, the evolved state of a neutrino born as $\nu_\alpha$ is
 \begin{equation}
@@ -419,7 +419,7 @@ where, here and below, we assume the Einstein convention of summing over repeate
 }
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Thus, the evolution operator is $\mathbb{U}_2\left(L\right) = e^{-i \mathbb{H}_2 L} = e^{-i(h_0 \mathbb{1}+h_k\sigma^k)L}$.  We factorize\footnote{We can do this because the commutator $C_2\equiv\left[h_0 \mathbb{1},h_k\sigma^k\right]=0$, so that $\left[h_0 \mathbb{1}, C_2\right]=\left[h_k\sigma^k, C_2\right]=0$.  For analogous reasons, we can also do this in the three-neutrino case in Section \ref{section:three_flavors}.} this into $e^{-ih_0\mathbb{1}L} e^{-ih_k\sigma^kL}$.  The operator $e^{-ih_0\mathbb{1}L}$ introduces a global phase that does not affect the probability, \ie, $e^{-ih_0\mathbb{1}L}\nu =e^{-ih_0L}\nu$.  After discarding it, we are left with $\mathbb{U}_2(L) =  e^{-ih_k\sigma^kL}$. 
+Thus, the evolution operator is $\mathbb{U}_2\left(L\right) = e^{-i \mathbb{H}_2 L}$, and, discarding the global phase as in Section \ref{section:general_remarks}, $\mathbb{U}_2\left(L\right) = e^{-ih_k\sigma^kL}$.
 
 To compute the action of $\mathbb{U}_2$, we use a well-known identity of Pauli matrices that generalizes Euler's formula,
 \begin{equation}
@@ -500,7 +500,7 @@ We follow the steps that we used in the two-neutrino case closely.  We represent
 \end{equation}
 where $h_0$ and $h_k$ are now functions of the components of $\mathbb{H}_3$; we show their explicit expressions in Table \ref{tab:h3_coefficients}.  The neutrino state at any time is $\nu(L) = f_e(L) \nu_e + f_\mu(L) \nu_\mu + f_\tau(L) \nu_\tau$, where $f_e$, $f_\mu$, and $f_\tau$ are, respectively, the probability amplitudes of measuring the state to be a $\nu_e$, $\nu_\mu$, or $\nu_\tau$.  We represent the neutrino state as a three-component column vector; the pure states are $\nu_e = \left(1~0~0\right)^{\rm T}$, $\nu_\mu=\left(0~1~0\right)^{\rm T}$, and $\nu_\tau=\left(0~0~1\right)^{\rm T}$. 
 
-The evolution operator is $\mathbb{U}_3\left(L\right) = e^{-i \mathbb{H}_3 L} = e^{-ih_0\mathbb{1}L}e^{-ih_k\lambda^kL}$.   Again, after discarding the global phase, we are left with $\mathbb{U}_3\left(L\right) = e^{-ih_k\lambda^kL}$.  
+The evolution operator is $\mathbb{U}_3\left(L\right) = e^{-i \mathbb{H}_3 L}$, and, discarding the global phase as before, $\mathbb{U}_3\left(L\right) = e^{-ih_k\lambda^kL}$.  
 
 Next we compute the action of $\mathbb{U}_3$ on a neutrino state.  We wish to expand $\mathbb{U}_3$ using an identity for the Gell-Mann matrices that is similar to the identity for the Pauli matrices, \equ{pauli_identity}, and that allows us to write
 \begin{equation}
@@ -1662,7 +1662,7 @@ For oscillations in vacuum, we use \equ{h2_vacuum}, \ie,
  \mathbb{M}_2^2
  \mathbb{R}_{2,\theta}^\dagger \;,
 \end{equation*}
-where the rotation matrix $\mathbb{R}_{2,\theta}$ is given in \equ{u_rotation_2nu}, in terms of the mixing angle $\theta$.  In \figu{prob_2nu}, we set $\theta$ and $\Delta m^2$, respectively, to the values of $\theta_{23}$ and $\Delta m_{31}^2$ used in \figu{prob_3nu}.  These are also the values used by the two-neutrino examples bundled with the code, and they are the ones the figure requires: with $\Delta m_{21}^2$ the first minimum of $P_{\nu_e \to \nu_e}$ at $L = 1300$~km would fall at $E \simeq 0.08$~GeV, far below the range plotted, and its depth would be set by $\sin^2 2\theta_{12}$; the published figure instead shows that minimum at $E \simeq 2.6$~GeV with near-maximal depth, which is what $\Delta m_{31}^2$ and $\theta_{23}$ give.
+where the rotation matrix $\mathbb{R}_{2,\theta}$ is given in \equ{u_rotation_2nu}, in terms of the mixing angle $\theta$.  In \figu{prob_2nu}, we set $\theta$ and $\Delta m^2$, respectively, to the values of $\theta_{23}$ and $\Delta m_{31}^2$ used in \figu{prob_3nu}.  The labels $e$ and $\mu$ on a pair carrying the parameters of the $2$--$3$ sector are, as Section \ref{section:general_remarks} notes, only names: at two flavors nothing distinguishes one pair from another once the angle and the splitting are fixed.  These are also the values used by the two-neutrino examples bundled with the code, and they are the ones the figure requires: with $\Delta m_{21}^2$ the first minimum of $P_{\nu_e \to \nu_e}$ at $L = 1300$~km would fall at $E \simeq 0.08$~GeV, far below the range plotted, and its depth would be set by $\sin^2 2\theta_{12}$; the published figure instead shows that minimum at $E \simeq 2.6$~GeV with near-maximal depth, which is what $\Delta m_{31}^2$ and $\theta_{23}$ give.
 
 For oscillations in matter, we use
 \begin{equation*}
