@@ -530,7 +530,7 @@ The coefficients in \equ{u3_def} can be trivially written as $u_0=\frac{1}{3}\te
  && I_2 \equiv \left\vert h \right\vert^2 = h_kh^k = \tfrac{1}{2}{\rm Tr}\,\tilde{\mathbb{H}}_3^2 \;, \\
  && I_3 \equiv \langle h \rangle = d_{ijk}h^ih^jh^k = \tfrac{1}{2}{\rm Tr}\,\tilde{\mathbb{H}}_3^3 \;,
 \end{eqnarray*}
-The tensor $d_{ijk} = \frac{1}{4} \text{Tr} \left( \lbrace\lambda_i,\lambda_j\rbrace\lambda_k \right)$, where the brackets represent the anticommutator.  It is totally symmetric, and appears in the product law of Gell-Mann matrices alongside the antisymmetric structure constants $f_{ijk}$, which come from the commutator instead; see \equ{star}.  Table \ref{tab:d_tensor} shows all non-zero components.
+where the trace forms are the ones that carry over unchanged to four flavors, and are how {\tt NuOscProbExact} evaluates them.  The tensor $d_{ijk} = \frac{1}{4} \text{Tr} \left( \lbrace\lambda_i,\lambda_j\rbrace\lambda_k \right)$, where the brackets represent the anticommutator.  It is totally symmetric, and appears in the product law of Gell-Mann matrices alongside the antisymmetric structure constants $f_{ijk}$, which come from the commutator instead; see \equ{star}.  Table \ref{tab:d_tensor} shows all non-zero components.
 
 Next, we solve the characteristic equation of $-h_k\lambda^kL$, \ie, $\phi^3 - L^2 \left\vert h \right\vert^2 \phi + \frac{2}{3} L^3 \langle h \rangle = 0$.  The equation follows from the Cayley-Hamilton theorem, written conveniently in terms of invariants\ \cite{MacFarlane:1968vc, Curtright:2015iba}.  Its three latent roots, or eigenvalues, are $\phi_m \equiv \psi_m L$ ($m=1,2,3$), with
 \begin{equation}
@@ -630,9 +630,9 @@ Sections \ref{section:two_flavors} and \ref{section:three_flavors} are \equ{sylv
 SU(4) has rank three, so $\tilde{\mathbb{H}}_4$ carries three invariants, all obtainable from traces,
 \begin{equation}
  \label{equ:invariants_4nu}
- I_2 \;, \quad I_3 \;, \quad I_4 = \tfrac{1}{2}\left({\rm Tr}\,\tilde{\mathbb{H}}_4^4 - I_2^2\right) \;,
+ I_2 = \tfrac{1}{2}{\rm Tr}\,\tilde{\mathbb{H}}_4^2 \;, \quad I_3 = \tfrac{1}{2}{\rm Tr}\,\tilde{\mathbb{H}}_4^3 \;, \quad I_4 = \tfrac{1}{2}\left({\rm Tr}\,\tilde{\mathbb{H}}_4^4 - I_2^2\right) \;,
 \end{equation}
-the first two defined as in Section \ref{section:three_flavors}, with $\tilde{\mathbb{H}}_3$ replaced by $\tilde{\mathbb{H}}_4$, and $I_4$ the one SU(4) adds.  The characteristic equation is the depressed quartic $\chi(\psi) = \psi^4 - I_2\psi^2 + \frac{2}{3}I_3\psi + \frac{1}{4}(I_2^2 - 2I_4) = 0$, which Ferrari-Euler reduction turns into the resolvent cubic
+the first two being the $\lvert h \rvert^2$ and $\langle h \rangle$ of Section \ref{section:three_flavors}, and $I_4$ the one that SU(4) adds.  The characteristic equation is the depressed quartic $\chi(\psi) = \psi^4 - I_2\psi^2 + \frac{2}{3}I_3\psi + \frac{1}{4}(I_2^2 - 2I_4) = 0$, which Ferrari-Euler reduction turns into the resolvent cubic
 \begin{equation}
  \label{equ:resolvent_cubic}
  z^3 - 2I_2 z^2 + 2I_4 z - \tfrac{4}{9}I_3^2 = 0 \;.
