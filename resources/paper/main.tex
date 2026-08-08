@@ -408,7 +408,7 @@ An approximation enters only when the true Hamiltonian varies \emph{continuously
 \section{Two-flavor oscillations}
 \label{section:two_flavors}
 
-We consider first oscillations between only two neutrino flavors; later, we consider three flavors.  It is a good approximation wherever one mass-squared splitting dominates, as in short-baseline reactor experiments and in accelerator and atmospheric analyses restricted to the leading oscillation; CP violation and the matter resonance need the three-flavor treatment of Section \ref{section:three_flavors}.  We represent the two-neutrino Hamiltonian operator by a $2 \times 2$ matrix $\mathbb{H}_2$.  The three traceless, Hermitian Pauli matrices $\sigma^k$ ($k=1,2,3$) --- the generators of the SU(2) algebra --- plus the identity matrix $\mathbb{1}$ make up the orthogonal basis of $2 \times 2$ matrices.  Thus, we expand the Hamiltonian as
+We consider first oscillations between only two neutrino flavors; later, we consider three flavors.  It is a good approximation wherever one mass-squared splitting dominates, as in short-baseline reactor experiments and in accelerator and atmospheric analyses restricted to the leading oscillation; CP violation and the matter resonance need the three-flavor treatment of Section \ref{section:three_flavors}.  We represent the two-neutrino Hamiltonian operator by a $2 \times 2$ matrix $\mathbb{H}_2$.  The three traceless, Hermitian Pauli matrices $\sigma^k$ ($k=1,2,3$) --- with $\sigma^k/2$ the generators of the SU(2) algebra --- plus the identity matrix $\mathbb{1}$ make up the orthogonal basis of $2 \times 2$ matrices.  Thus, we expand the Hamiltonian as
 \begin{equation}
  \label{equ:h2_expansion}
  \mathbb{H}_2 = h_0 \mathbb{1} + h_k \sigma^k \;,
@@ -501,7 +501,7 @@ gives a Hamiltonian that \equ{sylvester} then treats like any other.  The two op
    $h_7$ & $-\text{Im}\left[{\left(\mathbb{H}_3\right)_{23}}\right]$ \\
    $h_8$ & $\frac{\sqrt{3}}{6}\left[\left(\mathbb{H}_3\right)_{11}+\left(\mathbb{H}_3\right)_{22}-2\left(\mathbb{H}_3\right)_{33}\right]$ 
   \end{tabular}
-  \caption{\label{tab:h3_coefficients}Coefficients in the expansion of the three-neutrino Hamiltonian $\mathbb{H}_3$ in \equ{h3_expansion}.  The coefficient $h_0$ does not take part in the calculation of the flavor-transition probability; we include it here for completeness.}
+  \caption{\label{tab:h3_coefficients}Coefficients in the expansion of the three-neutrino Hamiltonian $\mathbb{H}_3$ in \equ{h3_expansion}.  The coefficient $h_0$ contributes only the global phase, and is included for completeness.}
 %  \end{ruledtabular}
 \end{table}
 }
@@ -532,7 +532,7 @@ The coefficients in \equ{u3_def} can be trivially written as $u_0=\frac{1}{3}\te
  \label{equ:def_I3}
  && -L^3 \langle h \rangle \equiv -L^3 d_{ijk}h^ih^jh^k \;.
 \end{eqnarray*}
-The tensor $d_{ijk} = \frac{1}{4} \text{Tr} \left( \lbrace\lambda_i,\lambda_j\rbrace\lambda_k \right)$, where the brackets represent the anticommutator.  It appears in the product law of Gell-Mann matrices and its components are the structure constants of the SU(3) algebra.  Table \ref{tab:d_tensor} shows all non-zero components.
+The tensor $d_{ijk} = \frac{1}{4} \text{Tr} \left( \lbrace\lambda_i,\lambda_j\rbrace\lambda_k \right)$, where the brackets represent the anticommutator.  It is totally symmetric, and appears in the product law of Gell-Mann matrices alongside the antisymmetric structure constants $f_{ijk}$, which come from the commutator instead; see \equ{star}.  Table \ref{tab:d_tensor} shows all non-zero components.
 
 Next, we solve the characteristic equation of $-h_k\lambda^kL$, \ie, $\phi^3-(L^2 \left\vert h \right\vert^2) \phi-\frac{2}{3} (-L^3 \langle h \rangle)=0$.  The equation follows from the Cayley-Hamilton theorem, written conveniently in terms of invariants\ \cite{MacFarlane:1968vc, Curtright:2015iba}.  Its three latent roots, or eigenvalues, are $\phi_m \equiv \psi_m L$ ($m=1,2,3$), with
 \begin{equation}
@@ -580,12 +580,12 @@ where $\left(h\ast h\right)_i \equiv d_{ijk}h^jh^k$.  \ref{appendix:derivation_u
  \sum_{m=1}^3
  e^{i L \psi_m}
  \left[
- \mathbb{1} 
- +
+ \frac{1}{3} \mathbb{1}
+ -
  \frac{\psi_m h_k - \left( h \ast h \right)_k}{3\psi_m^2-\lvert h \rvert^2} \lambda^k
  \right] \;.
 \end{equation}
-Equation \ref{equ:u3_expanded} was introduced in \Refs \cite{Ohlsson:1999xb, Ohlsson:1999um, Ohlsson:2000zz}, and applied to find analytic expressions of the probabilities in the cases of oscillations in vacuum and matter.  For a numerical implementation of \equ{u3_expanded} it is convenient to calculate the coefficients $u_0$ and $u_k$ with Eqs.\ (\ref{equ:u0}) and (\ref{equ:uk_expanded}), and use them to directly expand $\mathbb{U}_3$ in \equ{u3_def}.  This is the strategy that we adopt in {\tt NuOscProbExact}\ \cite{NuOscProbExact}.  
+\equ{u3_expanded} was introduced in \Refs\ \cite{Ohlsson:1999xb, Ohlsson:1999um, Ohlsson:2000zz}, and applied to find analytic expressions of the probabilities in the cases of oscillations in vacuum and matter.  For a numerical implementation of \equ{u3_expanded} it is convenient to calculate the coefficients $u_0$ and $u_k$ with Eqs.\ (\ref{equ:u0}) and (\ref{equ:uk_expanded}), and use them to directly expand $\mathbb{U}_3$ in \equ{u3_def}.  This is the strategy that we adopt in {\tt NuOscProbExact}\ \cite{NuOscProbExact}.  
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 {\def\arraystretch{1.3}
