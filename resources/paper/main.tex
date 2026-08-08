@@ -622,7 +622,7 @@ Because the algebra of Gell-Mann matrices is more complicated than that of Pauli
 \section{Four-flavor oscillations}
 \label{section:four_flavors}
 
-Sections \ref{section:two_flavors} and \ref{section:three_flavors} are \equ{sylvester} at $n=2$ and $n=3$, which is where the OS expansion lives.  This section is the same construction at $n=4$, the last value for which the eigenvalues can be written down in closed form.
+Sections \ref{section:two_flavors} and \ref{section:three_flavors} are \equ{sylvester} at $n=2$ and $n=3$; the expansions there, and the closed forms built on them, are due to OS.  This section is the same construction at $n=4$, which they did not carry out, and which is the last value for which the eigenvalues can be written down in closed form.
 
 \subsection{The four-flavor case}
 \label{section:4nu_case}
@@ -646,7 +646,7 @@ Its roots are $z_i = (\psi_j+\psi_k)^2$, real and non-negative precisely because
  \quad
  s_i = \pm 1 \;,
 \end{equation}
-with the signs fixed by $s_1s_2s_3\sqrt{z_1z_2z_3} = -\frac{2}{3}I_3$.  The three-flavor machinery sits inside the four-flavor solution; this is the sense in which the extension is inexpensive.
+with the signs fixed by $s_1s_2s_3\sqrt{z_1z_2z_3} = -\frac{2}{3}I_3$.  The three-flavor machinery sits literally inside the four-flavor solution, which is why the extension needs no new idea --- though it is not free at run time, as Section \ref{section:performance} shows.
 
 Two accidents that make $n=3$ compact both fail here.  The rank is three rather than two, so $I_4$ appears alongside $I_2$ and $I_3$.  And the SU(3) identity $\left(h \ast h\right) \ast h = \frac{1}{3}\lvert h \rvert^2 h$, which truncates the tower of \equ{ua_general} at one rung, is a Cayley-Hamilton accident of $n=3$: at $n=4$ the theorem constrains $\tilde{\mathbb{H}}_4^4$, and hence $(h \ast h) \ast (h \ast h)$, but leaves $(h \ast h) \ast h$ free.  Numerically the identity is violated at the level of tens of per cent for random $h$, so the second rung enters as independent data.  With that, Eqs.\ (\ref{equ:u0}) and (\ref{equ:uk_expanded}) become
 \begin{eqnarray}
@@ -691,7 +691,7 @@ The closed-form SU(4) exponential is not new outside neutrino physics: \Refs\ \c
    $P_{\nu_s \to \nu_\tau}$     & $\left\vert i u_{11} + u_{12} \right\vert^2$ \\
    $P_{\nu_s \to \nu_s}$        & $\left\vert u_0 - i \frac{3 u_{15}}{\sqrt{6}} \right\vert^2$ \\
   \end{tabular}
-  \caption{\label{tab:prob_4nu}Exact four-neutrino oscillation probabilities, for an arbitrary time-independent Hamiltonian.  The complex coefficients $u_0$ and $u_k$ are computed in Eqs.\ (\ref{equ:u0_4nu}) and (\ref{equ:uk_4nu}).  This is the four-flavor counterpart of Table \ref{tab:prob_3nu}; dropping the entries that involve $\nu_s$ does \emph{not} recover it, because the $u_k$ are different objects at each $n$.  The generator ordering is that of \ref{appendix:matrices_4nu}.  Reverse channels differ only in the sign of the antisymmetric coefficient, which is \equ{conjugation}; antineutrino probabilities follow by the same exchange.  Every entry has been verified against direct diagonalization, to $5 \cdot 10^{-15}$ over twenty random Hamiltonians.}
+  \caption{\label{tab:prob_4nu}Exact four-neutrino oscillation probabilities, for an arbitrary time-independent Hamiltonian.  The complex coefficients $u_0$ and $u_k$ are computed in Eqs.\ (\ref{equ:u0_4nu}) and (\ref{equ:uk_4nu}).  This is the four-flavor counterpart of Table \ref{tab:prob_3nu}; dropping the entries that involve $\nu_s$ does \emph{not} recover it, because the $u_k$ are different objects at each $n$.  The generator ordering is that of \ref{appendix:matrices_4nu}.  Reverse channels, and antineutrinos, follow by the exchange of \equ{conjugation}.  Every entry has been verified against direct diagonalization, to $5 \cdot 10^{-15}$ over twenty random Hamiltonians.}
 \end{table}
 }
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
