@@ -408,7 +408,7 @@ An approximation enters only when the true Hamiltonian varies \emph{continuously
 \section{Two-flavor oscillations}
 \label{section:two_flavors}
 
-We consider first oscillations between only two neutrino flavors; later, we consider three flavors.  It is a good approximation wherever one mass-squared splitting dominates, as in short-baseline reactor experiments and in accelerator and atmospheric analyses restricted to the leading oscillation; CP violation and the matter resonance need the three-flavor treatment of Section \ref{section:three_flavors}.  We represent the two-neutrino Hamiltonian operator by a $2 \times 2$ matrix $\mathbb{H}_2$.  The three traceless, Hermitian Pauli matrices $\sigma^k$ ($k=1,2,3$) --- with $\sigma^k/2$ the generators of the SU(2) algebra --- plus the identity matrix $\mathbb{1}$ make up the orthogonal basis of $2 \times 2$ matrices.  Thus, we expand the Hamiltonian as
+We consider first oscillations between only two neutrino flavors; later, we consider three flavors.  It is a good approximation wherever one mass-squared splitting dominates, as in short-baseline reactor experiments and in accelerator and atmospheric analyses restricted to the leading oscillation; CP violation and the matter resonance need the three-flavor treatment of Section \ref{section:three_flavors}.  We represent the two-neutrino Hamiltonian operator by a $2 \times 2$ matrix $\mathbb{H}_2$.  The three traceless, Hermitian Pauli matrices $\sigma^k$ ($k=1,2,3$) --- with $\sigma^k/2$ the generators of the SU(2) algebra --- plus the identity matrix $\mathbb{1}$ form an orthogonal basis of the Hermitian $2 \times 2$ matrices.  Thus, we expand the Hamiltonian as
 \begin{equation}
  \label{equ:h2_expansion}
  \mathbb{H}_2 = h_0 \mathbb{1} + h_k \sigma^k \;,
@@ -507,7 +507,7 @@ gives a Hamiltonian that \equ{sylvester} then treats like any other.  The two op
 }
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-We follow the steps that we used in the two-neutrino case closely.  We represent the three-neutrino Hamiltonian by a $3 \times 3$ matrix $\mathbb{H}_3$.  The eight traceless, Hermitian Gell-Mann matrices $\lambda^k$ ($k=1,\ldots,8$) --- with $\lambda^k/2$ the generators of the SU(3) algebra --- plus the identity matrix $\mathbb{1}$ make up the orthogonal basis of $3 \times 3$ matrices.  Thus, we expand the Hamiltonian as
+We follow the steps that we used in the two-neutrino case closely.  We represent the three-neutrino Hamiltonian by a $3 \times 3$ matrix $\mathbb{H}_3$.  The eight traceless, Hermitian Gell-Mann matrices $\lambda^k$ ($k=1,\ldots,8$) --- with $\lambda^k/2$ the generators of the SU(3) algebra --- plus the identity matrix $\mathbb{1}$ form an orthogonal basis of the Hermitian $3 \times 3$ matrices.  Thus, we expand the Hamiltonian as
 \begin{equation}
  \label{equ:h3_expansion}
  \mathbb{H}_3 = h_0 \mathbb{1} + h_k \lambda^k \;,
@@ -525,23 +525,21 @@ Next we compute the action of $\mathbb{U}_3$ on a neutrino state.  We wish to ex
 \end{equation}
 where the complex coefficients $u_0$ and $u_k$ are functions of $L$ and the $h_k$.  Reference\ \cite{MacFarlane:1968vc} introduced and demonstrated such an identity; below, we make use of their results, leaving most of the proofs to the reference.  See also \Refs\ \cite{Lehrer-Ilamed:1964, Rosen:1971nt, Torruella:1975, Kusnezov:1995, Curtright:2015iba, VanKortryk:2015kua} for further details.
 
-The coefficients in \equ{u3_def} can be trivially written as $u_0=\frac{1}{3}\text{Tr}~\mathbb{U}_3$ and $u_k=-\frac{i}{2}\text{Tr}(\lambda^k \mathbb{U}_3)$; next we unpack these forms.  An application of Sylvester's formula\ \cite{Sylvester:1883} to $3 \times 3$ matrices allows us to express the coefficients in terms of the SU(3) invariants
+The coefficients in \equ{u3_def} can be trivially written as $u_0=\frac{1}{3}\text{Tr}~\mathbb{U}_3$ and $u_k=-\frac{i}{2}\text{Tr}(\lambda^k \mathbb{U}_3)$; next we unpack these forms.  An application of Sylvester's formula\ \cite{Sylvester:1883} to $3 \times 3$ matrices --- that is, of \equ{ua_general} at $n = 3$ --- allows us to express the coefficients in terms of the two SU(3) invariants,
 \begin{eqnarray*}
- \label{equ:def_I2}
- && L^2 \left\vert h \right\vert^2  \equiv L^2 h_kh^k \;, \\
- \label{equ:def_I3}
- && -L^3 \langle h \rangle \equiv -L^3 d_{ijk}h^ih^jh^k \;.
+ && I_2 \equiv \left\vert h \right\vert^2 = h_kh^k \;, \\
+ && I_3 \equiv \langle h \rangle = d_{ijk}h^ih^jh^k \;,
 \end{eqnarray*}
-The tensor $d_{ijk} = \frac{1}{4} \text{Tr} \left( \lbrace\lambda_i,\lambda_j\rbrace\lambda_k \right)$, where the brackets represent the anticommutator.  It is totally symmetric, and appears in the product law of Gell-Mann matrices alongside the antisymmetric structure constants $f_{ijk}$, which come from the commutator instead; see \equ{star}.  Table \ref{tab:d_tensor} shows all non-zero components.
+named as in Section \ref{section:four_flavors}, which adds a third at four flavors.  The tensor $d_{ijk} = \frac{1}{4} \text{Tr} \left( \lbrace\lambda_i,\lambda_j\rbrace\lambda_k \right)$, where the brackets represent the anticommutator.  It is totally symmetric, and appears in the product law of Gell-Mann matrices alongside the antisymmetric structure constants $f_{ijk}$, which come from the commutator instead; see \equ{star}.  Table \ref{tab:d_tensor} shows all non-zero components.
 
-Next, we solve the characteristic equation of $-h_k\lambda^kL$, \ie, $\phi^3-(L^2 \left\vert h \right\vert^2) \phi-\frac{2}{3} (-L^3 \langle h \rangle)=0$.  The equation follows from the Cayley-Hamilton theorem, written conveniently in terms of invariants\ \cite{MacFarlane:1968vc, Curtright:2015iba}.  Its three latent roots, or eigenvalues, are $\phi_m \equiv \psi_m L$ ($m=1,2,3$), with
+Next, we solve the characteristic equation of $-h_k\lambda^kL$, \ie, $\phi^3 - L^2 I_2 \phi + \frac{2}{3} L^3 I_3 = 0$.  The equation follows from the Cayley-Hamilton theorem, written conveniently in terms of invariants\ \cite{MacFarlane:1968vc, Curtright:2015iba}.  Its three latent roots, or eigenvalues, are $\phi_m \equiv \psi_m L$ ($m=1,2,3$), with
 \begin{equation}
  \label{equ:phi_alpha}
  \psi_m
  \equiv
  \frac{2 \left\vert h \right\vert}{\sqrt{3}} \cos\left[\frac{1}{3}\left(\chi+2\pi m \right)\right] \;,
 \end{equation}
-where $\cos\left(\chi\right) = -\sqrt{3} \langle h \rangle / \lvert h \rvert^3$.  The step above is key: writing the eigenvalues in terms of the SU(3) invariants allows us to bypass an explicit diagonalization\ \cite{Curtright:2015iba}.
+where $\cos\left(\chi\right) = -\sqrt{3} I_3 / I_2^{3/2}$.  The step above is key: writing the eigenvalues in terms of the SU(3) invariants allows us to bypass an explicit diagonalization\ \cite{Curtright:2015iba}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 {\def\arraystretch{1.2}
@@ -572,7 +570,7 @@ With this, the coefficients in \equ{u3_def} are
  i\sum_{m=1}^3
  e^{i L \psi_m} \frac{\psi_m h_k - \left(h \ast h\right)_k}{3\psi_m^2 - \left\vert h \right\vert^2} \;,
 \end{eqnarray}
-where $\left(h\ast h\right)_i \equiv d_{ijk}h^jh^k$.  \ref{appendix:derivation_uk_expanded} contains the derivation of \equ{uk_expanded}.  Using Eqs.\ (\ref{equ:phi_alpha}), (\ref{equ:u0}), and (\ref{equ:uk_expanded}), we write the evolution operator concisely as in \Ref\ \cite{Ohlsson:1999xb},
+where $\left(h\ast h\right)_i \equiv d_{ijk}h^jh^k$.  \ref{appendix:derivation_uk_expanded} contains the derivation of \equ{uk_expanded}.  The denominator is $\chi^\prime(\psi_m)$, so \equ{uk_expanded} holds for a non-degenerate spectrum, as \equ{sylvester} does: it vanishes at a repeated root, and there the confluent form of the interpolation is needed instead.  This is not a corner case --- it is reached whenever $\lvert h \rvert \to 0$, and approached near a level crossing --- so {\tt NuOscProbExact} detects a degenerate pair and evaluates it from a separate, exact expression rather than from \equ{uk_expanded}.  Using Eqs.\ (\ref{equ:phi_alpha}), (\ref{equ:u0}), and (\ref{equ:uk_expanded}), we write the evolution operator concisely as in \Ref\ \cite{Ohlsson:1999xb},
 \begin{equation}
  \label{equ:u3_expanded}
  \mathbb{U}_3(L)
