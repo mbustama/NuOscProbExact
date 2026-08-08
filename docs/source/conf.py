@@ -75,10 +75,23 @@ numpydoc_show_class_members = False
 
 bibtex_bibfiles = ['refs.bib']
 
+# Only the inventories that are actually cross-referenced.  `scipy` was here
+# and was never used: nothing under docs/ or src/ carries a :func:`scipy...`
+# or any other scipy role, so its inventory was fetched on every build and
+# discarded.  That cost a network round trip each time and, on 2026-08-08,
+# failed the Code Quality job outright -- docs.scipy.org timed out, and the
+# job builds with -W, which turns the resulting warning into an error.
+#
+# The timeout matters for the two that remain.  Without it Sphinx waits with
+# `connect timeout=None`, so an unreachable host stalls the build rather than
+# failing it; ten seconds bounds that.  A fetch that fails is still a warning
+# and so still fatal under -W, which is intended: a mapping listed here is one
+# whose links are meant to resolve.
+intersphinx_timeout = 10
+
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
     'numpy': ('https://numpy.org/doc/stable', None),
-    'scipy': ('https://docs.scipy.org/doc/scipy', None),
 }
 
 # Keep the source order of the routines, which groups them the way the
