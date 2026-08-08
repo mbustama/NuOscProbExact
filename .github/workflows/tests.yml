@@ -30,6 +30,65 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
+  # Whether anything outside the paper changed.  `resources/paper/**` holds the
+  # LaTeX source of the article and its figures; editing it cannot affect any
+  # result the suite checks, and the paper is edited far more often than the
+  # code.  The heavy steps below are guarded on this.
+  #
+  # The jobs themselves are NOT skipped, and that is deliberate.  A job skipped
+  # by `if:` -- or a workflow skipped by a `paths` filter -- may never report
+  # its check, and the branch ruleset on `main` requires nine of these by name;
+  # a required check that never reports leaves a pull request pending forever
+  # rather than failing.  Running the job and doing nothing in it costs about
+  # fifteen seconds and keeps every check reporting as before.
+  #
+  # `tests/test_file_tree.py` is exempt: it asserts the tracked file list, so
+  # *adding or removing* a file under resources/paper does change what it
+  # checks, even though editing one does not.  It is run unconditionally below.
+  changes:
+    name: Detect what changed
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - id: filter
+        # Fails safe: anything unexpected -- a new branch, a force push, a
+        # missing base -- reports `code=true` and the full suite runs.
+        run: |
+          base=''
+          if [ "${{ github.event_name }}" = 'pull_request' ]; then
+            base='${{ github.event.pull_request.base.sha }}'
+          elif [ "${{ github.event.before }}" != '0000000000000000000000000000000000000000' ]; then
+            base='${{ github.event.before }}'
+          fi
+          if [ -z "$base" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+            echo 'no usable base; running everything'
+            echo 'code=true' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          changed=$(git diff --name-only "$base" '${{ github.sha }}')
+          echo "$changed"
+          if printf '%s\n' "$changed" | grep -qvE '^resources/paper/'; then
+            echo 'code=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'only the paper changed; heavy steps will be skipped'
+            echo 'code=false' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check the tracked file tree
+        # Run unconditionally, and here rather than in the guarded jobs below.
+        # A paper *edit* cannot change what this asserts, but adding or removing
+        # a file under resources/paper can, and that is exactly the case the
+        # guard would otherwise let through.  It imports nothing but the
+        # standard library, so pytest is the only install needed.
+        run: |
+          python -m pip install --quiet pytest
+          python -m pytest -q tests/test_file_tree.py
+
   pytest:
     # Pull-request events are kept only for forks.  A branch in this repository fires a push
     # event, which is what runs the job; a fork's branch does not, so without this its pull
@@ -37,6 +96,7 @@ jobs:
     # outside contribution arrives.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     name: Python ${{ matrix.python-version }}
+    needs: changes
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -52,11 +112,13 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Set up Python ${{ matrix.python-version }}
+        if: needs.changes.outputs.code == 'true'
         uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
+        if: needs.changes.outputs.code == 'true'
         # The `fast` extra is included so the matrix exercises the configuration most users
         # who care about speed will actually have.  The bare-NumPy configuration is not
         # skipped, it is a job of its own below.
@@ -65,6 +127,7 @@ jobs:
           pip install -e '.[fast,test]'
 
       - name: Run test suite
+        if: needs.changes.outputs.code == 'true'
         run: pytest -v
 
   numpy-path:
@@ -77,21 +140,25 @@ jobs:
     # see: a result that is correct only because the kernel produced it.
     name: NumPy path, Numba present but disabled
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    needs: changes
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
 
       - name: Set up Python
+        if: needs.changes.outputs.code == 'true'
         uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
       - name: Install dependencies
+        if: needs.changes.outputs.code == 'true'
         run: |
           python -m pip install --upgrade pip
           pip install -e '.[fast,test]'
 
       - name: Run the suite with the compiled path switched off
+        if: needs.changes.outputs.code == 'true'
         # `fastkernels.USE_NUMBA = False` has to be set before the tests import anything, so
         # it goes in a pytest plugin loaded with -p rather than in a fixture.  The file is
         # written here rather than committed because it exists only for this job; `python -m
@@ -125,16 +192,19 @@ jobs:
     # dispatch orphans the branch beneath it, which nothing else here would notice.
     name: Without Numba
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    needs: changes
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
 
       - name: Set up Python
+        if: needs.changes.outputs.code == 'true'
         uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
       - name: Install dependencies, then remove Numba
+        if: needs.changes.outputs.code == 'true'
         # Numba arrives as a base dependency now, so omitting the `fast` extra no longer
         # keeps it out -- it has to be uninstalled explicitly.  Without this the assertion
         # below fails and the job reports a break that is not one.
@@ -144,6 +214,7 @@ jobs:
           pip uninstall -y numba
 
       - name: Confirm Numba really is absent
+        if: needs.changes.outputs.code == 'true'
         # Belt and braces: the uninstall above could stop working (a renamed package, a
         # transitive dependency reinstalling it), at which point this job would quietly stop
         # testing the fallback while still reporting success.
@@ -154,6 +225,7 @@ jobs:
           "
 
       - name: Run test suite
+        if: needs.changes.outputs.code == 'true'
         # The suite skips the tests that require the compiled backend rather than failing
         # them, so the expected result here is passes plus skips, not passes alone.
         run: pytest -v
@@ -165,6 +237,7 @@ jobs:
     # it runs in parallel with the matrix and does not delay the pass/fail signal.
     name: Coverage
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    needs: changes
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -176,11 +249,13 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Set up Python
+        if: needs.changes.outputs.code == 'true'
         uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
       - name: Install dependencies
+        if: needs.changes.outputs.code == 'true'
         # Numba has to be here.  Coverage is 100% with it and 97% without, because the whole
         # `if HAVE_NUMBA:` block in fastkernels.py is unreachable when the import fails, and
         # the 98% floor is set against the former.  Since 1.13.0 the base dependencies
@@ -192,12 +267,14 @@ jobs:
           pip install -e '.[fast,test]'
 
       - name: Run test suite with coverage
+        if: needs.changes.outputs.code == 'true'
         # Branch coverage, which sources are measured, what the @njit exclusion covers and
         # the 98% floor all live in [tool.coverage] in pyproject.toml, so a local
         # `pytest --cov` gates identically.  Nothing is passed here that could drift.
         run: pytest -q --cov --cov-report=term-missing --cov-report=xml
 
       - name: Publish coverage summary
+        if: needs.changes.outputs.code == 'true'
         # Puts the table on the run's summary page, so the number is readable without
         # opening the log or downloading the artifact.
         run: |
@@ -208,6 +285,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload coverage to Codecov
+        if: needs.changes.outputs.code == 'true'
         # Dormant until a CODECOV_TOKEN repository secret exists: without one the condition
         # is false and the step is skipped, so this costs nothing and cannot fail before the
         # secret is deliberately added.  Creating it is the whole act of switching coverage
@@ -226,6 +304,7 @@ jobs:
           fail_ci_if_error: true
 
       - name: Upload coverage report
+        if: needs.changes.outputs.code == 'true'
         # Cobertura XML is what every coverage service consumes.  Publishing it as an
         # artifact keeps the report available whether or not the Codecov step above is
         # active, which is what makes the figure inspectable today.

@@ -22,23 +22,76 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
+  # Whether anything outside the paper changed.  `resources/paper/**` holds the
+  # LaTeX source of the article and its figures; editing it cannot affect any
+  # result the suite checks, and the paper is edited far more often than the
+  # code.  The heavy steps below are guarded on this.
+  #
+  # The jobs themselves are NOT skipped, and that is deliberate.  A job skipped
+  # by `if:` -- or a workflow skipped by a `paths` filter -- may never report
+  # its check, and the branch ruleset on `main` requires nine of these by name;
+  # a required check that never reports leaves a pull request pending forever
+  # rather than failing.  Running the job and doing nothing in it costs about
+  # fifteen seconds and keeps every check reporting as before.
+  #
+  # `tests/test_file_tree.py` is exempt: it asserts the tracked file list, so
+  # *adding or removing* a file under resources/paper does change what it
+  # checks, even though editing one does not.  It is run unconditionally below.
+  changes:
+    name: Detect what changed
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - id: filter
+        # Fails safe: anything unexpected -- a new branch, a force push, a
+        # missing base -- reports `code=true` and the full suite runs.
+        run: |
+          base=''
+          if [ "${{ github.event_name }}" = 'pull_request' ]; then
+            base='${{ github.event.pull_request.base.sha }}'
+          elif [ "${{ github.event.before }}" != '0000000000000000000000000000000000000000' ]; then
+            base='${{ github.event.before }}'
+          fi
+          if [ -z "$base" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+            echo 'no usable base; running everything'
+            echo 'code=true' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          changed=$(git diff --name-only "$base" '${{ github.sha }}')
+          echo "$changed"
+          if printf '%s\n' "$changed" | grep -qvE '^resources/paper/'; then
+            echo 'code=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'only the paper changed; heavy steps will be skipped'
+            echo 'code=false' >> "$GITHUB_OUTPUT"
+          fi
+
   lint:
     name: Run Ruff Linter
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    needs: changes
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
 
       - name: Set up Python
+        if: needs.changes.outputs.code == 'true'
         uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
       - name: Install Ruff
+        if: needs.changes.outputs.code == 'true'
         run: pip install ruff
 
       - name: Run Ruff Linter
+        if: needs.changes.outputs.code == 'true'
         # Undefined names, unused imports, comparison and except-clause mistakes.  The rule
         # selection, the two codebase-wide exemptions (E741 for `l`, E701 for the d_ijk
         # lookup table) and the star-import exemption for the paper's worked examples all
@@ -51,6 +104,7 @@ jobs:
         run: ruff check src/ tests/ examples/ docs/ notebooks/
 
       - name: Run Ruff Formatter (Check Only)
+        if: needs.changes.outputs.code == 'true'
         # Informational, and expected to stay that way.  The codebase predates ruff format
         # and does not follow it -- 35 of 39 files would be reformatted -- and running it
         # would rewrite the alignment of the SU(3) coefficient blocks and the d_ijk table,
@@ -62,18 +116,21 @@ jobs:
   docs:
     name: Documentation builds
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    needs: changes
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
 
       - name: Set up Python
+        if: needs.changes.outputs.code == 'true'
         uses: actions/setup-python@v7
         with:
           # Matches pages.yml, so what is checked here is what gets deployed.
           python-version: "3.12"
 
       - name: Install documentation dependencies and the package
+        if: needs.changes.outputs.code == 'true'
         # docs/requirements.txt is `-e .[docs]`, so this installs the package
         # editable along with the documentation dependencies.  The editable
         # install is required, not merely convenient: jupyter-sphinx executes
@@ -83,9 +140,11 @@ jobs:
         run: pip install -r docs/requirements.txt
 
       - name: Register the Jupyter kernel used by jupyter-sphinx
+        if: needs.changes.outputs.code == 'true'
         run: python -m ipykernel install --user --name python3 --display-name "Python 3"
 
       - name: Build HTML documentation
+        if: needs.changes.outputs.code == 'true'
         # Stricter than pages.yml on purpose.  -W turns Sphinx warnings into errors, which
         # is what catches a broken cross-reference, a page missing from the toctree, a
         # numpydoc section that does not parse, or an autodoc target that has been renamed
@@ -102,17 +161,20 @@ jobs:
   notebooks:
     name: Notebooks execute
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    needs: changes
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
 
       - name: Set up Python
+        if: needs.changes.outputs.code == 'true'
         uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
       - name: Install dependencies
+        if: needs.changes.outputs.code == 'true'
         # The `fast` extra is included so the notebooks run against the compiled
         # backend, which is what a reader following the Performance section will have.
         run: |
@@ -120,6 +182,7 @@ jobs:
           pip install -e '.[notebooks,fast]'
 
       - name: Execute every notebook
+        if: needs.changes.outputs.code == 'true'
         # Blocking, and the reason is the whole point of the job: a notebook is
         # documentation that claims to work.  The stored outputs make that claim
         # persuasive without being evidence -- they were true whenever the notebook was
@@ -156,6 +219,7 @@ jobs:
           PY
 
       - name: Run the worked examples
+        if: needs.changes.outputs.code == 'true'
         # The nine scripts in examples/ are the ones the paper walks through and the
         # ones README.md walks through line by line.  Nothing executed them, so
         # they could rot silently -- and had: two were referenced under names
@@ -171,6 +235,7 @@ jobs:
           echo "all worked examples ran"
 
       - name: Check every notebook ships its figures
+        if: needs.changes.outputs.code == 'true'
         # The notebooks are committed with their outputs, so that GitHub renders them
         # without anyone having to run anything.  A notebook stripped of its outputs
         # still executes and would pass the step above while showing a reader nothing.
