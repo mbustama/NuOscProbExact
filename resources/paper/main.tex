@@ -356,7 +356,7 @@ The numerator $N_a$ has degree $n-2$ in $\psi$ --- the leading $\psi^{n-1}$ of t
 
 One further reading fixes the relation to codes that propagate a density matrix rather than a state, which is the more general formulation and the one Section \ref{section:scope} refers to.  With no jump operators and a Hamiltonian constant over the interval, the Liouville-von Neumann equation ${\rm d}\rho/{\rm d}L = -i\left[\mathbb{H}, \rho\right]$ has the closed-form solution $\rho(L) = \mathbb{U}(L) \, \rho(0) \, \mathbb{U}^\dagger(L)$, with $\mathbb{U}$ given by \equ{sylvester}.  What such a code obtains by integrating along the trajectory is, in that limit, what \equ{sylvester} returns in a single evaluation; the difference between the two approaches is the terms that limit removes --- interactions, attenuation, and the open-system terms of Section \ref{section:limitations} --- and not the treatment of the oscillation itself.
 
-The eigenvalues are the only quantity in \equ{sylvester} that is not a polynomial in the Hamiltonian.  Everything else---the projectors, the probabilities---is rational in them.  That is why the construction extends to any $n$ for which the eigenvalues can be had, why it stops where they cannot be had in closed form ($n \geq 5$), and why the accuracy of the whole procedure is set by the accuracy of the roots, $\psi_m$.  We return to these points later.
+The eigenvalues are the only quantity in \equ{sylvester} that is not a polynomial in the Hamiltonian.  Everything else---the projectors, the probabilities---is rational in them.  That is why the construction extends to any $n$ for which the eigenvalues can be had, and why the accuracy of the whole procedure is set by the accuracy of the roots, $\psi_m$.  Section \ref{section:beyond_four} takes up what happens where they cannot be had in closed form.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -404,6 +404,13 @@ An approximation enters only when the true Hamiltonian varies \emph{continuously
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
+
+\subsection{Why the construction stops at four}
+\label{section:beyond_four}
+
+At $n \geq 5$ the Abel-Ruffini theorem removes the closed-form-in-radicals eigenvalues: the general quintic is not soluble in radicals, because the symmetric group $S_5$ is not soluble while $S_2$, $S_3$, and $S_4$ are.  The obstruction is a theorem, not a gap in anyone's algebra, and it is external to neutrino physics entirely.
+
+Three remarks calibrate what is actually lost.  First, closed form survives, uselessly: the general quintic is solvable beyond radicals, through the Bring radical and elliptic modular functions or through hypergeometric functions, but those special functions are themselves evaluated iteratively, so nothing is gained over applying Newton's method to $\chi$.  The radicals were never the point; the eigenvalue-only structure was.  Second, and consequently, the practical scheme at $n \geq 5$ is to seed the eigenvalues --- from an approximation, or from the closed-form $n \leq 4$ solution of a decoupled sub-block when a hierarchy permits --- and polish them with Newton's method; the assembly in \equ{sylvester} then proceeds unchanged.  Third, everything structural continues: \equ{ua_general} needs only that $\psi_m$ be a root of $\chi$, not that it be available in radicals.  What ends at four is the formula, not the method.
 
 \section{Two-flavor oscillations}
 \label{section:two_flavors}
@@ -453,7 +460,12 @@ valid for real $a_k$, where $\hat{a}$ is a unit vector in the direction of the v
  -
  i \frac{\sin\left(\left\vert h\right\vert L\right)}{\lvert h \rvert} h_k\sigma^k  \;,
 \end{equation}
-where $\lvert h \rvert^2 \equiv h_1^2 + h_2^2 + h_3^2$ is the squared modulus of the vector $h$.  At $n = 2$ the latent roots of Section \ref{section:evolution_operator} are simply $\pm \lvert h \rvert$, the eigenvalues of the traceless part.
+where $\lvert h \rvert^2 \equiv h_1^2 + h_2^2 + h_3^2$ is the squared modulus of the vector $h$.  At $n = 2$ the latent roots of Section \ref{section:evolution_operator} are simply $\pm \lvert h \rvert$, the eigenvalues of the traceless part, and \equ{evol_op_2nu} is the expansion $\mathbb{U}_2 = u_0 \mathbb{1} + i u_k \sigma^k$ of \equ{u3_def} with
+\begin{equation*}
+ u_0 = \cos\left(\lvert h \rvert L\right) \;, \qquad
+ u_k = -\frac{\sin\left(\lvert h \rvert L\right)}{\lvert h \rvert} h_k \;,
+\end{equation*}
+which is \equ{ua_general} at $n=2$.
 
 The evolved state $\nu_\alpha (L)$ of a neutrino that was created with flavor $\alpha$, \ie, with $f_\alpha(0) = 1$ and $f_\beta(0) = 0$, is $\nu_\alpha\left(L\right) = \mathbb{U}_2(L) \nu_\alpha$.  After some manipulation, the flavor-transition probability $P_{\nu_\alpha \to \nu_\beta}(L) = \lvert \nu_\beta^\dagger \mathbb{U}_2(L) \nu_\alpha \rvert^2$ is
 \begin{equation}
@@ -706,18 +718,6 @@ Because \equ{uk_4nu} takes an arbitrary Hermitian $\mathbb{H}_4$, it covers shor
  V_s = -V_{\rm NC} = \frac{G_{\rm F} n_n}{\sqrt{2}} \;,
 \end{equation}
 so that $V_s \simeq V_{\rm CC}/2$ in the crust.  The sterile state does not feel the charged-current potential, but the other three do not feel $V_s$; it is that difference that drives the resonance shown later in \figu{sterile_earth}.
-
-\subsection{Why the construction stops at four}
-\label{section:beyond_four}
-
-At $n \geq 5$ the Abel-Ruffini theorem removes the closed-form-in-radicals eigenvalues: the general quintic is not soluble in radicals, because the symmetric group $S_5$ is not soluble while $S_2$, $S_3$, and $S_4$ are.  The obstruction is a theorem, not a gap in anyone's algebra, and it is external to neutrino physics entirely.
-
-Three remarks calibrate what is actually lost.  First, closed form survives, uselessly: the general quintic is solvable beyond radicals, through the Bring radical and elliptic modular functions or through hypergeometric functions, but those special functions are themselves evaluated iteratively, so nothing is gained over applying Newton's method to $\chi$.  The radicals were never the point; the eigenvalue-only structure was.  Second, and consequently, the practical scheme at $n \geq 5$ is to seed the eigenvalues --- from an approximation, or from the closed-form $n \leq 4$ solution of a decoupled sub-block when a hierarchy permits --- and polish them with Newton's method; the assembly in \equ{sylvester} then proceeds unchanged.  Third, everything structural continues: \equ{ua_general} needs only that $\psi_m$ be a root of $\chi$, not that it be available in radicals.  What ends at four is the formula, not the method.
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 
 \section{Code description}
 \label{section:code}
