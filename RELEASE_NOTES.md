@@ -173,6 +173,30 @@ a change.
 - **The convergence order of the slab product was being quoted as first.** It is second, which
   is what the midpoint sampling gives.
 
+## The paper now travels with the code
+
+`resources/paper/` carries the source of the Computer Physics Communications article that
+documents this library: `main.tex`, all fifteen figures, `elsarticle.cls` and
+`elsarticle-num.bst` so it compiles without the Elsevier bundle, and `make_versions.py`,
+which derives the marked-up diff against the published version. The figures in it are drawn
+by `notebooks/10_paper_figures.ipynb` from data frozen in `tests/`, so a claim in the text
+can be traced to the measurement behind it without leaving the repository.
+
+**A clone gets it; `pip` does not.** Checked rather than assumed, on this release: the wheel
+holds 15 entries and the source distribution 24, all modules or metadata, and neither
+matches `resources`, `paper`, `.tex` or `.pdf`. Nothing about what you install has changed.
+
+`tests/external_drivers/` holds the C and C++ drivers for the codes that cannot be called
+from Python — GLoBES, Prob3++, NuFast — with the raw output of each and a README recording
+every convention that had to be matched first: three different roundings of the atomic mass
+unit among them, and a zenith angle in radians where the documentation says degrees.
+
+The paper's arbitrary-Hamiltonian example is now a **long-range interaction** — a gauged
+$L_e - L_\mu$ under which the Earth's electrons source a Yukawa potential, non-local and so
+not expressible as a density profile — with the figure for it drawn stand-alone in notebook
+10. It replaces a template that called an undefined `hamiltonian_mymodel`, which could
+assert the library's generality but not show it.
+
 ## A note on the numbers
 
 Every speedup above was measured on one laptop on one day, and figures like these move by tens
@@ -190,7 +214,7 @@ Python 3.9 or newer, tested on 3.9 through 3.13. `numpy` and `numba` are both in
 the compiled backend is what a plain install gets — see the note above on numba's numpy
 ceiling. `pip install "nuoscprobexact[fast]"` still works and is now a no-op.
 
-Twenty worked notebooks, and a regression suite of more than 750 tests at 100% coverage
+Twenty worked notebooks, and a regression suite of 797 tests at 100% coverage
 against a 98% floor, cross-checked against [nuSQuIDS](https://github.com/arguelles/nuSQuIDS)
 and against the Zaglauer–Schwarzer closed form for the matter spectrum.
 
