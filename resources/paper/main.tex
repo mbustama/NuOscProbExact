@@ -507,7 +507,7 @@ gives a Hamiltonian that \equ{sylvester} then treats like any other.  The two op
 }
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-We follow the steps that we used in the two-neutrino case closely.  We represent the three-neutrino Hamiltonian by a $3 \times 3$ matrix $\mathbb{H}_3$.  The eight traceless, Hermitian Gell-Mann matrices $\lambda^k$ ($k=1,\ldots,8$) --- with $\lambda^k/2$ the generators of the SU(3) algebra --- plus the identity matrix $\mathbb{1}$ form an orthogonal basis of the Hermitian $3 \times 3$ matrices.  Thus, we expand the Hamiltonian as
+The three-flavor case runs as the two-flavor one did, both being \equ{sylvester} at their own $n$.  We represent the three-neutrino Hamiltonian by a $3 \times 3$ matrix $\mathbb{H}_3$.  The eight traceless, Hermitian Gell-Mann matrices $\lambda^k$ ($k=1,\ldots,8$) --- with $\lambda^k/2$ the generators of the SU(3) algebra --- plus the identity matrix $\mathbb{1}$ form an orthogonal basis of the Hermitian $3 \times 3$ matrices.  Thus, we expand the Hamiltonian as
 \begin{equation}
  \label{equ:h3_expansion}
  \mathbb{H}_3 = h_0 \mathbb{1} + h_k \lambda^k \;,
@@ -585,7 +585,7 @@ where $\left(h\ast h\right)_i \equiv d_{ijk}h^jh^k$.  \ref{appendix:derivation_u
 \end{equation}
 \equ{u3_expanded} was introduced in \Refs\ \cite{Ohlsson:1999xb, Ohlsson:1999um, Ohlsson:2000zz}, and applied to find analytic expressions of the probabilities in the cases of oscillations in vacuum and matter.  For a numerical implementation of \equ{u3_expanded} it is convenient to calculate the coefficients $u_0$ and $u_k$ with Eqs.\ (\ref{equ:u0}) and (\ref{equ:uk_expanded}), and use them to directly expand $\mathbb{U}_3$ in \equ{u3_def}.  This is the strategy that we adopt in {\tt NuOscProbExact}\ \cite{NuOscProbExact}.
 
-One condition attaches to both expressions.  Their denominator is $\chi^\prime(\psi_m)$, which vanishes when two latent roots coincide, so they hold for a non-degenerate spectrum, as \equ{sylvester} does.  That is not only the trivial case $\lvert h \rvert = 0$, where all three roots vanish together: any two eigenvalues of $\tilde{\mathbb{H}}_3$ may meet at any $\lvert h \rvert$, and a level crossing --- where resonances live, and where the physics is most interesting --- is an approach to it.  The interpolation is then taken over the distinct roots instead, which {\tt NuOscProbExact} does exactly and automatically; Section \ref{section:limitations} gives the details.  
+One condition attaches to both expressions.  Their denominator is $\chi^\prime(\psi_m)$, which vanishes when two latent roots coincide, so they hold for a non-degenerate spectrum, as \equ{sylvester} does.  That is not only the trivial case $\lvert h \rvert = 0$, where all three roots vanish together: any two eigenvalues of $\tilde{\mathbb{H}}_3$ may meet at any $\lvert h \rvert$, and a matter resonance is an approach to it.  The interpolation is then taken over the distinct roots instead.  Section \ref{section:limitations} describes how {\tt NuOscProbExact} does this, and what a near-degenerate spectrum costs in accuracy.  
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 {\def\arraystretch{1.3}
