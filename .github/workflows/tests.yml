@@ -86,8 +86,8 @@ jobs:
         # guard would otherwise let through.  It imports nothing but the
         # standard library, so pytest is the only install needed.
         run: |
-          python -m pip install --quiet pytest
-          python -m pytest -q tests/test_file_tree.py
+          python3 -m pip install --quiet pytest
+          python3 -m pytest -q tests/test_file_tree.py
 
   pytest:
     # Pull-request events are kept only for forks.  A branch in this repository fires a push
@@ -285,7 +285,6 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload coverage to Codecov
-        if: needs.changes.outputs.code == 'true'
         # Dormant until a CODECOV_TOKEN repository secret exists: without one the condition
         # is false and the step is skipped, so this costs nothing and cannot fail before the
         # secret is deliberately added.  Creating it is the whole act of switching coverage
@@ -297,7 +296,7 @@ jobs:
         # badge frozen at a stale number under a green checkmark, which is worse than a
         # visible failure.  It cannot affect the tests' own signal, which comes from the jobs
         # above.
-        if: env.CODECOV_TOKEN != ''
+        if: needs.changes.outputs.code == 'true' && env.CODECOV_TOKEN != ''
         uses: codecov/codecov-action@v7
         with:
           files: ./coverage.xml
