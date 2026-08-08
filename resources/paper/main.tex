@@ -622,7 +622,7 @@ Because the algebra of Gell-Mann matrices is more complicated than that of Pauli
 \section{Four-flavor oscillations}
 \label{section:four_flavors}
 
-The two- and three-flavor constructions of Sections \ref{section:two_flavors} and \ref{section:three_flavors} are due to OS.  The four-flavor one is not: it is the case $n=4$ of Section \ref{section:general_n}, and it is the last one for which the eigenvalues can be written down in closed form.
+Sections \ref{section:two_flavors} and \ref{section:three_flavors} are \equ{sylvester} at $n=2$ and $n=3$, which is where the OS expansion lives.  This section is the same construction at $n=4$, the last value for which the eigenvalues can be written down in closed form.
 
 \subsection{The four-flavor case}
 \label{section:4nu_case}
@@ -634,19 +634,19 @@ SU(4) has rank three, so $\tilde{\mathbb{H}}_4$ carries three invariants, all ob
  I_3 = \langle h \rangle \;, \quad
  I_4 = \tfrac{1}{2}\left({\rm Tr}\,\tilde{\mathbb{H}}_4^4 - I_2^2\right) \;,
 \end{equation}
-the first two being those of the three-flavor case.  The characteristic equation is the depressed quartic $\chi(\psi) = \psi^4 - I_2\psi^2 - \frac{2}{3}I_3\psi + \frac{1}{4}(I_2^2 - 2I_4) = 0$, which Ferrari-Euler reduction turns into the resolvent cubic
+the first two being those of the three-flavor case.  The characteristic equation is the depressed quartic $\chi(\psi) = \psi^4 - I_2\psi^2 + \frac{2}{3}I_3\psi + \frac{1}{4}(I_2^2 - 2I_4) = 0$, which Ferrari-Euler reduction turns into the resolvent cubic
 \begin{equation}
  \label{equ:resolvent_cubic}
  z^3 - 2I_2 z^2 + 2I_4 z - \tfrac{4}{9}I_3^2 = 0 \;.
 \end{equation}
-Its roots are $z_i = (\psi_j+\psi_k)^2$, real and non-negative precisely because $\tilde{\mathbb{H}}_4$ is Hermitian.  Equation (\ref{equ:resolvent_cubic}) therefore yields to \emph{exactly} the trigonometric formula already used at three flavors, \equ{phi_alpha}, and
+Its roots are $z_i = (\psi_j+\psi_k)^2$, real and non-negative precisely because $\tilde{\mathbb{H}}_4$ is Hermitian.  Depressed by $z \to z + \frac{2}{3}I_2$, \equ{resolvent_cubic} therefore yields to the same trigonometric formula already used at three flavors, \equ{phi_alpha}, and
 \begin{equation}
  \label{equ:psi_4nu}
  \psi_m = \tfrac{1}{2}\left(s_1\sqrt{z_1}+s_2\sqrt{z_2}+s_3\sqrt{z_3}\right) \;,
  \quad
  s_i = \pm 1 \;,
 \end{equation}
-with the signs fixed by $s_1s_2s_3\sqrt{z_1z_2z_3} = \frac{2}{3}I_3$.  The three-flavor machinery sits inside the four-flavor solution; this is the sense in which the extension is inexpensive.
+with the signs fixed by $s_1s_2s_3\sqrt{z_1z_2z_3} = -\frac{2}{3}I_3$.  The three-flavor machinery sits inside the four-flavor solution; this is the sense in which the extension is inexpensive.
 
 Two accidents that make $n=3$ compact both fail here.  The rank is three rather than two, so $I_4$ appears alongside $I_2$ and $I_3$.  And the SU(3) identity $\left(h \ast h\right) \ast h = \frac{1}{3}\lvert h \rvert^2 h$, which truncates the tower of \equ{ua_general} at one rung, is a Cayley-Hamilton accident of $n=3$: at $n=4$ the theorem constrains $\tilde{\mathbb{H}}_4^4$, and hence $(h \ast h) \ast (h \ast h)$, but leaves $(h \ast h) \ast h$ free.  Numerically the identity is violated at the level of tens of per cent for random $h$, so the second rung enters as independent data.  With that, Eqs.\ (\ref{equ:u0}) and (\ref{equ:uk_expanded}) become
 \begin{eqnarray}
@@ -691,7 +691,7 @@ The closed-form SU(4) exponential is not new outside neutrino physics: \Refs\ \c
    $P_{\nu_s \to \nu_\tau}$     & $\left\vert i u_{11} + u_{12} \right\vert^2$ \\
    $P_{\nu_s \to \nu_s}$        & $\left\vert u_0 - i \frac{3 u_{15}}{\sqrt{6}} \right\vert^2$ \\
   \end{tabular}
-  \caption{\label{tab:prob_4nu}Exact four-neutrino oscillation probabilities, for an arbitrary time-independent Hamiltonian.  The complex coefficients $u_0$ and $u_k$ are computed in Eqs.\ (\ref{equ:u0_4nu}) and (\ref{equ:uk_4nu}).  This is the four-flavor counterpart of Table \ref{tab:prob_3nu}; dropping the entries that involve $\nu_s$ does \emph{not} recover it, because the $u_k$ are different objects at each $n$.  The generator ordering is that of \ref{appendix:matrices_4nu}.  Reverse channels differ only in the sign of the antisymmetric coefficient, and antineutrino probabilities are obtained by the same exchange.  Every entry has been verified against direct diagonalization at the $10^{-15}$ level.}
+  \caption{\label{tab:prob_4nu}Exact four-neutrino oscillation probabilities, for an arbitrary time-independent Hamiltonian.  The complex coefficients $u_0$ and $u_k$ are computed in Eqs.\ (\ref{equ:u0_4nu}) and (\ref{equ:uk_4nu}).  This is the four-flavor counterpart of Table \ref{tab:prob_3nu}; dropping the entries that involve $\nu_s$ does \emph{not} recover it, because the $u_k$ are different objects at each $n$.  The generator ordering is that of \ref{appendix:matrices_4nu}.  Reverse channels differ only in the sign of the antisymmetric coefficient, which is \equ{conjugation}; antineutrino probabilities follow by the same exchange.  Every entry has been verified against direct diagonalization, to $5 \cdot 10^{-15}$ over twenty random Hamiltonians.}
 \end{table}
 }
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
