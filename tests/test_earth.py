@@ -650,3 +650,128 @@ def test_a_radius_exactly_on_a_shell_boundary_takes_the_inner_shell(boundary):
         assert not np.isclose(on, just_outside, rtol=1.0e-3)
     else:
         assert np.isclose(on, just_outside, rtol=1.0e-6)
+
+
+# --- Antineutrinos through the Earth ----------------------------------
+#
+# Before 1.13.1 an antineutrino crossing had to be built by hand, as
+# notebooks/13_antineutrinos.ipynb showed: conjugate the vacuum
+# Hamiltonian, negate every potential, then compose the slabs.  The flag
+# has to reproduce exactly that, and keep the batched PREM path.
+
+
+def _vacuum_hamiltonian(n_flavors):
+    r"""Returns the energy-independent vacuum Hamiltonian at any n."""
+    if n_flavors == 2:
+        return h_vacuum_2nu()
+    if n_flavors == 3:
+        return h_vacuum_3nu()
+    return _vacuum_4nu(s14=np.sqrt(0.1), s24=np.sqrt(0.1))
+
+
+def _antineutrino_by_hand(h_vac, energy, costhz, n_flavors,
+                          n_slabs_per_segment=4):
+    r"""The hand-built idiom the flag replaces."""
+    widths_km, densities = earth.earth_slabs(costhz, n_slabs_per_segment)
+    potentials = [-earth.matter_potential(densities)]
+    if n_flavors == 4:
+        potentials.append(-earth.matter_potential_nc(densities))
+    builder = {2: hamiltonians2nu.hamiltonian_2nu_matter,
+               3: hamiltonians3nu.hamiltonian_3nu_matter,
+               4: hamiltonians4nu.hamiltonian_4nu_matter}[n_flavors]
+    h = builder(np.conj(np.asarray(h_vac, dtype=complex)), energy,
+                *potentials)
+    return np.asarray({2: slabs.probabilities_2nu_slabs,
+                       3: slabs.probabilities_3nu_slabs,
+                       4: slabs.probabilities_4nu_slabs}[n_flavors](
+                           h, widths_km*gd.CONV_KM_TO_INV_EV))
+
+
+@pytest.mark.parametrize('n_flavors', [2, 3, 4])
+@pytest.mark.parametrize('costhz', [-1.0, -0.9, -0.3])
+def test_the_antineutrino_flag_is_the_hand_built_construction(n_flavors,
+                                                              costhz):
+    r"""The flag reproduces conjugate-and-flip-both, exactly."""
+    h_vac = _vacuum_hamiltonian(n_flavors)
+    energy = 5.0e9
+
+    routine = {2: earth.probabilities_2nu_earth,
+               3: earth.probabilities_3nu_earth,
+               4: earth.probabilities_4nu_earth}[n_flavors]
+    got = np.asarray(routine(h_vac, energy, costhz, n_slabs_per_segment=4,
+                             antineutrino=True))
+    expected = _antineutrino_by_hand(h_vac, energy, costhz, n_flavors)
+
+    assert np.allclose(got, expected, rtol=0.0, atol=1.0e-14)
+
+
+@pytest.mark.parametrize('n_flavors', [2, 3, 4])
+def test_antineutrinos_differ_from_neutrinos_in_matter(n_flavors):
+    r"""The flag is not a no-op: matter separates the two.
+
+    The energy is chosen per flavor count to sit near that case's
+    resonance: the two-flavor Hamiltonian here carries the solar
+    splitting, whose MSW resonance in the Earth is around 100 MeV, not
+    the few GeV where the atmospheric one sits.
+    """
+    h_vac = _vacuum_hamiltonian(n_flavors)
+    energy = {2: 1.0e8, 3: 5.0e9, 4: 5.0e9}[n_flavors]
+
+    routine = {2: earth.probabilities_2nu_earth,
+               3: earth.probabilities_3nu_earth,
+               4: earth.probabilities_4nu_earth}[n_flavors]
+    nu = np.asarray(routine(h_vac, energy, -0.9, n_slabs_per_segment=4))
+    bar = np.asarray(routine(h_vac, energy, -0.9, n_slabs_per_segment=4,
+                             antineutrino=True))
+
+    assert np.abs(nu - bar).max() > 1.0e-3
+
+
+def test_conjugating_alone_is_not_enough():
+    r"""Both operations are needed, which is the point of the flag.
+
+    Conjugating the vacuum term without reversing the potential is the
+    classic error; it must not agree with the real antineutrino answer.
+    """
+    h_vac = _vacuum_hamiltonian(3)
+    energy = 5.0e9
+
+    bar = np.asarray(earth.probabilities_3nu_earth(
+        h_vac, energy, -0.9, n_slabs_per_segment=4, antineutrino=True))
+    conjugate_only = np.asarray(earth.probabilities_3nu_earth(
+        np.conj(np.asarray(h_vac, dtype=complex)), energy, -0.9,
+        n_slabs_per_segment=4))
+
+    assert np.abs(bar - conjugate_only).max() > 1.0e-3
+
+
+def test_the_antineutrino_grid_is_batched_like_the_neutrino_one():
+    r"""A whole oscillogram, one call, with the flag set."""
+    h_vac = _vacuum_hamiltonian(3)
+    energies = np.logspace(0.0, 1.0, 5)*1.0e9
+    costhz = np.array([-0.95, -0.6, -0.2])
+
+    grid = earth.probabilities_3nu_earth(
+        h_vac, energies[:, None], costhz[None, :], n_slabs_per_segment=4,
+        antineutrino=True)
+    assert grid.shape == (5, 3, 9)
+
+    for i, e in enumerate(energies):
+        for j, c in enumerate(costhz):
+            one = np.asarray(earth.probabilities_3nu_earth(
+                h_vac, e, c, n_slabs_per_segment=4, antineutrino=True))
+            assert np.allclose(grid[i, j], one, atol=1.0e-14)
+
+
+def test_antineutrinos_between_locations_carry_the_flag():
+    r"""The named-site wrappers pass it through."""
+    h_vac = _vacuum_hamiltonian(3)
+    energy = 5.0e9
+
+    bar = np.asarray(earth.probabilities_3nu_between_locations(
+        h_vac, energy, 'south_pole', 'kamioka', n_slabs_per_segment=4,
+        antineutrino=True))
+    costhz = earth._costhz_of_named_pair('south_pole', 'kamioka')
+    expected = _antineutrino_by_hand(h_vac, energy, costhz, 3)
+
+    assert np.allclose(bar, expected, rtol=0.0, atol=1.0e-14)

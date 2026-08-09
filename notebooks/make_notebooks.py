@@ -980,11 +980,19 @@ books['08_unusual_density_profiles.ipynb'] = notebook(
         code('import earth\nimport slabs'),
         code('def probabilities_profile(widths_km, densities, energy_ev,\n'
              '                          h_vac=None):\n'
-             '    """Nine probabilities through an arbitrary matter profile."""\n'
+             '    """Nine probabilities through an arbitrary matter profile.\n'
+             '\n'
+             '    `energy_ev` may be an array, in which case the whole scan\n'
+             '    is one call: the Hamiltonians stack on a leading axis and\n'
+             '    `slabs` composes every chord in a single pass.\n'
+             '    """\n'
              '    h_vac = H_VAC_3NU if h_vac is None else h_vac\n'
              '    vcc = earth.matter_potential(np.asarray(densities, '
              'dtype=float))\n'
-             '    H = hamiltonians3nu.hamiltonian_3nu_matter(h_vac, energy_ev,'
+             '    energy = np.asarray(energy_ev, dtype=float)\n'
+             '    if energy.ndim:\n'
+             '        energy = energy[:, None]   # one chord per energy\n'
+             '    H = hamiltonians3nu.hamiltonian_3nu_matter(h_vac, energy,'
              ' vcc)\n'
              '    return np.array(slabs.probabilities_3nu_slabs(\n'
              '        H, np.asarray(widths_km, dtype=float)*KM))\n\n\n'
@@ -1038,8 +1046,8 @@ books['08_unusual_density_profiles.ipynb'] = notebook(
         code('E_gev = np.logspace(-0.7, 1.7, 400)\n\n'
              'fig, ax = plt.subplots()\n'
              'for name, rho in profiles:\n'
-             '    p = np.array([probabilities_profile(widths, rho, e*GEV)[3]\n'
-             '                  for e in E_gev])\n'
+             '    # All 400 energies in one call, not one call each\n'
+             '    p = probabilities_profile(widths, rho, E_gev*GEV)[:, 3]\n'
              '    ax.semilogx(E_gev, p, label=name,\n'
              '                lw=1.6 if name == "uniform" else 1.2,\n'
              '                ls="--" if name == "uniform" else "-")\n'
@@ -1049,6 +1057,53 @@ books['08_unusual_density_profiles.ipynb'] = notebook(
              'ax.set_title("Same mean density, different arrangement")\n'
              'ax.legend()\n'
              'plt.show()'),
+        md('## One call for the whole scan\n\n'
+           'The curves above were not drawn one energy at a time. Every '
+           'routine in `slabs` takes a *batch* of chords: Hamiltonians of '
+           'shape `(..., n_slabs, n, n)` against the one set of widths the '
+           'chords share, returning one row of probabilities per chord.\n\n'
+           'That is the shape an energy scan already has. '
+           '`hamiltonian_3nu_matter` broadcasts an array of energies against '
+           'an array of per-slab potentials and hands back exactly it, so the '
+           'stacking costs nothing to write.\n\n'
+           'The geometry is what is shared, so this is the right tool for a '
+           'scan over energy at a fixed profile — and the wrong one for a '
+           'scan over zenith angle, where every chord has its own widths. For '
+           'that, `earth.probabilities_3nu_earth` takes energies and angles on '
+           'separate axes and handles the bookkeeping.'),
+        code('import timeit\n\n'
+             'rho = dict(profiles)["castle wall"]\n'
+             'E_scan = np.logspace(-0.7, 1.7, 400)*GEV\n\n'
+             '# One call: (400, 24, 3, 3) Hamiltonians, 24 shared widths\n'
+             'vcc = earth.matter_potential(rho)\n'
+             'H_batch = hamiltonians3nu.hamiltonian_3nu_matter(\n'
+             '    H_VAC_3NU, E_scan[:, None], vcc)\n'
+             'print("stack of Hamiltonians:", H_batch.shape)\n\n'
+             'batched = np.array(slabs.probabilities_3nu_slabs(\n'
+             '    H_batch, widths*KM))\n'
+             'print("probabilities        :", batched.shape)\n\n'
+             '# The loop it replaces\n'
+             'looped = np.array([\n'
+             '    slabs.probabilities_3nu_slabs(\n'
+             '        hamiltonians3nu.hamiltonian_3nu_matter(H_VAC_3NU, e, '
+             'vcc),\n'
+             '        widths*KM)\n'
+             '    for e in E_scan])\n\n'
+             'print("largest difference   : %.1e"\n'
+             '      % np.abs(batched-looped).max())\n\n'
+             't_batch = timeit.timeit(\n'
+             '    lambda: slabs.probabilities_3nu_slabs(H_batch, widths*KM),\n'
+             '    number=20)/20\n'
+             't_loop = timeit.timeit(\n'
+             '    lambda: [slabs.probabilities_3nu_slabs(h, widths*KM)\n'
+             '             for h in H_batch],\n'
+             '    number=3)/3\n'
+             'print("batched: %6.2f ms" % (1e3*t_batch))\n'
+             'print("looped : %6.2f ms  (%.0fx)"\n'
+             '      % (1e3*t_loop, t_loop/t_batch))'),
+        md('The two agree to round-off rather than bit for bit: they take '
+           'different paths through the compiled backend. What they do not '
+           'differ in is the physics — nothing is approximated by either.'),
         md('## Parametric enhancement\n\n'
            'A castle wall is not an arbitrary choice. When the width of one '
            'period is tuned against the oscillation length, successive layers '
@@ -1769,10 +1824,17 @@ Four density profiles with the *same* mean density, and indeed the same
 multiset of slabs, give different probabilities. The upper panel shows the
 profiles; the lower one, what they do.'''),
         code(r'''def probabilities_profile(widths_km, densities, energy_ev, h_vac=None):
-    """Nine probabilities through an arbitrary matter profile."""
+    """Nine probabilities through an arbitrary matter profile.
+
+    An array of energies gives a stack of chords sharing the widths,
+    which `slabs` composes in one pass rather than one energy at a time.
+    """
     h_vac = H_VAC_3NU if h_vac is None else h_vac
     vcc = earth.matter_potential(np.asarray(densities, dtype=float))
-    H = hamiltonians3nu.hamiltonian_3nu_matter(h_vac, energy_ev, vcc)
+    energy = np.asarray(energy_ev, dtype=float)
+    if energy.ndim:
+        energy = energy[:, None]
+    H = hamiltonians3nu.hamiltonian_3nu_matter(h_vac, energy, vcc)
     return np.array(slabs.probabilities_3nu_slabs(
         H, np.asarray(widths_km, dtype=float)*KM))
 
@@ -1824,8 +1886,8 @@ fig.text(0.005, 0.5*(pos_top.y1 + pos_bot.y0), r"Density [g cm$^{-3}$]",
          rotation="vertical", va="center", ha="left", fontsize=9)
 
 for (name, rho), ls, c in zip(profiles, STYLES, ["C0", "C1", "C2", "C3"]):
-    p = np.array([probabilities_profile(widths, rho, e*GEV)[3]
-                  for e in E_gev])
+    # The whole 400-energy scan in one call
+    p = probabilities_profile(widths, rho, E_gev*GEV)[:, 3]
     ax.semilogx(E_gev, p, ls, color=c, label=name)
 ax.set_xlim(E_gev[0], E_gev[-1])
 ax.set_xlabel("Neutrino energy [GeV]")
@@ -1852,21 +1914,14 @@ n_e, n_c = 300, 300
 E_tev = np.logspace(-0.5, 1.5, n_e)          # 0.3 - 30 TeV
 costhz = np.linspace(-1.0, -0.05, n_c)
 
-# Antineutrinos on the full PREM profile: conjugate the vacuum term and
-# flip BOTH potentials.  A sterile state feels neither, so V_NC no longer
-# cancels between the flavors and has to be built per slab alongside
-# V_CC.  The chord geometry changes with the angle, so the slabs are
-# rebuilt once per angle; index 5 of the sixteen probabilities is
-# P(nu_mu -> nu_mu).
-grid = np.empty((n_e, n_c))
-for j, c in enumerate(costhz):
-    widths_km, densities = earth.earth_slabs(c, n_slabs_per_segment=4)
-    vcc = -earth.matter_potential(densities)        # antineutrinos
-    vnc = -earth.matter_potential_nc(densities)     # antineutrinos
-    for i, e_tev in enumerate(E_tev):
-        H_bar = hamiltonians4nu.hamiltonian_4nu_matter(
-            np.conj(H_VAC_4NU), e_tev*1.0e3*GEV, vcc, vnc)
-        grid[i, j] = slabs.probabilities_4nu_slabs(H_bar, widths_km*KM)[5]
+# Antineutrinos on the full PREM profile, in one call.  `earth` builds
+# the slabs, conjugates the vacuum term and reverses both potentials --
+# a sterile state feels neither, so V_NC no longer cancels between the
+# flavors and is carried per slab alongside V_CC.  Energies and angles
+# go on separate axes; index 5 of the sixteen is P(nu_mu -> nu_mu).
+grid = earth.probabilities_4nu_earth(
+    H_VAC_4NU, E_tev[:, None]*1.0e3*GEV, costhz[None, :],
+    n_slabs_per_segment=4, antineutrino=True)[..., 5]
 
 fig, ax = plt.subplots(figsize=FIGSIZE_SQUARE)
 mesh = ax.pcolormesh(costhz, E_tev, grid, shading="auto",
@@ -2035,16 +2090,21 @@ print("V_emu at the centre : %.3e eV" % V_LRI[len(V_LRI)//2])
 
 
 def p_mue_lri(energy_ev, with_lri):
-    """P(nu_mu -> nu_e) along the chord, with or without the new term."""
+    """P(nu_mu -> nu_e) along the chord, with or without the new term.
+
+    The energies stack on a leading axis, so the whole scan is one call:
+    (n_energies, n_slabs, 3, 3) against the widths the chords share.
+    """
     h = np.asarray(hamiltonians3nu.hamiltonian_3nu_matter(
-        H_VAC_3NU, energy_ev, VCC_LRI))
+        H_VAC_3NU, np.asarray(energy_ev)[:, None], VCC_LRI))
     if with_lri:
         h = h + V_LRI[:, None, None]*Q_LR
-    return slabs.probabilities_3nu_slabs(h, WIDTHS_LRI*KM)[3]
+    return np.array(slabs.probabilities_3nu_slabs(
+        h, WIDTHS_LRI*KM))[:, 3]
 
 
-P_STD_LRI = np.array([p_mue_lri(e*GEV, False) for e in E_LRI])
-P_NEW_LRI = np.array([p_mue_lri(e*GEV, True) for e in E_LRI])
+P_STD_LRI = p_mue_lri(E_LRI*GEV, False)
+P_NEW_LRI = p_mue_lri(E_LRI*GEV, True)
 print("largest |dP| = %.3f, at E = %.1f GeV"
       % (np.max(np.abs(P_NEW_LRI-P_STD_LRI)),
          E_LRI[np.argmax(np.abs(P_NEW_LRI-P_STD_LRI))]))'''),

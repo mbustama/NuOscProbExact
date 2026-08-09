@@ -134,6 +134,48 @@ and the project uses [Semantic Versioning](https://semver.org/).
   0.5 -- it misrepresents nothing, and it is what a user of released nuCraft
   gets.
 
+## [1.13.1] - 2026-08-09
+
+### Added
+
+- **The slab routines take a batch of chords.**  `probabilities_2nu_slabs`,
+  `probabilities_3nu_slabs`, `probabilities_4nu_slabs` and the three
+  `evolution_operator_*_slabs` now accept Hamiltonians of shape
+  `(..., n_slabs, n_flavors, n_flavors)` against the one set of widths the
+  chords share, and return one result per chord.  A single chord returns
+  exactly the tuple it always did, so nothing that worked before changes.
+
+  This is the shape an energy scan across a fixed profile already has ---
+  `hamiltonian_3nu_matter(h_vac, energies[:, None], vcc)` produces it
+  directly --- and until now the only way to evaluate it was a Python loop
+  over energies, which is precisely what this library tells its users not
+  to do.  The batched path was already here, written and tested, but
+  reachable only from `earth`.  Now it is public.
+
+  Worth an order of magnitude where it matters: a 400-energy scan across a
+  24-slab castle wall goes from 17.0 ms to 0.6 ms, and a 500-energy scan
+  across the 456 slabs of an Earth diameter from 34.9 ms to 7.0 ms.  At
+  four flavors the per-slab arithmetic dominates and the gain is only a few
+  per cent, which is worth knowing before reaching for it.
+
+  Batched and per-chord evaluation agree to round-off rather than bit for
+  bit, because the two take different paths through the compiled backend.
+
+- **`antineutrino=` on the Earth routines.**  `probabilities_2nu_earth`,
+  `probabilities_3nu_earth`, `probabilities_4nu_earth` and the three
+  `*_between_locations` wrappers take it.  Setting it conjugates the vacuum
+  Hamiltonian *and* reverses every matter potential, which are two separate
+  operations and both are needed; applying only one is the classic way to
+  put the matter resonance on the wrong side.
+
+  Until now an antineutrino crossing had to be assembled by hand ---
+  `earth.earth_slabs`, negate the potentials, compose with `slabs` --- as
+  notebook 13 had to demonstrate.  That worked but gave up the batched PREM
+  path, so an antineutrino oscillogram was a Python loop over every grid
+  point while the neutrino one was a single call.  Both are now single
+  calls, and the flag reproduces the hand-built construction exactly, at
+  two, three and four flavors.
+
 ## [1.13.0] - 2026-08-06
 
 ### Changed

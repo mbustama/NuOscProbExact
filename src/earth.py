@@ -894,7 +894,8 @@ def _earth_hamiltonians(
     costhz: Union[int, float, list, np.ndarray],
     n_slabs_per_segment: int,
     electron_fraction: float,
-    n_flavors: int
+    n_flavors: int,
+    antineutrino: bool = False
 ) -> Tuple[np.ndarray, np.ndarray]:
     r"""Returns the per-slab Hamiltonians and widths for a chord.
 
@@ -928,6 +929,17 @@ def _earth_hamiltonians(
     widths_km, densities = _earth_slabs_cached(float(costhz),
                                                int(n_slabs_per_segment))
     potentials = matter_potential(densities, electron_fraction)
+    potentials_nc = matter_potential_nc(
+        densities, electron_fraction=electron_fraction)
+
+    # An antineutrino sees the conjugate vacuum Hamiltonian and both
+    # potentials reversed.  Doing only one of the two is the commonest
+    # way to put a matter resonance on the wrong side.
+    if antineutrino:
+        h_vacuum_energy_independent = np.conj(
+            np.asarray(h_vacuum_energy_independent, dtype=complex))
+        potentials = -potentials
+        potentials_nc = -potentials_nc
 
     # The slab axis is the last one the potentials carry, so the energy
     # gains a trailing axis of its own to broadcast against it: a scalar
@@ -950,8 +962,7 @@ def _earth_hamiltonians(
         # which therefore no longer cancels and has to be built too
         h = hamiltonians4nu.hamiltonian_4nu_matter(
             h_vacuum_energy_independent, energy, potentials,
-            matter_potential_nc(densities,
-                                electron_fraction=electron_fraction))
+            potentials_nc)
 
     return h, widths_km*gd.CONV_KM_TO_INV_EV
 
@@ -1183,7 +1194,8 @@ def _probabilities_earth_batch(
     n_slabs_per_segment: int,
     electron_fraction: float,
     n_flavors: int,
-    caller: str
+    caller: str,
+    antineutrino: bool = False
 ) -> np.ndarray:
     r"""Returns the probabilities for an array of energies, in chunks.
 
@@ -1229,18 +1241,27 @@ def _probabilities_earth_batch(
                                     flat.shape[0]*widths_km.shape[0]):
         widths = widths_km*gd.CONV_KM_TO_INV_EV
         potentials = matter_potential(densities, electron_fraction)
+        potentials_nc = matter_potential_nc(
+            densities, electron_fraction=electron_fraction)
+        h_vac = h_vacuum_energy_independent
+
+            # An antineutrino sees the conjugate vacuum Hamiltonian and both
+            # potentials reversed.  Doing only one of the two is the commonest
+            # way to put a matter resonance on the wrong side.
+        if antineutrino:
+            h_vac = np.conj(np.asarray(h_vac, dtype=complex))
+            potentials = -potentials
+            potentials_nc = -potentials_nc
         if n_flavors == 2:
             u = fastkernels.earth_chords_2nu_kernel(
-                h_vacuum_energy_independent, flat, potentials, widths)
+                h_vac, flat, potentials, widths)
         elif n_flavors == 3:
             u = fastkernels.earth_chords_3nu_kernel(
-                h_vacuum_energy_independent, flat, potentials, widths)
+                h_vac, flat, potentials, widths)
         else:
             u = fastkernels.earth_chords_4nu_kernel(
-                h_vacuum_energy_independent, flat, potentials,
-                matter_potential_nc(densities,
-                                    electron_fraction=electron_fraction),
-                widths, oscprob4nu.POLISH_ROOTS)
+                h_vac, flat, potentials,
+                potentials_nc, widths, oscprob4nu.POLISH_ROOTS)
         # P_ab = |U_ba|^2, initial flavor varying slowest
         p = np.abs(np.swapaxes(u, -1, -2))**2.0
         return p.reshape(energy.shape + (n_flavors*n_flavors,))
@@ -1248,7 +1269,8 @@ def _probabilities_earth_batch(
     if flat.shape[0] <= chunk:
         h, widths = _earth_hamiltonians(h_vacuum_energy_independent, flat,
                                         costhz, n_slabs_per_segment,
-                                        electron_fraction, n_flavors)
+                                        electron_fraction, n_flavors,
+                                        antineutrino)
         out = slabs._probabilities_slabs_batch(h, widths, n_flavors, caller)
     else:
         out = np.empty((flat.shape[0], n_flavors*n_flavors), dtype=float)
@@ -1256,7 +1278,8 @@ def _probabilities_earth_batch(
             piece = flat[start:start+chunk]
             h, widths = _earth_hamiltonians(
                 h_vacuum_energy_independent, piece, costhz,
-                n_slabs_per_segment, electron_fraction, n_flavors)
+                n_slabs_per_segment, electron_fraction, n_flavors,
+                antineutrino)
             out[start:start+chunk] = slabs._probabilities_slabs_batch(
                 h, widths, n_flavors, caller)
 
@@ -1377,7 +1400,8 @@ def _probabilities_earth(
     n_slabs_per_segment: int,
     electron_fraction: float,
     n_flavors: int,
-    caller: str
+    caller: str,
+    antineutrino: bool = False
 ) -> Union[Tuple[float, ...], np.ndarray]:
     r"""Returns the probabilities for one subdivision, scalar or batched.
 
@@ -1411,12 +1435,13 @@ def _probabilities_earth(
     if np.ndim(costhz) != 0:
         return _probabilities_earth_grid(
             h_vacuum_energy_independent, energy, costhz, n_slabs_per_segment,
-            electron_fraction, n_flavors, caller)
+            electron_fraction, n_flavors, caller, antineutrino)
 
     if np.ndim(energy) == 0:
         h, widths = _earth_hamiltonians(h_vacuum_energy_independent, energy,
                                         costhz, n_slabs_per_segment,
-                                        electron_fraction, n_flavors)
+                                        electron_fraction, n_flavors,
+                                        antineutrino)
         if n_flavors == 2:
             return slabs.probabilities_2nu_slabs(h, widths)
         if n_flavors == 3:
@@ -1425,7 +1450,8 @@ def _probabilities_earth(
 
     return _probabilities_earth_batch(h_vacuum_energy_independent, energy,
                                       costhz, n_slabs_per_segment,
-                                      electron_fraction, n_flavors, caller)
+                                      electron_fraction, n_flavors, caller,
+                                      antineutrino)
 
 
 def _probabilities_earth_grid(
@@ -1435,7 +1461,8 @@ def _probabilities_earth_grid(
     n_slabs_per_segment: int,
     electron_fraction: float,
     n_flavors: int,
-    caller: str
+    caller: str,
+    antineutrino: bool = False
 ) -> np.ndarray:
     r"""Returns the probabilities over a grid of energies and angles.
 
@@ -1502,7 +1529,8 @@ def _probabilities_earth_grid(
         at_angle = flat_costhz == angle
         out[at_angle] = _probabilities_earth_batch(
             h_vacuum_energy_independent, flat_energy[at_angle], float(angle),
-            n_slabs_per_segment, electron_fraction, n_flavors, caller)
+            n_slabs_per_segment, electron_fraction, n_flavors, caller,
+            antineutrino)
 
     return out.reshape(energy_b.shape + (n_flavors*n_flavors,))
 
@@ -1518,7 +1546,8 @@ def _probabilities_earth_tol(
     atol: Optional[float],
     n_max: int,
     return_n_slabs: bool,
-    caller: str
+    caller: str,
+    antineutrino: bool = False
 ) -> Union[Tuple[float, ...], np.ndarray, tuple]:
     r"""Returns the probabilities, refining first if a tolerance is set.
 
@@ -1560,13 +1589,14 @@ def _probabilities_earth_tol(
     if rtol is None and atol is None:
         p = _probabilities_earth(h_vacuum_energy_independent, energy, costhz,
                                  n_slabs_per_segment, electron_fraction,
-                                 n_flavors, caller)
+                                 n_flavors, caller, antineutrino)
         n = n_slabs_per_segment
     else:
         def evaluate(n_try: int) -> np.ndarray:
             return np.asarray(_probabilities_earth(
                 h_vacuum_energy_independent, energy, costhz, n_try,
-                electron_fraction, n_flavors, caller), dtype=float)
+                electron_fraction, n_flavors, caller, antineutrino),
+                dtype=float)
 
         # The search already evaluated the answer at the subdivision it
         # settled on, so there is nothing left to compute here
@@ -1589,7 +1619,8 @@ def probabilities_2nu_earth(
     rtol: Optional[float] = None,
     atol: Optional[float] = None,
     n_max: int = slabs.N_SLABS_MAX,
-    return_n_slabs: bool = False
+    return_n_slabs: bool = False,
+    antineutrino: bool = False
 ) -> Union[Tuple[float, float, float, float], np.ndarray]:
     r"""Returns the two-flavor probabilities across the Earth.
 
@@ -1602,6 +1633,10 @@ def probabilities_2nu_earth(
        Accepts an array of energies, returning one row of probabilities
        per energy.  A scalar energy returns exactly what it returned
        before.
+
+    .. versionchanged:: 1.13.1
+       Takes ``antineutrino``, so an antineutrino crossing needs no
+       hand-built slab sequence and keeps the batched PREM path.
 
     Parameters
     ----------
@@ -1647,6 +1682,14 @@ def probabilities_2nu_earth(
         probabilities.  Default: False.  Worth setting when a tolerance
         is in play, since a tight one can quietly cost a great deal of
         refinement.
+    antineutrino : bool, optional
+        Whether to propagate antineutrinos rather than neutrinos.
+        Default: False.  Setting it conjugates the vacuum
+        Hamiltonian *and* reverses every matter potential, which
+        are two separate operations and both are needed; applying
+        only one is the commonest way to put the matter resonance
+        on the wrong side.  The slabs, the geometry and the
+        batching are otherwise identical.
 
     Returns
     -------
@@ -1683,7 +1726,7 @@ def probabilities_2nu_earth(
     return _probabilities_earth_tol(
         h_vacuum_energy_independent, energy, costhz, n_slabs_per_segment,
         electron_fraction, 2, rtol, atol, n_max, return_n_slabs,
-        'probabilities_2nu_earth')
+        'probabilities_2nu_earth', antineutrino)
 
 
 def probabilities_3nu_earth(
@@ -1695,7 +1738,8 @@ def probabilities_3nu_earth(
     rtol: Optional[float] = None,
     atol: Optional[float] = None,
     n_max: int = slabs.N_SLABS_MAX,
-    return_n_slabs: bool = False
+    return_n_slabs: bool = False,
+    antineutrino: bool = False
 ) -> Union[Tuple[float, float, float, float, float, float, float, float,
                  float], np.ndarray]:
     r"""Returns the three-flavor probabilities across the Earth.
@@ -1712,6 +1756,10 @@ def probabilities_3nu_earth(
        Accepts an array of energies, returning one row of probabilities
        per energy.  A scalar energy returns exactly what it returned
        before.
+
+    .. versionchanged:: 1.13.1
+       Takes ``antineutrino``, so an antineutrino crossing needs no
+       hand-built slab sequence and keeps the batched PREM path.
 
     Parameters
     ----------
@@ -1757,6 +1805,14 @@ def probabilities_3nu_earth(
         probabilities.  Default: False.  Worth setting when a tolerance
         is in play, since a tight one can quietly cost a great deal of
         refinement.
+    antineutrino : bool, optional
+        Whether to propagate antineutrinos rather than neutrinos.
+        Default: False.  Setting it conjugates the vacuum
+        Hamiltonian *and* reverses every matter potential, which
+        are two separate operations and both are needed; applying
+        only one is the commonest way to put the matter resonance
+        on the wrong side.  The slabs, the geometry and the
+        batching are otherwise identical.
 
     Returns
     -------
@@ -1795,7 +1851,7 @@ def probabilities_3nu_earth(
     return _probabilities_earth_tol(
         h_vacuum_energy_independent, energy, costhz, n_slabs_per_segment,
         electron_fraction, 3, rtol, atol, n_max, return_n_slabs,
-        'probabilities_3nu_earth')
+        'probabilities_3nu_earth', antineutrino)
 
 
 def probabilities_2nu_between_locations(
@@ -1808,7 +1864,8 @@ def probabilities_2nu_between_locations(
     rtol: Optional[float] = None,
     atol: Optional[float] = None,
     n_max: int = slabs.N_SLABS_MAX,
-    return_n_slabs: bool = False
+    return_n_slabs: bool = False,
+    antineutrino: bool = False
 ) -> Union[Tuple[float, float, float, float], np.ndarray]:
     r"""Returns the two-flavor probabilities between two named locations.
 
@@ -1857,6 +1914,14 @@ def probabilities_2nu_between_locations(
         probabilities.  Default: False.  Worth setting when a tolerance
         is in play, since a tight one can quietly cost a great deal of
         refinement.
+    antineutrino : bool, optional
+        Whether to propagate antineutrinos rather than neutrinos.
+        Default: False.  Setting it conjugates the vacuum
+        Hamiltonian *and* reverses every matter potential, which
+        are two separate operations and both are needed; applying
+        only one is the commonest way to put the matter resonance
+        on the wrong side.  The slabs, the geometry and the
+        batching are otherwise identical.
 
     Returns
     -------
@@ -1893,7 +1958,7 @@ def probabilities_2nu_between_locations(
     return probabilities_2nu_earth(h_vacuum_energy_independent, energy,
                                    costhz, n_slabs_per_segment,
                                    electron_fraction, rtol, atol, n_max,
-                                   return_n_slabs)
+                                   return_n_slabs, antineutrino)
 
 
 def probabilities_3nu_between_locations(
@@ -1906,7 +1971,8 @@ def probabilities_3nu_between_locations(
     rtol: Optional[float] = None,
     atol: Optional[float] = None,
     n_max: int = slabs.N_SLABS_MAX,
-    return_n_slabs: bool = False
+    return_n_slabs: bool = False,
+    antineutrino: bool = False
 ) -> Union[Tuple[float, float, float, float, float, float, float, float,
                  float], np.ndarray]:
     r"""Returns the three-flavor probabilities between two named locations.
@@ -1956,6 +2022,14 @@ def probabilities_3nu_between_locations(
         probabilities.  Default: False.  Worth setting when a tolerance
         is in play, since a tight one can quietly cost a great deal of
         refinement.
+    antineutrino : bool, optional
+        Whether to propagate antineutrinos rather than neutrinos.
+        Default: False.  Setting it conjugates the vacuum
+        Hamiltonian *and* reverses every matter potential, which
+        are two separate operations and both are needed; applying
+        only one is the commonest way to put the matter resonance
+        on the wrong side.  The slabs, the geometry and the
+        batching are otherwise identical.
 
     Returns
     -------
@@ -1993,7 +2067,7 @@ def probabilities_3nu_between_locations(
     return probabilities_3nu_earth(h_vacuum_energy_independent, energy,
                                    costhz, n_slabs_per_segment,
                                    electron_fraction, rtol, atol, n_max,
-                                   return_n_slabs)
+                                   return_n_slabs, antineutrino)
 
 
 def _costhz_of_named_pair(loc_name_1: str, loc_name_2: str) -> float:
@@ -2037,7 +2111,8 @@ def probabilities_4nu_earth(
     rtol: Optional[float] = None,
     atol: Optional[float] = None,
     n_max: int = slabs.N_SLABS_MAX,
-    return_n_slabs: bool = False
+    return_n_slabs: bool = False,
+    antineutrino: bool = False
 ) -> Union[Tuple[float, ...], np.ndarray]:
     r"""Returns the four-flavor probabilities across the Earth.
 
@@ -2056,6 +2131,10 @@ def probabilities_4nu_earth(
        Accepts an array of energies, returning one row of probabilities
        per energy.  A scalar energy returns exactly what it returned
        before.
+
+    .. versionchanged:: 1.13.1
+       Takes ``antineutrino``, so an antineutrino crossing needs no
+       hand-built slab sequence and keeps the batched PREM path.
 
     Parameters
     ----------
@@ -2103,6 +2182,14 @@ def probabilities_4nu_earth(
         probabilities.  Default: False.  Worth setting when a tolerance
         is in play, since a tight one can quietly cost a great deal of
         refinement.
+    antineutrino : bool, optional
+        Whether to propagate antineutrinos rather than neutrinos.
+        Default: False.  Setting it conjugates the vacuum
+        Hamiltonian *and* reverses every matter potential, which
+        are two separate operations and both are needed; applying
+        only one is the commonest way to put the matter resonance
+        on the wrong side.  The slabs, the geometry and the
+        batching are otherwise identical.
 
     Returns
     -------
@@ -2141,7 +2228,7 @@ def probabilities_4nu_earth(
     return _probabilities_earth_tol(
         h_vacuum_energy_independent, energy, costhz, n_slabs_per_segment,
         electron_fraction, 4, rtol, atol, n_max, return_n_slabs,
-        'probabilities_4nu_earth')
+        'probabilities_4nu_earth', antineutrino)
 
 
 def probabilities_4nu_between_locations(
@@ -2154,7 +2241,8 @@ def probabilities_4nu_between_locations(
     rtol: Optional[float] = None,
     atol: Optional[float] = None,
     n_max: int = slabs.N_SLABS_MAX,
-    return_n_slabs: bool = False
+    return_n_slabs: bool = False,
+    antineutrino: bool = False
 ) -> Union[Tuple[float, ...], np.ndarray]:
     r"""Returns the four-flavor probabilities between two named locations.
 
@@ -2203,6 +2291,14 @@ def probabilities_4nu_between_locations(
         probabilities.  Default: False.  Worth setting when a tolerance
         is in play, since a tight one can quietly cost a great deal of
         refinement.
+    antineutrino : bool, optional
+        Whether to propagate antineutrinos rather than neutrinos.
+        Default: False.  Setting it conjugates the vacuum
+        Hamiltonian *and* reverses every matter potential, which
+        are two separate operations and both are needed; applying
+        only one is the commonest way to put the matter resonance
+        on the wrong side.  The slabs, the geometry and the
+        batching are otherwise identical.
 
     Returns
     -------
@@ -2242,4 +2338,4 @@ def probabilities_4nu_between_locations(
     return probabilities_4nu_earth(h_vacuum_energy_independent, energy,
                                    costhz, n_slabs_per_segment,
                                    electron_fraction, rtol, atol, n_max,
-                                   return_n_slabs)
+                                   return_n_slabs, antineutrino)

@@ -51,8 +51,27 @@ so every probability is unaffected --- but a caller comparing the
 returned operator against an independent matrix exponential must
 compare against the traceless one, exactly as the single-slab tests do.
 
-For the Earth specifically, :mod:`earth` builds the slabs for you from
-the Preliminary Reference Earth Model.
+Chords that share their geometry and differ only in their Hamiltonians
+--- an energy scan across a fixed profile --- can be passed together, as
+an array of shape ``(..., n_slabs, n_flavors, n_flavors)`` against the
+one set of widths they share.  Every routine here takes that form and
+returns one result per chord, composing the whole batch in a single
+pass rather than one chord at a time.
+
+The widths are the limit of what that buys.  A batch shares them, so it
+is the right tool for varying the Hamiltonian at fixed geometry and the
+wrong one for varying the geometry, where each chord has its own slab
+widths and there is nothing for one call to share.
+
+For the Earth, do not build the batch by hand at all.  :mod:`earth`
+generates the slabs from the Preliminary Reference Earth Model and
+applies this same batching internally, and its routines take energies
+and zenith angles on separate axes --- ``probabilities_3nu_earth(h,
+energies[None, :], costhz[:, None])`` returns a whole oscillogram,
+handling per-angle geometry that no single batch here could express.
+Reach for the routines in this module when the profile is one
+:mod:`earth` does not know about: a castle wall, a solar model, a
+hand-built layer sequence, or an Earth chord carrying an extra term.
 
 Routine listings
 ----------------
@@ -486,7 +505,9 @@ def _evolution_operator_slabs(
     Parameters
     ----------
     hamiltonian_matrices : array_like
-        Stack of Hamiltonians, of shape ``(n, n_flavors, n_flavors)``.
+        Stack of Hamiltonians, of shape ``(n, n_flavors, n_flavors)``,
+        or of shape ``(..., n, n_flavors, n_flavors)`` for a batch of
+        chords sharing one geometry.
     widths : array_like
         Slab widths, of shape ``(n,)``.
     n_flavors : int
@@ -498,8 +519,15 @@ def _evolution_operator_slabs(
     -------
     numpy.ndarray
         The evolution operator, of shape
-        ``(n_flavors, n_flavors)``.
+        ``(n_flavors, n_flavors)``, or ``(..., n_flavors, n_flavors)``
+        for a batch.
     """
+    # A leading axis beyond the slab axis means a batch of chords that
+    # share their widths; the batched path composes all of them at once.
+    if np.ndim(hamiltonian_matrices) > 3:
+        return _evolution_operator_slabs_batch(hamiltonian_matrices, widths,
+                                               n_flavors, caller)
+
     h, w = _check_slabs(hamiltonian_matrices, widths, n_flavors, caller)
 
     # The compiled path computes the operators *and* composes them in one
@@ -551,11 +579,26 @@ def evolution_operator_2nu_slabs(
 
     .. versionadded:: 1.8.0
 
+    .. versionchanged:: 1.13.1
+       Accepts a batch of chords that share one set of slab widths,
+       of shape ``(..., n, 2, 2)``, and returns one result per
+       chord.  A single chord returns exactly what it returned
+       before.  The batch is composed in one pass rather than one
+       chord at a time, which is worth roughly an order of
+       magnitude on an energy scan across a fixed profile; it agrees
+       with the per-chord
+       result to round-off rather than bit for bit, because the two
+       take different paths through the compiled backend.
+
     Parameters
     ----------
     hamiltonian_matrices : array_like
         Hamiltonians, of shape ``(n, 2, 2)``, one per slab and ordered
-        along the trajectory, in units of eV.
+        along the trajectory, in units of eV.  May instead have
+        shape ``(..., n, 2, 2)``, a batch of chords that share the
+        widths below and differ only in their Hamiltonians --- an
+        energy scan across a fixed profile, typically, asked for as
+        ``hamiltonian_2nu_matter(h_vac, energies[:, None], vcc)``.
     widths : array_like
         Slab widths, of shape ``(n,)``, in units of eV\ :sup:`-1`.  Use
         `globaldefs.CONV_KM_TO_INV_EV` to convert from km.
@@ -564,7 +607,8 @@ def evolution_operator_2nu_slabs(
     -------
     numpy.ndarray
         The evolution operator, of shape ``(2, 2)``, indexed
-        ``(final, initial)``.
+        ``(final, initial)``, or of shape ``(..., 2, 2)`` carrying
+        one such operator per chord when a batch is given.
 
     Raises
     ------
@@ -603,11 +647,26 @@ def evolution_operator_3nu_slabs(
 
     .. versionadded:: 1.8.0
 
+    .. versionchanged:: 1.13.1
+       Accepts a batch of chords that share one set of slab widths,
+       of shape ``(..., n, 3, 3)``, and returns one result per
+       chord.  A single chord returns exactly what it returned
+       before.  The batch is composed in one pass rather than one
+       chord at a time, which is worth roughly an order of
+       magnitude on an energy scan across a fixed profile; it agrees
+       with the per-chord
+       result to round-off rather than bit for bit, because the two
+       take different paths through the compiled backend.
+
     Parameters
     ----------
     hamiltonian_matrices : array_like
         Hamiltonians, of shape ``(n, 3, 3)``, one per slab and ordered
-        along the trajectory, in units of eV.
+        along the trajectory, in units of eV.  May instead have
+        shape ``(..., n, 3, 3)``, a batch of chords that share the
+        widths below and differ only in their Hamiltonians --- an
+        energy scan across a fixed profile, typically, asked for as
+        ``hamiltonian_3nu_matter(h_vac, energies[:, None], vcc)``.
     widths : array_like
         Slab widths, of shape ``(n,)``, in units of eV\ :sup:`-1`.  Use
         `globaldefs.CONV_KM_TO_INV_EV` to convert from km.
@@ -616,7 +675,8 @@ def evolution_operator_3nu_slabs(
     -------
     numpy.ndarray
         The evolution operator, of shape ``(3, 3)``, indexed
-        ``(final, initial)``.
+        ``(final, initial)``, or of shape ``(..., 3, 3)`` carrying
+        one such operator per chord when a batch is given.
 
     Raises
     ------
@@ -653,19 +713,36 @@ def probabilities_2nu_slabs(
 
     .. versionadded:: 1.8.0
 
+    .. versionchanged:: 1.13.1
+       Accepts a batch of chords that share one set of slab widths,
+       of shape ``(..., n, 2, 2)``, and returns one result per
+       chord.  A single chord returns exactly what it returned
+       before.  The batch is composed in one pass rather than one
+       chord at a time, which is worth roughly an order of
+       magnitude on an energy scan across a fixed profile; it agrees
+       with the per-chord
+       result to round-off rather than bit for bit, because the two
+       take different paths through the compiled backend.
+
     Parameters
     ----------
     hamiltonian_matrices : array_like
         Hamiltonians, of shape ``(n, 2, 2)``, one per slab and ordered
-        along the trajectory, in units of eV.
+        along the trajectory, in units of eV.  May instead have
+        shape ``(..., n, 2, 2)``, a batch of chords that share the
+        widths below and differ only in their Hamiltonians --- an
+        energy scan across a fixed profile, typically, asked for as
+        ``hamiltonian_2nu_matter(h_vac, energies[:, None], vcc)``.
     widths : array_like
         Slab widths, of shape ``(n,)``, in units of eV\ :sup:`-1`.
 
     Returns
     -------
-    tuple of float
+    tuple of float or numpy.ndarray
         The probabilities
-        :math:`P_{ee}, P_{e\mu}, P_{\mu e}, P_{\mu\mu}`.
+        :math:`P_{ee}, P_{e\mu}, P_{\mu e}, P_{\mu\mu}`.  Given a batch,
+        an array of shape ``(..., 4)`` instead, with the same
+        ordering along the last axis.
 
     Raises
     ------
@@ -685,6 +762,11 @@ def probabilities_2nu_slabs(
         Pee, Pem, Pme, Pmm = slabs.probabilities_2nu_slabs(H, [0.3, 0.4])
         print('%.6f  %.6f' % (Pee, Pem))
     """
+    if np.ndim(hamiltonian_matrices) > 3:
+        return _probabilities_slabs_batch(
+            hamiltonian_matrices, widths, 2,
+            'probabilities_2nu_slabs')
+
     u = evolution_operator_2nu_slabs(hamiltonian_matrices, widths)
 
     # P_ab = |U_ba|^2: the evolution operator is indexed (final, initial)
@@ -705,18 +787,35 @@ def probabilities_3nu_slabs(
 
     .. versionadded:: 1.8.0
 
+    .. versionchanged:: 1.13.1
+       Accepts a batch of chords that share one set of slab widths,
+       of shape ``(..., n, 3, 3)``, and returns one result per
+       chord.  A single chord returns exactly what it returned
+       before.  The batch is composed in one pass rather than one
+       chord at a time, which is worth roughly an order of
+       magnitude on an energy scan across a fixed profile; it agrees
+       with the per-chord
+       result to round-off rather than bit for bit, because the two
+       take different paths through the compiled backend.
+
     Parameters
     ----------
     hamiltonian_matrices : array_like
         Hamiltonians, of shape ``(n, 3, 3)``, one per slab and ordered
-        along the trajectory, in units of eV.
+        along the trajectory, in units of eV.  May instead have
+        shape ``(..., n, 3, 3)``, a batch of chords that share the
+        widths below and differ only in their Hamiltonians --- an
+        energy scan across a fixed profile, typically, asked for as
+        ``hamiltonian_3nu_matter(h_vac, energies[:, None], vcc)``.
     widths : array_like
         Slab widths, of shape ``(n,)``, in units of eV\ :sup:`-1`.
 
     Returns
     -------
-    tuple of float
-        The nine probabilities, with the initial flavor varying slowest.
+    tuple of float or numpy.ndarray
+        The nine probabilities, with the initial flavor varying
+        slowest.  Given a batch, an array of shape ``(..., 9)``
+        instead, with the same ordering along the last axis.
 
     Raises
     ------
@@ -735,7 +834,28 @@ def probabilities_3nu_slabs(
                       np.diag([0.5, 0.0, -0.5])], dtype=complex)
         prob = slabs.probabilities_3nu_slabs(H, [0.2, 0.3])
         print('%.6f  %.6f' % (prob[0], prob[1]))
+
+    Several chords across the same two slabs, in one call.  The widths
+    are given once, because the geometry is shared; only the
+    Hamiltonians differ, which is what an energy scan is:
+
+    .. jupyter-execute::
+
+        import slabs
+
+        import numpy as np
+        H = np.array([np.diag([1.0, 0.0, -1.0]),
+                      np.diag([0.5, 0.0, -0.5])], dtype=complex)
+        stack = np.array([1.0, 2.0, 3.0])[:, None, None, None]*H
+        prob = slabs.probabilities_3nu_slabs(stack, [0.2, 0.3])
+        print(prob.shape)
+        print('%.6f  %.6f' % (prob[0, 0], prob[2, 0]))
     """
+    if np.ndim(hamiltonian_matrices) > 3:
+        return _probabilities_slabs_batch(
+            hamiltonian_matrices, widths, 3,
+            'probabilities_3nu_slabs')
+
     u = evolution_operator_3nu_slabs(hamiltonian_matrices, widths)
 
     # P_ab = |U_ba|^2: the evolution operator is indexed (final, initial)
@@ -764,11 +884,26 @@ def evolution_operator_4nu_slabs(
 
     .. versionadded:: 1.11.0
 
+    .. versionchanged:: 1.13.1
+       Accepts a batch of chords that share one set of slab widths,
+       of shape ``(..., n, 4, 4)``, and returns one result per
+       chord.  A single chord returns exactly what it returned
+       before.  The batch is composed in one pass rather than one
+       chord at a time, which is worth roughly a few per cent on an
+       energy scan across a fixed profile; it agrees with the
+       per-chord
+       result to round-off rather than bit for bit, because the two
+       take different paths through the compiled backend.
+
     Parameters
     ----------
     hamiltonian_matrices : array_like
         Hamiltonians, of shape ``(n, 4, 4)``, one per slab and ordered
-        along the trajectory, in units of eV.
+        along the trajectory, in units of eV.  May instead have
+        shape ``(..., n, 4, 4)``, a batch of chords that share the
+        widths below and differ only in their Hamiltonians --- an
+        energy scan across a fixed profile, typically, asked for as
+        ``hamiltonian_4nu_matter(h_vac, energies[:, None], vcc)``.
     widths : array_like
         Slab widths, of shape ``(n,)``, in units of eV\ :sup:`-1`.  Use
         `globaldefs.CONV_KM_TO_INV_EV` to convert from km.
@@ -777,7 +912,8 @@ def evolution_operator_4nu_slabs(
     -------
     numpy.ndarray
         The evolution operator, of shape ``(4, 4)``, indexed
-        ``(final, initial)``.
+        ``(final, initial)``, or of shape ``(..., 4, 4)`` carrying
+        one such operator per chord when a batch is given.
 
     Raises
     ------
@@ -817,19 +953,35 @@ def probabilities_4nu_slabs(
 
     .. versionadded:: 1.11.0
 
+    .. versionchanged:: 1.13.1
+       Accepts a batch of chords that share one set of slab widths,
+       of shape ``(..., n, 4, 4)``, and returns one result per
+       chord.  A single chord returns exactly what it returned
+       before.  The batch is composed in one pass rather than one
+       chord at a time, which is worth roughly a few per cent on an
+       energy scan across a fixed profile; it agrees with the
+       per-chord
+       result to round-off rather than bit for bit, because the two
+       take different paths through the compiled backend.
+
     Parameters
     ----------
     hamiltonian_matrices : array_like
         Hamiltonians, of shape ``(n, 4, 4)``, one per slab and ordered
-        along the trajectory, in units of eV.
+        along the trajectory, in units of eV.  May instead have
+        shape ``(..., n, 4, 4)``, a batch of chords that share the
+        widths below and differ only in their Hamiltonians --- an
+        energy scan across a fixed profile, typically, asked for as
+        ``hamiltonian_4nu_matter(h_vac, energies[:, None], vcc)``.
     widths : array_like
         Slab widths, of shape ``(n,)``, in units of eV\ :sup:`-1`.
 
     Returns
     -------
-    tuple of float
+    tuple of float or numpy.ndarray
         The sixteen probabilities, with the initial flavor varying
-        slowest.
+        slowest.  Given a batch, an array of shape ``(..., 16)``
+        instead, with the same ordering along the last axis.
 
     Raises
     ------
@@ -849,6 +1001,11 @@ def probabilities_4nu_slabs(
         prob = slabs.probabilities_4nu_slabs(H, [0.2, 0.3])
         print('%.6f  %.6f' % (prob[0], prob[1]))
     """
+    if np.ndim(hamiltonian_matrices) > 3:
+        return _probabilities_slabs_batch(
+            hamiltonian_matrices, widths, 4,
+            'probabilities_4nu_slabs')
+
     u = evolution_operator_4nu_slabs(hamiltonian_matrices, widths)
 
     # P_ab = |U_ba|^2: the evolution operator is indexed (final, initial)

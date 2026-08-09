@@ -1038,8 +1038,7 @@ The fourth flavor is where this code does something none of the other Earth code
 Two things about it are worth drawing out.  The first is that the resonance is there at all: it is driven by the neutral-current potential, which cancels between the three active flavors and so is invisible to every three-flavor calculation, but which the sterile state does not feel and therefore cannot cancel.  A 3+1 system is sensitive to the neutron density as well as the electron density, and \ref{app:sample_2nu_hamiltonians} sets out the $\mathbb{A}_4$ that follows.  The second is that the resonance follows the density along the chord rather than sitting at one energy: it is near $4$~TeV for trajectories that stay in the mantle and near $1.4$~TeV for those that cross the denser core, so the core-mantle boundary near $\cos\theta_z = -0.84$ separates two different resonant energies.  A calculation at a single averaged density cannot show that, which is the practical reason for carrying the profile.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\begin{lstlisting}[language=Python, caption={Producing Figures\ \ref{fig:earth_oscillogram}, \ref{fig:density_arrangement}, and \ref{fig:sterile_earth}.  Each snippet is the core of the calculation, with the geometry and the plotting left to the notebook.  The Earth routine used for \figu{earth_oscillogram} takes the energies and the directions on separate axes and returns the whole oscillogram from one call; the other two compose a slab sequence directly.  The full versions are in {\tt notebooks/10\_paper\_figures.ipynb}.}, label={lst:figures}, float=tbp]
-import numpy as np
+\begin{lstlisting}[language=Python, caption={Producing Figures\ \ref{fig:earth_oscillogram}, \ref{fig:density_arrangement}, and \ref{fig:sterile_earth}.  Each snippet is the core of the calculation, with the geometry and the plotting left to the notebook.  The Earth routines take the energies and the directions on separate axes and return a whole oscillogram from one call, at three flavors and at four; the arbitrary profile of \figu{density_arrangement} is not one {\tt earth} knows about, so its slabs are composed directly, with the energies stacked the same way.  The full versions are in {\tt notebooks/10\_paper\_figures.ipynb}.}, label={lst:figures}, float=tbp]
 import earth, slabs
 import hamiltonians3nu, hamiltonians4nu
 from globaldefs import *
@@ -1054,34 +1053,31 @@ grid = earth.probabilities_3nu_earth(
     n_slabs_per_segment=4)[..., 4]
 
 # --- Fig. 5: an arbitrary layered profile.
-# widths [km] and densities [g cm^-3] are free;
-# each slab is solved exactly and composed in order
+# widths [km] and densities [g cm^-3] are free; each
+# slab is solved exactly and composed in order.  The
+# energies stack on a leading axis, so the whole scan
+# crosses the profile in one call
 vcc = earth.matter_potential(densities)
 h = hamiltonians3nu.hamiltonian_3nu_matter(
-    h_vacuum_energy_indep, energy, vcc)
+    h_vacuum_energy_indep, energies[:, None], vcc)
 p = slabs.probabilities_3nu_slabs(
     h, widths*CONV_KM_TO_INV_EV)
 
 # --- Fig. 6: a 3+1 system, antineutrinos, on PREM.
-# Conjugating the vacuum term and flipping BOTH
-# potentials gives the antineutrino Hamiltonian.  A
-# sterile state feels neither, so V_NC no longer
-# cancels and is built per slab beside V_CC
+# antineutrino=True conjugates the vacuum term and
+# reverses both potentials.  A sterile state feels
+# neither, so V_NC no longer cancels and is carried
+# per slab beside V_CC.  Index 5 of the sixteen is
+# P(mu->mu)
 h4_vacuum = hamiltonians4nu.\
     hamiltonian_4nu_vacuum_energy_independent( \
         S12_NO_BF, S23_NO_BF, S13_NO_BF,
         S14, S24, S34, DCP_NO_BF,
         D21_NO_BF, D31_NO_BF, DM41)
 
-w_prem, rho_prem = earth.earth_slabs(costhz)
-h4 = hamiltonians4nu.hamiltonian_4nu_matter( \
-    np.conj(h4_vacuum), energy,
-    -earth.matter_potential(rho_prem),
-    -earth.matter_potential_nc(rho_prem))
-
-# index 5 of the sixteen is P(mu->mu)
-p_mumu = slabs.probabilities_4nu_slabs( \
-    h4, w_prem*CONV_KM_TO_INV_EV)[5]
+grid4 = earth.probabilities_4nu_earth(
+    h4_vacuum, energies[:, None], cos_zenith[None, :],
+    n_slabs_per_segment=4, antineutrino=True)[..., 5]
 \end{lstlisting}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
