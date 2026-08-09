@@ -124,7 +124,7 @@ Per-code traps
   where it means ``=``, so the ``rE`` keyword is silently ignored.  Both
   are worth reporting upstream.
 
-* **nuCraft cannot get below 3.7e-4 at 3+1, and it is not the solver.**
+* **nuCraft cannot get below 2.8e-3 at 3+1, and it is not the solver.**
   Its sterile entry and its charged-current entry are set by two
   independently rounded constants, ``7.6525e-5*(1-y)`` and
   ``15.256e-5*y``, whose ratio is 0.5016 where the isoscalar value
@@ -133,7 +133,7 @@ Per-code traps
   floor.  Forcing the ratio to 0.5 by hand drops the same run to 2.8e-7,
   which is what its solver is actually worth.  The curve is drawn as
   released, floor and all, because that is what a user of nuCraft gets;
-  the caption says where the floor comes from rather than leaving a reader
+  the paper says where the floor comes from rather than leaving a reader
   to conclude the solver is poor.  Worth reporting upstream with the
   other two.
 

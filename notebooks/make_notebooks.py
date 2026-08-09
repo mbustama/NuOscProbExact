@@ -2351,14 +2351,14 @@ The external numbers are frozen in `tests/prem_speed_accuracy.json`.'''),
 #   for the minimum residual returns 0.9926748, and the two codes then
 #   agree to 3e-11 at constant density.
 #
-#   nuCraft is absent from the 3+1 panel, and not because it cannot do 3+1.
+#   nuCraft is flat at 2.8e-3 in the 3+1 panel, and that is not its solver.
 #   Its sterile and charged-current entries come from two independently
 #   rounded constants whose ratio is 0.5016 where the isoscalar value is
-#   exactly 0.5.  Scaling the density cannot separate them, so a 3.7e-4
-#   floor survives every setting; forcing the ratio to 0.5 by hand drops the
-#   same run to 2.8e-7.  Publishing the patched curve would misrepresent the
-#   released code and publishing the unpatched one would misrepresent its
-#   solver, so it appears only where the sterile entry never enters.
+#   exactly 0.5.  Scaling the density cannot separate them, so that floor
+#   survives every setting; forcing the ratio to 0.5 by hand drops the same
+#   run to 2.8e-7.  The curve drawn is the released one, because that is
+#   what a user of nuCraft gets; patching it would put a number in the
+#   figure that no installation of nuCraft returns.
 # ---------------------------------------------------------------------------
 
 with open(os.path.join('..', 'tests', 'prem_speed_accuracy.json')) as handle:
