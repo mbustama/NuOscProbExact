@@ -240,6 +240,8 @@ TREE = [
     ('tests/bit_compare.py', 'Compares two captures, in ulps'),
     ('tests/test_documented_figures.py',
      'Keeps the quoted performance figures agreeing'),
+    ('tests/test_paper.py',
+     'Keeps the paper agreeing with the repository'),
     ('tests/test_version_consistency.py',
      'Keeps the version agreeing wherever it is implied'),
     ('tests/test_nusquids_comparison.py',
