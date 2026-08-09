@@ -1409,7 +1409,7 @@ books['10_paper_figures.ipynb'] = notebook(
 
 The plotting style is the group's standard `matplotlibrc`, inlined into the setup cell below rather than shipped as a separate file, with its sizes set for figures included at the paper's `\columnwidth`.
 
-Running this notebook writes all eight PDFs. Set `NUOSC_PAPER_FIGDIR` to write them straight into the paper's directory.''',
+Running this notebook writes all fourteen PDFs. Set `NUOSC_PAPER_FIGDIR` to write them straight into the paper's directory.''',
     [
         code(r'''import earth
 import slabs
@@ -1667,11 +1667,13 @@ density profile. Each chord is decomposed into slabs, each solved exactly.'''),
 E_gev = np.logspace(0.0, 2.0, n_e)
 cz = np.linspace(-0.999, -0.05, n_c)
 
-grid = np.empty((n_e, n_c))
-for i, e in enumerate(E_gev):
-    for j, c in enumerate(cz):
-        grid[i, j] = earth.probabilities_3nu_earth(
-            H_VAC_3NU, e*GEV, c, n_slabs_per_segment=4)[4]
+# The whole oscillogram in one call: energies and angles are indexed on
+# separate axes and broadcast against each other, so the routine builds
+# each chord's geometry once and spreads every energy over the fused
+# kernel.  Index 4 of the nine probabilities is P(nu_mu -> nu_mu).
+grid = earth.probabilities_3nu_earth(
+    H_VAC_3NU, E_gev[:, None]*GEV, cz[None, :],
+    n_slabs_per_segment=4)[..., 4]
 
 fig, (axe, ax) = plt.subplots(
     2, 1, figsize=(COLW, COLW*1.78),
@@ -1834,8 +1836,10 @@ fig.savefig(os.path.join(FIGDIR, "density_arrangement.pdf"))
 plt.show()'''),
         md('''## A 3+1 sterile resonance through the Earth
 
-Four flavors, antineutrinos, through the Earth: the matter resonance that a
-three-flavor treatment cannot produce at all.'''),
+Four flavors, antineutrinos, through the full PREM profile: the matter
+resonance that a three-flavor treatment cannot produce at all. Because the
+resonance follows the density, it sits at a different energy for chords that
+cross the core than for chords that stay in the mantle.'''),
         code(r'''DM41 = 1.0                       # [eV^2]
 S14 = S24 = np.sqrt(0.10)
 S34 = 0.0
@@ -1848,20 +1852,24 @@ n_e, n_c = 300, 300
 E_tev = np.logspace(-0.5, 1.5, n_e)          # 0.3 - 30 TeV
 costhz = np.linspace(-1.0, -0.05, n_c)
 
-# Antineutrinos: conjugate the vacuum term and flip both potentials.  One
-# average mantle density here, so the whole grid is a single broadcast call.
-rho_mantle = 4.5                              # [g cm^-3]
-vcc = earth.matter_potential(rho_mantle)
-H_bar = hamiltonians4nu.hamiltonian_4nu_matter(
-    np.conj(H_VAC_4NU), E_tev[:, None]*1.0e3*GEV,
-    -vcc, -gd.VNC_EARTH_CRUST*rho_mantle/3.0)
-
-L_grid = np.array([earth.distance_traveled_inside_earth(c)
-                   for c in costhz])*KM
-grid = oscprob4nu.probabilities_4nu(H_bar, L_grid[None, :])
+# Antineutrinos on the full PREM profile: conjugate the vacuum term and
+# flip BOTH potentials.  A sterile state feels neither, so V_NC no longer
+# cancels between the flavors and has to be built per slab alongside
+# V_CC.  The chord geometry changes with the angle, so the slabs are
+# rebuilt once per angle; index 5 of the sixteen probabilities is
+# P(nu_mu -> nu_mu).
+grid = np.empty((n_e, n_c))
+for j, c in enumerate(costhz):
+    widths_km, densities = earth.earth_slabs(c, n_slabs_per_segment=4)
+    vcc = -earth.matter_potential(densities)        # antineutrinos
+    vnc = -earth.matter_potential_nc(densities)     # antineutrinos
+    for i, e_tev in enumerate(E_tev):
+        H_bar = hamiltonians4nu.hamiltonian_4nu_matter(
+            np.conj(H_VAC_4NU), e_tev*1.0e3*GEV, vcc, vnc)
+        grid[i, j] = slabs.probabilities_4nu_slabs(H_bar, widths_km*KM)[5]
 
 fig, ax = plt.subplots(figsize=FIGSIZE_SQUARE)
-mesh = ax.pcolormesh(costhz, E_tev, grid[:, :, 5], shading="auto",
+mesh = ax.pcolormesh(costhz, E_tev, grid, shading="auto",
                      cmap="viridis", vmin=0.0, vmax=1.0, rasterized=True)
 ax.set_yscale("log")
 ax.set_xlabel(r"Cosine of zenith angle, $\cos\theta_z$")
