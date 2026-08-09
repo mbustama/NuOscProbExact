@@ -1490,7 +1490,9 @@ What cannot be added this way is anything that is not a Hermitian Hamiltonian.  
 \label{app:tests}
 \appresetfloats
 
-Table \ref{tab:tests} lists what the 824 tests that ship with {\tt NuOscProbExact} cover; \ref{app:structure} shows the modules they exercise.  They run in a few seconds, and reach every line and every branch of the library: coverage is $100\%$ in v1.13.1, held above a floor of $98\%$ that fails the build if it drops.  They are run on every push to the repository and on every pull request, so a contributor need not invoke them; but they are also the quickest way to confirm a local installation.  The tests are not packaged with the library, so this is from a clone of the repository\ \cite{NuOscProbExact}:
+Table \ref{tab:tests} lists what the 824 tests that ship with {\tt NuOscProbExact} cover; \ref{app:structure} shows the modules they exercise.  They reach every line and every branch of the library: coverage is $100\%$ in v1.13.1, held above a floor of $98\%$ that fails the build if it drops.
+
+They run on every push and every pull request, so a contributor need not invoke them; but they are also the quickest way to confirm a local installation.  The tests are not packaged with the library, so this is from a clone:
 \begin{verbatim}
 pip install -e ".[test]"
 pytest
