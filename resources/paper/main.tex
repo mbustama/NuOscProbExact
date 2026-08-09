@@ -1730,14 +1730,14 @@ Those cases also fix the labels that vacuum leaves free, each in its own way.  T
 \label{app:derivation_uk_expanded}
 \appresetfloats
 
-We start from the definition $u_k = -\frac{i}{2}{\rm Tr}\left(\lambda^k \mathbb{U}_3\right)$ of Section \ref{sec:readings}, which lets $u_k$ be obtained by differentiating a trace rather than by evaluating one:
+We start from the definition $u_k = -\frac{i}{2}{\rm Tr}\left(\lambda^k \mathbb{U}_3\right)$ of Section \ref{sec:readings}.  It lets $u_k$ be had by differentiating ${\rm Tr}\,\mathbb{U}_3$, which needs the latent roots and nothing else, since the projectors of \equ{sylvester} satisfy ${\rm Tr}\,\mathbb{P}_m = 1$; evaluating ${\rm Tr}\left(\lambda^k \mathbb{U}_3\right)$ directly would need the projectors themselves.  So
 \begin{eqnarray*}
  u_k 
  &=& -\frac{1}{2}{\rm Tr}\frac{\partial}{\partial\left(-h_kL\right)}e^{-ih_a\lambda^aL}  \\
  &=& -\frac{1}{2}\frac{\partial}{\partial\left(-h_kL\right)}{\rm Tr}~\mathbb{U}_3 \\
  &=& -\frac{i}{2}\sum_{m=1}^3 e^{iL\psi_m} \frac{\partial\left(L\psi_m\right)}{\partial\left(-h_kL\right)} \;,
 \end{eqnarray*}
-where the first step holds under the trace and not outside it: the derivative of a matrix exponential is $\int_0^1 e^{sA} A^\prime e^{\left(1-s\right)A} {\rm d}s$, which cyclicity collapses to $A^\prime e^A$ once traced, returning $i \lambda^k \mathbb{U}_3$ here.  The last step uses ${\rm Tr}\,\mathbb{U}_3 = \sum_m e^{iL\psi_m}$ and brings down a factor of $i$ from each exponential.  The baseline is held fixed throughout, so what remains is a derivative of the latent root alone, and it follows from implicit differentiation of $\chi\left(\psi_m\right) = 0$ --- legitimate wherever $\chi^\prime\left(\psi_m\right) = 3\psi_m^2 - \lvert h \rvert^2$ does not vanish, which is the non-degeneracy \equ{uk_expanded} requires in any case, that same quantity being its denominator:
+where the first step holds under the trace and not outside it: $\lambda^k$ does not commute with $h_a \lambda^a$, so differentiating the exponential term by term leaves a $\lambda^k$ in every position of every power, and it is the cyclic property of the trace that gathers them into ${\rm Tr}\left(i \lambda^k \mathbb{U}_3\right)$.  The last step uses ${\rm Tr}\,\mathbb{U}_3 = \sum_m e^{iL\psi_m}$ and brings down a factor of $i$ from each exponential.  What is left is the derivative of a latent root, which follows from implicit differentiation of $\chi\left(\psi_m\right) = 0$ --- legitimate wherever $\chi^\prime\left(\psi_m\right) = 3\psi_m^2 - \lvert h \rvert^2$ does not vanish, the non-degeneracy that \equ{uk_expanded} requires in any case, that same quantity being its denominator.  The baseline is held fixed, so it cancels:
 \begin{equation*}
  \frac{\partial\left(L\psi_m\right)}{\partial\left(-h_kL\right)}
  =
@@ -1745,19 +1745,7 @@ where the first step holds under the trace and not outside it: the derivative of
  =
  \frac{2\left[\left(h \ast h\right)_k - \psi_m h_k\right]}{3\psi_m^2-\lvert h \rvert^2} \;.
 \end{equation*}
-Thus, the coefficients $u_k$ can be written as
-\begin{equation}
- \label{equ:uk_short}
- u_k = i \left[ x h_k - y \left(h\ast h\right)_k \right] \;,
-\end{equation}
-where
-\begin{eqnarray}
- \label{equ:x_def}
- && x = \sum_{m=1}^3 \frac{ \psi_m e^{i L \psi_m}} { 3\psi_m^2-\lvert h \rvert^2 } \;, \\
- \label{equ:y_def}
- && y = \sum_{m=1}^3 \frac{ e^{i L \psi_m} } { 3\psi_m^2-\lvert h \rvert^2 } \;.
-\end{eqnarray}
-Inserting Eqs.\ (\ref{equ:x_def}) and (\ref{equ:y_def}) into \equ{uk_short} results in \equ{uk_expanded} in the main text.
+Putting this back into the last line above gives \equ{uk_expanded} of the main text: the $2$ cancels the $\tfrac{1}{2}$, and writing the bracket the other way round, as $\psi_m h_k - \left(h \ast h\right)_k$, absorbs the sign that is left.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
