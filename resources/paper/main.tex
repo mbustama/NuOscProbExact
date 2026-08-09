@@ -727,7 +727,7 @@ Development happens in the public GitHub repository\ \cite{NuOscProbExact}, whic
 
 \subsection{Validation}
 
-The code ships with a test suite of 823 tests, which covers every line and branch of the library to achieve 100\% code coverage in v1.13.1 of {\tt NuOscProbExact}; \ref{app:tests} groups them by what they cover.  Beyond internal consistency, the results are checked against independent sources: against {\tt nuSQuIDS}\ \cite{Delgado:2014kpa, NuSQuIDS}, an independently written code, with which the three-flavor probabilities agree to $10^{-11}$ and the four-flavor ones to $10^{-9}$ once conventions are matched; against the closed-form eigenvalues of Zaglauer \& Schwarzer\ \cite{Zaglauer:1988gz} for the three-flavor matter spectrum; against direct numerical exponentiation of the Hamiltonian, as in \figu{validation}; and, in the two-flavor vacuum case, against the standard analytic formula.  Where a residual remains --- as in the four-flavor case, whose eigenvalue cluster can be stiff --- the tests establish which side of the comparison it belongs to rather than absorbing it into a loose tolerance.
+The code ships with a test suite of 824 tests, which covers every line and branch of the library to achieve 100\% code coverage in v1.13.1 of {\tt NuOscProbExact}; \ref{app:tests} groups them by what they cover.  Beyond internal consistency, the results are checked against independent sources: against {\tt nuSQuIDS}\ \cite{Delgado:2014kpa, NuSQuIDS}, an independently written code, with which the three-flavor probabilities agree to $10^{-11}$ and the four-flavor ones to $10^{-9}$ once conventions are matched; against the closed-form eigenvalues of Zaglauer \& Schwarzer\ \cite{Zaglauer:1988gz} for the three-flavor matter spectrum; against direct numerical exponentiation of the Hamiltonian, as in \figu{validation}; and, in the two-flavor vacuum case, against the standard analytic formula.  Where a residual remains --- as in the four-flavor case, whose eigenvalue cluster can be stiff --- the tests establish which side of the comparison it belongs to rather than absorbing it into a loose tolerance.
 
 \subsection{Limitations}
 \label{sec:limitations}
@@ -1490,11 +1490,16 @@ What cannot be added this way is anything that is not a Hermitian Hamiltonian.  
 \label{app:tests}
 \appresetfloats
 
-Table \ref{tab:tests} lists what the 823 tests that ship with {\tt NuOscProbExact} cover; \ref{app:structure} shows the modules they exercise.  They run in a few seconds, and reach every line and every branch of the library, providing 100\% code coverage in v1.13.1 of the code.
+Table \ref{tab:tests} lists what the 824 tests that ship with {\tt NuOscProbExact} cover; \ref{app:structure} shows the modules they exercise.  They run in a few seconds, and reach every line and every branch of the library: coverage is $100\%$ in v1.13.1, held above a floor of $98\%$ that fails the build if it drops.  They are run on every push to the repository and on every pull request, so a contributor need not invoke them; but they are also the quickest way to confirm a local installation.  The tests are not packaged with the library, so this is from a clone of the repository\ \cite{NuOscProbExact}:
+\begin{verbatim}
+pip install -e ".[test]"
+pytest
+\end{verbatim}
+which takes a few seconds.  Adding {\tt -{}-cov} measures coverage against the floor above.
 
-The suite is not only a regression net.  Roughly half of it checks the physics and the algebra against something external to the implementation---closed-form eigenvalues, an independently written code, direct matrix exponentiation, the SU(3) structure constants---and the rest checks the properties that a probability must have whatever the Hamiltonian: unitarity, the behavior of reversed channels, and agreement between the scalar, vectorized, and compiled paths, which are three separate pieces of code that must return the same numbers.
+The suite is not only a regression net.  Roughly half of it checks the physics and the algebra against something external to the implementation---closed-form eigenvalues, an independently written code, direct matrix exponentiation, the standard two-flavor formula, and the defining properties of the SU(3) $d$ tensor---and the rest checks the properties that a probability must have whatever the Hamiltonian: unitarity, the behavior of reversed channels, and agreement between the scalar, vectorized, and compiled paths, which are three separate pieces of code that must return the same numbers.
 
-{\tt NuOscProbExact} enforces continuous integration: every code pull request on GitHub runs the test suite, across the supported versions of Python, together with a linter and a type checker.  The notebooks are executed there as well, so an example that stops working cannot survive a release.  This ensures continuity and correctness in future contributions.
+{\tt NuOscProbExact} enforces continuous integration: every code pull request on GitHub runs the test suite, across the five supported versions of Python, together with a linter.  Static type checking is not part of that; instead the suite itself checks that every routine carries annotations and that they agree with its docstring, since Sphinx renders both and two different answers to the same question are worse than one absent.  The notebooks are executed in the same workflow, so an example that stops working cannot survive a merge.  This ensures continuity and correctness in future contributions.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 {\def\arraystretch{1.15}
@@ -1504,7 +1509,7 @@ The suite is not only a regression net.  Roughly half of it checks the physics a
    \hline
    Batching and tolerance selection         & 168 \\
    Numerical edge cases and degeneracies    & 92 \\
-   PREM, geometry and Earth crossings       & 76 \\
+   PREM, geometry and Earth crossings       & 77 \\
    Compiled kernels against {\tt numpy}      & 69 \\
    Type annotations                         & 46 \\
    Four-flavor construction                 & 45 \\
@@ -1524,7 +1529,7 @@ The suite is not only a regression net.  Roughly half of it checks the physics a
    Version consistency                      & 7 \\
    Repository layout                        & 7 \\
    \hline
-   Total                                    & 823 \\
+   Total                                    & 824 \\
   \end{tabular}
   \caption{\label{tab:tests}The test suite of {\tt NuOscProbExact} v1.13.1, grouped by what each file covers, in descending order.  Coverage of the library is complete: every line and every branch is executed.  The comparison with {\tt nuSQuIDS}\ \cite{Delgado:2014kpa, NuSQuIDS} runs against frozen reference values rather than against a live installation, so that a release of another code cannot break this one's continuous integration.}
 \end{table}

@@ -775,3 +775,30 @@ def test_antineutrinos_between_locations_carry_the_flag():
     expected = _antineutrino_by_hand(h_vac, energy, costhz, 3)
 
     assert np.allclose(bar, expected, rtol=0.0, atol=1.0e-14)
+
+
+def test_antineutrinos_reach_the_compiled_four_flavor_kernel():
+    r"""The batched kernel path, at four flavors, for antineutrinos.
+
+    `_probabilities_earth_batch` reverses both potentials inside its
+    compiled branch, and only the four-flavor kernel is handed the
+    neutral-current one.  Reaching that line needs all three at once: a
+    stack big enough for the kernel to be worth dispatching to, four
+    flavors, and ``antineutrino=True``.
+    """
+    h_vac = _vacuum_hamiltonian(4)
+    energies = np.logspace(2.0, 4.0, 64)*1.0e9
+    costhz = -0.8
+
+    bar = earth.probabilities_4nu_earth(h_vac, energies, costhz,
+                                        n_slabs_per_segment=4,
+                                        antineutrino=True)
+    assert bar.shape == (64, 16)
+
+    expected = np.stack([_antineutrino_by_hand(h_vac, e, costhz, 4)
+                         for e in energies])
+    assert np.allclose(bar, expected, rtol=0.0, atol=1.0e-12)
+
+    nu = earth.probabilities_4nu_earth(h_vac, energies, costhz,
+                                       n_slabs_per_segment=4)
+    assert np.abs(nu - bar).max() > 1.0e-3
