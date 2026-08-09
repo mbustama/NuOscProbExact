@@ -1671,7 +1671,7 @@ Both moduli divide by $\lvert h \rvert^2$, which vanishes at one point only; Sec
 \label{app:2nu_vacuum}
 \appresetfloats
 
-As a simple example and cross-check of the OS method, we compute $P_{\nu_e \to \nu_\mu}$ for two-flavor oscillations in vacuum.  These are driven by the mass-squared difference between two mass eigenstates, $\nu_1$ and $\nu_2$, with masses $m_1$ and $m_2$, out of which the flavor states $\nu_e$ and $\nu_\mu$ are constructed.  Any other pair of flavors does as well --- $\nu_\mu$ and $\nu_\tau$, say --- since in vacuum nothing distinguishes one pair from another once the angle and the splitting are fixed.  The spaces of flavor and mass states are connected by a unitary rotation that is parametrized by a mixing angle $\theta$, \ie,
+As a simple example and cross-check of the OS method, we compute $P_{\nu_e \to \nu_\mu}$ for two-flavor oscillations in vacuum.  These are driven by the mass-squared difference between two mass eigenstates, $\nu_1$ and $\nu_2$, with masses $m_1$ and $m_2$, out of which the flavor states $\nu_e$ and $\nu_\mu$ are constructed.  Any other pair of flavors does as well --- $\nu_\mu$ and $\nu_\tau$, say --- since in vacuum nothing distinguishes one pair from another once the angle and the splitting are fixed; the paragraph that closes this appendix says what fixes them once a term is added.  The spaces of flavor and mass states are connected by a unitary rotation that is parametrized by a mixing angle $\theta$, \ie,
 \begin{equation}
  \label{equ:u_rotation_2nu}
  \mathbb{R}_{2,\theta}
@@ -1693,14 +1693,14 @@ The Hamiltonian in the flavor basis, at neutrino energy $E$, is
 \end{equation}
 where $\mathbb{M}_2^2~\equiv~$${\rm diag}(-\Delta m^2/2, \Delta m^2/2)$ is the mass-squared matrix, and $\Delta m^2\equiv m_2^2-m_1^2$.  The larger $m_i^2$ value sits on the \emph{second} mass eigenstate, which is the textbook traceless form and the ordering the code uses.
 
-Two conventions meet here, and neither affects what follows.  Section \ref{sec:three_flavors}, and the four-flavor Hamiltonians of \ref{app:sample_2nu_hamiltonians}, put the zero on $\nu_1$ rather than making the mass matrix traceless, as is usual at three and four flavors; the two differ by a multiple of the identity, which Section \ref{sec:general_remarks} discards.  Which eigenstate carries the larger $m_i^2$ is the second, and the paragraph that closes this appendix says where that one does matter.
+Two conventions meet here.  Section \ref{sec:three_flavors}, and the four-flavor Hamiltonians of \ref{app:sample_2nu_hamiltonians}, put the zero on $\nu_1$ rather than making the mass matrix traceless, as is usual at three and four flavors; the two differ by a multiple of the identity, which Section \ref{sec:general_remarks} discards, so nothing below turns on which is used.  The other convention is which eigenstate carries the larger $m_i^2$, and that one is not free of consequences --- the paragraph that closes this appendix says where they fall.
 
-Using Table \ref{tab:h2_coefficients} --- and only the squares are needed --- we identify
+Using Table \ref{tab:h2_coefficients}, we identify the squares that \equ{prob_2nu_general} calls for,
 \begin{equation*}
  h_1^2 = \left(\frac{\Delta m^2}{4E}\right)^2 \sin^2\left(2\theta\right) \;, \;\;
  h_3^2 = \left(\frac{\Delta m^2}{4E}\right)^2 \cos^2\left(2\theta\right) \;,
 \end{equation*}
-and $h_2 = 0$, so that $\lvert h \rvert^2 = \left(\Delta m^2/4E\right)^2$ and $h_1^2 / \lvert h \rvert^2  = \sin^2\left(2\theta\right)$.  From \equ{prob_2nu_general}, the probability is
+with $h_2 = 0$, so that $\lvert h \rvert^2 = \left(\Delta m^2/4E\right)^2$ and $h_1^2 / \lvert h \rvert^2  = \sin^2\left(2\theta\right)$.  From \equ{prob_2nu_general}, the probability is
 \begin{equation*}
  P_{\nu_e \to \nu_\mu}^{\rm vac} (E, L)
  =
@@ -1711,7 +1711,7 @@ which is the standard expression for two-neutrino oscillations in vacuum; see, \
 
 Now the ordering.  Putting the larger $m_i^2$ on the first mass eigenstate instead gives the negative of $\mathbb{M}_2^2$, and hence of $\mathbb{H}_2^{\rm vac}$, which nothing above would notice: the probability depends on the $h_k$ only through $h_1^2 + h_2^2$, $\lvert h \rvert^2$, and $\sin^2\left(\lvert h \rvert L\right)$, each of them even under $h_k \to -h_k$, so the formula just recovered stands either way.  What the sign does affect is every Hamiltonian that \emph{adds} a term to $\mathbb{H}_2^{\rm vac}$: the matter, NSI, and LIV cases of \ref{app:sample_2nu_hamiltonians}.  Negating only the vacuum term reverses its sign relative to the matter potential, and what comes out is the negative of the antineutrino Hamiltonian of \equ{antineutrino}, up to the sign of $h_2$ --- which \equ{prob_2nu_general} does not see either.  The probabilities are therefore exactly those of the corresponding \emph{antineutrino} process, and for the LIV case those of the CPT-conjugate one, with $b_i \to -b_i$: an identity, not a numerical near-agreement, and the code returns the two bit for bit.
 
-Those three cases also fix the labels that vacuum leaves free: $\mathbb{A}_2 = {\rm diag}(V_{\rm CC}, 0)$ acts on one state and not the other, so there the first is $\nu_e$ in earnest rather than by convention.  The matter, NSI, and LIV panels of \figu{prob_2nu} are computed with the ordering above, and would show the antineutrino probabilities under the other one; the vacuum panel does not depend on the choice.  Nothing in Section\ \ref{sec:examples} is affected, since this concerns the two-flavor Hamiltonian alone.
+Those cases also fix the labels that vacuum leaves free, each in its own way.  The potential $\mathbb{A}_2$ of \ref{app:sample_2nu_hamiltonians} acts on one state and not the other, so with matter and with NSI the first is $\nu_e$ in earnest rather than by convention; the Lorentz-violating case carries no potential at all, and there it is $\mathbb{B}_2$, with $b_1 \neq b_2$, that does the same work.  The matter, NSI, and LIV panels of \figu{prob_2nu} are computed with the ordering above, and would show the antineutrino probabilities under the other one; the vacuum panel does not depend on the choice.  Nothing in Section\ \ref{sec:examples} is affected, since this concerns the two-flavor Hamiltonian alone.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
