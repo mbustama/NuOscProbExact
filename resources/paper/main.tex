@@ -1424,7 +1424,7 @@ for $p = 1, \ldots, 6$ running over the six flavor pairs $(\alpha,\beta)$ in lex
 \end{equation*}
 They satisfy ${\rm Tr}(\lambda^a\lambda^b) = 2\delta^{ab}$, as do the Pauli and Gell-Mann matrices.
 
-Three properties motivate this choice.  Deleting the pairs that involve the fourth state reduces it to the standard Gell-Mann ordering on the upper-left $3 \times 3$ block, so that the three-flavor expressions embed unchanged; the two generators of a given pair are adjacent, so the $T$-conjugate structure of Table \ref{tab:prob_4nu} reads off consecutive indices; and the generator that singles out the sterile state, $\lambda^{15}$, comes last, so that adding a fourth state appends to the three-flavor labelling rather than renumbering it.
+Three properties motivate this choice.  Deleting the pairs that involve the fourth state leaves exactly the eight Gell-Mann matrices on the upper-left $3 \times 3$ block, so the SU(3) subalgebra is embedded as it stands --- though not in the Gell-Mann order, since the Cartan generators are collected at the end here rather than interleaved, which is why \tabl{prob_4nu} does not reduce entry by entry to \tabl{prob_3nu}; the two generators of a given pair are adjacent, so the $T$-conjugate structure of Table \ref{tab:prob_4nu} reads off consecutive indices; and the generator that singles out the sterile state, $\lambda^{15}$, comes last, so that adding a fourth state appends to the three-flavor labelling rather than renumbering it.
 
 
 \section{Structure of the code}
@@ -1603,8 +1603,8 @@ What the sign does affect is every Hamiltonian that \emph{adds} a term to $\math
 
 Using Table \ref{tab:h2_coefficients}, we identify
 \begin{equation*}
- \lvert h_1 \rvert^2 = \frac{\Delta m^2}{2E} \sin^2\left(2\theta\right) \;, \;\;
- \lvert h_3 \rvert^2 = \frac{\Delta m^2}{2E} \cos^2\left(2\theta\right) \;,
+ \lvert h_1 \rvert^2 = \left(\frac{\Delta m^2}{4E}\right)^2 \sin^2\left(2\theta\right) \;, \;\;
+ \lvert h_3 \rvert^2 = \left(\frac{\Delta m^2}{4E}\right)^2 \cos^2\left(2\theta\right) \;,
 \end{equation*}
 and $\lvert h_2 \rvert^2 = 0$, so that $\lvert h_1 \rvert^2 / \lvert h \rvert^2  = \sin^2\left(2\theta\right)$.  From \equ{prob_2nu_general}, the probability is
 \begin{equation*}
@@ -1624,29 +1624,23 @@ which is the standard expression for two-neutrino oscillations in vacuum; see, \
 \section{Derivation of \equ{uk_expanded}}
 \label{app:derivation_uk_expanded}
 
-First, we write 
-\begin{equation*}
- u_k
- = 
- -\frac{1}{2}\sum_{m=1}^3 e^{i\phi_m} \frac{\partial\phi_m}{\partial \left(-h_kL\right)} \;, 
-\end{equation*}
-where
-\begin{equation*}
- \frac{\partial\phi_m}{\partial\left(-h_kL\right)}
- =
- \frac{2\left[\phi_m\left(-h_kL\right)+d_{ijk}\left(-h^iL\right)\left(-h^jL\right)\right]}{3\phi_m^2-I_2} \;.
-\end{equation*}
-This can be expanded as
+We start from the definition $u_k = -\frac{i}{2}{\rm Tr}\left(\lambda^k \mathbb{U}_3\right)$ of Section \ref{sec:readings}, which lets $u_k$ be obtained by differentiating a trace rather than by evaluating one:
 \begin{eqnarray*}
  u_k 
  &=& -\frac{1}{2}\text{Tr}\frac{\partial}{\partial\left(-h_kL\right)}e^{-ih_k\lambda^kL}  \\
  &=& -\frac{1}{2}\frac{\partial}{\partial\left(-h_kL\right)}\text{Tr}~\mathbb{U}_3 \\
- &=& -\frac{1}{2}\sum_{m=1}^3 e^{i\phi_m} \frac{\partial\phi_m}{\partial\left(-h_kL\right)} \;.
+ &=& -\frac{i}{2}\sum_{m=1}^3 e^{iL\psi_m} \frac{\partial\left(L\psi_m\right)}{\partial\left(-h_kL\right)} \;,
 \end{eqnarray*}
+the last step using ${\rm Tr}\,\mathbb{U}_3 = \sum_m e^{iL\psi_m}$ and bringing down a factor of $i$ from each exponential.  The derivative of a latent root is
+\begin{equation*}
+ \frac{\partial\left(L\psi_m\right)}{\partial\left(-h_kL\right)}
+ =
+ \frac{2\left[\psi_m\left(-h_kL\right)+d_{ijk}\left(-h^iL\right)\left(-h^jL\right)\right]}{3\psi_m^2-\lvert h \rvert^2} \;.
+\end{equation*}
 Thus, the coefficients $u_k$ can be written as 
 \begin{equation}
  \label{equ:uk_short}
- u_k = -L x h_k + L^2 y \left(h\ast h\right)_k \;,
+ u_k = i \left[ -L x h_k + L^2 y \left(h\ast h\right)_k \right] \;,
 \end{equation}
 where
 \begin{eqnarray}
