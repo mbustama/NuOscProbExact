@@ -534,7 +534,7 @@ where the trace forms are the ones that carry over unchanged to four flavors, an
 
 Next, we solve the characteristic equation of $-h_k\lambda^kL$, \ie, $\phi^3 - L^2 \left\vert h \right\vert^2 \phi + \frac{2}{3} L^3 \langle h \rangle = 0$.  The equation follows from the Cayley-Hamilton theorem, written conveniently in terms of invariants\ \cite{MacFarlane:1968vc, Curtright:2015iba}.  Its three latent roots, or eigenvalues, are $\phi_m \equiv \psi_m L$ ($m=1,2,3$), with
 \begin{equation}
- \label{equ:phi_alpha}
+ \label{equ:psi_m}
  \psi_m
  \equiv
  \frac{2 \left\vert h \right\vert}{\sqrt{3}} \cos\left[\frac{1}{3}\left(\chi+2\pi m \right)\right] \;,
@@ -570,7 +570,7 @@ With this, the coefficients in \equ{u3_def} are
  i\sum_{m=1}^3
  e^{i L \psi_m} \frac{\psi_m h_k - \left(h \ast h\right)_k}{3\psi_m^2 - \left\vert h \right\vert^2} \;,
 \end{eqnarray}
-where $\left(h\ast h\right)_i \equiv d_{ijk}h^jh^k$.  \ref{app:derivation_uk_expanded} contains the derivation of \equ{uk_expanded}.  Using Eqs.\ (\ref{equ:phi_alpha}), (\ref{equ:u0}), and (\ref{equ:uk_expanded}), we write the evolution operator concisely as in \Ref\ \cite{Ohlsson:1999xb},
+where $\left(h\ast h\right)_i \equiv d_{ijk}h^jh^k$.  \ref{app:derivation_uk_expanded} contains the derivation of \equ{uk_expanded}.  Using Eqs.\ (\ref{equ:psi_m}), (\ref{equ:u0}), and (\ref{equ:uk_expanded}), we write the evolution operator concisely as in \Ref\ \cite{Ohlsson:1999xb},
 \begin{equation}
  \label{equ:u3_expanded}
  \mathbb{U}_3(L)
@@ -637,7 +637,7 @@ the first two being the $\lvert h \rvert^2$ and $\langle h \rangle$ of Section \
  \label{equ:resolvent_cubic}
  z^3 - 2I_2 z^2 + 2I_4 z - \tfrac{4}{9}I_3^2 = 0 \;.
 \end{equation}
-Its roots are $z_i = (\psi_j+\psi_k)^2$, real and non-negative precisely because $\tilde{\mathbb{H}}_4$ is Hermitian.  Depressed by $z \to z + \frac{2}{3}I_2$, \equ{resolvent_cubic} therefore yields to the same trigonometric formula already used at three flavors, \equ{phi_alpha}, and
+Its roots are $z_i = (\psi_j+\psi_k)^2$, real and non-negative precisely because $\tilde{\mathbb{H}}_4$ is Hermitian.  Depressed by $z \to z + \frac{2}{3}I_2$, \equ{resolvent_cubic} therefore yields to the same trigonometric formula already used at three flavors, \equ{psi_m}, and
 \begin{equation}
  \label{equ:psi_4nu}
  \psi_m = \tfrac{1}{2}\left(s_1\sqrt{z_1}+s_2\sqrt{z_2}+s_3\sqrt{z_3}\right) \;,
@@ -1422,9 +1422,11 @@ for $p = 1, \ldots, 6$ running over the six flavor pairs $(\alpha,\beta)$ in lex
  \quad
  l = 1, 2, 3 \;.
 \end{equation*}
-They satisfy ${\rm Tr}(\lambda^a\lambda^b) = 2\delta^{ab}$, as do the Pauli and Gell-Mann matrices.
+So, for instance, $\lambda^1 = E_{e\mu} + E_{\mu e}$ has a single $1$ in each of the $(e,\mu)$ and $(\mu,e)$ slots, $\lambda^2 = -i(E_{e\mu} - E_{\mu e})$ is its antisymmetric partner, and $\lambda^{13} = {\rm diag}(1,-1,0,0)$ is the first Cartan generator.  They satisfy ${\rm Tr}(\lambda^a\lambda^b) = 2\delta^{ab}$, as do the Pauli and Gell-Mann matrices.
 
-Three properties motivate this choice.  Deleting the pairs that involve the fourth state leaves exactly the eight Gell-Mann matrices on the upper-left $3 \times 3$ block, so the SU(3) subalgebra is embedded as it stands --- though not in the Gell-Mann order, since the Cartan generators are collected at the end here rather than interleaved, which is why \tabl{prob_4nu} does not reduce entry by entry to \tabl{prob_3nu}; the two generators of a given pair are adjacent, so the $T$-conjugate structure of Table \ref{tab:prob_4nu} reads off consecutive indices; and the generator that singles out the sterile state, $\lambda^{15}$, comes last, so that adding a fourth state appends to the three-flavor labelling rather than renumbering it.
+Three properties motivate this choice.  The eight Gell-Mann matrices survive it: deleting the six generators of the pairs that involve the fourth state leaves them exactly, on the upper-left $3 \times 3$ block, so the SU(3) subalgebra is embedded as it stands.  The two generators of a given pair are adjacent, so the $T$-conjugate structure of \tabl{prob_4nu} reads off consecutive indices.  And the generator that singles out the sterile state, $\lambda^{15}$, comes last, so that a fourth state appends to the three-flavor labelling rather than renumbering it.
+
+What the embedding does not preserve is the order.  Gell-Mann interleaves the two Cartan generators; this scheme collects all three of its own at the end, so the surviving eight appear as $\lambda^1, \lambda^2, \lambda^4, \lambda^5, \lambda^6, \lambda^7, \lambda^3, \lambda^8$ in Gell-Mann labels.  Sections \ref{sec:two_flavors} and \ref{sec:three_flavors}, with Tables \ref{tab:h2_coefficients} to \ref{tab:prob_3nu}, use the Gell-Mann numbering; Section \ref{sec:four_flavors} and \tabl{prob_4nu} use the one above.  That is why \tabl{prob_4nu} does not reduce entry by entry to \tabl{prob_3nu}.
 
 
 \section{Structure of the code}
