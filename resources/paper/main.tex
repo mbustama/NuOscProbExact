@@ -1549,29 +1549,30 @@ The suite is not only a regression net.  Roughly half of it checks the physics a
 \label{app:notebooks}
 \appresetfloats
 
-Twenty notebooks ship with {\tt NuOscProbExact}, in the {\tt notebooks/} directory of the repository\ \cite{NuOscProbExact}, numbered in reading order; Table \ref{tab:notebooks} says what each one does.  They are the long form of Section \ref{sec:examples}: there, a scenario is a paragraph, a listing, and a figure; in a notebook it is the same calculation with the reasoning around it --- why a convention is what it is, what happens at the edges of the parameter range, and what the numbers were checked against.
 
-Each notebook is stored with its output, so it can be read without being run, and each ends with a pointer to its neighbors in the reading order and to the API reference.  Running them instead needs only
+Twenty tutorial notebooks come with {\tt NuOscProbExact}, in the {\tt notebooks/} directory of the repository\ \cite{NuOscProbExact}, numbered in reading order; Table \ref{tab:notebooks} says what each one does.  They are the long form of Section \ref{sec:examples}: there, a scenario is a paragraph and a panel, with one listing standing for four of them; in a notebook it is the same calculation with the reasoning around it --- why a convention is what it is, what happens at the edges of the parameter range, and what the numbers were checked against.
+
+They live in the repository rather than in the installed package, so they come with a clone and not with {\tt pip}; running them from one needs only
 \begin{verbatim}
 pip install "nuoscprobexact[notebooks]"
 jupyter lab notebooks/
 \end{verbatim}
-from a clone.  All twenty are written by one generator script, also in the repository, which executes each of them in turn; and continuous integration re-executes every notebook whenever the code changes, and fails the build on one whose cells carry no output, so an example that has stopped working cannot survive a merge (\ref{app:tests}).
+Reading them needs less than that: each is stored with its output, so a notebook can be read on GitHub without being run, and each ends with a pointer to its neighbors in the reading order and to the API reference.  All twenty are written by one generator script, also in the repository, which executes each of them in turn, and all twenty are executed again in continuous integration under the guarantee of \ref{app:tests}.
 
-Three of them carry more of this paper than the others.  Notebook 10 produces every figure in it, and only it does: from data frozen in the repository where a figure compares this code against another, and from a live calculation everywhere else.  Notebook 20 is where the long-range potential of Section \ref{sec:arbitrary_hamiltonian} is built and validated, Listing \ref{lst:3nu_arbitrary} being the core of it.  And notebook 17 works through the external corroboration summarized in Section \ref{sec:validation}: what {\tt nuSQuIDS} and the Zaglauer--Schwarzer closed form each agree with, to what accuracy, and --- the laborious part --- which conventions had to be matched before either comparison meant anything.
+Three of them carry more of this paper than the others.  Every figure here is produced by notebook 10, and by nothing else: the probabilities are computed as the notebook runs, except in the figures that compare this code against another, where every code's numbers, including this one's, are read from data frozen in the repository.  Notebook 17 works through the external corroboration summarized in Section \ref{sec:validation}: what {\tt nuSQuIDS} and the Zaglauer--Schwarzer closed form each agree with, to what accuracy, and --- the laborious part --- which conventions had to be matched before either comparison meant anything.  And notebook 20 is where the long-range potential of Section \ref{sec:arbitrary_hamiltonian} is built and validated, Listing \ref{lst:3nu_arbitrary} being the core of it.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 {\def\arraystretch{1.1}
 \begin{table*}[t!]
   {\small
-  \begin{tabular}{rlp{10.3cm}}
+  \begin{tabular}{rlp{9.2cm}}
    & Notebook & What it does \\
    \hline
    \multicolumn{3}{l}{\emph{Getting started}} \\
    1 & Basics & Units, one probability, and why to pass arrays rather than loop \\
    2 & Oscillations in vacuum & The probabilities against baseline and against energy \\
    \multicolumn{3}{l}{\emph{Matter, and new physics}} \\
-   3 & Matter, NSI, and LIV & Constant-density matter, non-standard interactions, and Lorentz-invariance violation: three Hamiltonians, one routine \\
+   3 & Matter, NSI, and Lorentz-invariance violation & Constant-density matter and two kinds of new physics: three Hamiltonians, one routine \\
    4 & Oscillograms & A two-dimensional map in energy and baseline, from a single call \\
    5 & Bi-probability plots & CP violation as an ellipse, and where it degenerates to a point \\
    \multicolumn{3}{l}{\emph{Matter that varies along the trajectory}} \\
@@ -1582,23 +1583,24 @@ Three of them carry more of this paper than the others.  Notebook 10 produces ev
    9 & Performance & Looping against broadcasting, and the compiled kernels, measured as the notebook runs \\
    10 & The paper's figures & Every figure in this paper, produced by one run \\
    \multicolumn{3}{l}{\emph{Where the approximations fail}} \\
-   11 & Exact versus the approximations & Where the standard formulas depart from the exact result, and by how much \\
+   11 & Exact versus the textbook approximations & Where the standard formulas depart from the exact result, and by how much \\
    12 & Mass ordering and the octant & Both orderings, and the octant degeneracy of $\theta_{23}$: where it holds, and the channel that breaks it \\
    13 & Antineutrinos, done properly & The two operations of \equ{antineutrino}, and two ways of applying only one \\
    \multicolumn{3}{l}{\emph{Hard cases}} \\
-   14 & Solar neutrinos and the MSW resonance & The adiabatic resonance by slabs, against the analytic result, and why a Magnus-type method is the better tool there \\
+   14 & Solar neutrinos, the MSW resonance, and the limits of slabs & The adiabatic resonance by slabs, checked against the analytic result, and where a Magnus-type method takes over \\
    15 & Numerical edge cases & Degeneracies and vanishing denominators, and what is returned in place of NaN \\
    16 & Four neutrinos, and a sterile state & A 3+1 system through SU(4), and why the construction stops at four \\
    17 & Cross-checks with other codes & Agreement with {\tt nuSQuIDS} and with the Zaglauer--Schwarzer eigenvalues, and the conventions matched to reach it \\
    \multicolumn{3}{l}{\emph{The machinery, and extending it}} \\
-   18 & The evolution operator and the SU($n$) coefficients & The operator and the coefficients $h_a$ themselves, for composing evolution or extending the method \\
+   18 & The evolution operator, and the SU($n$) coefficients & The operator and the coefficients $h_a$ themselves, for composing evolution or extending the method \\
    19 & Animated scenes & Four parameter sweeps, drawn as filmstrips, with the animation an opt-in switch \\
    20 & An arbitrary Hamiltonian, through three profiles & A long-range $L_e - L_\mu$ force carried through an invented body, an exponential one, and the Earth \\
   \end{tabular}}
-  \caption{\label{tab:notebooks}The twenty tutorial notebooks that ship with {\tt NuOscProbExact} v1.13.1, in reading order.  The groupings are a suggested path rather than a division of the code: any notebook may be read on its own.  This table is checked against the repository by the test suite of \ref{app:tests}, so a notebook added, removed, or renamed fails the build until the table follows it.}
+  \caption{\label{tab:notebooks}The twenty tutorial notebooks in the repository of {\tt NuOscProbExact} v1.13.1, in reading order.  The groupings are a suggested path rather than a division of the code: any notebook may be read on its own.  This table is checked against that repository by the test suite of \ref{app:tests}, which derives the numbering and the titles from the notebooks themselves, so one added, removed, reordered, or retitled fails the build until the table follows it.}
 \end{table*}
 }
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
