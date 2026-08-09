@@ -1612,8 +1612,9 @@ Three of them carry more of this paper than the others.  Every figure in this pa
 \label{app:derivation_prob_2nu_general}
 \appresetfloats
 
-We proceed by computing the survival probability $P_{\nu_\alpha \to \nu_\alpha} = \lvert \nu_\alpha^\dagger \mathbb{U}_2(L) \nu_\alpha \rvert^2$.  We start by operating on $\nu_\alpha$ with the linear combination $h_k \sigma^k$ that appears in the expansion of the evolution operator $\mathbb{U}_2(L)$, \equ{evol_op_2nu}, \ie, $(h_k \sigma^k) \nu_\alpha$.  In matrix form, with $\nu_\alpha = \left(1~0\right)^{\rm T}$, this is
+Both two-flavor probabilities follow from a single matrix product.  Operating on $\nu_\alpha = \left(1~0\right)^{\rm T}$ with the linear combination $h_k \sigma^k$ that appears in the expansion of the evolution operator, \equ{evol_op_2nu}, gives
 \begin{equation}
+ \label{equ:h_on_nu_2nu}
  \left(\begin{array}{cc}
   h_3      & h_1-ih_2 \\
   h_1+ih_2 & -h_3     \\
@@ -1626,33 +1627,40 @@ We proceed by computing the survival probability $P_{\nu_\alpha \to \nu_\alpha} 
  \left(\begin{array}{c}
   h_3      \\
   h_1+ih_2 \\
- \end{array}\right) \;.
+ \end{array}\right) \;,
 \end{equation}
-Using \equ{evol_op_2nu} for $\mathbb{U}_2(L)$, the survival probability amplitude is
-\begin{equation}
+and the two entries are the two probabilities: contracting on the left with $\nu_\alpha^\dagger$ keeps the first, and with $\nu_\beta^\dagger = \left(0~1\right)$ the second.  The coefficients are those of Table \ref{tab:h2_coefficients}, and all three are real because $\mathbb{H}_2$ is Hermitian: $h_1 = {\rm Re}[(\mathbb{H}_2)_{12}]$ and $h_2 = -{\rm Im}[(\mathbb{H}_2)_{12}]$ from an off-diagonal element and its conjugate, $h_3 = [(\mathbb{H}_2)_{11} - (\mathbb{H}_2)_{22}]/2$ from two real diagonal ones.
+
+Take the transition first.  The identity term of \equ{evol_op_2nu} is diagonal and cannot connect $\nu_\alpha$ to $\nu_\beta$, so the whole amplitude comes from the second entry of \equ{h_on_nu_2nu},
+\begin{equation*}
+ \nu_\beta^\dagger \mathbb{U}_2(L) \nu_\alpha
+ =
+ -i \frac{\sin\left(\lvert h \rvert L\right)}{\lvert h \rvert}
+ \left(h_1 + i h_2\right) \;,
+\end{equation*}
+and, since $\lvert h_1 + i h_2 \rvert^2 = h_1^2 + h_2^2$ for real $h_1$ and $h_2$, its squared modulus is \equ{prob_2nu_general}.
+
+The first entry gives the survival probability, and the two together give back unitarity.  The amplitude is
+\begin{equation*}
  \nu_\alpha^\dagger \mathbb{U}_2(L) \nu_\alpha
  =
  \cos\left(\left\vert h\right\vert L\right)
  -
  i \frac{h_3}{\lvert h \rvert} \sin\left(\left\vert h\right\vert L\right) \;,
-\end{equation}
-where the coefficient $h_3 = [(\mathbb{H}_2)_{11} - (\mathbb{H}_2)_{22}]/2$; see Table \ref{tab:h2_coefficients}.  Since $\mathbb{H}_2$ is Hermitian, its diagonal elements are real, and, hence, $h_3$ is real; the modulus of the amplitude therefore squares term by term, and the survival probability $\lvert \nu_\alpha^\dagger \mathbb{U}_2(L) \nu_\alpha \rvert^2$ is
-\begin{equation}
+\end{equation*}
+whose two terms are its real and imaginary parts, $h_3$ being real, so that the squared modulus is the sum of their squares:
+\begin{equation*}
  P_{\nu_\alpha \to \nu_\alpha}(L)
  =
  \cos^2(\lvert h \rvert L)
  +
- \frac{h_3^2}{\lvert h \rvert^2} \sin^2(\lvert h \rvert L) \;.
-\end{equation}
-Now, because $h_3^2 = \vert h \rvert^2 - h_1^2 - h_2^2$, this becomes
-\begin{equation}
- P_{\nu_\alpha \to \nu_\alpha}(L)
+ \frac{h_3^2}{\lvert h \rvert^2} \sin^2(\lvert h \rvert L)
  =
- 1
- -
- \frac{h_1^2 + h_2^2}{\lvert h \rvert^2} \sin^2(\lvert h \rvert L) \;.
-\end{equation}
-Starting instead from $\nu_\alpha = \left(0~1\right)^{\rm T}$ reverses the sign of the $h_3$ term in the amplitude and leaves its modulus untouched, so the same expression holds for either flavor.  Because of the conservation of probability, $P_{\nu_\alpha \to \nu_\beta} = 1 - P_{\nu_\alpha \to \nu_\alpha}$, with $\alpha \neq \beta$, which gives \equ{prob_2nu_general}.
+ 1 - \frac{h_1^2 + h_2^2}{\lvert h \rvert^2} \sin^2(\lvert h \rvert L) \;,
+\end{equation*}
+the second step using $h_3^2 = \lvert h \rvert^2 - h_1^2 - h_2^2$.  This is $1 - P_{\nu_\alpha \to \nu_\beta}$, as conservation of probability requires.  Starting from $\nu_\beta$ instead reverses the sign of the $h_3$ term and leaves the modulus untouched, so the two survival probabilities are equal, as are the two transition probabilities --- which is the symmetry noted below \equ{prob_2nu_general}.
+
+One configuration lies outside all of this.  Both expressions divide by $\lvert h \rvert^2$, and it vanishes only when $h_1 = h_2 = h_3 = 0$, which is where the two latent roots $\pm \lvert h \rvert$ of Section \ref{sec:evolution_operator} coincide --- the two-flavor face of the degeneracy that Section \ref{sec:three_flavors} discusses at three.  There $\mathbb{H}_2$ is a multiple of the identity, nothing oscillates, and the limiting values are $P_{\nu_\alpha \to \nu_\beta} = 0$ and $P_{\nu_\alpha \to \nu_\alpha} = 1$, which is what {\tt NuOscProbExact} returns.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
