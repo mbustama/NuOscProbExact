@@ -932,8 +932,12 @@ def _earth_hamiltonians(
     widths_km, densities = _earth_slabs_cached(float(costhz),
                                                int(n_slabs_per_segment))
     potentials = matter_potential(densities, electron_fraction)
-    potentials_nc = matter_potential_nc(
-        densities, electron_fraction=electron_fraction)
+    # Only four flavors need the neutral-current potential: with three
+    # active states it is common to all of them and drops out, so at two
+    # and three it is not worth the array it would take.
+    potentials_nc = (
+        matter_potential_nc(densities, electron_fraction=electron_fraction)
+        if n_flavors == 4 else None)
 
     # An antineutrino sees the conjugate vacuum Hamiltonian and both
     # potentials reversed.  Doing only one of the two is the commonest
@@ -942,7 +946,8 @@ def _earth_hamiltonians(
         h_vacuum_energy_independent = np.conj(
             np.asarray(h_vacuum_energy_independent, dtype=complex))
         potentials = -potentials
-        potentials_nc = -potentials_nc
+        if potentials_nc is not None:
+            potentials_nc = -potentials_nc
 
     # The slab axis is the last one the potentials carry, so the energy
     # gains a trailing axis of its own to broadcast against it: a scalar
@@ -1247,8 +1252,11 @@ def _probabilities_earth_batch(
                                     flat.shape[0]*widths_km.shape[0]):
         widths = widths_km*gd.CONV_KM_TO_INV_EV
         potentials = matter_potential(densities, electron_fraction)
-        potentials_nc = matter_potential_nc(
-            densities, electron_fraction=electron_fraction)
+        # As above: only the four-flavor kernel is handed this one.
+        potentials_nc = (
+            matter_potential_nc(densities,
+                                electron_fraction=electron_fraction)
+            if n_flavors == 4 else None)
         h_vac = h_vacuum_energy_independent
 
             # An antineutrino sees the conjugate vacuum Hamiltonian and both
@@ -1257,7 +1265,8 @@ def _probabilities_earth_batch(
         if antineutrino:
             h_vac = np.conj(np.asarray(h_vac, dtype=complex))
             potentials = -potentials
-            potentials_nc = -potentials_nc
+            if potentials_nc is not None:
+                potentials_nc = -potentials_nc
         if n_flavors == 2:
             u = fastkernels.earth_chords_2nu_kernel(
                 h_vac, flat, potentials, widths)
