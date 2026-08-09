@@ -1612,7 +1612,7 @@ Three of them carry more of this paper than the others.  Every figure in this pa
 \label{app:derivation_prob_2nu_general}
 \appresetfloats
 
-Both two-flavor probabilities follow from a single matrix product.  Operating on $\nu_\alpha = \left(1~0\right)^{\rm T}$ with the linear combination $h_k \sigma^k$ that appears in the expansion of the evolution operator, \equ{evol_op_2nu}, gives
+The two-flavor probabilities follow from a single matrix product.  Operating on $\nu_\alpha = \left(1~0\right)^{\rm T}$ with the linear combination $h_k \sigma^k$ that appears in the expansion of the evolution operator, \equ{evol_op_2nu}, gives
 \begin{equation}
  \label{equ:h_on_nu_2nu}
  \left(\begin{array}{cc}
@@ -1629,7 +1629,7 @@ Both two-flavor probabilities follow from a single matrix product.  Operating on
   h_1+ih_2 \\
  \end{array}\right) \;,
 \end{equation}
-and the two entries are the two probabilities: contracting on the left with $\nu_\alpha^\dagger$ keeps the first, and with $\nu_\beta^\dagger = \left(0~1\right)$ the second.  The coefficients are those of Table \ref{tab:h2_coefficients}, and all three are real because $\mathbb{H}_2$ is Hermitian: $h_1 = {\rm Re}[(\mathbb{H}_2)_{12}]$ and $h_2 = -{\rm Im}[(\mathbb{H}_2)_{12}]$ from an off-diagonal element and its conjugate, $h_3 = [(\mathbb{H}_2)_{11} - (\mathbb{H}_2)_{22}]/2$ from two real diagonal ones.
+and each entry carries one of the probabilities: contracting on the left with $\nu_\alpha^\dagger$ keeps the first, and with $\nu_\beta^\dagger = \left(0~1\right)$ the second.  The coefficients are those of Table \ref{tab:h2_coefficients}.  That they are real is what Hermiticity buys here --- a traceless $2 \times 2$ matrix that is not Hermitian needs complex ones --- and it is used once for each of the two moduli below.
 
 Take the transition first.  The identity term of \equ{evol_op_2nu} is diagonal and cannot connect $\nu_\alpha$ to $\nu_\beta$, so the whole amplitude comes from the second entry of \equ{h_on_nu_2nu},
 \begin{equation*}
@@ -1638,9 +1638,9 @@ Take the transition first.  The identity term of \equ{evol_op_2nu} is diagonal a
  -i \frac{\sin\left(\lvert h \rvert L\right)}{\lvert h \rvert}
  \left(h_1 + i h_2\right) \;,
 \end{equation*}
-and, since $\lvert h_1 + i h_2 \rvert^2 = h_1^2 + h_2^2$ for real $h_1$ and $h_2$, its squared modulus is \equ{prob_2nu_general}.
+whose squared modulus is \equ{prob_2nu_general}: the prefactor contributes $\sin^2\left(\lvert h \rvert L\right)/\lvert h \rvert^2$, and $\lvert h_1 + i h_2 \rvert^2 = h_1^2 + h_2^2$ because both are real.
 
-The first entry gives the survival probability, and the two together give back unitarity.  The amplitude is
+The first entry gives the survival probability, and the two then sum to one.  The amplitude is
 \begin{equation*}
  \nu_\alpha^\dagger \mathbb{U}_2(L) \nu_\alpha
  =
@@ -1658,9 +1658,9 @@ whose two terms are its real and imaginary parts, $h_3$ being real, so that the 
  =
  1 - \frac{h_1^2 + h_2^2}{\lvert h \rvert^2} \sin^2(\lvert h \rvert L) \;,
 \end{equation*}
-the second step using $h_3^2 = \lvert h \rvert^2 - h_1^2 - h_2^2$.  This is $1 - P_{\nu_\alpha \to \nu_\beta}$, as conservation of probability requires.  Starting from $\nu_\beta$ instead reverses the sign of the $h_3$ term and leaves the modulus untouched, so the two survival probabilities are equal, as are the two transition probabilities --- which is the symmetry noted below \equ{prob_2nu_general}.
+the second step using $h_3^2 = \lvert h \rvert^2 - h_1^2 - h_2^2$.  This is $1 - P_{\nu_\alpha \to \nu_\beta}$, as conservation of probability requires.  Starting from $\nu_\beta$ reverses the sign of the $h_3$ term and leaves the modulus untouched, so a two-flavor system has only these two numbers in it: $P_{\nu_\beta \to \nu_\beta} = P_{\nu_\alpha \to \nu_\alpha}$, and $P_{\nu_\beta \to \nu_\alpha} = P_{\nu_\alpha \to \nu_\beta}$, the latter already plain in \equ{prob_2nu_general}, whose right-hand side carries no flavor label at all.
 
-One configuration lies outside all of this.  Both expressions divide by $\lvert h \rvert^2$, and it vanishes only when $h_1 = h_2 = h_3 = 0$, which is where the two latent roots $\pm \lvert h \rvert$ of Section \ref{sec:evolution_operator} coincide --- the two-flavor face of the degeneracy that Section \ref{sec:three_flavors} discusses at three.  There $\mathbb{H}_2$ is a multiple of the identity, nothing oscillates, and the limiting values are $P_{\nu_\alpha \to \nu_\beta} = 0$ and $P_{\nu_\alpha \to \nu_\alpha} = 1$, which is what {\tt NuOscProbExact} returns.
+One Hamiltonian lies outside all of this, and exactly one.  Both expressions divide by $\lvert h \rvert^2$, which vanishes only when $h_1 = h_2 = h_3 = 0$: the latent roots of Section \ref{sec:evolution_operator} are $\pm \lvert h \rvert$ at two flavors, so there is nowhere else they can meet.  There $\mathbb{H}_2$ is a multiple of the identity, nothing oscillates, and the values are $P_{\nu_\alpha \to \nu_\beta} = 0$ and $P_{\nu_\alpha \to \nu_\alpha} = 1$, which is what {\tt NuOscProbExact} returns.  That single point is the whole of two-flavor degeneracy, and the difference from three flavors is not one of degree: there, as Section \ref{sec:three_flavors} says, two roots may meet at any $\lvert h \rvert$, and a matter resonance is an approach to it.  So the accuracy that a near-degenerate spectrum costs, in Section \ref{sec:limitations}, has no two-flavor counterpart --- with two roots the gap is the whole spectral spread however small it is, and the probabilities stay exact to round-off as $\lvert h \rvert \to 0$.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
