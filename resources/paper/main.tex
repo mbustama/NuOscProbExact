@@ -1713,6 +1713,14 @@ Now the ordering.  Putting the larger $m_i^2$ on the first mass eigenstate inste
 
 Those cases also fix the labels that vacuum leaves free, each in its own way.  The potential $\mathbb{A}_2$ of \ref{app:sample_2nu_hamiltonians} acts on one state and not the other, so with matter and with NSI the first is $\nu_e$ in earnest rather than by convention; the Lorentz-violating case carries no potential at all, and there it is $\mathbb{B}_2$, with $b_1 \neq b_2$, that does the same work.  The matter, NSI, and LIV panels of \figu{prob_2nu} are computed with the ordering above, and would show the antineutrino probabilities under the other one; the vacuum panel does not depend on the choice.  Nothing in Section\ \ref{sec:examples} is affected, since this concerns the two-flavor Hamiltonian alone.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[t!]
+ \centering
+ \includegraphics[width=\columnwidth]{prob_2nu_vs_energy_compare.pdf}
+ \caption{\label{fig:prob_2nu}Two-neutrino oscillation probabilities $P_{\nu_e \to \nu_e}$ ({\it top}), $P_{\nu_\mu \to \nu_e}$ ({\it center}), and $P_{\nu_\mu \to \nu_\mu}$ ({\it bottom}), computed using the method presented here, via {\tt NuOscProbExact}\ \cite{NuOscProbExact}.  This figure is the two-neutrino counterpart of \figu{prob_3nu}.  See the main text and \ref{app:sample_2nu_hamiltonians} for details.}
+\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1725,11 +1733,11 @@ Those cases also fix the labels that vacuum leaves free, each in its own way.  T
 We start from the definition $u_k = -\frac{i}{2}{\rm Tr}\left(\lambda^k \mathbb{U}_3\right)$ of Section \ref{sec:readings}, which lets $u_k$ be obtained by differentiating a trace rather than by evaluating one:
 \begin{eqnarray*}
  u_k 
- &=& -\frac{1}{2}\text{Tr}\frac{\partial}{\partial\left(-h_kL\right)}e^{-ih_k\lambda^kL}  \\
- &=& -\frac{1}{2}\frac{\partial}{\partial\left(-h_kL\right)}\text{Tr}~\mathbb{U}_3 \\
+ &=& -\frac{1}{2}{\rm Tr}\frac{\partial}{\partial\left(-h_kL\right)}e^{-ih_a\lambda^aL}  \\
+ &=& -\frac{1}{2}\frac{\partial}{\partial\left(-h_kL\right)}{\rm Tr}~\mathbb{U}_3 \\
  &=& -\frac{i}{2}\sum_{m=1}^3 e^{iL\psi_m} \frac{\partial\left(L\psi_m\right)}{\partial\left(-h_kL\right)} \;,
 \end{eqnarray*}
-the last step using ${\rm Tr}\,\mathbb{U}_3 = \sum_m e^{iL\psi_m}$ and bringing down a factor of $i$ from each exponential.  The baseline is held fixed throughout, so this is a derivative of the latent root alone, and it follows from implicit differentiation of $\chi\left(\psi_m\right) = 0$, with $\chi^\prime\left(\psi_m\right) = 3\psi_m^2 - \lvert h \rvert^2$ appearing as the denominator already met in \equ{uk_expanded}:
+where the first step holds under the trace and not outside it: the derivative of a matrix exponential is $\int_0^1 e^{sA} A^\prime e^{\left(1-s\right)A} {\rm d}s$, which cyclicity collapses to $A^\prime e^A$ once traced, returning $i \lambda^k \mathbb{U}_3$ here.  The last step uses ${\rm Tr}\,\mathbb{U}_3 = \sum_m e^{iL\psi_m}$ and brings down a factor of $i$ from each exponential.  The baseline is held fixed throughout, so what remains is a derivative of the latent root alone, and it follows from implicit differentiation of $\chi\left(\psi_m\right) = 0$ --- legitimate wherever $\chi^\prime\left(\psi_m\right) = 3\psi_m^2 - \lvert h \rvert^2$ does not vanish, which is the non-degeneracy \equ{uk_expanded} requires in any case, that same quantity being its denominator:
 \begin{equation*}
  \frac{\partial\left(L\psi_m\right)}{\partial\left(-h_kL\right)}
  =
@@ -1740,26 +1748,16 @@ the last step using ${\rm Tr}\,\mathbb{U}_3 = \sum_m e^{iL\psi_m}$ and bringing 
 Thus, the coefficients $u_k$ can be written as
 \begin{equation}
  \label{equ:uk_short}
- u_k = i \left[ -L x h_k + L^2 y \left(h\ast h\right)_k \right] \;,
+ u_k = i \left[ x h_k - y \left(h\ast h\right)_k \right] \;,
 \end{equation}
 where
 \begin{eqnarray}
  \label{equ:x_def}
- && x = - \frac{1}{L} \sum_{m=1}^3 \frac{ \psi_m e^{i L \psi_m}} { 3\psi_m^2-\lvert h \rvert^2 } \;, \\
+ && x = \sum_{m=1}^3 \frac{ \psi_m e^{i L \psi_m}} { 3\psi_m^2-\lvert h \rvert^2 } \;, \\
  \label{equ:y_def}
- && y = - \frac{1}{L^2} \sum_{m=1}^3 \frac{ e^{i L \psi_m} } { 3\psi_m^2-\lvert h \rvert^2 } \;.
+ && y = \sum_{m=1}^3 \frac{ e^{i L \psi_m} } { 3\psi_m^2-\lvert h \rvert^2 } \;.
 \end{eqnarray}
 Inserting Eqs.\ (\ref{equ:x_def}) and (\ref{equ:y_def}) into \equ{uk_short} results in \equ{uk_expanded} in the main text.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\begin{figure}[t!]
- \centering
- \includegraphics[width=\columnwidth]{prob_2nu_vs_energy_compare.pdf}
- \caption{\label{fig:prob_2nu}Two-neutrino oscillation probabilities $P_{\nu_e \to \nu_e}$ ({\it top}), $P_{\nu_\mu \to \nu_e}$ ({\it center}), and $P_{\nu_\mu \to \nu_\mu}$ ({\it bottom}), computed using the method presented here, via {\tt NuOscProbExact}\ \cite{NuOscProbExact}.  This figure is the two-neutrino counterpart of \figu{prob_3nu}.  See the main text and \ref{app:sample_2nu_hamiltonians} for details.}
-\end{figure}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\newpage
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
