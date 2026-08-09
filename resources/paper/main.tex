@@ -1292,15 +1292,18 @@ We thank Carlos Arg\"uelles, Peter Denton, Francisco De Zela, Joachim Kopp, Step
 % Appendix B is B.1 and not B.12: elsarticle prefixes the letter but
 % never resets the counters.  \thesection is "Appendix~B" here, so the
 % float numbers take the letter alone.
-\counterwithin{figure}{section}
-\counterwithin{table}{section}
 \renewcommand{\thefigure}{\Alph{section}.\arabic{figure}}
 \renewcommand{\thetable}{\Alph{section}.\arabic{table}}
+% Every appendix restarts its own float numbering; \appresetfloats is
+% written out at the head of each one rather than left to a single
+% global declaration, so that adding an appendix cannot miss it.
+\newcommand{\appresetfloats}{\setcounter{figure}{0}\setcounter{table}{0}}
 
 \newpage
 
 \section{SU($n$) matrices}
 \label{app:matrices}
+\appresetfloats
 
 For completeness, and to avoid any ambiguity in the method presented in the main text, we show here explicitly the SU(2) and SU(3) matrices, and the construction of the SU(4) matrices.  
 
@@ -1431,6 +1434,7 @@ What the embedding does not preserve is the order.  Gell-Mann interleaves the tw
 
 \section{Structure of the code}
 \label{app:structure}
+\appresetfloats
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{figure*}[t!]
@@ -1440,9 +1444,21 @@ What the embedding does not preserve is the order.  Gell-Mann interleaves the tw
 \end{figure*}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Figure~\ref{fig:architecture} shows the structure of {\tt NuOscProbExact}: ten modules and some $13\,700$ lines, more than half of them docstrings.  Nothing inherits from anything, and no result depends on a previous call.  What state there is either caches geometry that would otherwise be recomputed --- the slabs along a chord, the size of the last-level cache --- or selects a code path, as {\tt fastkernels.USE\_NUMBA} and {\tt oscprob4nu.ROOT\_STRATEGY} do; none of it changes a probability. 
+Figure~\ref{fig:architecture} shows the structure of {\tt NuOscProbExact}: ten modules and some $13\,700$ lines, more than half of them docstrings.  Nothing inherits from anything, and no result depends on a previous call; the only state kept is memoised geometry and two switches that select a code path, neither of which changes a probability.
 
-Table \ref{tab:modules} says what each module is for.  The division is along one line: a module either builds a Hamiltonian or consumes one.  Everything in the first group is a convenience---the scenarios of Section \ref{sec:examples} are common enough to be worth shipping, but nothing in the second group knows or cares where its input came from, which is what makes an arbitrary Hamiltonian a first-class case rather than an escape hatch.  (Two sign conventions are in use internally in the code: {\tt oscprob3nu} works with the latent roots of Section \ref{sec:evolution_operator}, whereas {\tt oscprob4nu} uses the eigenvalues of $\tilde{\mathbb{H}}$ and the opposite sign in the exponent.  The two are equivalent, both reproduce \equ{sylvester} to round-off, and neither is visible outside its module.)  \ref{app:tests} says how all of this is tested.
+\subsection{The modules}
+
+Table \ref{tab:modules} says what each module is for, and \ref{app:tests} says how each is tested.  The division is along one line: a module either builds a Hamiltonian or consumes one.  Everything in the first group is a convenience---the scenarios of Section \ref{sec:examples} are common enough to be worth shipping, but nothing in the second group knows or cares where its input came from, which is what makes an arbitrary Hamiltonian a first-class case rather than an escape hatch.  (Two sign conventions are in use internally: {\tt oscprob3nu} works with the latent roots of Section \ref{sec:evolution_operator}, whereas {\tt oscprob4nu} uses the eigenvalues of $\tilde{\mathbb{H}}$ and the opposite sign in the exponent.  The two are equivalent, both reproduce \equ{sylvester} to round-off, and neither is visible outside its module.)
+
+\subsection{Entry points}
+
+The names follow a pattern, so the call for a new case can usually be guessed.  Probabilities come from {\tt probabilities\_$n$nu} and the evolution operator from {\tt evolution\_operator\_$n$nu}, both in {\tt oscprob$n$nu}, and both take a Hamiltonian and a baseline, or stacks of either.  Hamiltonians for the standard scenarios come from {\tt hamiltonian\_$n$nu\_}\emph{scenario} in {\tt hamiltonians$n$nu}, with \emph{scenario} one of {\tt vacuum\_energy\_independent}, {\tt matter}, {\tt nsi}, or {\tt liv}; what they return is an ordinary array, so one built by hand serves just as well.  A trajectory of constant-density layers goes to {\tt probabilities\_$n$nu\_slabs}, and a chord through Earth to {\tt probabilities\_$n$nu\_earth}, which cuts the layers from PREM itself.  Those few names cover every case in this paper.  The full interface --- some ninety public functions, including the named observing sites, the tolerance-driven refinement, and the two-flavor counterparts throughout --- is documented on the accompanying site\ \cite{NuOscProbExactDocs}.
+
+\subsection{Adding a scenario}
+
+Extending the code means writing a Hamiltonian, and nothing else.  The {\tt oscprob} modules accept any Hermitian $2\times2$, $3\times3$ or $4\times4$ array and do not ask where it came from, so a new term is added to whatever an existing builder returns and passed on unchanged.  Listing \ref{lst:3nu_arbitrary} is that in full: one array of potentials, one matrix of charges, one addition.  The same holds along a trajectory---build one Hamiltonian per layer and hand the stack to {\tt slabs}---which is how \figu{density_arrangement} and \figu{lri_earth} are computed.  Nothing needs to be registered, subclassed, or recompiled, and the compiled kernels pick up the new Hamiltonian along with every other.
+
+What cannot be added this way is anything that is not a Hermitian Hamiltonian.  Absorption, decay to invisible states, and open-system terms are not missing features but a different object, evolving the density matrix rather than the state; Section \ref{sec:limitations} gives the cost of that, and {\tt nuSQuIDS}\ \cite{Delgado:2014kpa, NuSQuIDS} is the tool for it.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 {\def\arraystretch{1.2}
@@ -1472,6 +1488,7 @@ Table \ref{tab:modules} says what each module is for.  The division is along one
 
 \section{The test suite}
 \label{app:tests}
+\appresetfloats
 
 Table \ref{tab:tests} lists what the 823 tests that ship with {\tt NuOscProbExact} cover; \ref{app:structure} shows the modules they exercise.  They run in a few seconds, and reach every line and every branch of the library, providing 100\% code coverage in v1.13.1 of the code.
 
@@ -1526,6 +1543,7 @@ The suite is not only a regression net.  Roughly half of it checks the physics a
 
 \section{Derivation of \equ{prob_2nu_general}}
 \label{app:derivation_prob_2nu_general}
+\appresetfloats
 
 We proceed by computing the survival probability $P_{\nu_\alpha \to \nu_\alpha} = \lvert \nu_\alpha^\dagger \mathbb{U}_2(L) \nu_\alpha \rvert^2$.  We start by operating on $\nu_\alpha$ with the linear combination $h_k \sigma^k$ that appears in the expansion of the evolution operator $\mathbb{U}_2(L)$, \equ{evol_op_2nu}, \ie, $(h_k \sigma^k) \nu_\alpha$.  In matrix form, with $\nu_\alpha = \left(1~0\right)^{\rm T}$, this is
 \begin{equation}
@@ -1576,6 +1594,7 @@ Because of the conservation of probability, $P_{\nu_\alpha \to \nu_\beta} = 1 - 
 
 \section{Two-flavor oscillations in vacuum}
 \label{app:2nu_vacuum}
+\appresetfloats
 
 As a simple example and cross-check of the OS method, we consider two-flavor oscillations in vacuum.  These are driven by the mass-squared difference between two mass eigenstates, $\nu_1$ and $\nu_2$, with masses $m_1$ and $m_2$, out of which the flavor states $\nu_e$ and $\nu_\mu$ are constructed (or $\nu_2$ and $\nu_3$ for the case of $\nu_\mu$ and $\nu_\tau$).  The spaces of flavor and mass states are connected by a unitary rotation that is parametrized by a mixing angle $\theta$, \ie,
 \begin{equation}
@@ -1625,6 +1644,7 @@ which is the standard expression for two-neutrino oscillations in vacuum; see, \
 
 \section{Derivation of \equ{uk_expanded}}
 \label{app:derivation_uk_expanded}
+\appresetfloats
 
 We start from the definition $u_k = -\frac{i}{2}{\rm Tr}\left(\lambda^k \mathbb{U}_3\right)$ of Section \ref{sec:readings}, which lets $u_k$ be obtained by differentiating a trace rather than by evaluating one:
 \begin{eqnarray*}
@@ -1670,6 +1690,7 @@ Inserting Eqs.\ (\ref{equ:x_def}) and (\ref{equ:y_def}) into \equ{uk_short} resu
 
 \section{Sample two- and four-flavor Hamiltonians}
 \label{app:sample_2nu_hamiltonians}
+\appresetfloats
 
 Here we present the two- and four-flavor Hamiltonians included as examples in {\tt NuOscProbExact}.  These are the counterparts of the three-flavor examples presented in Section\ \ref{sec:examples}; we refer to that section for a description of each scenario.  All of the Hamiltonians below are written in the flavor basis.
 
@@ -1789,6 +1810,7 @@ with $\mathbb{B}_4 = {\rm diag}\left(b_1, b_2, b_3, b_4\right)$ and $\mathbb{R}_
 
 \section{Speed against accuracy through the Earth}
 \label{app:prem_plane}
+\appresetfloats
 
 Section \ref{sec:plane} reads \figu{prem_plane}; this appendix is what had to be true before it could be drawn, and where each code's curve stops.
 
