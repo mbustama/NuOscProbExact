@@ -713,9 +713,10 @@ The same routines also accept a stack of Hamiltonians, an array of baselines, or
 
 \smallskip
 
-\subsection{Documentation}  
+\subsection{Documentation}
+\label{sec:documentation}
 
-The main source of documentation is the accompanying site\ \cite{NuOscProbExactDocs}; a copy is bundled with the code.  Besides an API reference generated from the source, it carries three things that do not fit in a paper: a methodology section that works through the construction of Sections \ref{sec:general_n}--\ref{sec:four_flavors} in the form in which it is implemented, including the conditioning behavior discussed below; a set of numerical recipes for the cases users actually meet --- layered profiles, oscillograms, antineutrinos, parameter scans; and twenty executable notebooks, one of which generates every figure in this paper, listed in \ref{app:notebooks}.  Every notebook is executed in continuous integration whenever the code changes, and one that carries no stored output fails the build, so the documented behavior and the shipped behavior cannot drift apart.
+The main source of documentation is the accompanying site\ \cite{NuOscProbExactDocs}, whose source is in the repository beside the code.  Besides an API reference generated from the source, it carries three things that do not fit in a paper: a methodology section that works through the construction of Sections \ref{sec:general_n}--\ref{sec:four_flavors} in the form in which it is implemented, including the conditioning behavior discussed below; a set of numerical recipes for the cases users actually meet --- layered profiles, oscillograms, antineutrinos, parameter scans; and twenty executable notebooks, one of which generates every figure in this paper, listed in \ref{app:notebooks}.  Every notebook is executed in continuous integration whenever the code changes, and one that carries no stored output fails the build, so the documented behavior and the shipped behavior cannot drift apart.
 
 \subsection{Installation}
 
@@ -728,7 +729,7 @@ Development happens in the public GitHub repository\ \cite{NuOscProbExact}, whic
 \subsection{Validation}
 \label{sec:validation}
 
-The code ships with a test suite of 828 tests, which covers every line and branch of the library to achieve 100\% code coverage in v1.13.1 of {\tt NuOscProbExact}; \ref{app:tests} groups them by what they cover.  Beyond internal consistency, the results are checked against independent sources: against {\tt nuSQuIDS}\ \cite{Delgado:2014kpa, NuSQuIDS}, an independently written code, with which the three-flavor probabilities agree to $10^{-11}$ and the four-flavor ones to $10^{-9}$ once conventions are matched; against the closed-form eigenvalues of Zaglauer \& Schwarzer\ \cite{Zaglauer:1988gz} for the three-flavor matter spectrum; against direct numerical exponentiation of the Hamiltonian, as in \figu{validation}; and, in the two-flavor vacuum case, against the standard analytic formula.  Where a residual remains --- as in the four-flavor case, whose eigenvalue cluster can be stiff --- the tests establish which side of the comparison it belongs to rather than absorbing it into a loose tolerance.
+The repository carries a test suite of 829 tests, which covers every line and branch of the library to achieve 100\% code coverage in v1.13.1 of {\tt NuOscProbExact}; \ref{app:tests} groups them by what they cover.  Beyond internal consistency, the results are checked against independent sources: against {\tt nuSQuIDS}\ \cite{Delgado:2014kpa, NuSQuIDS}, an independently written code, with which the three-flavor probabilities agree to $10^{-11}$ and the four-flavor ones to $10^{-9}$ once conventions are matched; against the closed-form eigenvalues of Zaglauer \& Schwarzer\ \cite{Zaglauer:1988gz} for the three-flavor matter spectrum; against direct numerical exponentiation of the Hamiltonian, as in \figu{validation}; and, in the two-flavor vacuum case, against the standard analytic formula.  Where a residual remains --- as in the four-flavor case, whose eigenvalue cluster can be stiff --- the tests establish which side of the comparison it belongs to rather than absorbing it into a loose tolerance.
 
 \subsection{Limitations}
 \label{sec:limitations}
@@ -748,7 +749,7 @@ Listing\ \ref{lst:3nu_examples} shows a basic code example of how to use {\tt Nu
 
 Below, we introduce each of them briefly; we do not explore their phenomenology, but we provide references.  Following our tenet, we do not derive analytic expressions for the probabilities, only numerically evaluate them.
 
-Four other subsections go beyond them: antineutrinos, which need no separate construction; matter of piece-wise constant density and the profile of Earth; a 3+1 sterile system, which needs four flavors; and a Hamiltonian of the reader's own, for which no specialized expression exists in any of the codes of Section \ref{sec:comparison}.  The first needs no new construction, only the two operations of \equ{antineutrino}; the next two extend the reach of the method, to matter that varies along the trajectory and to a fourth flavor; and the last is what the code was built for.  The batched evaluation draws each of their figures in a single call.  Every figure in this paper that shows computed probabilities --- Figures \ref{fig:validation}, \ref{fig:prob_3nu}, \ref{fig:earth_oscillogram}, \ref{fig:density_arrangement}, \ref{fig:sterile_earth}, \ref{fig:lri_earth}, \ref{fig:exact_vs_approx}, and \ref{fig:prob_2nu} --- is generated by running the single bundled notebook {\tt notebooks/10\_paper\_figures.ipynb}.
+Four other subsections go beyond them: antineutrinos, which need no separate construction; matter of piece-wise constant density and the profile of Earth; a 3+1 sterile system, which needs four flavors; and a Hamiltonian of the reader's own, for which no specialized expression exists in any of the codes of Section \ref{sec:comparison}.  The first needs no new construction, only the two operations of \equ{antineutrino}; the next two extend the reach of the method, to matter that varies along the trajectory and to a fourth flavor; and the last is what the code was built for.  The batched evaluation draws each of their figures in a single call.  Every figure in this paper that shows computed probabilities --- Figures \ref{fig:validation}, \ref{fig:prob_3nu}, \ref{fig:earth_oscillogram}, \ref{fig:density_arrangement}, \ref{fig:sterile_earth}, \ref{fig:lri_earth}, \ref{fig:exact_vs_approx}, and \ref{fig:prob_2nu} --- is generated by running the single notebook {\tt notebooks/10\_paper\_figures.ipynb} in the repository.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1492,7 +1493,7 @@ What cannot be added this way is anything that is not a Hermitian Hamiltonian.  
 \label{app:tests}
 \appresetfloats
 
-Table \ref{tab:tests} lists what the 828 tests that ship with {\tt NuOscProbExact} cover; \ref{app:structure} shows the modules they exercise.  They reach every line and every branch of the library: coverage is $100\%$ in v1.13.1, held above a floor of $98\%$ that fails the build if it drops.
+Table \ref{tab:tests} lists what the 829 tests of {\tt NuOscProbExact} cover; \ref{app:structure} shows the modules they exercise.  They reach every line and every branch of the library: coverage is $100\%$ in v1.13.1, held above a floor of $98\%$ that fails the build if it drops.
 
 They run on every push and every pull request, so a contributor need not invoke them; but they are also the quickest way to confirm a local installation.  The tests are not packaged with the library, so this is from a clone:
 \begin{verbatim}
@@ -1530,11 +1531,11 @@ The suite is not only a regression net.  Roughly half of it checks the physics a
    Probabilities                            & 11 \\
    Evolution operator                       & 11 \\
    Vectorized Hamiltonian builders          & 9 \\
+   Repository layout                        & 8 \\
    Version consistency                      & 7 \\
-   Repository layout                        & 7 \\
    This paper, against the repository       & 4 \\
    \hline
-   Total                                    & 828 \\
+   Total                                    & 829 \\
   \end{tabular}
   \caption{\label{tab:tests}The test suite of {\tt NuOscProbExact} v1.13.1, grouped by what each file covers, in descending order.  Coverage of the library is complete: every line and every branch is executed.  The comparison with {\tt nuSQuIDS}\ \cite{Delgado:2014kpa, NuSQuIDS} runs against frozen reference values rather than against a live installation, so that a release of another code cannot break this one's continuous integration.}
 \end{table}
@@ -1550,16 +1551,16 @@ The suite is not only a regression net.  Roughly half of it checks the physics a
 \appresetfloats
 
 
-Twenty tutorial notebooks come with {\tt NuOscProbExact}, in the {\tt notebooks/} directory of the repository\ \cite{NuOscProbExact}, numbered in reading order; Table \ref{tab:notebooks} says what each one does.  They are the long form of Section \ref{sec:examples}: there, a scenario is a paragraph and a panel, with one listing standing for four of them; in a notebook it is the same calculation with the reasoning around it --- why a convention is what it is, what happens at the edges of the parameter range, and what the numbers were checked against.
+Twenty tutorial notebooks sit in the {\tt notebooks/} directory of the repository\ \cite{NuOscProbExact}, numbered in reading order; Table \ref{tab:notebooks} says what each one does.  They are the long form of Section \ref{sec:examples}: what is a paragraph and a figure there is, in a notebook, the same calculation with the reasoning around it --- why a convention is what it is, what happens at the edges of the parameter range, and what the numbers were checked against.
 
-They live in the repository rather than in the installed package, so they come with a clone and not with {\tt pip}; running them from one needs only
+They are not part of the installed package, so they come with a clone rather than with {\tt pip}; running them from one needs only
 \begin{verbatim}
 pip install "nuoscprobexact[notebooks]"
 jupyter lab notebooks/
 \end{verbatim}
-Reading them needs less than that: each is stored with its output, so a notebook can be read on GitHub without being run, and each ends with a pointer to its neighbors in the reading order and to the API reference.  All twenty are written by one generator script, also in the repository, which executes each of them in turn, and all twenty are executed again in continuous integration under the guarantee of \ref{app:tests}.
+Reading them needs less than that: each is stored with its output, so a notebook can be read on GitHub without being run, and each ends with a pointer to its neighbors in the reading order and to the API reference.  All twenty are written by one generator script, also in the repository, which executes each of them in turn; continuous integration then re-executes them on every change, under the conditions Section \ref{sec:documentation} gives for failing the build.
 
-Three of them carry more of this paper than the others.  Every figure here is produced by notebook 10, and by nothing else: the probabilities are computed as the notebook runs, except in the figures that compare this code against another, where every code's numbers, including this one's, are read from data frozen in the repository.  Notebook 17 works through the external corroboration summarized in Section \ref{sec:validation}: what {\tt nuSQuIDS} and the Zaglauer--Schwarzer closed form each agree with, to what accuracy, and --- the laborious part --- which conventions had to be matched before either comparison meant anything.  And notebook 20 is where the long-range potential of Section \ref{sec:arbitrary_hamiltonian} is built and validated, Listing \ref{lst:3nu_arbitrary} being the core of it.
+Three of them carry more of this paper than the others.  Every figure in this paper is produced by notebook 10, and by nothing else: the probabilities in them are computed as the notebook runs, except in the figures that compare this code against another, where every code's numbers, including this one's, are read from data frozen in the repository.  Notebook 17 works through the external corroboration summarized in Section \ref{sec:validation}: what {\tt nuSQuIDS} and the Zaglauer--Schwarzer closed form each agree with, to what accuracy, and --- the laborious part --- which conventions had to be matched before either comparison meant anything.  And notebook 20 is where the long-range potential of Section \ref{sec:arbitrary_hamiltonian} is built and validated, Listing \ref{lst:3nu_arbitrary} being the core of it.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 {\def\arraystretch{1.1}
@@ -1572,7 +1573,7 @@ Three of them carry more of this paper than the others.  Every figure here is pr
    1 & Basics & Units, one probability, and why to pass arrays rather than loop \\
    2 & Oscillations in vacuum & The probabilities against baseline and against energy \\
    \multicolumn{3}{l}{\emph{Matter, and new physics}} \\
-   3 & Matter, NSI, and Lorentz-invariance violation & Constant-density matter and two kinds of new physics: three Hamiltonians, one routine \\
+   3 & Matter, NSI, and Lorentz-invariance violation & Constant-density matter, then non-standard interactions and Lorentz-invariance violation on top of it: three Hamiltonians, one routine \\
    4 & Oscillograms & A two-dimensional map in energy and baseline, from a single call \\
    5 & Bi-probability plots & CP violation as an ellipse, and where it degenerates to a point \\
    \multicolumn{3}{l}{\emph{Matter that varies along the trajectory}} \\
@@ -1587,7 +1588,7 @@ Three of them carry more of this paper than the others.  Every figure here is pr
    12 & Mass ordering and the octant & Both orderings, and the octant degeneracy of $\theta_{23}$: where it holds, and the channel that breaks it \\
    13 & Antineutrinos, done properly & The two operations of \equ{antineutrino}, and two ways of applying only one \\
    \multicolumn{3}{l}{\emph{Hard cases}} \\
-   14 & Solar neutrinos, the MSW resonance, and the limits of slabs & The adiabatic resonance by slabs, checked against the analytic result, and where a Magnus-type method takes over \\
+   14 & Solar neutrinos, the MSW resonance, and the limits of slabs & The adiabatic resonance, checked against the analytic result, and where a Magnus-type method takes over \\
    15 & Numerical edge cases & Degeneracies and vanishing denominators, and what is returned in place of NaN \\
    16 & Four neutrinos, and a sterile state & A 3+1 system through SU(4), and why the construction stops at four \\
    17 & Cross-checks with other codes & Agreement with {\tt nuSQuIDS} and with the Zaglauer--Schwarzer eigenvalues, and the conventions matched to reach it \\
@@ -1596,7 +1597,7 @@ Three of them carry more of this paper than the others.  Every figure here is pr
    19 & Animated scenes & Four parameter sweeps, drawn as filmstrips, with the animation an opt-in switch \\
    20 & An arbitrary Hamiltonian, through three profiles & A long-range $L_e - L_\mu$ force carried through an invented body, an exponential one, and the Earth \\
   \end{tabular}}
-  \caption{\label{tab:notebooks}The twenty tutorial notebooks in the repository of {\tt NuOscProbExact} v1.13.1, in reading order.  The groupings are a suggested path rather than a division of the code: any notebook may be read on its own.  This table is checked against that repository by the test suite of \ref{app:tests}, which derives the numbering and the titles from the notebooks themselves, so one added, removed, reordered, or retitled fails the build until the table follows it.}
+  \caption{\label{tab:notebooks}The twenty tutorial notebooks of {\tt NuOscProbExact} v1.13.1, in reading order.  The groupings are a suggested path rather than a division of the code: any notebook may be read on its own.  This table is checked against that repository by the test suite of \ref{app:tests}, which derives the numbering and the titles from the notebooks themselves, so a notebook added, removed, reordered, or retitled fails the build until the table follows it.}
 \end{table*}
 }
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1773,7 +1774,7 @@ For oscillations in vacuum, we use \equ{h2_vacuum}, \ie,
  \mathbb{M}_2^2
  \mathbb{R}_{2,\theta}^\dagger \;,
 \end{equation*}
-where the rotation matrix $\mathbb{R}_{2,\theta}$ is given in \equ{u_rotation_2nu}, in terms of the mixing angle $\theta$.  In \figu{prob_2nu}, we set $\theta$ and $\Delta m^2$, respectively, to the values of $\theta_{23}$ and $\Delta m_{31}^2$ used in \figu{prob_3nu}.  The labels $e$ and $\mu$ on a pair carrying the parameters of the $2$--$3$ sector are, as Section \ref{sec:general_remarks} notes, only names: at two flavors nothing distinguishes one pair from another once the angle and the splitting are fixed.  These are also the values used by the two-neutrino examples bundled with the code, and they are the ones the figure requires: with $\Delta m_{21}^2$ the first minimum of $P_{\nu_e \to \nu_e}$ at $L = 1300$~km would fall at $E \simeq 0.08$~GeV, far below the range plotted, and its depth would be set by $\sin^2 2\theta_{12}$; the published figure instead shows that minimum at $E \simeq 2.6$~GeV with near-maximal depth, which is what $\Delta m_{31}^2$ and $\theta_{23}$ give.
+where the rotation matrix $\mathbb{R}_{2,\theta}$ is given in \equ{u_rotation_2nu}, in terms of the mixing angle $\theta$.  In \figu{prob_2nu}, we set $\theta$ and $\Delta m^2$, respectively, to the values of $\theta_{23}$ and $\Delta m_{31}^2$ used in \figu{prob_3nu}.  The labels $e$ and $\mu$ on a pair carrying the parameters of the $2$--$3$ sector are, as Section \ref{sec:general_remarks} notes, only names: at two flavors nothing distinguishes one pair from another once the angle and the splitting are fixed.  These are also the values used by the two-neutrino examples in the repository, and they are the ones the figure requires: with $\Delta m_{21}^2$ the first minimum of $P_{\nu_e \to \nu_e}$ at $L = 1300$~km would fall at $E \simeq 0.08$~GeV, far below the range plotted, and its depth would be set by $\sin^2 2\theta_{12}$; the published figure instead shows that minimum at $E \simeq 2.6$~GeV with near-maximal depth, which is what $\Delta m_{31}^2$ and $\theta_{23}$ give.
 
 For oscillations in matter, we use
 \begin{equation*}

@@ -25,6 +25,7 @@ without touching anything.
 """
 
 import ast
+import json
 import os
 import pathlib
 import re
@@ -510,3 +511,57 @@ def test_the_notebook_page_lists_every_notebook_in_reading_order():
         flattened = ' '.join(page[found:found+400].split())
         wanted = blurb[0].upper() + blurb[1:]
         assert wanted in flattened, 'blurb missing for %s: %s' % (name, wanted)
+
+
+# A notebook whose own heading cannot be carried verbatim by
+# `READING_ORDER`, with the reason.  An rst link text cannot contain a
+# `:math:` role, so 12's heading loses its subscript on the way to the
+# documentation page; the paper's table says `theta_23` in the column
+# beside the title instead.  Anything else here would be drift.
+HEADING_EXCEPTIONS = {
+    '12_ordering_and_octant.ipynb': 'Mass ordering and the octant',
+}
+
+
+def test_reading_order_titles_are_the_notebooks_own_headings():
+    r"""A notebook is called the same thing wherever it is named.
+
+    ``READING_ORDER`` supplies the title to three places --- the
+    documentation page, the navigation footers, and Appendix D of the
+    paper --- and until this test there was a fourth, unchecked: the
+    heading inside the notebook itself.  They had drifted in four of the
+    twenty, always in the same direction, the list carrying a shortened
+    form of what the notebook says at the top of its first cell: "Matter,
+    NSI, and LIV" for a notebook headed "Matter, NSI, and
+    Lorentz-invariance violation", and three more like it.  A reader who
+    follows a link from the paper should not have to work out that the
+    page they land on is the one they were sent to.
+
+    The comparison strips ``$`` so that a heading may set its
+    mathematics as mathematics --- ``SU($n$)`` against ``SU(n)`` --- and
+    `HEADING_EXCEPTIONS` carries the one title that cannot survive the
+    trip into an rst link at all.
+    """
+    root = pathlib.Path(__file__).resolve().parent.parent
+    generator = (root / 'notebooks' / 'make_notebooks.py').read_text()
+    order = ast.literal_eval(
+        re.search(r'READING_ORDER = (\[.*?\n\])\n', generator, re.S).group(1))
+
+    for name, title, _ in order:
+        notebook = json.loads((root / 'notebooks' / name).read_text())
+        first = ''.join(notebook['cells'][0]['source']).strip().split('\n')[0]
+        assert first.startswith('# '), (
+            '%s does not open with a heading' % name)
+        heading = first[2:].strip().replace('$', '')
+
+        if name in HEADING_EXCEPTIONS:
+            assert title == HEADING_EXCEPTIONS[name], (
+                '%s is listed as %r; the exception on file is %r, so either '
+                'the title changed or the exception is stale'
+                % (name, title, HEADING_EXCEPTIONS[name]))
+            continue
+
+        assert heading == title, (
+            '%s is headed %r but listed as %r; the notebook, the '
+            'documentation page, the footers and the paper have to agree'
+            % (name, heading, title))

@@ -193,8 +193,8 @@ def test_the_paper_states_the_notebook_count_correctly():
             % (stale.group(0), count))
 
 
-def test_the_test_table_sums_to_the_total_it_states():
-    r"""Table C.1 adds up, and covers every test file.
+def test_the_test_table_adds_up_and_is_ordered():
+    r"""Table C.1 adds up, is in the order it claims, and covers every file.
 
     It is a hand-written breakdown of a number that changes whenever a
     test is added, in a document nothing rebuilds.  Both halves have
@@ -202,6 +202,11 @@ def test_the_test_table_sums_to_the_total_it_states():
     longer summed to the stated total, and a total that no longer
     matched the suite.  The row count is checked too, since the table is
     one row per test module.
+
+    The descending order is checked because the caption promises it and
+    because that is what a new row silently breaks: adding four tests to
+    one module moved it up two places, and the row went in where the old
+    count had put it.
     """
     rows, total = [], None
     for line in tabular_labelled('tab:tests').split(r'\\'):
@@ -214,6 +219,9 @@ def test_the_test_table_sums_to_the_total_it_states():
             rows.append(int(cells[1]))
 
     assert total is not None, 'the test table states no total'
+    assert rows == sorted(rows, reverse=True), (
+        'the test table says it is in descending order; it runs %s'
+        % ' '.join(str(row) for row in rows))
     assert sum(rows) == total, (
         'the rows of the test table sum to %d, against a stated total of %d'
         % (sum(rows), total))
