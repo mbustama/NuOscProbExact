@@ -917,6 +917,9 @@ def _earth_hamiltonians(
     n_flavors : int
         Number of neutrino flavors, 2, 3, or 4.
 
+    antineutrino : bool
+        Whether to propagate antineutrinos: the vacuum Hamiltonian is
+        conjugated and every matter potential reversed.
     Returns
     -------
     tuple of numpy.ndarray
@@ -1216,6 +1219,9 @@ def _probabilities_earth_batch(
     caller : str
         Name of the calling routine, used in error messages.
 
+    antineutrino : bool
+        Whether to propagate antineutrinos: the vacuum Hamiltonian is
+        conjugated and every matter potential reversed.
     Returns
     -------
     numpy.ndarray
@@ -1425,6 +1431,9 @@ def _probabilities_earth(
     caller : str
         Name of the calling routine, used in error messages.
 
+    antineutrino : bool
+        Whether to propagate antineutrinos: the vacuum Hamiltonian is
+        conjugated and every matter potential reversed.
     Returns
     -------
     tuple of float or numpy.ndarray
@@ -1497,6 +1506,9 @@ def _probabilities_earth_grid(
     caller : str
         Name of the calling routine, used in error messages.
 
+    antineutrino : bool
+        Whether to propagate antineutrinos: the vacuum Hamiltonian is
+        conjugated and every matter potential reversed.
     Returns
     -------
     numpy.ndarray
@@ -1580,6 +1592,9 @@ def _probabilities_earth_tol(
     caller : str
         Name of the calling routine, used in error messages.
 
+    antineutrino : bool
+        Whether to propagate antineutrinos: the vacuum Hamiltonian is
+        conjugated and every matter potential reversed.
     Returns
     -------
     tuple of float, numpy.ndarray, or tuple
@@ -1843,6 +1858,11 @@ def probabilities_3nu_earth(
         print('P_mue = %.6f'
               % earth.probabilities_3nu_earth(h_vac, 1.0e10, -1.0)[3])
 
+        # The same chord for antineutrinos: matter separates the two
+        print('P_mue (nubar) = %.6f'
+              % earth.probabilities_3nu_earth(
+                  h_vac, 1.0e10, -1.0, antineutrino=True)[3])
+
         # An array of energies returns the whole scan from one call
         energies = np.array([1.0, 5.0, 10.0])*1.0e9
         prob = earth.probabilities_3nu_earth(h_vac, energies, -1.0)
@@ -1874,6 +1894,10 @@ def probabilities_2nu_between_locations(
     `probabilities_2nu_earth` along it.
 
     .. versionadded:: 1.8.0
+
+    .. versionchanged:: 1.13.1
+       Takes ``antineutrino``, passed through to the routine it
+       wraps.
 
     Parameters
     ----------
@@ -1982,6 +2006,10 @@ def probabilities_3nu_between_locations(
     `probabilities_3nu_earth` along it.
 
     .. versionadded:: 1.8.0
+
+    .. versionchanged:: 1.13.1
+       Takes ``antineutrino``, passed through to the routine it
+       wraps.
 
     Parameters
     ----------
@@ -2251,6 +2279,10 @@ def probabilities_4nu_between_locations(
     `probabilities_4nu_earth` along it.
 
     .. versionadded:: 1.11.0
+
+    .. versionchanged:: 1.13.1
+       Takes ``antineutrino``, passed through to the routine it
+       wraps.
 
     Parameters
     ----------
