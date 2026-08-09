@@ -857,6 +857,7 @@ where $\mathbb{M}_3^2 \equiv {\rm diag}(0, \Delta m_{21}^2, \Delta m_{31}^2)$ is
  \label{equ:pmns}
  \mathbb{R}_{3,\theta}
  =
+ \setlength{\arraycolsep}{2pt}
  \left(
  \begin{array}{ccc}
   c_{12}c_{13} & s_{12}c_{13} & s_{13}e^{-i\delta} \\
@@ -1203,7 +1204,7 @@ What \figu{plane} also shows is the shape of the difference.  Every other entry 
 Taken together, the two planes are the honest statement of what this construction is for.  It is not the fastest route to a three-flavor probability in constant matter, and \figu{plane} says so.  Its value is that its position on the plot does not depend on the Hamiltonian: the same call, at the same accuracy, serves four flavors, sterile states, non-standard interactions, a Lorentz-violating background, or a Hamiltonian nobody has yet written down --- none of which the other entries in \figu{plane} can take at all, and for which the question of which is faster therefore does not arise.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-{\def\arraystretch{1.2}
+{\def\arraystretch{1.2}\setlength{\tabcolsep}{4pt}
 \begin{table*}[t!]
 \centering
 \begin{tabular}{l c c c p{1.75cm} c c c c p{1.85cm}}
@@ -1213,7 +1214,7 @@ Taken together, the two planes are the honest statement of what this constructio
  Code & Version & Lang. & Flavors & Matter & over $E$ & setting & \fig~\ref{fig:plane} & \fig~\ref{fig:prem_plane} & Built for \\
  \hline
  {\tt NuOscProbExact}
-   & $1.13.0$ & {\tt Python} & $2,3,4$ & Arbitrary $\mathbb{H}$ & yes
+   & $1.13.1$ & {\tt Python} & $2,3,4$ & Arbitrary $\mathbb{H}$ & yes
    & $N_{\rm slabs}$, rtol & $1 \cdot 10^{-15}$ & $4 \cdot 10^{-8}$
    & Arbitrary $\mathbb{H}$ \\
  {\tt nuSQuIDS}\ \cite{Delgado:2014kpa, NuSQuIDS}
