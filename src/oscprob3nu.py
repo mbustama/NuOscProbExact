@@ -1548,9 +1548,10 @@ def probabilities_3nu(
        at most :data:`SMALL_BATCH` elements is evaluated one at a time
        through the scalar path, because a batched call carries a fixed
        cost that a handful of points does not amortise.  Larger stacks
-       are evaluated by a compiled kernel instead, if the optional
-       `numba` extra is installed; for three flavors that kernel wins at
-       every size.  See :mod:`fastkernels`.
+       are evaluated by a compiled kernel instead, which for three
+       flavors wins at every size; ``numba`` is a dependency, so that
+       path is present unless it has been switched off with
+       ``fastkernels.USE_NUMBA``.  See :mod:`fastkernels`.
 
     Parameters
     ----------

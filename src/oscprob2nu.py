@@ -886,10 +886,11 @@ def probabilities_2nu(
        at most :data:`SMALL_BATCH` elements is evaluated one at a time
        through the scalar path, because a batched call carries a fixed
        cost that a handful of points does not amortise.  Above
-       ``fastkernels.MIN_BATCH[2]`` elements, and only if the optional
-       `numba` extra is installed, the stack is evaluated by a compiled
-       kernel instead; see :mod:`fastkernels` for the measured
-       thresholds and why the two-flavor one is high.
+       ``fastkernels.MIN_BATCH[2]`` elements the stack is evaluated by
+       a compiled kernel instead; ``numba`` is a dependency, so that
+       path is present unless it has been switched off with
+       ``fastkernels.USE_NUMBA``.  See :mod:`fastkernels` for the
+       measured thresholds and why the two-flavor one is high.
 
     Parameters
     ----------

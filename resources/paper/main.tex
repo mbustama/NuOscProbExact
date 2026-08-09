@@ -1440,9 +1440,9 @@ What the embedding does not preserve is the order.  Gell-Mann interleaves the tw
 \end{figure*}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Figure~\ref{fig:architecture} shows the structure of {\tt NuOscProbExact}: ten modules and some $13\,700$ lines, more than half of them docstrings, with no inheritance and no state carried between calls. 
+Figure~\ref{fig:architecture} shows the structure of {\tt NuOscProbExact}: ten modules and some $13\,700$ lines, more than half of them docstrings.  Nothing inherits from anything, and no result depends on a previous call.  What state there is either caches geometry that would otherwise be recomputed --- the slabs along a chord, the size of the last-level cache --- or selects a code path, as {\tt fastkernels.USE\_NUMBA} and {\tt oscprob4nu.ROOT\_STRATEGY} do; none of it changes a probability. 
 
-Table \ref{tab:modules} says what each module is for.  The division is along one line: a module either builds a Hamiltonian or consumes one.  Everything in the first group is a convenience---the scenarios of Section \ref{sec:examples} are common enough to be worth shipping, but nothing in the second group knows or cares where its input came from, which is what makes an arbitrary Hamiltonian a first-class case rather than an escape hatch.  (Two sign conventions are in use internally in the code: {\tt oscprob3nu} works with the latent roots of Section \ref{sec:evolution_operator}, whereas {\tt oscprob4nu} uses the eigenvalues of $\tilde{\mathbb{H}}$ and the opposite sign in the exponent.  The two are equivalent, both reproduce \equ{sylvester} to round-off, and neither is visible outside its module.)
+Table \ref{tab:modules} says what each module is for.  The division is along one line: a module either builds a Hamiltonian or consumes one.  Everything in the first group is a convenience---the scenarios of Section \ref{sec:examples} are common enough to be worth shipping, but nothing in the second group knows or cares where its input came from, which is what makes an arbitrary Hamiltonian a first-class case rather than an escape hatch.  (Two sign conventions are in use internally in the code: {\tt oscprob3nu} works with the latent roots of Section \ref{sec:evolution_operator}, whereas {\tt oscprob4nu} uses the eigenvalues of $\tilde{\mathbb{H}}$ and the opposite sign in the exponent.  The two are equivalent, both reproduce \equ{sylvester} to round-off, and neither is visible outside its module.)  \ref{app:tests} says how all of this is tested.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 {\def\arraystretch{1.2}
@@ -1456,8 +1456,8 @@ Table \ref{tab:modules} says what each module is for.  The division is along one
    {\tt hamiltonians2nu} & Two-flavor Hamiltonians for the standard scenarios \\
    {\tt hamiltonians3nu} & Three-flavor, including the PMNS matrix of \equ{pmns} \\
    {\tt hamiltonians4nu} & Four-flavor, for 3+1 scenarios \\
-   {\tt slabs} & Composition across adjacent constant-density layers \\
-   {\tt earth} & PREM profile, chord geometry, named sites, zenith scans \\
+   {\tt slabs} & Composition across constant-density layers, one chord or a batch \\
+   {\tt earth} & PREM profile, chord geometry, named sites, batched energy and zenith scans \\
    {\tt fastkernels} & Compiled kernels for the batched paths \\
    {\tt globaldefs} & Constants, unit conversions, NuFit 4.0 defaults \\
   \end{tabular}
@@ -1473,7 +1473,7 @@ Table \ref{tab:modules} says what each module is for.  The division is along one
 \section{The test suite}
 \label{app:tests}
 
-Table \ref{tab:tests} lists what the 823 tests that ship with {\tt NuOscProbExact} cover.  They run in a few seconds, and reach every line and every branch of the library, providing 100\% code coverage in v1.13.1 of the code.
+Table \ref{tab:tests} lists what the 823 tests that ship with {\tt NuOscProbExact} cover; \ref{app:structure} shows the modules they exercise.  They run in a few seconds, and reach every line and every branch of the library, providing 100\% code coverage in v1.13.1 of the code.
 
 The suite is not only a regression net.  Roughly half of it checks the physics and the algebra against something external to the implementation---closed-form eigenvalues, an independently written code, direct matrix exponentiation, the SU(3) structure constants---and the rest checks the properties that a probability must have whatever the Hamiltonian: unitarity, the behavior of reversed channels, and agreement between the scalar, vectorized, and compiled paths, which are three separate pieces of code that must return the same numbers.
 
