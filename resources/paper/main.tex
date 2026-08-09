@@ -280,7 +280,6 @@ What follows is expository but condensed: enough detail to present the method an
 
 Let $\nu$ represent the flavor state of a neutrino.  The state evolves according to the Schr\"odinger equation
 \begin{equation}
- \label{equ:evolution_eq}
  i \frac{d\nu}{dt} = H \nu \;,
 \end{equation}
 where $t$ is the time elapsed since the creation of the neutrino and $\mathbb{H}$ is the Hamiltonian written in flavor space.  We use units where $c = \hbar = 1$.  We take $\mathbb{H}$ to be Hermitian, which is what makes the evolution unitary and conserves the number of neutrinos summed over flavors; Section \ref{sec:limitations} takes up what survives when it is not.  In a system of $n$ neutrinos, we represent $\mathbb{H}$ by an $n \times n$ matrix and $\nu$ by a column vector with $n$ entries.  Below, we consider the cases $n = 2$, 3, and 4; we write $\alpha, \beta$ for flavor labels, which run over $e, \mu, \tau$ at $n = 3$ and over $e, \mu, \tau, s$ at $n = 4$, the last being a sterile state.  At $n = 2$ the pair is a matter of naming: a two-flavor system is fixed by one mixing angle and one mass-squared splitting whichever two states are meant, and we call them $e$ and $\mu$ throughout, as the code does.
@@ -639,7 +638,6 @@ the first two being the $\lvert h \rvert^2$ and $\langle h \rangle$ of Section \
 \end{equation}
 Its roots are $z_i = (\psi_j+\psi_k)^2$, real and non-negative precisely because $\tilde{\mathbb{H}}_4$ is Hermitian.  Depressed by $z \to z + \frac{2}{3}I_2$, \equ{resolvent_cubic} therefore yields to the same trigonometric formula already used at three flavors, \equ{psi_m}, and
 \begin{equation}
- \label{equ:psi_4nu}
  \psi_m = \tfrac{1}{2}\left(s_1\sqrt{z_1}+s_2\sqrt{z_2}+s_3\sqrt{z_3}\right) \;,
  \quad
  s_i = \pm 1 \;,
@@ -880,7 +878,6 @@ When neutrinos propagate in matter, $\nu_e$ and $\bar{\nu}_e$ scatter on electro
 
 The Hamiltonian that drives oscillations in matter is
 \begin{equation}
- \label{equ:h3_matt}
  \mathbb{H}_3^{\rm matt}(E)
  = 
  \mathbb{H}_3^{\rm vac}(E) + \mathbb{A}_3 \;.
@@ -896,7 +893,6 @@ Oscillations in matter might receive sub-leading contributions due to new neutri
 
 In this case, the Hamiltonian is
 \begin{equation}
- \label{equ:h3_nsi}
  \mathbb{H}_3^{\rm NSI}(E)
  =
  \mathbb{H}_3^{\rm vac}(E) + \mathbb{A}_3 + \mathbb{V}_3  \;,
@@ -940,7 +936,6 @@ To study LIV, we adopt the framework of the Standard Model Extension (SME)\ \cit
 
 The Hamiltonian for CPT-odd LIV is\ \cite{Coleman:1998ti, Kostelecky:2003xn, Dighe:2008bu}
 \begin{equation}
- \label{equ:h3_liv}
  \mathbb{H}_3^{\rm LIV}(E)
  = 
  \mathbb{H}_3^{\rm vac}(E)
@@ -1730,14 +1725,14 @@ Those cases also fix the labels that vacuum leaves free, each in its own way.  T
 \label{app:derivation_uk_expanded}
 \appresetfloats
 
-We start from the definition $u_k = -\frac{i}{2}{\rm Tr}\left(\lambda^k \mathbb{U}_3\right)$ of Section \ref{sec:readings}.  It lets $u_k$ be had by differentiating ${\rm Tr}\,\mathbb{U}_3$, which needs the latent roots and nothing else, since the projectors of \equ{sylvester} satisfy ${\rm Tr}\,\mathbb{P}_m = 1$; evaluating ${\rm Tr}\left(\lambda^k \mathbb{U}_3\right)$ directly would need the projectors themselves.  So
+We start from the definition $u_k = -\frac{i}{2}{\rm Tr}\left(\lambda^k \mathbb{U}_3\right)$ of Section \ref{sec:readings}, and assume throughout the non-degenerate spectrum that \equ{sylvester} and \equ{uk_expanded} both require.  The definition lets $u_k$ be obtained by differentiating ${\rm Tr}\,\mathbb{U}_3$, which needs the latent roots and nothing else, since the projectors are then rank one and ${\rm Tr}\,\mathbb{P}_m = 1$; evaluating ${\rm Tr}\left(\lambda^k \mathbb{U}_3\right)$ directly would need the projectors themselves.  So
 \begin{eqnarray*}
  u_k 
  &=& -\frac{1}{2}{\rm Tr}\frac{\partial}{\partial\left(-h_kL\right)}e^{-ih_a\lambda^aL}  \\
  &=& -\frac{1}{2}\frac{\partial}{\partial\left(-h_kL\right)}{\rm Tr}~\mathbb{U}_3 \\
  &=& -\frac{i}{2}\sum_{m=1}^3 e^{iL\psi_m} \frac{\partial\left(L\psi_m\right)}{\partial\left(-h_kL\right)} \;,
 \end{eqnarray*}
-where the first step holds under the trace and not outside it: $\lambda^k$ does not commute with $h_a \lambda^a$, so differentiating the exponential term by term leaves a $\lambda^k$ in every position of every power, and it is the cyclic property of the trace that gathers them into ${\rm Tr}\left(i \lambda^k \mathbb{U}_3\right)$.  The last step uses ${\rm Tr}\,\mathbb{U}_3 = \sum_m e^{iL\psi_m}$ and brings down a factor of $i$ from each exponential.  What is left is the derivative of a latent root, which follows from implicit differentiation of $\chi\left(\psi_m\right) = 0$ --- legitimate wherever $\chi^\prime\left(\psi_m\right) = 3\psi_m^2 - \lvert h \rvert^2$ does not vanish, the non-degeneracy that \equ{uk_expanded} requires in any case, that same quantity being its denominator.  The baseline is held fixed, so it cancels:
+where the first step holds under the trace and not outside it: $\lambda^k$ does not commute with $h_a \lambda^a$, so differentiating the exponential term by term leaves a $\lambda^k$ in every position of every power, and it is the cyclic property of the trace that gathers them into ${\rm Tr}\left(i \lambda^k \mathbb{U}_3\right)$.  The last step uses ${\rm Tr}\,\mathbb{U}_3 = \sum_m e^{iL\psi_m}$ and brings down a factor of $i$ from each exponential.  What is left is the derivative of a latent root, which follows from implicit differentiation of $\chi\left(\psi_m\right) = 0$; the assumption above is what makes that step legitimate, since it is $\chi^\prime\left(\psi_m\right) = 3\psi_m^2 - \lvert h \rvert^2$ that must not vanish, the same quantity that ends up as the denominator of \equ{uk_expanded}.  The baseline is held fixed, so it cancels:
 \begin{equation*}
  \frac{\partial\left(L\psi_m\right)}{\partial\left(-h_kL\right)}
  =
@@ -1745,7 +1740,14 @@ where the first step holds under the trace and not outside it: $\lambda^k$ does 
  =
  \frac{2\left[\left(h \ast h\right)_k - \psi_m h_k\right]}{3\psi_m^2-\lvert h \rvert^2} \;.
 \end{equation*}
-Putting this back into the last line above gives \equ{uk_expanded} of the main text: the $2$ cancels the $\tfrac{1}{2}$, and writing the bracket the other way round, as $\psi_m h_k - \left(h \ast h\right)_k$, absorbs the sign that is left.
+Substituting this into the sum that closes the first display --- the $2$ cancelling the $\tfrac{1}{2}$, and the bracket written the other way round to absorb the sign that is left --- gives
+\begin{equation*}
+ u_k
+ =
+ i\sum_{m=1}^3
+ e^{i L \psi_m} \frac{\psi_m h_k - \left(h \ast h\right)_k}{3\psi_m^2 - \left\vert h \right\vert^2} \;,
+\end{equation*}
+which is \equ{uk_expanded} of the main text.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1775,7 +1777,6 @@ where the rotation matrix $\mathbb{R}_{2,\theta}$ is given in \equ{u_rotation_2n
 
 For oscillations in matter, we use
 \begin{equation*}
- \label{equ:h2_matt}
  \mathbb{H}_2^{\rm matt}(E) 
  = 
  \mathbb{H}_2^{\rm vac}(E)  + \mathbb{A}_2 \;,
@@ -1784,7 +1785,6 @@ where $\mathbb{A}_2 \equiv {\rm diag}(V_{\rm CC}, 0)$ and $V_{\rm CC}$ is define
 
 For oscillations in matter with non-standard interactions, we use\ \cite{GonzalezGarcia:2004wg, GonzalezGarcia:2005xw}
 \begin{equation*}
- \label{equ:h2_nsi}
  \mathbb{H}_2^{\rm NSI}(E) 
  = 
  \mathbb{H}_2^{\rm vac}(E) + \mathbb{A}_2 + \mathbb{V}_2 \;,
@@ -1804,7 +1804,6 @@ In \figu{prob_2nu}, we set $\epsilon_{ee} = -\epsilon_{e\mu} = 0.06$ and $\epsil
 
 For oscillations in a CPT-odd Lorentz-violating background, we use\ \cite{GonzalezGarcia:2004wg, GonzalezGarcia:2005xw} 
 \begin{equation*}
- \label{equ:h2_liv}
  \mathbb{H}_2^{\rm LIV}(E) 
  = 
  \mathbb{H}_2^{\rm vac}(E) + \frac{E}{\Lambda} \mathbb{R}_{2,\xi} \mathbb{B}_2 \mathbb{R}_{2,\xi}^\dagger \;,
