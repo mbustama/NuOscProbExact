@@ -1823,7 +1823,7 @@ For oscillations in vacuum, we use
  \mathbb{M}_4^2
  \mathbb{R}_4^\dagger \;,
 \end{equation*}
-where $\mathbb{M}_4^2 = {\rm diag}\left(0, \Delta m_{21}^2, \Delta m_{31}^2, \Delta m_{41}^2\right)$ and $\mathbb{R}_4$ is the $4 \times 4$ mixing matrix, built from the six angles $\theta_{12}$, $\theta_{13}$, $\theta_{23}$, $\theta_{14}$, $\theta_{24}$, $\theta_{34}$ and three phases, of which the code takes $\delta_{14}$ and $\delta_{24}$ to be zero by default.  Section \ref{sec:three_flavors} writes the three-flavor matrix out because conventions differ between codes; at $3+1$ they differ more, so we give the ordering too,
+where $\mathbb{M}_4^2 = {\rm diag}\left(0, \Delta m_{21}^2, \Delta m_{31}^2, \Delta m_{41}^2\right)$ and $\mathbb{R}_4$ is the $4 \times 4$ mixing matrix, built from the six angles $\theta_{12}$, $\theta_{13}$, $\theta_{23}$, $\theta_{14}$, $\theta_{24}$, $\theta_{34}$ and three phases, of which the code takes $\delta_{14}$ and $\delta_{24}$ to be zero by default.  Section \ref{sec:three_flavors} writes the three-flavor matrix out because conventions differ between codes.  At $3+1$ there is no standard ordering to differ from, as there is none for the SU(4) generators of \ref{app:matrices_4nu}, so we state ours,
 \begin{equation*}
  \mathbb{R}_4
  =
@@ -1834,17 +1834,15 @@ where $\mathbb{M}_4^2 = {\rm diag}\left(0, \Delta m_{21}^2, \Delta m_{31}^2, \De
  \mathbb{R}_{13}\left(\delta_{\rm CP}\right)
  \mathbb{R}_{12} \;,
 \end{equation*}
-with $\mathbb{R}_{ij}$ the rotation by $\theta_{ij}$ in the $i$--$j$ plane, carrying $\sin\theta_{ij} e^{-i\delta}$ in its $\left(i,j\right)$ entry and $-\sin\theta_{ij} e^{i\delta}$ in its $\left(j,i\right)$ entry where a phase is shown.  Setting the three new angles to zero leaves $\mathbb{R}_{23} \mathbb{R}_{13}\left(\delta_{\rm CP}\right) \mathbb{R}_{12}$, which is \equ{pmns}, so $\mathbb{H}_3^{\rm vac}$ returns in the active block and $\nu_s$ decouples.
+with $\mathbb{R}_{ij}$ the rotation by $\theta_{ij}$ in the $i$--$j$ plane: $\cos\theta_{ij}$ in its $\left(i,i\right)$ and $\left(j,j\right)$ entries, $\sin\theta_{ij} e^{-i\delta}$ in its $\left(i,j\right)$ entry, $-\sin\theta_{ij} e^{i\delta}$ in its $\left(j,i\right)$ entry, with $\delta = 0$ where no phase is shown, and the identity elsewhere.  Setting the three new angles to zero leaves $\mathbb{R}_{23} \mathbb{R}_{13}\left(\delta_{\rm CP}\right) \mathbb{R}_{12}$, which is \equ{pmns}, so $\mathbb{H}_3^{\rm vac}$ returns in the active block and $\nu_s$ decouples.
 
 For oscillations in matter, we use
 \begin{equation*}
  \mathbb{H}_4^{\rm matt}(E)
  =
  \mathbb{H}_4^{\rm vac}(E) + \mathbb{A}_4 \;,
- \qquad
- \mathbb{A}_4 \equiv {\rm diag}\left(V_{\rm CC}, 0, 0, -V_{\rm NC}\right) \;,
 \end{equation*}
-or, written out,
+where
 \begin{equation}
  \label{equ:a4}
  \mathbb{A}_4 = {\rm diag}\left(V_{\rm CC}, 0, 0, V_s\right) \;,
@@ -1877,7 +1875,7 @@ For oscillations in a CPT-odd Lorentz-violating background, we use
 \end{equation*}
 with $\mathbb{B}_4 = {\rm diag}\left(b_1, b_2, b_3, b_4\right)$ and $\mathbb{R}_{4,\xi}$ ordered as $\mathbb{R}_4$ above but carrying its own six angles $\xi_{ij}$ and one phase.  Here, unlike in $\mathbb{A}_4$ and $\mathbb{V}_4$, nothing privileges the fourth state: $b_4$ is an eigenvalue like the others, so the sterile neutrino may couple to the Lorentz-violating background even though it is blind to matter.  Setting the three new angles to zero recovers the three-flavor term in the active block whatever $b_4$ is --- with $\mathbb{R}_{4,\xi}$ block diagonal, $b_4$ acts on $\nu_s$ alone, and a term on a decoupled state is a phase.  We have checked that the active probabilities are unchanged to $10^{-13}$ as $b_4$ is varied over four orders of magnitude and both signs.
 
-Neither of these last two Hamiltonians is drawn in this paper, the four-flavor figures being the matter case of \figu{validation} and \figu{sterile_earth}: the test suite of \ref{app:tests} exercises both, and notebook 16 of \ref{app:notebooks} works through the four-flavor NSI case.
+Neither of these last two Hamiltonians is drawn in this paper.  Every four-flavor figure in it uses $\mathbb{H}_4^{\rm matt}$ instead: the four-flavor case of \figu{validation}, all of \figu{sterile_earth}, and the sterile panel of \figu{prem_plane_3plus1}.  The test suite of \ref{app:tests} exercises both of the others, and notebook 16 of \ref{app:notebooks} works through the four-flavor NSI case.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
