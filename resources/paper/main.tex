@@ -1762,7 +1762,7 @@ Here we present the two- and four-flavor Hamiltonians included as examples in {\
 
 \subsection{Two-flavor Hamiltonians}
 
-Figure \ref{fig:prob_2nu} shows the probabilities $P_{\nu_e \to \nu_e}$, $P_{\nu_\mu \to \nu_e}$, and $P_{\nu_\mu \to \nu_\mu}$ for the same four scenarios as in \figu{prob_3nu}, computed using {\tt NuOscProbExact}\ \cite{NuOscProbExact}.  Again, we set the baseline to $L = 1300$~km.  The parameters and their values used in each example case are introduced below; they are a selection of the ones used in \figu{prob_3nu}.
+Figure \ref{fig:prob_2nu} shows the probabilities $P_{\nu_e \to \nu_e}$, $P_{\nu_\mu \to \nu_e}$, and $P_{\nu_\mu \to \nu_\mu}$ for the same four scenarios as in \figu{prob_3nu}, computed using {\tt NuOscProbExact}\ \cite{NuOscProbExact}.  Again, we set the baseline to $L = 1300$~km.  The parameters and their values used in each example case are introduced below; they are a selection of the ones used in \figu{prob_3nu}.  The two non-standard cases follow the two-flavor treatments of \Refs\ \cite{GonzalezGarcia:2004wg, GonzalezGarcia:2005xw}; Section \ref{sec:examples} carries the references for the physics itself.
 
 For oscillations in vacuum, we use \equ{h2_vacuum}, \ie,
 \begin{equation*}
@@ -1783,7 +1783,7 @@ For oscillations in matter, we use
 \end{equation*}
 where $\mathbb{A}_2 \equiv {\rm diag}(V_{\rm CC}, 0)$ and $V_{\rm CC}$ is defined as before.  In \figu{prob_2nu}, we set $\rho = 3$~g~cm$^{-3}$.
 
-For oscillations in matter with non-standard interactions, we use\ \cite{GonzalezGarcia:2004wg, GonzalezGarcia:2005xw}
+For oscillations in matter with non-standard interactions, we use
 \begin{equation*}
  \mathbb{H}_2^{\rm NSI}(E) 
  = 
@@ -1794,7 +1794,7 @@ where $\mathbb{V}_2 \equiv V_{\rm CC} \epsilon_2$ and the matrix of NSI strength
  \epsilon_2
  =
  \left(
-  \begin{array}{ccc}
+  \begin{array}{cc}
    \epsilon_{ee}         & \epsilon_{e\mu}         \\
    \epsilon_{e\mu}^\ast  & \epsilon_{\mu\mu}       \\
   \end{array}
@@ -1802,7 +1802,7 @@ where $\mathbb{V}_2 \equiv V_{\rm CC} \epsilon_2$ and the matrix of NSI strength
 \end{equation*}
 In \figu{prob_2nu}, we set $\epsilon_{ee} = -\epsilon_{e\mu} = 0.06$ and $\epsilon_{\mu\mu} = 1.2$.
 
-For oscillations in a CPT-odd Lorentz-violating background, we use\ \cite{GonzalezGarcia:2004wg, GonzalezGarcia:2005xw} 
+For oscillations in a CPT-odd Lorentz-violating background, we use
 \begin{equation*}
  \mathbb{H}_2^{\rm LIV}(E) 
  = 
@@ -1823,7 +1823,18 @@ For oscillations in vacuum, we use
  \mathbb{M}_4^2
  \mathbb{R}_4^\dagger \;,
 \end{equation*}
-where $\mathbb{M}_4^2 = {\rm diag}\left(0, \Delta m_{21}^2, \Delta m_{31}^2, \Delta m_{41}^2\right)$ and $\mathbb{R}_4$ is the $4 \times 4$ mixing matrix, built from the six angles $\theta_{12}$, $\theta_{13}$, $\theta_{23}$, $\theta_{14}$, $\theta_{24}$, $\theta_{34}$ and, in general, three phases; the code takes $\delta_{\rm CP}$ together with $\delta_{14}$ and $\delta_{24}$, both zero by default.  Setting the three new angles to zero returns $\mathbb{H}_3^{\rm vac}$ in the active block and decouples $\nu_s$.
+where $\mathbb{M}_4^2 = {\rm diag}\left(0, \Delta m_{21}^2, \Delta m_{31}^2, \Delta m_{41}^2\right)$ and $\mathbb{R}_4$ is the $4 \times 4$ mixing matrix, built from the six angles $\theta_{12}$, $\theta_{13}$, $\theta_{23}$, $\theta_{14}$, $\theta_{24}$, $\theta_{34}$ and three phases, of which the code takes $\delta_{14}$ and $\delta_{24}$ to be zero by default.  Section \ref{sec:three_flavors} writes the three-flavor matrix out because conventions differ between codes; at $3+1$ they differ more, so we give the ordering too,
+\begin{equation*}
+ \mathbb{R}_4
+ =
+ \mathbb{R}_{34}
+ \mathbb{R}_{24}\left(\delta_{24}\right)
+ \mathbb{R}_{14}\left(\delta_{14}\right)
+ \mathbb{R}_{23}
+ \mathbb{R}_{13}\left(\delta_{\rm CP}\right)
+ \mathbb{R}_{12} \;,
+\end{equation*}
+with $\mathbb{R}_{ij}$ the rotation by $\theta_{ij}$ in the $i$--$j$ plane, carrying $\sin\theta_{ij} e^{-i\delta}$ in its $\left(i,j\right)$ entry and $-\sin\theta_{ij} e^{i\delta}$ in its $\left(j,i\right)$ entry where a phase is shown.  Setting the three new angles to zero leaves $\mathbb{R}_{23} \mathbb{R}_{13}\left(\delta_{\rm CP}\right) \mathbb{R}_{12}$, which is \equ{pmns}, so $\mathbb{H}_3^{\rm vac}$ returns in the active block and $\nu_s$ decouples.
 
 For oscillations in matter, we use
 \begin{equation*}
@@ -1840,7 +1851,7 @@ or, written out,
  \quad
  V_s = -V_{\rm NC} = \frac{G_{\rm F} n_n}{\sqrt{2}} \;,
 \end{equation}
-so that $V_s \simeq V_{\rm CC}/2$ in the crust.  That last entry is the one feature with no two- or three-flavor counterpart, and it is not a convention: the neutral-current potential is common to the three active flavors and may be removed as a global phase, but the sterile state never had it, and subtracting a term it does not feel leaves $-V_{\rm NC}$ behind.  The sterile state does not feel the charged-current potential either, while the other three do not feel $V_s$; it is that difference that drives the resonance of \figu{sterile_earth}.  A 3+1 system is therefore sensitive to the neutron density as well as the electron density, which no active-only scenario is.  In \figu{sterile_earth} the density is the PREM profile\ \cite{Dziewonski:1981xy} along the chord, so both $V_{\rm CC}$ and $V_{\rm NC}$ vary from slab to slab.
+so that $V_s$ is exactly half of $V_{\rm CC}$ wherever there is one neutron per electron, which is what {\tt globaldefs} takes the crust to be.  That last entry is the one feature with no two- or three-flavor counterpart, and it is not a convention: the neutral-current potential is common to the three active flavors and may be removed as a global phase, but the sterile state never had it, and subtracting a term it does not feel leaves $-V_{\rm NC}$ behind.  The sterile state does not feel the charged-current potential either, while the other three do not feel $V_s$; it is that difference that drives the resonance of \figu{sterile_earth}.  A 3+1 system is therefore sensitive to the neutron density as well as the electron density, which no active-only scenario is.  In \figu{sterile_earth} the density is the PREM profile\ \cite{Dziewonski:1981xy} along the chord, so both $V_{\rm CC}$ and $V_{\rm NC}$ vary from slab to slab.
 
 For oscillations in matter with non-standard interactions, we use
 \begin{equation*}
@@ -1856,7 +1867,7 @@ For oscillations in matter with non-standard interactions, we use
   \end{array}
  \right) \;,
 \end{equation*}
-where $\epsilon_3$ is the $3 \times 3$ matrix of Section\ \ref{sec:examples}.  The sterile row and column vanish for the same reason as above, and by the same logic: a state with no standard-model interactions has no non-standard ones either.  The sterile entry keeps the $-V_{\rm NC}$ of $\mathbb{A}_4$.
+where $\epsilon_3$ is the $3 \times 3$ matrix of Section\ \ref{sec:examples}.  The sterile row and column vanish because a state with no standard-model interactions has no non-standard ones either.  The sterile entry keeps the $-V_{\rm NC}$ of $\mathbb{A}_4$.
 
 For oscillations in a CPT-odd Lorentz-violating background, we use
 \begin{equation*}
@@ -1864,7 +1875,9 @@ For oscillations in a CPT-odd Lorentz-violating background, we use
  =
  \mathbb{H}_4^{\rm vac}(E) + \frac{E}{\Lambda} \mathbb{R}_{4,\xi} \mathbb{B}_4 \mathbb{R}_{4,\xi}^\dagger \;,
 \end{equation*}
-with $\mathbb{B}_4 = {\rm diag}\left(b_1, b_2, b_3, b_4\right)$ and $\mathbb{R}_{4,\xi}$ a $4 \times 4$ rotation carrying its own angles.  Here, unlike in $\mathbb{A}_4$ and $\mathbb{V}_4$, nothing privileges the fourth state: $b_4$ is an eigenvalue like the others, so the sterile neutrino may couple to the Lorentz-violating background even though it is blind to matter.  Setting the three new angles to zero recovers the three-flavor term in the active block whatever $b_4$ is --- with $\mathbb{R}_{4,\xi}$ block diagonal, $b_4$ acts on $\nu_s$ alone, and a term on a decoupled state is a phase.  We have checked that the active probabilities are unchanged to $10^{-13}$ as $b_4$ is varied over four orders of magnitude and both signs.
+with $\mathbb{B}_4 = {\rm diag}\left(b_1, b_2, b_3, b_4\right)$ and $\mathbb{R}_{4,\xi}$ ordered as $\mathbb{R}_4$ above but carrying its own six angles $\xi_{ij}$ and one phase.  Here, unlike in $\mathbb{A}_4$ and $\mathbb{V}_4$, nothing privileges the fourth state: $b_4$ is an eigenvalue like the others, so the sterile neutrino may couple to the Lorentz-violating background even though it is blind to matter.  Setting the three new angles to zero recovers the three-flavor term in the active block whatever $b_4$ is --- with $\mathbb{R}_{4,\xi}$ block diagonal, $b_4$ acts on $\nu_s$ alone, and a term on a decoupled state is a phase.  We have checked that the active probabilities are unchanged to $10^{-13}$ as $b_4$ is varied over four orders of magnitude and both signs.
+
+Neither of these last two Hamiltonians is drawn in this paper, the four-flavor figures being the matter case of \figu{validation} and \figu{sterile_earth}: the test suite of \ref{app:tests} exercises both, and notebook 16 of \ref{app:notebooks} works through the four-flavor NSI case.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
