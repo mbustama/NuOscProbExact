@@ -772,7 +772,7 @@ Development is version-controlled and happens in the public GitHub repository\ \
 \subsection{Code validation}
 \label{sec:validation}
 
-The repository carries a test suite of 829 tests, which cover every line and branch of the library in v1.13.1 of {\tt NuOscProbExact}; \ref{app:tests} groups them by what they cover.  Beyond internal consistency, the results are checked against independent sources: against {\tt nuSQuIDS}\ \cite{Delgado:2014kpa, NuSQuIDS}, an independently written code, with which the three-flavor probabilities agree to $10^{-11}$ and the four-flavor ones to $10^{-9}$ once conventions are matched; against the closed-form eigenvalues of Zaglauer \& Schwarzer\ \cite{Zaglauer:1988gz} for the three-flavor matter spectrum; against direct numerical exponentiation of the Hamiltonian, as in \figu{validation}; and, in the two-flavor vacuum case, against the standard analytic formula.
+The repository carries a test suite of 870 tests, which cover every line and branch of the library in v1.13.1 of {\tt NuOscProbExact}; \ref{app:tests} groups them by what they cover.  Beyond internal consistency, the results are checked against independent sources: against {\tt nuSQuIDS}\ \cite{Delgado:2014kpa, NuSQuIDS}, an independently written code, with which the three-flavor probabilities agree to $10^{-11}$ and the four-flavor ones to $10^{-9}$ once conventions are matched; against the closed-form eigenvalues of Zaglauer \& Schwarzer\ \cite{Zaglauer:1988gz} for the three-flavor matter spectrum; against direct numerical exponentiation of the Hamiltonian, as in \figu{validation}; and, in the two-flavor vacuum case, against the standard analytic formula.
 
 Where a residual remains---as at four flavors, where a large $\Delta m_{41}^2$ crowds three of the four latent roots together and leaves the fourth far off, the near-degeneracy that Section \ref{sec:limitations} quantifies---the wider tolerance it needs is not left to stand on its own.  A third reference settles where the residual belongs.  It could have either of two sources: the accuracy limit of the closed form near a near-degenerate spectrum, or a convention the two codes match imperfectly.  Against direct exponentiation of the same Hamiltonian, the error of the expansion and its disagreement with {\tt nuSQuIDS} come out the same size, which leaves only the first: {\tt nuSQuIDS} sits where the exponential does, and the whole residual is from the closed form.
 
@@ -1561,7 +1561,7 @@ What cannot be added this way is anything that is not a Hermitian Hamiltonian.  
 \label{app:tests}
 \appresetfloats
 
-Table \ref{tab:tests} lists what the 829 tests of {\tt NuOscProbExact} cover; \ref{app:structure} shows the modules they exercise.  They reach every line and every branch of the library: coverage is $100\%$ in v1.13.1, held above a floor of $98\%$ that fails the build if it drops.
+Table \ref{tab:tests} lists what the 870 tests of {\tt NuOscProbExact} cover; \ref{app:structure} shows the modules they exercise.  They reach every line and every branch of the library: coverage is $100\%$ in v1.13.1, held above a floor of $98\%$ that fails the build if it drops.
 
 They run on every push and every pull request, so a contributor need not invoke them; but they are also the quickest way to confirm a local installation.  The tests are not packaged with the library, so this is from a clone:
 \begin{verbatim}
@@ -1581,10 +1581,10 @@ The suite is not only a regression net.  Roughly half of it checks the physics a
    What is tested & Tests \\
    \hline
    Batching and tolerance selection         & 168 \\
+   PREM, geometry, and Earth crossings       & 110 \\
    Numerical edge cases and degeneracies    & 92 \\
-   PREM, geometry, and Earth crossings       & 77 \\
    Compiled kernels against {\tt numpy}      & 69 \\
-   Type annotations                         & 46 \\
+   Type annotations                         & 54 \\
    Four-flavor construction                 & 45 \\
    Docstrings                               & 40 \\
    Slab composition                         & 37 \\
@@ -1603,7 +1603,7 @@ The suite is not only a regression net.  Roughly half of it checks the physics a
    Version consistency                      & 7 \\
    This paper, against the repository       & 4 \\
    \hline
-   Total                                    & 829 \\
+   Total                                    & 870 \\
   \end{tabular}
   \caption{\label{tab:tests}The test suite of {\tt NuOscProbExact} v1.13.1, grouped by what each file covers, in descending order.  Coverage of the library is complete: every line and every branch is executed.  The comparison with {\tt nuSQuIDS}\ \cite{Delgado:2014kpa, NuSQuIDS} runs against frozen reference values rather than against a live installation, so that a release of another code cannot break this one's continuous integration.}
 \end{table}
