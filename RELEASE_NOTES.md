@@ -190,7 +190,7 @@ alongside `rtol` and `atol`, which choose the slab count for you.
 
 **Nothing changes yet.** One half remains the default, so every result in this release is what
 it was. The change is deferred because it is not small: over 0.3–30 GeV the median change in
-`P(νμ→νe)` is **61% through the diameter, 3% through the mantle alone, and 0.7% on a shallow
+`P(νμ→νe)` is **67% through the diameter, 3% through the mantle alone, and 0.6% on a shallow
 chord**, and flipping it also means re-measuring the comparisons against external codes, which
 are handed a matched potential.
 

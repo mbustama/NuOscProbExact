@@ -43,8 +43,8 @@ and the project uses [Semantic Versioning](https://semver.org/).
   `ELECTRON_FRACTION_EARTH_CRUST`, one half throughout, so every frozen
   reference, figure and notebook output is untouched.  The effect when it
   is asked for is large: over 0.3-30 GeV the median change in
-  `P(nu_mu -> nu_e)` is 61% on a chord through the diameter, 3% through
-  the mantle alone, and 0.7% on a shallow one.  Flipping the default
+  `P(nu_mu -> nu_e)` is 67% on a chord through the diameter, 3% through
+  the mantle alone, and 0.6% on a shallow one.  Flipping the default
   therefore belongs to its own release, together with re-measuring the
   comparisons against external codes, which are handed a matched
   potential.
