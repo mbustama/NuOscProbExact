@@ -80,7 +80,8 @@ __all__ = ['LOC_COORDS_DMS', 'PREM_BOUNDARIES',
            'CHUNK_BYTES_FALLBACK', 'CHUNK_BYTES_MIN', 'CHUNK_BYTES_MAX',
            'MIN_CHUNK_ENERGIES', 'MAX_CHUNK_BYTES',
            'dms_to_decimal', 'coordinates_of_named_location',
-           'density_prem', 'matter_potential', 'matter_potential_nc',
+           'density_prem', 'electron_fraction_prem', 'earth_slab_radii',
+           'matter_potential', 'matter_potential_nc',
            'distance_traveled_inside_earth',
            'earth_radial_distance_from_depth',
            'prem_layer_edges_along_chord', 'chord_length_inside_earth',
@@ -251,6 +252,109 @@ def coordinates_of_named_location(
             '%s' % (loc_name, ', '.join(sorted(LOC_COORDS_DMS)))) from None
 
     return entry['lat'], entry['lon']
+
+
+def electron_fraction_prem(
+    r: Union[int, float, list, np.ndarray],
+    mantle: float = gd.ELECTRON_FRACTION_EARTH_MANTLE,
+    core: float = gd.ELECTRON_FRACTION_EARTH_CORE
+) -> Union[float, np.ndarray]:
+    r"""Returns the electron fraction inside the Earth, by radius.
+
+    The companion to `density_prem`: that one gives :math:`\rho`, this
+    one gives :math:`Y_e`, and `matter_potential` needs both.  PREM
+    fixes the density but not the composition, so the two values here
+    come from a compositional model rather than from PREM, and either
+    may be overridden.
+
+    The split is at the core-mantle boundary, ``PREM_BOUNDARIES[1]``,
+    which is $3480$ km: below it the iron-nickel core, above it the
+    silicate mantle and the crust above that.  The crust is treated as
+    mantle, which matters little --- it is thin, and a neutrino spends
+    almost none of a chord in it.
+
+    Nothing calls this by default.  The Earth routines assume
+    `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`, one half throughout,
+    unless an electron fraction is passed to them explicitly; see
+    `earth_slab_radii` for building the per-slab array to pass.
+
+    Parameters
+    ----------
+    r : int, float, list or numpy.ndarray
+        Radial distance from the center of the Earth, in units of km.
+    mantle : float, optional
+        Electron fraction above the core-mantle boundary.  Default:
+        `globaldefs.ELECTRON_FRACTION_EARTH_MANTLE`.
+    core : float, optional
+        Electron fraction below it.  Default:
+        `globaldefs.ELECTRON_FRACTION_EARTH_CORE`.
+
+    Returns
+    -------
+    float or numpy.ndarray
+        The electron fraction, adimensional, of the same shape as `r`.
+
+    Examples
+    --------
+    .. jupyter-execute::
+
+        import earth
+
+        print('%.4f' % earth.electron_fraction_prem(6000.0))
+        print('%.4f' % earth.electron_fraction_prem(1000.0))
+    """
+    scalar_input = (np.ndim(r) == 0)
+    r = np.asarray(r, dtype=float)
+
+    # A select rather than a branch, so that the batched path stays
+    # branch-free, as everything else along it is.
+    fraction = np.where(r < PREM_BOUNDARIES[1], float(core), float(mantle))
+
+    return float(fraction) if scalar_input else fraction
+
+
+def earth_slab_radii(
+    costhz: Union[int, float],
+    n_slabs_per_segment: int = 8
+) -> np.ndarray:
+    r"""Returns the radius at the midpoint of each slab along a chord.
+
+    `earth_slabs` returns the width and the density of every slab; this
+    returns the radius each density was evaluated at, which is what
+    `electron_fraction_prem` needs to give a per-slab electron fraction.
+    Call both with the same `costhz` and `n_slabs_per_segment`, or the
+    arrays will not correspond.
+
+    Parameters
+    ----------
+    costhz : int or float
+        Cosine of the zenith angle of arrival, in :math:`[-1, 0]`.
+    n_slabs_per_segment : int, optional
+        Slabs per PREM shell crossing.  Default: ``8``.
+
+    Returns
+    -------
+    numpy.ndarray
+        The radii, in units of km, one per slab, in the order that
+        `earth_slabs` returns its slabs in.
+
+    Examples
+    --------
+    .. jupyter-execute::
+
+        import earth
+
+        radii = earth.earth_slab_radii(-1.0, 2)
+        print(len(radii))
+        print('%.1f' % radii.min())
+    """
+    widths, _ = earth_slabs(costhz, n_slabs_per_segment)
+
+    # The slabs tile the chord from one end, so the midpoint of each is
+    # its own half-width past the end of everything before it.
+    midpoints = np.cumsum(widths) - widths/2.0
+
+    return earth_radial_distance_from_depth(costhz, midpoints)
 
 
 def density_prem(
@@ -931,6 +1035,19 @@ def _earth_hamiltonians(
     # the multiplication below allocates its own result.
     widths_km, densities = _earth_slabs_cached(float(costhz),
                                                int(n_slabs_per_segment))
+    # An electron fraction may be one number for the whole chord or one
+    # per slab, as `electron_fraction_prem` returns.  Anything else
+    # broadcasts into a shape nothing downstream expects, so it is
+    # caught here rather than surfacing as a NumPy error about operands.
+    if np.ndim(electron_fraction) != 0 \
+            and np.shape(electron_fraction) != np.shape(densities):
+        raise ValueError(
+            'electron_fraction must be a scalar or have one entry per slab, '
+            'which is %d for costhz = %g at n_slabs_per_segment = %d; got '
+            'shape %s.  earth.earth_slab_radii, called with the same two, '
+            'gives the radii to build it from'
+            % (len(densities), costhz, n_slabs_per_segment,
+               np.shape(electron_fraction)))
     potentials = matter_potential(densities, electron_fraction)
     # Only four flavors need the neutral-current potential: with three
     # active states it is common to all of them and drops out, so at two

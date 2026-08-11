@@ -48,7 +48,9 @@ __all__ = ['CONV_KM_TO_INV_EV', 'CONV_CM_TO_INV_EV', 'CONV_INV_EV_TO_CM',
            'ELECTRON_FRACTION_EARTH_CRUST',
            'DENSITY_MATTER_CRUST_G_PER_CM3', 'NUM_DENSITY_E_EARTH_CRUST',
            'VCC_EARTH_CRUST', 'NEUTRON_FRACTION_EARTH_CRUST',
-           'NUM_DENSITY_N_EARTH_CRUST', 'VNC_EARTH_CRUST', 'S12_NO_BF',
+           'NUM_DENSITY_N_EARTH_CRUST', 'VNC_EARTH_CRUST',
+           'ELECTRON_FRACTION_EARTH_MANTLE', 'ELECTRON_FRACTION_EARTH_CORE',
+           'S12_NO_BF',
            'S23_NO_BF', 'S13_NO_BF', 'DCP_NO_BF', 'D21_NO_BF',
            'D31_NO_BF', 'S12_IO_BF', 'S23_IO_BF', 'S13_IO_BF',
            'DCP_IO_BF', 'D21_IO_BF', 'D32_IO_BF', 'D31_IO_BF', 'EPS_EE',
@@ -197,6 +199,42 @@ NUM_DENSITY_N_EARTH_CRUST = NUM_DENSITY_E_EARTH_CRUST \
 r"""float: Neutron number density in the Earth's crust.
 
 Units: [eV\ :sup:`3`].
+"""
+
+
+###############################################################################
+# Electron fraction inside the Earth
+###############################################################################
+
+ELECTRON_FRACTION_EARTH_MANTLE = 0.4957
+r"""float: Electron fraction in the Earth's mantle.
+
+The mantle is silicate rock, close to isoscalar but not exactly so, and
+this is the value that a pyrolite composition gives.  PREM\ [1]_ fixes
+the density, not the composition, so this number comes from a
+compositional model instead and is quoted separately for that reason.
+
+Not a default anywhere: `ELECTRON_FRACTION_EARTH_CRUST`, which is
+one half, remains what `earth` assumes unless asked otherwise.  See
+`earth.electron_fraction_prem`.
+
+Units: [adimensional].
+
+References
+----------
+.. [1] A. M. Dziewonski and D. L. Anderson, "Preliminary reference Earth
+   model", Phys. Earth Planet. Interiors 25, 297 (1981).
+"""
+
+ELECTRON_FRACTION_EARTH_CORE = 0.4666
+r"""float: Electron fraction in the Earth's core.
+
+The core is iron-nickel with a light-element admixture, which is
+neutron-richer than the mantle, so its electron fraction is lower.  As
+with `ELECTRON_FRACTION_EARTH_MANTLE`, PREM fixes the density and the
+composition comes from elsewhere.
+
+Units: [adimensional].
 """
 
 VNC_EARTH_CRUST = -GF*NUM_DENSITY_N_EARTH_CRUST/np.sqrt(2.0)

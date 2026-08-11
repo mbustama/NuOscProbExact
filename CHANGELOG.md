@@ -7,6 +7,29 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **The electron fraction inside the Earth can now vary with radius.**
+  `earth.electron_fraction_prem` returns `Y_e` at a radius, split at the
+  core-mantle boundary, with `globaldefs.ELECTRON_FRACTION_EARTH_MANTLE`
+  (0.4957) and `globaldefs.ELECTRON_FRACTION_EARTH_CORE` (0.4666) as its
+  two values, both overridable.  `earth.earth_slab_radii` gives the radii
+  of a chord's slabs, in the order `earth.earth_slabs` returns them, so
+  the per-slab array can be built and handed to any of the `earth`
+  routines through their existing `electron_fraction` argument.
+
+  **No default changes.**  Every `earth` routine still assumes
+  `ELECTRON_FRACTION_EARTH_CRUST`, one half throughout, so every frozen
+  reference, figure and notebook output is untouched.  The effect when it
+  is asked for is not small --- through the full diameter at 1 GeV,
+  `P_ee` moves from 0.782 to 0.851 --- which is why flipping the default
+  belongs to its own release, together with re-measuring the comparisons
+  of the paper, whose external codes are handed a matched potential.
+
+  A mismatched `electron_fraction` array is now refused with a message
+  naming the slab count and pointing at `earth_slab_radii`, where before
+  it surfaced as a NumPy broadcast error.
+
 ### Changed
 
 - **The Earth speed-accuracy figures are re-measured against the compiled

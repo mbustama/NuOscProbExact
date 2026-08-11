@@ -802,3 +802,94 @@ def test_antineutrinos_reach_the_compiled_four_flavor_kernel():
     nu = earth.probabilities_4nu_earth(h_vac, energies, costhz,
                                        n_slabs_per_segment=4)
     assert np.abs(nu - bar).max() > 1.0e-3
+
+
+###############################################################################
+# Electron fraction inside the Earth
+###############################################################################
+
+def test_electron_fraction_prem_splits_at_the_core_mantle_boundary():
+    r"""Core below 3480 km, mantle above, and the boundary is mantle."""
+    cmb = earth.PREM_BOUNDARIES[1]
+    assert earth.electron_fraction_prem(cmb - 1.0) \
+        == gd.ELECTRON_FRACTION_EARTH_CORE
+    assert earth.electron_fraction_prem(cmb) \
+        == gd.ELECTRON_FRACTION_EARTH_MANTLE
+    assert earth.electron_fraction_prem(cmb + 1.0) \
+        == gd.ELECTRON_FRACTION_EARTH_MANTLE
+
+
+def test_electron_fraction_prem_keeps_the_shape_it_is_given():
+    r"""Scalar in, scalar out; array in, array of the same shape out."""
+    assert isinstance(earth.electron_fraction_prem(6000.0), float)
+    fractions = earth.electron_fraction_prem([1000.0, 6000.0, 3000.0])
+    assert fractions.shape == (3,)
+    assert np.array_equal(
+        fractions, [gd.ELECTRON_FRACTION_EARTH_CORE,
+                    gd.ELECTRON_FRACTION_EARTH_MANTLE,
+                    gd.ELECTRON_FRACTION_EARTH_CORE])
+
+
+def test_electron_fraction_prem_takes_both_values_from_the_caller():
+    r"""Neither value is baked in."""
+    assert earth.electron_fraction_prem(6000.0, mantle=0.49, core=0.47) == 0.49
+    assert earth.electron_fraction_prem(1000.0, mantle=0.49, core=0.47) == 0.47
+
+
+@pytest.mark.parametrize('costhz', [-1.0, -0.9, -0.84, -0.3])
+@pytest.mark.parametrize('n_slabs_per_segment', [2, 4])
+def test_slab_radii_are_the_radii_the_densities_were_taken_at(
+        costhz, n_slabs_per_segment):
+    r"""`earth_slab_radii` inverts the geometry `earth_slabs` used.
+
+    Re-evaluating PREM at the returned radii has to give back the very
+    densities `earth_slabs` reports, or the electron fractions built
+    from them would belong to different slabs.
+    """
+    widths, densities = earth.earth_slabs(costhz, n_slabs_per_segment)
+    radii = earth.earth_slab_radii(costhz, n_slabs_per_segment)
+
+    assert radii.shape == densities.shape
+    assert np.allclose(earth.density_prem(radii), densities, rtol=0.0,
+                       atol=1.0e-12)
+
+
+def test_the_default_earth_probabilities_do_not_move():
+    r"""One half throughout is still what the routines assume.
+
+    The frozen references, the figures and the notebook outputs all rest
+    on it, so this pins the default against a per-slab array that spells
+    the same thing out.
+    """
+    h = h_vacuum_3nu()
+    uniform = earth.electron_fraction_prem(
+        earth.earth_slab_radii(-0.9, 4),
+        mantle=gd.ELECTRON_FRACTION_EARTH_CRUST,
+        core=gd.ELECTRON_FRACTION_EARTH_CRUST)
+
+    assert np.allclose(
+        earth.probabilities_3nu_earth(h, 1.0e9, -0.9, n_slabs_per_segment=4),
+        earth.probabilities_3nu_earth(h, 1.0e9, -0.9, n_slabs_per_segment=4,
+                                      electron_fraction=uniform),
+        rtol=0.0, atol=ATOL)
+
+
+def test_a_radial_electron_fraction_changes_the_probabilities():
+    r"""And it is not a rounding-level change."""
+    h = h_vacuum_3nu()
+    prem = earth.electron_fraction_prem(earth.earth_slab_radii(-1.0, 4))
+
+    default = np.ravel(earth.probabilities_3nu_earth(
+        h, 1.0e9, -1.0, n_slabs_per_segment=4))
+    varied = np.ravel(earth.probabilities_3nu_earth(
+        h, 1.0e9, -1.0, n_slabs_per_segment=4, electron_fraction=prem))
+
+    assert abs(default[0] - varied[0]) > 0.01
+
+
+def test_a_mismatched_electron_fraction_array_is_refused():
+    r"""With the slab count named, not as a NumPy broadcast error."""
+    h = h_vacuum_3nu()
+    with pytest.raises(ValueError, match='one entry per slab'):
+        earth.probabilities_3nu_earth(h, 1.0e9, -0.9, n_slabs_per_segment=4,
+                                      electron_fraction=np.array([0.5, 0.4]))
