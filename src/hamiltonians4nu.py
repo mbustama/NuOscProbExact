@@ -517,8 +517,10 @@ def hamiltonian_4nu_liv(
     Nothing here privileges the fourth state: :math:`b_4` is an
     eigenvalue like the others, so a sterile neutrino may couple to the
     LIV background whether or not it couples to matter.  Setting the
-    three new angles to zero and :math:`b_4` equal to the trace-shifted
-    remainder recovers the three-flavor term in the active block.
+    three new angles to zero recovers the three-flavor term in the
+    active block, whatever :math:`b_4` is: with :math:`R` block
+    diagonal, :math:`b_4` acts on the sterile state alone, and a term
+    on a decoupled state is a phase.
 
     .. versionadded:: 1.11.0
 

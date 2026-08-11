@@ -980,11 +980,19 @@ books['08_unusual_density_profiles.ipynb'] = notebook(
         code('import earth\nimport slabs'),
         code('def probabilities_profile(widths_km, densities, energy_ev,\n'
              '                          h_vac=None):\n'
-             '    """Nine probabilities through an arbitrary matter profile."""\n'
+             '    """Nine probabilities through an arbitrary matter profile.\n'
+             '\n'
+             '    `energy_ev` may be an array, in which case the whole scan\n'
+             '    is one call: the Hamiltonians stack on a leading axis and\n'
+             '    `slabs` composes every chord in a single pass.\n'
+             '    """\n'
              '    h_vac = H_VAC_3NU if h_vac is None else h_vac\n'
              '    vcc = earth.matter_potential(np.asarray(densities, '
              'dtype=float))\n'
-             '    H = hamiltonians3nu.hamiltonian_3nu_matter(h_vac, energy_ev,'
+             '    energy = np.asarray(energy_ev, dtype=float)\n'
+             '    if energy.ndim:\n'
+             '        energy = energy[:, None]   # one chord per energy\n'
+             '    H = hamiltonians3nu.hamiltonian_3nu_matter(h_vac, energy,'
              ' vcc)\n'
              '    return np.array(slabs.probabilities_3nu_slabs(\n'
              '        H, np.asarray(widths_km, dtype=float)*KM))\n\n\n'
@@ -1038,8 +1046,8 @@ books['08_unusual_density_profiles.ipynb'] = notebook(
         code('E_gev = np.logspace(-0.7, 1.7, 400)\n\n'
              'fig, ax = plt.subplots()\n'
              'for name, rho in profiles:\n'
-             '    p = np.array([probabilities_profile(widths, rho, e*GEV)[3]\n'
-             '                  for e in E_gev])\n'
+             '    # All 400 energies in one call, not one call each\n'
+             '    p = probabilities_profile(widths, rho, E_gev*GEV)[:, 3]\n'
              '    ax.semilogx(E_gev, p, label=name,\n'
              '                lw=1.6 if name == "uniform" else 1.2,\n'
              '                ls="--" if name == "uniform" else "-")\n'
@@ -1049,6 +1057,53 @@ books['08_unusual_density_profiles.ipynb'] = notebook(
              'ax.set_title("Same mean density, different arrangement")\n'
              'ax.legend()\n'
              'plt.show()'),
+        md('## One call for the whole scan\n\n'
+           'The curves above were not drawn one energy at a time. Every '
+           'routine in `slabs` takes a *batch* of chords: Hamiltonians of '
+           'shape `(..., n_slabs, n, n)` against the one set of widths the '
+           'chords share, returning one row of probabilities per chord.\n\n'
+           'That is the shape an energy scan already has. '
+           '`hamiltonian_3nu_matter` broadcasts an array of energies against '
+           'an array of per-slab potentials and hands back exactly it, so the '
+           'stacking costs nothing to write.\n\n'
+           'The geometry is what is shared, so this is the right tool for a '
+           'scan over energy at a fixed profile — and the wrong one for a '
+           'scan over zenith angle, where every chord has its own widths. For '
+           'that, `earth.probabilities_3nu_earth` takes energies and angles on '
+           'separate axes and handles the bookkeeping.'),
+        code('import timeit\n\n'
+             'rho = dict(profiles)["castle wall"]\n'
+             'E_scan = np.logspace(-0.7, 1.7, 400)*GEV\n\n'
+             '# One call: (400, 24, 3, 3) Hamiltonians, 24 shared widths\n'
+             'vcc = earth.matter_potential(rho)\n'
+             'H_batch = hamiltonians3nu.hamiltonian_3nu_matter(\n'
+             '    H_VAC_3NU, E_scan[:, None], vcc)\n'
+             'print("stack of Hamiltonians:", H_batch.shape)\n\n'
+             'batched = np.array(slabs.probabilities_3nu_slabs(\n'
+             '    H_batch, widths*KM))\n'
+             'print("probabilities        :", batched.shape)\n\n'
+             '# The loop it replaces\n'
+             'looped = np.array([\n'
+             '    slabs.probabilities_3nu_slabs(\n'
+             '        hamiltonians3nu.hamiltonian_3nu_matter(H_VAC_3NU, e, '
+             'vcc),\n'
+             '        widths*KM)\n'
+             '    for e in E_scan])\n\n'
+             'print("largest difference   : %.1e"\n'
+             '      % np.abs(batched-looped).max())\n\n'
+             't_batch = timeit.timeit(\n'
+             '    lambda: slabs.probabilities_3nu_slabs(H_batch, widths*KM),\n'
+             '    number=20)/20\n'
+             't_loop = timeit.timeit(\n'
+             '    lambda: [slabs.probabilities_3nu_slabs(h, widths*KM)\n'
+             '             for h in H_batch],\n'
+             '    number=3)/3\n'
+             'print("batched: %6.2f ms" % (1e3*t_batch))\n'
+             'print("looped : %6.2f ms  (%.0fx)"\n'
+             '      % (1e3*t_loop, t_loop/t_batch))'),
+        md('The two agree to round-off rather than bit for bit: they take '
+           'different paths through the compiled backend. What they do not '
+           'differ in is the physics — nothing is approximated by either.'),
         md('## Parametric enhancement\n\n'
            'A castle wall is not an arbitrary choice. When the width of one '
            'period is tuned against the oscillation length, successive layers '
@@ -1409,7 +1464,7 @@ books['10_paper_figures.ipynb'] = notebook(
 
 The plotting style is the group's standard `matplotlibrc`, inlined into the setup cell below rather than shipped as a separate file, with its sizes set for figures included at the paper's `\columnwidth`.
 
-Running this notebook writes all eight PDFs. Set `NUOSC_PAPER_FIGDIR` to write them straight into the paper's directory.''',
+Running this notebook writes all fourteen PDFs. Set `NUOSC_PAPER_FIGDIR` to write them straight into the paper's directory.''',
     [
         code(r'''import earth
 import slabs
@@ -1667,11 +1722,13 @@ density profile. Each chord is decomposed into slabs, each solved exactly.'''),
 E_gev = np.logspace(0.0, 2.0, n_e)
 cz = np.linspace(-0.999, -0.05, n_c)
 
-grid = np.empty((n_e, n_c))
-for i, e in enumerate(E_gev):
-    for j, c in enumerate(cz):
-        grid[i, j] = earth.probabilities_3nu_earth(
-            H_VAC_3NU, e*GEV, c, n_slabs_per_segment=4)[4]
+# The whole oscillogram in one call: energies and angles are indexed on
+# separate axes and broadcast against each other, so the routine builds
+# each chord's geometry once and spreads every energy over the fused
+# kernel.  Index 4 of the nine probabilities is P(nu_mu -> nu_mu).
+grid = earth.probabilities_3nu_earth(
+    H_VAC_3NU, E_gev[:, None]*GEV, cz[None, :],
+    n_slabs_per_segment=4)[..., 4]
 
 fig, (axe, ax) = plt.subplots(
     2, 1, figsize=(COLW, COLW*1.78),
@@ -1767,10 +1824,17 @@ Four density profiles with the *same* mean density, and indeed the same
 multiset of slabs, give different probabilities. The upper panel shows the
 profiles; the lower one, what they do.'''),
         code(r'''def probabilities_profile(widths_km, densities, energy_ev, h_vac=None):
-    """Nine probabilities through an arbitrary matter profile."""
+    """Nine probabilities through an arbitrary matter profile.
+
+    An array of energies gives a stack of chords sharing the widths,
+    which `slabs` composes in one pass rather than one energy at a time.
+    """
     h_vac = H_VAC_3NU if h_vac is None else h_vac
     vcc = earth.matter_potential(np.asarray(densities, dtype=float))
-    H = hamiltonians3nu.hamiltonian_3nu_matter(h_vac, energy_ev, vcc)
+    energy = np.asarray(energy_ev, dtype=float)
+    if energy.ndim:
+        energy = energy[:, None]
+    H = hamiltonians3nu.hamiltonian_3nu_matter(h_vac, energy, vcc)
     return np.array(slabs.probabilities_3nu_slabs(
         H, np.asarray(widths_km, dtype=float)*KM))
 
@@ -1822,8 +1886,8 @@ fig.text(0.005, 0.5*(pos_top.y1 + pos_bot.y0), r"Density [g cm$^{-3}$]",
          rotation="vertical", va="center", ha="left", fontsize=9)
 
 for (name, rho), ls, c in zip(profiles, STYLES, ["C0", "C1", "C2", "C3"]):
-    p = np.array([probabilities_profile(widths, rho, e*GEV)[3]
-                  for e in E_gev])
+    # The whole 400-energy scan in one call
+    p = probabilities_profile(widths, rho, E_gev*GEV)[:, 3]
     ax.semilogx(E_gev, p, ls, color=c, label=name)
 ax.set_xlim(E_gev[0], E_gev[-1])
 ax.set_xlabel("Neutrino energy [GeV]")
@@ -1834,8 +1898,10 @@ fig.savefig(os.path.join(FIGDIR, "density_arrangement.pdf"))
 plt.show()'''),
         md('''## A 3+1 sterile resonance through the Earth
 
-Four flavors, antineutrinos, through the Earth: the matter resonance that a
-three-flavor treatment cannot produce at all.'''),
+Four flavors, antineutrinos, through the full PREM profile: the matter
+resonance that a three-flavor treatment cannot produce at all. Because the
+resonance follows the density, it sits at a different energy for chords that
+cross the core than for chords that stay in the mantle.'''),
         code(r'''DM41 = 1.0                       # [eV^2]
 S14 = S24 = np.sqrt(0.10)
 S34 = 0.0
@@ -1848,20 +1914,17 @@ n_e, n_c = 300, 300
 E_tev = np.logspace(-0.5, 1.5, n_e)          # 0.3 - 30 TeV
 costhz = np.linspace(-1.0, -0.05, n_c)
 
-# Antineutrinos: conjugate the vacuum term and flip both potentials.  One
-# average mantle density here, so the whole grid is a single broadcast call.
-rho_mantle = 4.5                              # [g cm^-3]
-vcc = earth.matter_potential(rho_mantle)
-H_bar = hamiltonians4nu.hamiltonian_4nu_matter(
-    np.conj(H_VAC_4NU), E_tev[:, None]*1.0e3*GEV,
-    -vcc, -gd.VNC_EARTH_CRUST*rho_mantle/3.0)
-
-L_grid = np.array([earth.distance_traveled_inside_earth(c)
-                   for c in costhz])*KM
-grid = oscprob4nu.probabilities_4nu(H_bar, L_grid[None, :])
+# Antineutrinos on the full PREM profile, in one call.  `earth` builds
+# the slabs, conjugates the vacuum term and reverses both potentials --
+# a sterile state feels neither, so V_NC no longer cancels between the
+# flavors and is carried per slab alongside V_CC.  Energies and angles
+# go on separate axes; index 5 of the sixteen is P(nu_mu -> nu_mu).
+grid = earth.probabilities_4nu_earth(
+    H_VAC_4NU, E_tev[:, None]*1.0e3*GEV, costhz[None, :],
+    n_slabs_per_segment=4, antineutrino=True)[..., 5]
 
 fig, ax = plt.subplots(figsize=FIGSIZE_SQUARE)
-mesh = ax.pcolormesh(costhz, E_tev, grid[:, :, 5], shading="auto",
+mesh = ax.pcolormesh(costhz, E_tev, grid, shading="auto",
                      cmap="viridis", vmin=0.0, vmax=1.0, rasterized=True)
 ax.set_yscale("log")
 ax.set_xlabel(r"Cosine of zenith angle, $\cos\theta_z$")
@@ -2027,16 +2090,21 @@ print("V_emu at the centre : %.3e eV" % V_LRI[len(V_LRI)//2])
 
 
 def p_mue_lri(energy_ev, with_lri):
-    """P(nu_mu -> nu_e) along the chord, with or without the new term."""
+    """P(nu_mu -> nu_e) along the chord, with or without the new term.
+
+    The energies stack on a leading axis, so the whole scan is one call:
+    (n_energies, n_slabs, 3, 3) against the widths the chords share.
+    """
     h = np.asarray(hamiltonians3nu.hamiltonian_3nu_matter(
-        H_VAC_3NU, energy_ev, VCC_LRI))
+        H_VAC_3NU, np.asarray(energy_ev)[:, None], VCC_LRI))
     if with_lri:
         h = h + V_LRI[:, None, None]*Q_LR
-    return slabs.probabilities_3nu_slabs(h, WIDTHS_LRI*KM)[3]
+    return np.array(slabs.probabilities_3nu_slabs(
+        h, WIDTHS_LRI*KM))[:, 3]
 
 
-P_STD_LRI = np.array([p_mue_lri(e*GEV, False) for e in E_LRI])
-P_NEW_LRI = np.array([p_mue_lri(e*GEV, True) for e in E_LRI])
+P_STD_LRI = p_mue_lri(E_LRI*GEV, False)
+P_NEW_LRI = p_mue_lri(E_LRI*GEV, True)
 print("largest |dP| = %.3f, at E = %.1f GeV"
       % (np.max(np.abs(P_NEW_LRI-P_STD_LRI)),
          E_LRI[np.argmax(np.abs(P_NEW_LRI-P_STD_LRI))]))'''),
@@ -2283,14 +2351,14 @@ The external numbers are frozen in `tests/prem_speed_accuracy.json`.'''),
 #   for the minimum residual returns 0.9926748, and the two codes then
 #   agree to 3e-11 at constant density.
 #
-#   nuCraft is absent from the 3+1 panel, and not because it cannot do 3+1.
+#   nuCraft is flat at 2.8e-3 in the 3+1 panel, and that is not its solver.
 #   Its sterile and charged-current entries come from two independently
 #   rounded constants whose ratio is 0.5016 where the isoscalar value is
-#   exactly 0.5.  Scaling the density cannot separate them, so a 3.7e-4
-#   floor survives every setting; forcing the ratio to 0.5 by hand drops the
-#   same run to 2.8e-7.  Publishing the patched curve would misrepresent the
-#   released code and publishing the unpatched one would misrepresent its
-#   solver, so it appears only where the sterile entry never enters.
+#   exactly 0.5.  Scaling the density cannot separate them, so that floor
+#   survives every setting; forcing the ratio to 0.5 by hand drops the same
+#   run to 2.8e-7.  The curve drawn is the released one, because that is
+#   what a user of nuCraft gets; patching it would put a number in the
+#   figure that no installation of nuCraft returns.
 # ---------------------------------------------------------------------------
 
 with open(os.path.join('..', 'tests', 'prem_speed_accuracy.json')) as handle:
@@ -2997,30 +3065,19 @@ books['13_antineutrinos.ipynb'] = notebook(
              'print("max |nu - nubar| with dCP = 0, vacuum = %.2e"\n'
              '      % np.max(np.abs(a-b)))'),
         md('## Through the Earth\n\n'
-           'The same rule applies to a slabbed calculation: conjugate the '
-           'vacuum Hamiltonian and pass the negative potential. Because '
-           '`earth` builds its Hamiltonians from the vacuum one it is given, '
-           'the antineutrino case is one conjugation away — but the sign of '
-           'the potential has to be handled where the potential is built, so '
-           'the profile is assembled by hand here.'),
-        code('import earth\nimport slabs\n\n\n'
-             'def probabilities_earth_antinu(h_vac, energy, costhz,\n'
-             '                               n_slabs_per_segment=6):\n'
-             '    """Antineutrino probabilities across the Earth."""\n'
-             '    widths_km, densities = earth.earth_slabs(\n'
-             '        costhz, n_slabs_per_segment)\n'
-             '    vcc = -earth.matter_potential(densities)     # antineutrinos\n'
-             '    H = hamiltonians3nu.hamiltonian_3nu_matter(\n'
-             '        np.conj(h_vac), energy, vcc)             # antineutrinos\n'
-             '    return np.array(slabs.probabilities_3nu_slabs(\n'
-             '        H, widths_km*KM))\n\n\n'
+           'The same rule applies to a slabbed calculation, and `earth` '
+           'applies it for you. Pass `antineutrino=True`: it conjugates the '
+           'vacuum Hamiltonian **and** reverses both potentials, per slab, '
+           'and keeps the batched PREM path, so a whole angle scan is still '
+           'one call.'),
+        code('import earth\nimport slabs\n\n'
              'costhz = np.linspace(-0.999, -0.05, 140)\n'
              'E_fixed = 8.0*GEV\n\n'
-             'p_nu = [earth.probabilities_3nu_earth(\n'
-             '    H_VAC_3NU, E_fixed, c, n_slabs_per_segment=6)[3]\n'
-             '    for c in costhz]\n'
-             'p_bar = [probabilities_earth_antinu(H_VAC_3NU, E_fixed, c)[3]\n'
-             '         for c in costhz]\n\n'
+             'p_nu = earth.probabilities_3nu_earth(\n'
+             '    H_VAC_3NU, E_fixed, costhz, n_slabs_per_segment=6)[:, 3]\n'
+             'p_bar = earth.probabilities_3nu_earth(\n'
+             '    H_VAC_3NU, E_fixed, costhz, n_slabs_per_segment=6,\n'
+             '    antineutrino=True)[:, 3]\n\n'
              'fig, ax = plt.subplots()\n'
              'ax.plot(costhz, p_nu, label="neutrinos")\n'
              'ax.plot(costhz, p_bar, "--", label="antineutrinos")\n'
@@ -3030,6 +3087,33 @@ books['13_antineutrinos.ipynb'] = notebook(
              'ax.set_title("Through the Earth at E = 8 GeV")\n'
              'ax.legend()\n'
              'plt.show()'),
+        md('## What the flag actually does\n\n'
+           'Nothing you could not do by hand — and doing it by hand once is '
+           'the clearest way to see that *both* operations are in there. '
+           'Conjugate the vacuum Hamiltonian, negate the potential where the '
+           'potential is built, and compose the slabs:'),
+        code('def probabilities_earth_antinu(h_vac, energy, costhz,\n'
+             '                               n_slabs_per_segment=6):\n'
+             '    """Antineutrinos across the Earth, assembled by hand."""\n'
+             '    widths_km, densities = earth.earth_slabs(\n'
+             '        costhz, n_slabs_per_segment)\n'
+             '    vcc = -earth.matter_potential(densities)     # antineutrinos\n'
+             '    H = hamiltonians3nu.hamiltonian_3nu_matter(\n'
+             '        np.conj(h_vac), energy, vcc)             # antineutrinos\n'
+             '    return np.array(slabs.probabilities_3nu_slabs(\n'
+             '        H, widths_km*KM))\n\n\n'
+             'by_hand = np.array([probabilities_earth_antinu(\n'
+             '    H_VAC_3NU, E_fixed, c)[3] for c in costhz])\n\n'
+             'print("flag vs by hand : %.1e" % np.abs(p_bar-by_hand).max())\n'
+             'print("nu vs nubar     : %.3f" % np.abs(p_nu-p_bar).max())'),
+        md('The two agree exactly. What the flag buys is not the arithmetic '
+           'but the batching: the hand-built version is one call per angle, '
+           'because the potentials have to be rebuilt outside `earth`, while '
+           'the flag keeps the whole scan inside one call.\n\n'
+           'At four flavors the flag matters more than convenience. A '
+           'sterile state does not feel the neutral-current potential, so '
+           '$V_{NC}$ no longer cancels between the flavors and has to be '
+           'reversed too — two potentials to get right instead of one.'),
     ])
 
 # -------------------------------------------------------- 14 solar neutrinos
@@ -5857,7 +5941,8 @@ READING_ORDER = [
      'units, one probability, and why to pass arrays'),
     ('02_vacuum_oscillations.ipynb', 'Oscillations in vacuum',
      'the probabilities against baseline and against energy'),
-    ('03_matter_nsi_liv.ipynb', 'Matter, NSI, and LIV',
+    ('03_matter_nsi_liv.ipynb',
+     'Matter, NSI, and Lorentz-invariance violation',
      'constant-density matter and two kinds of new physics'),
     ('04_oscillogram.ipynb', 'Oscillograms',
      'a two-dimensional map in a single call'),
@@ -5873,14 +5958,17 @@ READING_ORDER = [
      'looping versus broadcasting, measured on your machine'),
     ('10_paper_figures.ipynb', "The paper's figures",
      'the two figures of arXiv:1904.12391, reproduced'),
-    ('11_exact_vs_approximations.ipynb', 'Exact versus the approximations',
+    ('11_exact_vs_approximations.ipynb',
+     'Exact versus the textbook approximations',
      'where the familiar formulas break, and by how much'),
     ('12_ordering_and_octant.ipynb', 'Mass ordering and the octant',
      'two open questions, and how they show up'),
     ('13_antineutrinos.ipynb', 'Antineutrinos, done properly',
      'conjugate *and* flip -- and two ways to get it half right'),
-    ('14_solar_and_adiabatic_msw.ipynb', 'Solar neutrinos and the MSW '
-     'resonance', 'the adiabatic resonance, and the limits of slabbing'),
+    ('14_solar_and_adiabatic_msw.ipynb',
+     'Solar neutrinos, the MSW resonance, and the limits of slabs',
+     'the adiabatic resonance by slabs, and when a Magnus method is the '
+     'better tool'),
     ('15_numerical_edge_cases.ipynb', 'Numerical edge cases',
      'degeneracies, and what returns a number instead of NaN'),
     ('16_four_neutrinos.ipynb', 'Four neutrinos, and a sterile state',
@@ -5888,7 +5976,7 @@ READING_ORDER = [
     ('17_cross_checks.ipynb', 'Cross-checks with other codes',
      'corroboration from nuSQuIDS and Zaglauer-Schwarzer'),
     ('18_evolution_operator.ipynb',
-     'The evolution operator and the SU(n) coefficients',
+     'The evolution operator, and the SU(n) coefficients',
      'the machinery underneath, for composing and extending'),
     ('19_animations.ipynb', 'Animated scenes',
      'four sweeps, as stills, and the reel they came from'),

@@ -1,5 +1,5 @@
 {
- "note": "Speed-accuracy comparison at L = 1300 km, rho = 3 g/cm^3, three flavors, channel P(nu_mu -> nu_e). Accuracy is max |P - P_ref| over 60 energies spanning 0.6-20 GeV, against a 50-digit mpmath matrix exponential of the same Hamiltonian, so that no code serves as its own reference. Timing is per probability over a 2000-point scan, best of several runs, on one desktop machine. Every code is given the same V_CC and the same baseline in eV^-1; see the provenance comments in notebooks/10_paper_figures.ipynb.",
+ "note": "Speed-accuracy comparison at L = 1300 km, rho = 3 g/cm^3, three flavors, channel P(nu_mu -> nu_e). Accuracy is max |P - P_ref| over 60 energies spanning 0.6-20 GeV, against a 50-digit mpmath matrix exponential of the same Hamiltonian, so that no code serves as its own reference. Timing is per probability over a 2000-point scan, best of several runs, on one laptop: Intel Core i5-1334U, 10 cores / 12 threads, 16 GB RAM. Every code is given the same V_CC and the same baseline in eV^-1; see the provenance comments in notebooks/10_paper_figures.ipynb.",
  "series": [
   {
    "name": "NuOscProbExact",

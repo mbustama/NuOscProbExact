@@ -51,6 +51,8 @@ Routine listings
     * dms_to_decimal - Degrees, minutes, seconds to decimal degrees
     * coordinates_of_named_location - Coordinates of a named site
     * density_prem - PREM density at a radius
+    * electron_fraction_prem - PREM-layered electron fraction
+    * earth_slab_radii - Radius at the midpoint of each slab
     * matter_potential - Charged-current potential from a density
     * matter_potential_nc - Neutral-current potential, for a sterile state
     * distance_traveled_inside_earth - Chord length for a given costhz
@@ -80,7 +82,8 @@ __all__ = ['LOC_COORDS_DMS', 'PREM_BOUNDARIES',
            'CHUNK_BYTES_FALLBACK', 'CHUNK_BYTES_MIN', 'CHUNK_BYTES_MAX',
            'MIN_CHUNK_ENERGIES', 'MAX_CHUNK_BYTES',
            'dms_to_decimal', 'coordinates_of_named_location',
-           'density_prem', 'matter_potential', 'matter_potential_nc',
+           'density_prem', 'electron_fraction_prem', 'earth_slab_radii',
+           'matter_potential', 'matter_potential_nc',
            'distance_traveled_inside_earth',
            'earth_radial_distance_from_depth',
            'prem_layer_edges_along_chord', 'chord_length_inside_earth',
@@ -94,7 +97,7 @@ __all__ = ['LOC_COORDS_DMS', 'PREM_BOUNDARIES',
 
 import os
 from functools import lru_cache
-from typing import Optional, Tuple, Union
+from typing import Callable, Optional, Tuple, Union
 
 import numpy as np
 
@@ -253,6 +256,235 @@ def coordinates_of_named_location(
     return entry['lat'], entry['lon']
 
 
+def _resolve_electron_fraction(
+    electron_fraction: Union[int, float, np.ndarray, Callable],
+    costhz: float,
+    n_slabs_per_segment: int,
+    widths_km: np.ndarray,
+    densities: np.ndarray
+) -> Union[float, np.ndarray]:
+    r"""Returns a per-slab electron fraction, from whatever was given.
+
+    Both paths that build potentials from a chord's slabs go through
+    this, so that a scalar, an array and a callable mean the same thing
+    whichever one runs.
+
+    A callable is evaluated at the radii of the slabs actually cut,
+    which is the only form that survives refinement: an array is tied to
+    one slab count, and asking for a tolerance changes it.
+
+    Parameters
+    ----------
+    electron_fraction : int, float, numpy.ndarray or callable
+        One value for the chord, one per slab, or a function of radius
+        in km, as `electron_fraction_prem` is.
+    costhz : float
+        Cosine of the zenith angle, for the geometry and the message.
+    n_slabs_per_segment : int
+        Slabs per shell crossing, for the message.
+    widths_km : numpy.ndarray
+        The slab widths, in units of km.
+    densities : numpy.ndarray
+        The slab densities, whose shape a per-slab array must match.
+
+    Returns
+    -------
+    float or numpy.ndarray
+        The electron fraction, ready for `matter_potential`.
+
+    Raises
+    ------
+    ValueError
+        If an array is given whose length is not the slab count.
+    """
+    if callable(electron_fraction):
+        midpoints = np.cumsum(widths_km) - widths_km/2.0
+        electron_fraction = electron_fraction(
+            earth_radial_distance_from_depth(costhz, midpoints))
+
+    # Anything else broadcasts into a shape nothing downstream expects,
+    # so it is caught here rather than surfacing as a NumPy error about
+    # operands.
+    if np.ndim(electron_fraction) != 0 \
+            and np.shape(electron_fraction) != np.shape(densities):
+        raise ValueError(
+            'electron_fraction must be a scalar, one entry per slab, or a '
+            'callable of radius; the slab count is %d for costhz = %g at '
+            'n_slabs_per_segment = %d, and an array of shape %s was given.  '
+            'Pass earth.electron_fraction_prem itself, rather than its '
+            'values, and it is evaluated at whatever slabs are cut'
+            % (len(densities), costhz, n_slabs_per_segment,
+               np.shape(electron_fraction)))
+
+    return electron_fraction
+
+
+def _mean_nucleon_mass(
+    electron_fraction: Union[int, float, np.ndarray]
+) -> Union[float, np.ndarray]:
+    r"""Returns the mean nucleon mass for an electron fraction.
+
+    :math:`\bar{m} = Y_e m_p + (1 - Y_e) m_n`, which is the mass per
+    nucleon of matter with :math:`Y_e` electrons per nucleon.  It is not
+    a free quantity: the neutron fraction is :math:`1 - Y_e`, so a
+    caller who varies :math:`Y_e` and leaves the mass alone is
+    describing matter that is neutron-rich in its charge and isoscalar
+    in its mass at once.
+
+    At :math:`Y_e = 1/2` this is :math:`(m_p + m_n)/2` bit for bit,
+    which is what the routines here used before they took a varying
+    :math:`Y_e`, so nothing computed at one half moves.  Away from it
+    the shift is small --- :math:`5 \cdot 10^{-5}` in relative terms at
+    the core's :math:`Y_e` --- and it is carried for consistency rather
+    than for its size.
+
+    Parameters
+    ----------
+    electron_fraction : int, float or numpy.ndarray
+        Electrons per nucleon.
+
+    Returns
+    -------
+    float or numpy.ndarray
+        The mean nucleon mass, in units of eV.
+    """
+    return (electron_fraction*gd.MASS_PROTON
+            + (1.0 - electron_fraction)*gd.MASS_NEUTRON)
+
+
+def electron_fraction_prem(
+    r: Union[int, float, list, np.ndarray],
+    core: float = gd.ELECTRON_FRACTION_EARTH_CORE,
+    mantle: float = gd.ELECTRON_FRACTION_EARTH_MANTLE,
+    crust: float = gd.ELECTRON_FRACTION_EARTH_CRUST_LAYER,
+    ocean: float = gd.ELECTRON_FRACTION_EARTH_OCEAN
+) -> Union[float, np.ndarray]:
+    r"""Returns the electron fraction inside the Earth, by radius.
+
+    The companion to `density_prem`: that one gives :math:`\rho`, this
+    one gives :math:`Y_e`, and `matter_potential` needs both.  PREM is a
+    density model and carries no composition, so the four values here
+    come from the material of each layer rather than from PREM, and any
+    of them may be overridden.  Assuming one half throughout instead is
+    exactly isoscalar matter, which no part of the Earth is.
+
+    The three splits are radii PREM already has, in
+    ``PREM_BOUNDARIES``: :math:`3480` km for the core, :math:`6346.6`
+    km for the mantle, and :math:`6368` km for the crust, with the
+    ocean above that.
+
+    PREM's ocean is a global average rather than a feature of any one
+    baseline: a neutrino arriving at a detector under rock crosses none
+    of it.  For a land chord, pass ``ocean=`` the crust's value.
+
+    Nothing calls this by default.  The Earth routines assume
+    `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`, one half throughout,
+    unless an electron fraction is passed to them explicitly; see
+    `earth_slab_radii` for building the per-slab array to pass.
+
+    Parameters
+    ----------
+    r : int, float, list or numpy.ndarray
+        Radial distance from the center of the Earth, in units of km.
+    core : float, optional
+        Electron fraction at :math:`r \leq 3480` km.  Default:
+        `globaldefs.ELECTRON_FRACTION_EARTH_CORE`.
+    mantle : float, optional
+        Electron fraction at :math:`3480 < r \leq 6346.6` km.  Default:
+        `globaldefs.ELECTRON_FRACTION_EARTH_MANTLE`.
+    crust : float, optional
+        Electron fraction at :math:`6346.6 < r \leq 6368` km.  Default:
+        `globaldefs.ELECTRON_FRACTION_EARTH_CRUST_LAYER`.
+    ocean : float, optional
+        Electron fraction at :math:`r > 6368` km.  Default:
+        `globaldefs.ELECTRON_FRACTION_EARTH_OCEAN`.
+
+    Returns
+    -------
+    float or numpy.ndarray
+        The electron fraction, adimensional, of the same shape as `r`.
+
+    Examples
+    --------
+    .. jupyter-execute::
+
+        import earth
+
+        for radius in [1000.0, 6000.0, 6350.0, 6370.0]:
+            print('%.4f' % earth.electron_fraction_prem(radius))
+    """
+    scalar_input = (np.ndim(r) == 0)
+    r = np.asarray(r, dtype=float)
+
+    # Refused for the same radii `density_prem` refuses, so that the two
+    # companions cannot disagree about what is inside the Earth.  A
+    # radius out of range would otherwise pick up the core's value or
+    # the ocean's and say nothing.
+    if np.any(r < 0.0):
+        raise ValueError('electron_fraction_prem: radial distance cannot '
+                         'be negative')
+    if np.any(r > gd.EARTH_RADIUS):
+        raise ValueError(
+            'electron_fraction_prem: radial distance cannot exceed the '
+            'radius of the Earth, %g km' % gd.EARTH_RADIUS)
+
+    # Selects rather than branches, so that the batched path stays
+    # branch-free, as everything else along it is.  The boundaries are
+    # taken as belonging to the layer above, so that a radius exactly on
+    # one gets the same answer `density_prem` gives it.
+    fraction = np.where(
+        r <= PREM_BOUNDARIES[1], float(core),
+        np.where(r <= PREM_BOUNDARIES[6], float(mantle),
+                 np.where(r <= PREM_BOUNDARIES[8], float(crust),
+                          float(ocean))))
+
+    return float(fraction) if scalar_input else fraction
+
+
+def earth_slab_radii(
+    costhz: Union[int, float],
+    n_slabs_per_segment: int = 8
+) -> np.ndarray:
+    r"""Returns the radius at the midpoint of each slab along a chord.
+
+    `earth_slabs` returns the width and the density of every slab; this
+    returns the radius each density was evaluated at, which is what
+    `electron_fraction_prem` needs to give a per-slab electron fraction.
+    Call both with the same `costhz` and `n_slabs_per_segment`, or the
+    arrays will not correspond.
+
+    Parameters
+    ----------
+    costhz : int or float
+        Cosine of the zenith angle of arrival, in :math:`[-1, 0]`.
+    n_slabs_per_segment : int, optional
+        Slabs per PREM shell crossing.  Default: ``8``.
+
+    Returns
+    -------
+    numpy.ndarray
+        The radii, in units of km, one per slab, in the order that
+        `earth_slabs` returns its slabs in.
+
+    Examples
+    --------
+    .. jupyter-execute::
+
+        import earth
+
+        radii = earth.earth_slab_radii(-1.0, 2)
+        print(len(radii))
+        print('%.1f' % radii.min())
+    """
+    widths, _ = earth_slabs(costhz, n_slabs_per_segment)
+
+    # The slabs tile the chord from one end, so the midpoint of each is
+    # its own half-width past the end of everything before it.
+    midpoints = np.cumsum(widths) - widths/2.0
+
+    return earth_radial_distance_from_depth(costhz, midpoints)
+
+
 def density_prem(
     r: Union[int, float, list, np.ndarray],
     tol: float = 1.e-8
@@ -325,7 +557,8 @@ def density_prem(
 
 def matter_potential(
     density: Union[int, float, list, np.ndarray],
-    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST
+    electron_fraction: Union[int, float, np.ndarray]
+    = gd.ELECTRON_FRACTION_EARTH_CRUST
 ) -> Union[float, np.ndarray]:
     r"""Returns the charged-current matter potential for a density.
 
@@ -340,10 +573,11 @@ def matter_potential(
     ----------
     density : int, float, list or numpy.ndarray
         Matter density, in units of g cm\ :sup:`-3`.
-    electron_fraction : float, optional
-        Electrons per nucleon.  Default:
-        `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`, which is 0.5 and is
-        a good approximation everywhere in the Earth.
+    electron_fraction : int, float or numpy.ndarray, optional
+        Electrons per nucleon, one value or one per density.  Default:
+        `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`, one half, which is
+        exactly isoscalar matter and so is no layer of the Earth; see
+        `electron_fraction_prem` for the layered values.
 
     Returns
     -------
@@ -364,7 +598,7 @@ def matter_potential(
     # Electron number density in eV^3, by the same route as
     # globaldefs.NUM_DENSITY_E_EARTH_CRUST
     num_density_e = (density*gd.CONV_G_TO_EV
-                     / ((gd.MASS_PROTON+gd.MASS_NEUTRON)/2.0)
+                     / _mean_nucleon_mass(electron_fraction)
                      * electron_fraction
                      / pow(gd.CONV_CM_TO_INV_EV, 3.0))
     potential = np.sqrt(2.0)*gd.GF*num_density_e
@@ -375,7 +609,8 @@ def matter_potential(
 def matter_potential_nc(
     density: Union[int, float, list, np.ndarray],
     neutron_fraction: Optional[float] = None,
-    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST
+    electron_fraction: Union[int, float, np.ndarray]
+    = gd.ELECTRON_FRACTION_EARTH_CRUST
 ) -> Union[float, np.ndarray]:
     r"""Returns the neutral-current matter potential for a density.
 
@@ -397,12 +632,20 @@ def matter_potential_nc(
     density : int, float, list or numpy.ndarray
         Matter density, in units of g cm\ :sup:`-3`.
     neutron_fraction : float, optional
-        Neutrons per nucleon.  Default: ``1 - electron_fraction``, the
-        isoscalar value, since a nucleon is either a proton --- matched
-        by an electron --- or a neutron.
-    electron_fraction : float, optional
-        Electrons per nucleon, used only to derive `neutron_fraction`
-        when that is not given.  Default:
+        Neutrons per nucleon.  Default: ``1 - electron_fraction``, since
+        a nucleon is either a proton --- matched by an electron --- or a
+        neutron, so for ordinary matter the two are one quantity and not
+        two.  Giving a value that is not the complement is therefore
+        describing something other than protons and neutrons, and is
+        accepted rather than refused only because it is occasionally
+        useful for testing sensitivity; the mean nucleon mass still
+        follows `electron_fraction`, so the two are mixed in that case.
+        The `earth` chord routines never pass this, and so always derive
+        it.
+    electron_fraction : int, float or numpy.ndarray, optional
+        Electrons per nucleon, one value or one per density.  Sets the
+        mean nucleon mass, and derives `neutron_fraction` when that is
+        not given.  Default:
         `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`.
 
     Returns
@@ -428,7 +671,7 @@ def matter_potential_nc(
     # Neutron number density in eV^3, by the same route as the electron
     # one in `matter_potential`
     num_density_n = (density*gd.CONV_G_TO_EV
-                     / ((gd.MASS_PROTON+gd.MASS_NEUTRON)/2.0)
+                     / _mean_nucleon_mass(electron_fraction)
                      * neutron_fraction
                      / pow(gd.CONV_CM_TO_INV_EV, 3.0))
     potential = -gd.GF*num_density_n/np.sqrt(2.0)
@@ -894,7 +1137,8 @@ def _earth_hamiltonians(
     costhz: Union[int, float, list, np.ndarray],
     n_slabs_per_segment: int,
     electron_fraction: float,
-    n_flavors: int
+    n_flavors: int,
+    antineutrino: bool = False
 ) -> Tuple[np.ndarray, np.ndarray]:
     r"""Returns the per-slab Hamiltonians and widths for a chord.
 
@@ -916,6 +1160,9 @@ def _earth_hamiltonians(
     n_flavors : int
         Number of neutrino flavors, 2, 3, or 4.
 
+    antineutrino : bool
+        Whether to propagate antineutrinos: the vacuum Hamiltonian is
+        conjugated and every matter potential reversed.
     Returns
     -------
     tuple of numpy.ndarray
@@ -927,7 +1174,25 @@ def _earth_hamiltonians(
     # the multiplication below allocates its own result.
     widths_km, densities = _earth_slabs_cached(float(costhz),
                                                int(n_slabs_per_segment))
+    electron_fraction = _resolve_electron_fraction(
+        electron_fraction, costhz, n_slabs_per_segment, widths_km, densities)
     potentials = matter_potential(densities, electron_fraction)
+    # Only four flavors need the neutral-current potential: with three
+    # active states it is common to all of them and drops out, so at two
+    # and three it is not worth the array it would take.
+    potentials_nc = (
+        matter_potential_nc(densities, electron_fraction=electron_fraction)
+        if n_flavors == 4 else None)
+
+    # An antineutrino sees the conjugate vacuum Hamiltonian and both
+    # potentials reversed.  Doing only one of the two is the commonest
+    # way to put a matter resonance on the wrong side.
+    if antineutrino:
+        h_vacuum_energy_independent = np.conj(
+            np.asarray(h_vacuum_energy_independent, dtype=complex))
+        potentials = -potentials
+        if potentials_nc is not None:
+            potentials_nc = -potentials_nc
 
     # The slab axis is the last one the potentials carry, so the energy
     # gains a trailing axis of its own to broadcast against it: a scalar
@@ -950,8 +1215,7 @@ def _earth_hamiltonians(
         # which therefore no longer cancels and has to be built too
         h = hamiltonians4nu.hamiltonian_4nu_matter(
             h_vacuum_energy_independent, energy, potentials,
-            matter_potential_nc(densities,
-                                electron_fraction=electron_fraction))
+            potentials_nc)
 
     return h, widths_km*gd.CONV_KM_TO_INV_EV
 
@@ -1183,7 +1447,8 @@ def _probabilities_earth_batch(
     n_slabs_per_segment: int,
     electron_fraction: float,
     n_flavors: int,
-    caller: str
+    caller: str,
+    antineutrino: bool = False
 ) -> np.ndarray:
     r"""Returns the probabilities for an array of energies, in chunks.
 
@@ -1204,6 +1469,9 @@ def _probabilities_earth_batch(
     caller : str
         Name of the calling routine, used in error messages.
 
+    antineutrino : bool
+        Whether to propagate antineutrinos: the vacuum Hamiltonian is
+        conjugated and every matter potential reversed.
     Returns
     -------
     numpy.ndarray
@@ -1228,19 +1496,35 @@ def _probabilities_earth_batch(
     if fastkernels.worthwhile_slabs(n_flavors,
                                     flat.shape[0]*widths_km.shape[0]):
         widths = widths_km*gd.CONV_KM_TO_INV_EV
+        electron_fraction = _resolve_electron_fraction(
+            electron_fraction, costhz, n_slabs_per_segment, widths_km,
+            densities)
         potentials = matter_potential(densities, electron_fraction)
+        # As above: only the four-flavor kernel is handed this one.
+        potentials_nc = (
+            matter_potential_nc(densities,
+                                electron_fraction=electron_fraction)
+            if n_flavors == 4 else None)
+        h_vac = h_vacuum_energy_independent
+
+            # An antineutrino sees the conjugate vacuum Hamiltonian and both
+            # potentials reversed.  Doing only one of the two is the commonest
+            # way to put a matter resonance on the wrong side.
+        if antineutrino:
+            h_vac = np.conj(np.asarray(h_vac, dtype=complex))
+            potentials = -potentials
+            if potentials_nc is not None:
+                potentials_nc = -potentials_nc
         if n_flavors == 2:
             u = fastkernels.earth_chords_2nu_kernel(
-                h_vacuum_energy_independent, flat, potentials, widths)
+                h_vac, flat, potentials, widths)
         elif n_flavors == 3:
             u = fastkernels.earth_chords_3nu_kernel(
-                h_vacuum_energy_independent, flat, potentials, widths)
+                h_vac, flat, potentials, widths)
         else:
             u = fastkernels.earth_chords_4nu_kernel(
-                h_vacuum_energy_independent, flat, potentials,
-                matter_potential_nc(densities,
-                                    electron_fraction=electron_fraction),
-                widths, oscprob4nu.POLISH_ROOTS)
+                h_vac, flat, potentials,
+                potentials_nc, widths, oscprob4nu.POLISH_ROOTS)
         # P_ab = |U_ba|^2, initial flavor varying slowest
         p = np.abs(np.swapaxes(u, -1, -2))**2.0
         return p.reshape(energy.shape + (n_flavors*n_flavors,))
@@ -1248,7 +1532,8 @@ def _probabilities_earth_batch(
     if flat.shape[0] <= chunk:
         h, widths = _earth_hamiltonians(h_vacuum_energy_independent, flat,
                                         costhz, n_slabs_per_segment,
-                                        electron_fraction, n_flavors)
+                                        electron_fraction, n_flavors,
+                                        antineutrino)
         out = slabs._probabilities_slabs_batch(h, widths, n_flavors, caller)
     else:
         out = np.empty((flat.shape[0], n_flavors*n_flavors), dtype=float)
@@ -1256,7 +1541,8 @@ def _probabilities_earth_batch(
             piece = flat[start:start+chunk]
             h, widths = _earth_hamiltonians(
                 h_vacuum_energy_independent, piece, costhz,
-                n_slabs_per_segment, electron_fraction, n_flavors)
+                n_slabs_per_segment, electron_fraction, n_flavors,
+                antineutrino)
             out[start:start+chunk] = slabs._probabilities_slabs_batch(
                 h, widths, n_flavors, caller)
 
@@ -1273,7 +1559,8 @@ def slabs_for_tolerance(
     atol: Optional[float] = None,
     n_start: int = 8,
     n_max: int = slabs.N_SLABS_MAX,
-    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST
+    electron_fraction: Union[int, float, np.ndarray, Callable]
+    = gd.ELECTRON_FRACTION_EARTH_CRUST
 ) -> int:
     r"""Returns the subdivision an Earth crossing needs for a tolerance.
 
@@ -1321,9 +1608,14 @@ def slabs_for_tolerance(
         returned.  Default: 8, the default of the probability routines.
     n_max : int, optional
         Largest subdivision to try.  Default: `slabs.N_SLABS_MAX`.
-    electron_fraction : float, optional
-        Electrons per nucleon.  Default:
-        `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`.
+    electron_fraction : int, float, numpy.ndarray or callable, optional
+        Electrons per nucleon: one value for the whole chord, one per
+        slab, or a function of radius in km, such as
+        `electron_fraction_prem`.  Prefer the callable, which is the
+        only form that survives a slab count chosen from a tolerance.
+        Default: `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`, one half
+        throughout, which is exactly isoscalar matter and so is no layer
+        of the Earth.
 
     Returns
     -------
@@ -1377,7 +1669,8 @@ def _probabilities_earth(
     n_slabs_per_segment: int,
     electron_fraction: float,
     n_flavors: int,
-    caller: str
+    caller: str,
+    antineutrino: bool = False
 ) -> Union[Tuple[float, ...], np.ndarray]:
     r"""Returns the probabilities for one subdivision, scalar or batched.
 
@@ -1401,6 +1694,9 @@ def _probabilities_earth(
     caller : str
         Name of the calling routine, used in error messages.
 
+    antineutrino : bool
+        Whether to propagate antineutrinos: the vacuum Hamiltonian is
+        conjugated and every matter potential reversed.
     Returns
     -------
     tuple of float or numpy.ndarray
@@ -1411,12 +1707,13 @@ def _probabilities_earth(
     if np.ndim(costhz) != 0:
         return _probabilities_earth_grid(
             h_vacuum_energy_independent, energy, costhz, n_slabs_per_segment,
-            electron_fraction, n_flavors, caller)
+            electron_fraction, n_flavors, caller, antineutrino)
 
     if np.ndim(energy) == 0:
         h, widths = _earth_hamiltonians(h_vacuum_energy_independent, energy,
                                         costhz, n_slabs_per_segment,
-                                        electron_fraction, n_flavors)
+                                        electron_fraction, n_flavors,
+                                        antineutrino)
         if n_flavors == 2:
             return slabs.probabilities_2nu_slabs(h, widths)
         if n_flavors == 3:
@@ -1425,7 +1722,8 @@ def _probabilities_earth(
 
     return _probabilities_earth_batch(h_vacuum_energy_independent, energy,
                                       costhz, n_slabs_per_segment,
-                                      electron_fraction, n_flavors, caller)
+                                      electron_fraction, n_flavors, caller,
+                                      antineutrino)
 
 
 def _probabilities_earth_grid(
@@ -1435,7 +1733,8 @@ def _probabilities_earth_grid(
     n_slabs_per_segment: int,
     electron_fraction: float,
     n_flavors: int,
-    caller: str
+    caller: str,
+    antineutrino: bool = False
 ) -> np.ndarray:
     r"""Returns the probabilities over a grid of energies and angles.
 
@@ -1470,6 +1769,9 @@ def _probabilities_earth_grid(
     caller : str
         Name of the calling routine, used in error messages.
 
+    antineutrino : bool
+        Whether to propagate antineutrinos: the vacuum Hamiltonian is
+        conjugated and every matter potential reversed.
     Returns
     -------
     numpy.ndarray
@@ -1502,7 +1804,8 @@ def _probabilities_earth_grid(
         at_angle = flat_costhz == angle
         out[at_angle] = _probabilities_earth_batch(
             h_vacuum_energy_independent, flat_energy[at_angle], float(angle),
-            n_slabs_per_segment, electron_fraction, n_flavors, caller)
+            n_slabs_per_segment, electron_fraction, n_flavors, caller,
+            antineutrino)
 
     return out.reshape(energy_b.shape + (n_flavors*n_flavors,))
 
@@ -1518,7 +1821,8 @@ def _probabilities_earth_tol(
     atol: Optional[float],
     n_max: int,
     return_n_slabs: bool,
-    caller: str
+    caller: str,
+    antineutrino: bool = False
 ) -> Union[Tuple[float, ...], np.ndarray, tuple]:
     r"""Returns the probabilities, refining first if a tolerance is set.
 
@@ -1551,6 +1855,9 @@ def _probabilities_earth_tol(
     caller : str
         Name of the calling routine, used in error messages.
 
+    antineutrino : bool
+        Whether to propagate antineutrinos: the vacuum Hamiltonian is
+        conjugated and every matter potential reversed.
     Returns
     -------
     tuple of float, numpy.ndarray, or tuple
@@ -1560,13 +1867,14 @@ def _probabilities_earth_tol(
     if rtol is None and atol is None:
         p = _probabilities_earth(h_vacuum_energy_independent, energy, costhz,
                                  n_slabs_per_segment, electron_fraction,
-                                 n_flavors, caller)
+                                 n_flavors, caller, antineutrino)
         n = n_slabs_per_segment
     else:
         def evaluate(n_try: int) -> np.ndarray:
             return np.asarray(_probabilities_earth(
                 h_vacuum_energy_independent, energy, costhz, n_try,
-                electron_fraction, n_flavors, caller), dtype=float)
+                electron_fraction, n_flavors, caller, antineutrino),
+                dtype=float)
 
         # The search already evaluated the answer at the subdivision it
         # settled on, so there is nothing left to compute here
@@ -1585,11 +1893,13 @@ def probabilities_2nu_earth(
     energy: Union[int, float, list, np.ndarray],
     costhz: Union[int, float, list, np.ndarray],
     n_slabs_per_segment: int = 8,
-    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST,
+    electron_fraction: Union[int, float, np.ndarray, Callable]
+    = gd.ELECTRON_FRACTION_EARTH_CRUST,
     rtol: Optional[float] = None,
     atol: Optional[float] = None,
     n_max: int = slabs.N_SLABS_MAX,
-    return_n_slabs: bool = False
+    return_n_slabs: bool = False,
+    antineutrino: bool = False
 ) -> Union[Tuple[float, float, float, float], np.ndarray]:
     r"""Returns the two-flavor probabilities across the Earth.
 
@@ -1602,6 +1912,10 @@ def probabilities_2nu_earth(
        Accepts an array of energies, returning one row of probabilities
        per energy.  A scalar energy returns exactly what it returned
        before.
+
+    .. versionchanged:: 1.13.1
+       Takes ``antineutrino``, so an antineutrino crossing needs no
+       hand-built slab sequence and keeps the batched PREM path.
 
     Parameters
     ----------
@@ -1624,9 +1938,14 @@ def probabilities_2nu_earth(
         Number of equal sub-slabs per chord segment.  A segment runs
         between consecutive PREM boundary crossings; a chord crosses most
         shells twice, so there are more segments than shells.  Default: 8.
-    electron_fraction : float, optional
-        Electrons per nucleon.  Default:
-        `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`.
+    electron_fraction : int, float, numpy.ndarray or callable, optional
+        Electrons per nucleon: one value for the whole chord, one per
+        slab, or a function of radius in km, such as
+        `electron_fraction_prem`.  Prefer the callable, which is the
+        only form that survives a slab count chosen from a tolerance.
+        Default: `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`, one half
+        throughout, which is exactly isoscalar matter and so is no layer
+        of the Earth.
     rtol : float, optional
         Relative tolerance on every returned probability.  Default:
         None, meaning ``n_slabs_per_segment`` is used as given.  When
@@ -1647,6 +1966,14 @@ def probabilities_2nu_earth(
         probabilities.  Default: False.  Worth setting when a tolerance
         is in play, since a tight one can quietly cost a great deal of
         refinement.
+    antineutrino : bool, optional
+        Whether to propagate antineutrinos rather than neutrinos.
+        Default: False.  Setting it conjugates the vacuum
+        Hamiltonian *and* reverses every matter potential, which
+        are two separate operations and both are needed; applying
+        only one is the commonest way to put the matter resonance
+        on the wrong side.  The slabs, the geometry and the
+        batching are otherwise identical.
 
     Returns
     -------
@@ -1683,7 +2010,7 @@ def probabilities_2nu_earth(
     return _probabilities_earth_tol(
         h_vacuum_energy_independent, energy, costhz, n_slabs_per_segment,
         electron_fraction, 2, rtol, atol, n_max, return_n_slabs,
-        'probabilities_2nu_earth')
+        'probabilities_2nu_earth', antineutrino)
 
 
 def probabilities_3nu_earth(
@@ -1691,11 +2018,13 @@ def probabilities_3nu_earth(
     energy: Union[int, float, list, np.ndarray],
     costhz: Union[int, float, list, np.ndarray],
     n_slabs_per_segment: int = 8,
-    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST,
+    electron_fraction: Union[int, float, np.ndarray, Callable]
+    = gd.ELECTRON_FRACTION_EARTH_CRUST,
     rtol: Optional[float] = None,
     atol: Optional[float] = None,
     n_max: int = slabs.N_SLABS_MAX,
-    return_n_slabs: bool = False
+    return_n_slabs: bool = False,
+    antineutrino: bool = False
 ) -> Union[Tuple[float, float, float, float, float, float, float, float,
                  float], np.ndarray]:
     r"""Returns the three-flavor probabilities across the Earth.
@@ -1712,6 +2041,10 @@ def probabilities_3nu_earth(
        Accepts an array of energies, returning one row of probabilities
        per energy.  A scalar energy returns exactly what it returned
        before.
+
+    .. versionchanged:: 1.13.1
+       Takes ``antineutrino``, so an antineutrino crossing needs no
+       hand-built slab sequence and keeps the batched PREM path.
 
     Parameters
     ----------
@@ -1734,9 +2067,14 @@ def probabilities_3nu_earth(
         Number of equal sub-slabs per chord segment.  A segment runs
         between consecutive PREM boundary crossings; a chord crosses most
         shells twice, so there are more segments than shells.  Default: 8.
-    electron_fraction : float, optional
-        Electrons per nucleon.  Default:
-        `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`.
+    electron_fraction : int, float, numpy.ndarray or callable, optional
+        Electrons per nucleon: one value for the whole chord, one per
+        slab, or a function of radius in km, such as
+        `electron_fraction_prem`.  Prefer the callable, which is the
+        only form that survives a slab count chosen from a tolerance.
+        Default: `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`, one half
+        throughout, which is exactly isoscalar matter and so is no layer
+        of the Earth.
     rtol : float, optional
         Relative tolerance on every returned probability.  Default:
         None, meaning ``n_slabs_per_segment`` is used as given.  When
@@ -1757,6 +2095,14 @@ def probabilities_3nu_earth(
         probabilities.  Default: False.  Worth setting when a tolerance
         is in play, since a tight one can quietly cost a great deal of
         refinement.
+    antineutrino : bool, optional
+        Whether to propagate antineutrinos rather than neutrinos.
+        Default: False.  Setting it conjugates the vacuum
+        Hamiltonian *and* reverses every matter potential, which
+        are two separate operations and both are needed; applying
+        only one is the commonest way to put the matter resonance
+        on the wrong side.  The slabs, the geometry and the
+        batching are otherwise identical.
 
     Returns
     -------
@@ -1787,6 +2133,11 @@ def probabilities_3nu_earth(
         print('P_mue = %.6f'
               % earth.probabilities_3nu_earth(h_vac, 1.0e10, -1.0)[3])
 
+        # The same chord for antineutrinos: matter separates the two
+        print('P_mue (nubar) = %.6f'
+              % earth.probabilities_3nu_earth(
+                  h_vac, 1.0e10, -1.0, antineutrino=True)[3])
+
         # An array of energies returns the whole scan from one call
         energies = np.array([1.0, 5.0, 10.0])*1.0e9
         prob = earth.probabilities_3nu_earth(h_vac, energies, -1.0)
@@ -1795,7 +2146,7 @@ def probabilities_3nu_earth(
     return _probabilities_earth_tol(
         h_vacuum_energy_independent, energy, costhz, n_slabs_per_segment,
         electron_fraction, 3, rtol, atol, n_max, return_n_slabs,
-        'probabilities_3nu_earth')
+        'probabilities_3nu_earth', antineutrino)
 
 
 def probabilities_2nu_between_locations(
@@ -1804,11 +2155,13 @@ def probabilities_2nu_between_locations(
     loc_name_1: str,
     loc_name_2: str,
     n_slabs_per_segment: int = 8,
-    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST,
+    electron_fraction: Union[int, float, np.ndarray, Callable]
+    = gd.ELECTRON_FRACTION_EARTH_CRUST,
     rtol: Optional[float] = None,
     atol: Optional[float] = None,
     n_max: int = slabs.N_SLABS_MAX,
-    return_n_slabs: bool = False
+    return_n_slabs: bool = False,
+    antineutrino: bool = False
 ) -> Union[Tuple[float, float, float, float], np.ndarray]:
     r"""Returns the two-flavor probabilities between two named locations.
 
@@ -1817,6 +2170,10 @@ def probabilities_2nu_between_locations(
     `probabilities_2nu_earth` along it.
 
     .. versionadded:: 1.8.0
+
+    .. versionchanged:: 1.13.1
+       Takes ``antineutrino``, passed through to the routine it
+       wraps.
 
     Parameters
     ----------
@@ -1834,9 +2191,14 @@ def probabilities_2nu_between_locations(
         Number of equal sub-slabs per chord segment.  A segment runs
         between consecutive PREM boundary crossings; a chord crosses most
         shells twice, so there are more segments than shells.  Default: 8.
-    electron_fraction : float, optional
-        Electrons per nucleon.  Default:
-        `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`.
+    electron_fraction : int, float, numpy.ndarray or callable, optional
+        Electrons per nucleon: one value for the whole chord, one per
+        slab, or a function of radius in km, such as
+        `electron_fraction_prem`.  Prefer the callable, which is the
+        only form that survives a slab count chosen from a tolerance.
+        Default: `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`, one half
+        throughout, which is exactly isoscalar matter and so is no layer
+        of the Earth.
     rtol : float, optional
         Relative tolerance on every returned probability.  Default:
         None, meaning ``n_slabs_per_segment`` is used as given.  When
@@ -1857,6 +2219,14 @@ def probabilities_2nu_between_locations(
         probabilities.  Default: False.  Worth setting when a tolerance
         is in play, since a tight one can quietly cost a great deal of
         refinement.
+    antineutrino : bool, optional
+        Whether to propagate antineutrinos rather than neutrinos.
+        Default: False.  Setting it conjugates the vacuum
+        Hamiltonian *and* reverses every matter potential, which
+        are two separate operations and both are needed; applying
+        only one is the commonest way to put the matter resonance
+        on the wrong side.  The slabs, the geometry and the
+        batching are otherwise identical.
 
     Returns
     -------
@@ -1893,7 +2263,7 @@ def probabilities_2nu_between_locations(
     return probabilities_2nu_earth(h_vacuum_energy_independent, energy,
                                    costhz, n_slabs_per_segment,
                                    electron_fraction, rtol, atol, n_max,
-                                   return_n_slabs)
+                                   return_n_slabs, antineutrino)
 
 
 def probabilities_3nu_between_locations(
@@ -1902,11 +2272,13 @@ def probabilities_3nu_between_locations(
     loc_name_1: str,
     loc_name_2: str,
     n_slabs_per_segment: int = 8,
-    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST,
+    electron_fraction: Union[int, float, np.ndarray, Callable]
+    = gd.ELECTRON_FRACTION_EARTH_CRUST,
     rtol: Optional[float] = None,
     atol: Optional[float] = None,
     n_max: int = slabs.N_SLABS_MAX,
-    return_n_slabs: bool = False
+    return_n_slabs: bool = False,
+    antineutrino: bool = False
 ) -> Union[Tuple[float, float, float, float, float, float, float, float,
                  float], np.ndarray]:
     r"""Returns the three-flavor probabilities between two named locations.
@@ -1916,6 +2288,10 @@ def probabilities_3nu_between_locations(
     `probabilities_3nu_earth` along it.
 
     .. versionadded:: 1.8.0
+
+    .. versionchanged:: 1.13.1
+       Takes ``antineutrino``, passed through to the routine it
+       wraps.
 
     Parameters
     ----------
@@ -1933,9 +2309,14 @@ def probabilities_3nu_between_locations(
         Number of equal sub-slabs per chord segment.  A segment runs
         between consecutive PREM boundary crossings; a chord crosses most
         shells twice, so there are more segments than shells.  Default: 8.
-    electron_fraction : float, optional
-        Electrons per nucleon.  Default:
-        `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`.
+    electron_fraction : int, float, numpy.ndarray or callable, optional
+        Electrons per nucleon: one value for the whole chord, one per
+        slab, or a function of radius in km, such as
+        `electron_fraction_prem`.  Prefer the callable, which is the
+        only form that survives a slab count chosen from a tolerance.
+        Default: `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`, one half
+        throughout, which is exactly isoscalar matter and so is no layer
+        of the Earth.
     rtol : float, optional
         Relative tolerance on every returned probability.  Default:
         None, meaning ``n_slabs_per_segment`` is used as given.  When
@@ -1956,6 +2337,14 @@ def probabilities_3nu_between_locations(
         probabilities.  Default: False.  Worth setting when a tolerance
         is in play, since a tight one can quietly cost a great deal of
         refinement.
+    antineutrino : bool, optional
+        Whether to propagate antineutrinos rather than neutrinos.
+        Default: False.  Setting it conjugates the vacuum
+        Hamiltonian *and* reverses every matter potential, which
+        are two separate operations and both are needed; applying
+        only one is the commonest way to put the matter resonance
+        on the wrong side.  The slabs, the geometry and the
+        batching are otherwise identical.
 
     Returns
     -------
@@ -1993,7 +2382,7 @@ def probabilities_3nu_between_locations(
     return probabilities_3nu_earth(h_vacuum_energy_independent, energy,
                                    costhz, n_slabs_per_segment,
                                    electron_fraction, rtol, atol, n_max,
-                                   return_n_slabs)
+                                   return_n_slabs, antineutrino)
 
 
 def _costhz_of_named_pair(loc_name_1: str, loc_name_2: str) -> float:
@@ -2033,11 +2422,13 @@ def probabilities_4nu_earth(
     energy: Union[int, float, list, np.ndarray],
     costhz: Union[int, float, list, np.ndarray],
     n_slabs_per_segment: int = 8,
-    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST,
+    electron_fraction: Union[int, float, np.ndarray, Callable]
+    = gd.ELECTRON_FRACTION_EARTH_CRUST,
     rtol: Optional[float] = None,
     atol: Optional[float] = None,
     n_max: int = slabs.N_SLABS_MAX,
-    return_n_slabs: bool = False
+    return_n_slabs: bool = False,
+    antineutrino: bool = False
 ) -> Union[Tuple[float, ...], np.ndarray]:
     r"""Returns the four-flavor probabilities across the Earth.
 
@@ -2056,6 +2447,10 @@ def probabilities_4nu_earth(
        Accepts an array of energies, returning one row of probabilities
        per energy.  A scalar energy returns exactly what it returned
        before.
+
+    .. versionchanged:: 1.13.1
+       Takes ``antineutrino``, so an antineutrino crossing needs no
+       hand-built slab sequence and keeps the batched PREM path.
 
     Parameters
     ----------
@@ -2079,10 +2474,16 @@ def probabilities_4nu_earth(
         Number of equal sub-slabs per chord segment.  A segment runs
         between consecutive PREM boundary crossings; a chord crosses most
         shells twice, so there are more segments than shells.  Default: 8.
-    electron_fraction : float, optional
-        Electrons per nucleon.  The neutron fraction is taken as its
-        complement, which is what sets :math:`V_{NC}`.  Default:
-        `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`.
+    electron_fraction : int, float, numpy.ndarray or callable, optional
+        Electrons per nucleon: one value for the whole chord, one per
+        slab, or a function of radius in km, such as
+        `electron_fraction_prem`.  Prefer the callable, which is the
+        only form that survives a slab count chosen from a tolerance.
+        The neutron fraction is taken as its complement, which is what
+        sets :math:`V_{NC}`, so a layered electron fraction layers that
+        too.  Default: `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`, one
+        half throughout, which is exactly isoscalar matter and so is no
+        layer of the Earth.
     rtol : float, optional
         Relative tolerance on every returned probability.  Default:
         None, meaning ``n_slabs_per_segment`` is used as given.  When
@@ -2103,6 +2504,14 @@ def probabilities_4nu_earth(
         probabilities.  Default: False.  Worth setting when a tolerance
         is in play, since a tight one can quietly cost a great deal of
         refinement.
+    antineutrino : bool, optional
+        Whether to propagate antineutrinos rather than neutrinos.
+        Default: False.  Setting it conjugates the vacuum
+        Hamiltonian *and* reverses every matter potential, which
+        are two separate operations and both are needed; applying
+        only one is the commonest way to put the matter resonance
+        on the wrong side.  The slabs, the geometry and the
+        batching are otherwise identical.
 
     Returns
     -------
@@ -2141,7 +2550,7 @@ def probabilities_4nu_earth(
     return _probabilities_earth_tol(
         h_vacuum_energy_independent, energy, costhz, n_slabs_per_segment,
         electron_fraction, 4, rtol, atol, n_max, return_n_slabs,
-        'probabilities_4nu_earth')
+        'probabilities_4nu_earth', antineutrino)
 
 
 def probabilities_4nu_between_locations(
@@ -2150,11 +2559,13 @@ def probabilities_4nu_between_locations(
     loc_name_1: str,
     loc_name_2: str,
     n_slabs_per_segment: int = 8,
-    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST,
+    electron_fraction: Union[int, float, np.ndarray, Callable]
+    = gd.ELECTRON_FRACTION_EARTH_CRUST,
     rtol: Optional[float] = None,
     atol: Optional[float] = None,
     n_max: int = slabs.N_SLABS_MAX,
-    return_n_slabs: bool = False
+    return_n_slabs: bool = False,
+    antineutrino: bool = False
 ) -> Union[Tuple[float, ...], np.ndarray]:
     r"""Returns the four-flavor probabilities between two named locations.
 
@@ -2163,6 +2574,10 @@ def probabilities_4nu_between_locations(
     `probabilities_4nu_earth` along it.
 
     .. versionadded:: 1.11.0
+
+    .. versionchanged:: 1.13.1
+       Takes ``antineutrino``, passed through to the routine it
+       wraps.
 
     Parameters
     ----------
@@ -2180,9 +2595,14 @@ def probabilities_4nu_between_locations(
         Number of equal sub-slabs per chord segment.  A segment runs
         between consecutive PREM boundary crossings; a chord crosses most
         shells twice, so there are more segments than shells.  Default: 8.
-    electron_fraction : float, optional
-        Electrons per nucleon.  Default:
-        `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`.
+    electron_fraction : int, float, numpy.ndarray or callable, optional
+        Electrons per nucleon: one value for the whole chord, one per
+        slab, or a function of radius in km, such as
+        `electron_fraction_prem`.  Prefer the callable, which is the
+        only form that survives a slab count chosen from a tolerance.
+        Default: `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`, one half
+        throughout, which is exactly isoscalar matter and so is no layer
+        of the Earth.
     rtol : float, optional
         Relative tolerance on every returned probability.  Default:
         None, meaning ``n_slabs_per_segment`` is used as given.  When
@@ -2203,6 +2623,14 @@ def probabilities_4nu_between_locations(
         probabilities.  Default: False.  Worth setting when a tolerance
         is in play, since a tight one can quietly cost a great deal of
         refinement.
+    antineutrino : bool, optional
+        Whether to propagate antineutrinos rather than neutrinos.
+        Default: False.  Setting it conjugates the vacuum
+        Hamiltonian *and* reverses every matter potential, which
+        are two separate operations and both are needed; applying
+        only one is the commonest way to put the matter resonance
+        on the wrong side.  The slabs, the geometry and the
+        batching are otherwise identical.
 
     Returns
     -------
@@ -2242,4 +2670,4 @@ def probabilities_4nu_between_locations(
     return probabilities_4nu_earth(h_vacuum_energy_independent, energy,
                                    costhz, n_slabs_per_segment,
                                    electron_fraction, rtol, atol, n_max,
-                                   return_n_slabs)
+                                   return_n_slabs, antineutrino)

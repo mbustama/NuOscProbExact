@@ -43,7 +43,7 @@ Matter, and new physics
 Once a matter potential is added the Hamiltonian stops being diagonal in the
 mass basis, and the conventions start to bite.
 
-`03. Matter, NSI, and LIV <https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/03_matter_nsi_liv.ipynb>`_
+`03. Matter, NSI, and Lorentz-invariance violation <https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/03_matter_nsi_liv.ipynb>`_
    Constant-density matter and two kinds of new physics.
 
 `04. Oscillograms <https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/04_oscillogram.ipynb>`_
@@ -84,7 +84,7 @@ Where the approximations fail
 The reason to want an exact result: three places the familiar formulas do
 not reach.
 
-`11. Exact versus the approximations <https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/11_exact_vs_approximations.ipynb>`_
+`11. Exact versus the textbook approximations <https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/11_exact_vs_approximations.ipynb>`_
    Where the familiar formulas break, and by how much.
 
 `12. Mass ordering and the octant <https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/12_ordering_and_octant.ipynb>`_
@@ -99,8 +99,9 @@ Hard cases
 Resonances, degeneracies, a fourth flavor, and corroboration from codes that
 share none of this one.
 
-`14. Solar neutrinos and the MSW resonance <https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/14_solar_and_adiabatic_msw.ipynb>`_
-   The adiabatic resonance, and the limits of slabbing.
+`14. Solar neutrinos, the MSW resonance, and the limits of slabs <https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/14_solar_and_adiabatic_msw.ipynb>`_
+   The adiabatic resonance by slabs, and when a Magnus method is the
+   better tool.
 
 `15. Numerical edge cases <https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/15_numerical_edge_cases.ipynb>`_
    Degeneracies, and what returns a number instead of NaN.
@@ -117,7 +118,7 @@ Underneath, and beyond
 The evolution operator itself, the library in motion, and a Hamiltonian of
 your own.
 
-`18. The evolution operator and the SU(n) coefficients <https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/18_evolution_operator.ipynb>`_
+`18. The evolution operator, and the SU(n) coefficients <https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/18_evolution_operator.ipynb>`_
    The machinery underneath, for composing and extending.
 
 `19. Animated scenes <https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/19_animations.ipynb>`_

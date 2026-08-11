@@ -76,7 +76,7 @@ The method relies on expansions of the Hamiltonian and time-evolution operators 
 * **The evolution operator itself**, not only the probabilities, so it can be composed across segments or used to propagate a density matrix.
 * **Whole scans in one call.**  Every core routine accepts a stack of Hamiltonians, an array of baselines, or both broadcast against each other, which is tens of times faster than the equivalent Python loop and gives identical results.
 * **Piecewise-constant matter.**  `slabs` propagates across a sequence of adjacent slabs of arbitrary width and density, solving each exactly and multiplying the operators, at two, three or four flavors.
-* **The Earth.**  `earth` builds those slabs from the Preliminary Reference Earth Model, and computes probabilities along a given zenith angle or between two of fifteen predefined locations.  A 3+1 crossing is included: the sterile state does not feel the neutral-current potential, so that potential stops cancelling and `earth` builds it per slab.
+* **The Earth.**  `earth` builds those slabs from the Preliminary Reference Earth Model, and computes probabilities along a given zenith angle or between two of fifteen predefined locations.  A 3+1 crossing is included: the sterile state does not feel the neutral-current potential, so that potential stops cancelling and `earth` builds it per slab.  PREM fixes the density but not the composition, so the electron fraction is the caller's: it defaults to one half throughout, and `earth.electron_fraction_prem` supplies the value of each layer instead — core, mantle, crust and ocean.  That default will change to the layered values in a future release.
 * **A compiled backend, installed by default.**  Large batched calls run on compiled kernels, and so does the whole slab composition behind `slabs` and `earth` — an Earth crossing is 7–14× quicker depending on the flavor count.  `numba` comes with the package as of 1.13.0; where it is unavailable or switched off, the NumPy path is used and the answers are the same to round-off.
 
 ### What it does not do
@@ -331,6 +331,7 @@ NuOscProbExact/
     ├── bit_capture.py               # Exact-bit capture, for refactors meant to be invisible
     ├── bit_compare.py               # Compares two captures, in ulps
     ├── test_documented_figures.py   # Keeps the quoted performance figures agreeing
+    ├── test_paper.py                # Keeps the paper agreeing with the repository
     ├── test_version_consistency.py  # Keeps the version agreeing wherever it is implied
     ├── test_nusquids_comparison.py  # Against nuSQuIDS, an independent external code
     ├── nusquids_reference.py        # Regenerates the frozen nuSQuIDS reference data

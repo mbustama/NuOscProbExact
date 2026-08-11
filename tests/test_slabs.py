@@ -247,3 +247,107 @@ def test_4nu_slabs_reject_a_malformed_sequence(rng):
             np.stack([random_hermitian(rng, 3) for _ in range(3)]), [1., 2., 3.])
     with pytest.raises(ValueError, match='cannot be negative'):
         slabs.evolution_operator_4nu_slabs(h_stack, [1.0, -1.0, 1.0])
+
+
+# --- Batches of chords sharing one geometry ---------------------------
+#
+# The public routines took one chord at a time until 1.13.1.  What has to
+# hold now is that a batch is the same answer as the loop it replaces, for
+# every flavor count and every leading shape, and that a single chord still
+# returns exactly the tuple it always did.
+
+
+@pytest.mark.parametrize('n_flavors, probabilities, evolution',
+                         [(2, slabs.probabilities_2nu_slabs,
+                           slabs.evolution_operator_2nu_slabs),
+                          (3, slabs.probabilities_3nu_slabs,
+                           slabs.evolution_operator_3nu_slabs),
+                          (4, slabs.probabilities_4nu_slabs,
+                           slabs.evolution_operator_4nu_slabs)])
+def test_a_batch_of_chords_is_the_loop_it_replaces(n_flavors, probabilities,
+                                                   evolution, rng):
+    r"""Batched and per-chord evaluation agree, at every flavor count.
+
+    They agree to round-off rather than bit for bit: the two take
+    different paths through the compiled backend, which is why this is
+    an ``allclose`` and not an equality.
+    """
+    n_slabs, n_chords = 5, 6
+    widths = rng.uniform(0.1, 2.0, n_slabs)
+    stack = np.stack([np.stack([random_hermitian(rng, n_flavors)
+                                for _ in range(n_slabs)])
+                      for _ in range(n_chords)])
+
+    batched = np.asarray(probabilities(stack, widths))
+    looped = np.stack([np.asarray(probabilities(chord, widths))
+                       for chord in stack])
+    assert batched.shape == (n_chords, n_flavors*n_flavors)
+    assert np.allclose(batched, looped, atol=ATOL)
+
+    batched_u = np.asarray(evolution(stack, widths))
+    looped_u = np.stack([np.asarray(evolution(chord, widths))
+                         for chord in stack])
+    assert batched_u.shape == (n_chords, n_flavors, n_flavors)
+    assert np.allclose(batched_u, looped_u, atol=ATOL)
+
+
+@pytest.mark.parametrize('n_flavors, probabilities',
+                         [(2, slabs.probabilities_2nu_slabs),
+                          (3, slabs.probabilities_3nu_slabs),
+                          (4, slabs.probabilities_4nu_slabs)])
+def test_one_chord_still_returns_the_tuple_it_always_did(n_flavors,
+                                                         probabilities, rng):
+    r"""The un-batched call is untouched: a tuple, not an array."""
+    n_slabs = 4
+    widths = rng.uniform(0.1, 2.0, n_slabs)
+    chord = np.stack([random_hermitian(rng, n_flavors)
+                      for _ in range(n_slabs)])
+
+    prob = probabilities(chord, widths)
+    assert isinstance(prob, tuple)
+    assert len(prob) == n_flavors*n_flavors
+
+
+@pytest.mark.parametrize('leading', [(2,), (2, 3), (1, 1, 4)])
+def test_any_number_of_leading_axes_is_carried_through(leading, rng):
+    r"""The batch axes are whatever the caller brought, not just one."""
+    n_slabs = 3
+    widths = rng.uniform(0.1, 2.0, n_slabs)
+    stack = np.stack([random_hermitian(rng, 3)
+                      for _ in range(int(np.prod(leading))*n_slabs)])
+    stack = stack.reshape(leading + (n_slabs, 3, 3))
+
+    prob = np.asarray(slabs.probabilities_3nu_slabs(stack, widths))
+    assert prob.shape == leading + (9,)
+
+    flat = np.asarray(slabs.probabilities_3nu_slabs(
+        stack.reshape(-1, n_slabs, 3, 3), widths))
+    assert np.allclose(prob.reshape(-1, 9), flat, atol=ATOL)
+
+
+def test_batched_slab_probabilities_are_unitary(rng):
+    r"""Unitarity holds chord by chord across a batch."""
+    n_slabs, n_chords = 4, 5
+    widths = rng.uniform(0.1, 2.0, n_slabs)
+    stack = np.stack([np.stack([random_hermitian(rng, 3)
+                                for _ in range(n_slabs)])
+                      for _ in range(n_chords)])
+
+    prob = np.asarray(slabs.probabilities_3nu_slabs(
+        stack, widths)).reshape(n_chords, 3, 3)
+    assert np.allclose(prob.sum(axis=2), 1.0, atol=ATOL)
+    assert np.allclose(prob.sum(axis=1), 1.0, atol=ATOL)
+
+
+def test_a_batch_is_validated_like_a_single_chord(rng):
+    r"""The batch path rejects the same malformed input, and says so."""
+    stack = np.stack([np.stack([random_hermitian(rng, 3) for _ in range(3)])
+                      for _ in range(2)])
+
+    with pytest.raises(ValueError, match='one width per slab'):
+        slabs.probabilities_3nu_slabs(stack, [1.0, 2.0])
+    with pytest.raises(ValueError, match='cannot be negative'):
+        slabs.probabilities_3nu_slabs(stack, [1.0, -1.0, 1.0])
+    with pytest.raises(ValueError, match=r'shape \(\.\.\., n, 3, 3\)'):
+        slabs.probabilities_3nu_slabs(
+            np.zeros((2, 3, 4, 4), dtype=complex), [1.0, 2.0, 3.0])

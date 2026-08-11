@@ -650,3 +650,426 @@ def test_a_radius_exactly_on_a_shell_boundary_takes_the_inner_shell(boundary):
         assert not np.isclose(on, just_outside, rtol=1.0e-3)
     else:
         assert np.isclose(on, just_outside, rtol=1.0e-6)
+
+
+# --- Antineutrinos through the Earth ----------------------------------
+#
+# Before 1.13.1 an antineutrino crossing had to be built by hand, as
+# notebooks/13_antineutrinos.ipynb showed: conjugate the vacuum
+# Hamiltonian, negate every potential, then compose the slabs.  The flag
+# has to reproduce exactly that, and keep the batched PREM path.
+
+
+def _vacuum_hamiltonian(n_flavors):
+    r"""Returns the energy-independent vacuum Hamiltonian at any n."""
+    if n_flavors == 2:
+        return h_vacuum_2nu()
+    if n_flavors == 3:
+        return h_vacuum_3nu()
+    return _vacuum_4nu(s14=np.sqrt(0.1), s24=np.sqrt(0.1))
+
+
+def _antineutrino_by_hand(h_vac, energy, costhz, n_flavors,
+                          n_slabs_per_segment=4):
+    r"""The hand-built idiom the flag replaces."""
+    widths_km, densities = earth.earth_slabs(costhz, n_slabs_per_segment)
+    potentials = [-earth.matter_potential(densities)]
+    if n_flavors == 4:
+        potentials.append(-earth.matter_potential_nc(densities))
+    builder = {2: hamiltonians2nu.hamiltonian_2nu_matter,
+               3: hamiltonians3nu.hamiltonian_3nu_matter,
+               4: hamiltonians4nu.hamiltonian_4nu_matter}[n_flavors]
+    h = builder(np.conj(np.asarray(h_vac, dtype=complex)), energy,
+                *potentials)
+    return np.asarray({2: slabs.probabilities_2nu_slabs,
+                       3: slabs.probabilities_3nu_slabs,
+                       4: slabs.probabilities_4nu_slabs}[n_flavors](
+                           h, widths_km*gd.CONV_KM_TO_INV_EV))
+
+
+@pytest.mark.parametrize('n_flavors', [2, 3, 4])
+@pytest.mark.parametrize('costhz', [-1.0, -0.9, -0.3])
+def test_the_antineutrino_flag_is_the_hand_built_construction(n_flavors,
+                                                              costhz):
+    r"""The flag reproduces conjugate-and-flip-both, exactly."""
+    h_vac = _vacuum_hamiltonian(n_flavors)
+    energy = 5.0e9
+
+    routine = {2: earth.probabilities_2nu_earth,
+               3: earth.probabilities_3nu_earth,
+               4: earth.probabilities_4nu_earth}[n_flavors]
+    got = np.asarray(routine(h_vac, energy, costhz, n_slabs_per_segment=4,
+                             antineutrino=True))
+    expected = _antineutrino_by_hand(h_vac, energy, costhz, n_flavors)
+
+    assert np.allclose(got, expected, rtol=0.0, atol=1.0e-14)
+
+
+@pytest.mark.parametrize('n_flavors', [2, 3, 4])
+def test_antineutrinos_differ_from_neutrinos_in_matter(n_flavors):
+    r"""The flag is not a no-op: matter separates the two.
+
+    The energy is chosen per flavor count to sit near that case's
+    resonance: the two-flavor Hamiltonian here carries the solar
+    splitting, whose MSW resonance in the Earth is around 100 MeV, not
+    the few GeV where the atmospheric one sits.
+    """
+    h_vac = _vacuum_hamiltonian(n_flavors)
+    energy = {2: 1.0e8, 3: 5.0e9, 4: 5.0e9}[n_flavors]
+
+    routine = {2: earth.probabilities_2nu_earth,
+               3: earth.probabilities_3nu_earth,
+               4: earth.probabilities_4nu_earth}[n_flavors]
+    nu = np.asarray(routine(h_vac, energy, -0.9, n_slabs_per_segment=4))
+    bar = np.asarray(routine(h_vac, energy, -0.9, n_slabs_per_segment=4,
+                             antineutrino=True))
+
+    assert np.abs(nu - bar).max() > 1.0e-3
+
+
+def test_conjugating_alone_is_not_enough():
+    r"""Both operations are needed, which is the point of the flag.
+
+    Conjugating the vacuum term without reversing the potential is the
+    classic error; it must not agree with the real antineutrino answer.
+    """
+    h_vac = _vacuum_hamiltonian(3)
+    energy = 5.0e9
+
+    bar = np.asarray(earth.probabilities_3nu_earth(
+        h_vac, energy, -0.9, n_slabs_per_segment=4, antineutrino=True))
+    conjugate_only = np.asarray(earth.probabilities_3nu_earth(
+        np.conj(np.asarray(h_vac, dtype=complex)), energy, -0.9,
+        n_slabs_per_segment=4))
+
+    assert np.abs(bar - conjugate_only).max() > 1.0e-3
+
+
+def test_the_antineutrino_grid_is_batched_like_the_neutrino_one():
+    r"""A whole oscillogram, one call, with the flag set."""
+    h_vac = _vacuum_hamiltonian(3)
+    energies = np.logspace(0.0, 1.0, 5)*1.0e9
+    costhz = np.array([-0.95, -0.6, -0.2])
+
+    grid = earth.probabilities_3nu_earth(
+        h_vac, energies[:, None], costhz[None, :], n_slabs_per_segment=4,
+        antineutrino=True)
+    assert grid.shape == (5, 3, 9)
+
+    for i, e in enumerate(energies):
+        for j, c in enumerate(costhz):
+            one = np.asarray(earth.probabilities_3nu_earth(
+                h_vac, e, c, n_slabs_per_segment=4, antineutrino=True))
+            assert np.allclose(grid[i, j], one, atol=1.0e-14)
+
+
+def test_antineutrinos_between_locations_carry_the_flag():
+    r"""The named-site wrappers pass it through."""
+    h_vac = _vacuum_hamiltonian(3)
+    energy = 5.0e9
+
+    bar = np.asarray(earth.probabilities_3nu_between_locations(
+        h_vac, energy, 'south_pole', 'kamioka', n_slabs_per_segment=4,
+        antineutrino=True))
+    costhz = earth._costhz_of_named_pair('south_pole', 'kamioka')
+    expected = _antineutrino_by_hand(h_vac, energy, costhz, 3)
+
+    assert np.allclose(bar, expected, rtol=0.0, atol=1.0e-14)
+
+
+def test_antineutrinos_reach_the_compiled_four_flavor_kernel():
+    r"""The batched kernel path, at four flavors, for antineutrinos.
+
+    `_probabilities_earth_batch` reverses both potentials inside its
+    compiled branch, and only the four-flavor kernel is handed the
+    neutral-current one.  Reaching that line needs all three at once: a
+    stack big enough for the kernel to be worth dispatching to, four
+    flavors, and ``antineutrino=True``.
+    """
+    h_vac = _vacuum_hamiltonian(4)
+    energies = np.logspace(2.0, 4.0, 64)*1.0e9
+    costhz = -0.8
+
+    bar = earth.probabilities_4nu_earth(h_vac, energies, costhz,
+                                        n_slabs_per_segment=4,
+                                        antineutrino=True)
+    assert bar.shape == (64, 16)
+
+    expected = np.stack([_antineutrino_by_hand(h_vac, e, costhz, 4)
+                         for e in energies])
+    assert np.allclose(bar, expected, rtol=0.0, atol=1.0e-12)
+
+    nu = earth.probabilities_4nu_earth(h_vac, energies, costhz,
+                                       n_slabs_per_segment=4)
+    assert np.abs(nu - bar).max() > 1.0e-3
+
+
+###############################################################################
+# Electron fraction inside the Earth
+###############################################################################
+
+def test_electron_fraction_prem_gives_each_layer_its_own_value():
+    r"""Four layers, split at radii PREM already has."""
+    assert earth.electron_fraction_prem(1000.0) \
+        == gd.ELECTRON_FRACTION_EARTH_CORE
+    assert earth.electron_fraction_prem(5000.0) \
+        == gd.ELECTRON_FRACTION_EARTH_MANTLE
+    assert earth.electron_fraction_prem(6350.0) \
+        == gd.ELECTRON_FRACTION_EARTH_CRUST_LAYER
+    assert earth.electron_fraction_prem(6370.0) \
+        == gd.ELECTRON_FRACTION_EARTH_OCEAN
+
+
+@pytest.mark.parametrize('index, below, above', [
+    (1, gd.ELECTRON_FRACTION_EARTH_CORE, gd.ELECTRON_FRACTION_EARTH_MANTLE),
+    (6, gd.ELECTRON_FRACTION_EARTH_MANTLE,
+     gd.ELECTRON_FRACTION_EARTH_CRUST_LAYER),
+    (8, gd.ELECTRON_FRACTION_EARTH_CRUST_LAYER,
+     gd.ELECTRON_FRACTION_EARTH_OCEAN),
+])
+def test_each_boundary_belongs_to_the_layer_below_it(index, below, above):
+    r"""As `density_prem` treats them, so a radius on one agrees."""
+    edge = earth.PREM_BOUNDARIES[index]
+    assert earth.electron_fraction_prem(edge) == below
+    assert earth.electron_fraction_prem(edge + 1.0e-6) == above
+
+
+def test_the_ocean_is_the_only_layer_above_one_half():
+    r"""Hydrogen has Z/A = 1, and nothing else in the Earth does."""
+    assert gd.ELECTRON_FRACTION_EARTH_OCEAN > 0.5
+    for fraction in (gd.ELECTRON_FRACTION_EARTH_CORE,
+                     gd.ELECTRON_FRACTION_EARTH_MANTLE,
+                     gd.ELECTRON_FRACTION_EARTH_CRUST_LAYER):
+        assert fraction < 0.5
+
+
+def test_the_layer_values_are_the_compositions_they_claim():
+    r"""Iron for the core, seawater for the ocean, to four places."""
+    assert gd.ELECTRON_FRACTION_EARTH_CORE == round(26.0/55.845, 4)
+    assert gd.ELECTRON_FRACTION_EARTH_OCEAN == round(10.0/18.015, 4)
+
+
+def test_electron_fraction_prem_takes_every_value_from_the_caller():
+    r"""No layer's value is baked in.
+
+    The ocean matters most: PREM's is a global average, and a chord to a
+    detector under rock crosses none of it, so that caller has to be
+    able to spell it as crust.
+    """
+    assert earth.electron_fraction_prem(6000.0, mantle=0.49) == 0.49
+    assert earth.electron_fraction_prem(1000.0, core=0.47) == 0.47
+    assert earth.electron_fraction_prem(6350.0, crust=0.48) == 0.48
+    assert earth.electron_fraction_prem(6370.0, ocean=0.48) == 0.48
+
+
+def test_the_mean_nucleon_mass_follows_the_electron_fraction():
+    r"""Y_e and the neutron fraction are one quantity, not two.
+
+    Varying Y_e while holding the mass at the isoscalar value describes
+    matter that is neutron-rich in its charge and isoscalar in its mass
+    at once.  At one half the two agree bit for bit, which is what keeps
+    every default untouched.
+    """
+    isoscalar = (gd.MASS_PROTON + gd.MASS_NEUTRON)/2.0
+
+    assert earth._mean_nucleon_mass(0.5) == isoscalar
+    assert earth._mean_nucleon_mass(0.0) == gd.MASS_NEUTRON
+    assert earth._mean_nucleon_mass(1.0) == gd.MASS_PROTON
+    # Neutron-richer matter is heavier per nucleon, so a fixed density
+    # holds fewer nucleons, and the potential falls.
+    assert earth._mean_nucleon_mass(
+        gd.ELECTRON_FRACTION_EARTH_CORE) > isoscalar
+    assert earth.matter_potential(
+        3.0, gd.ELECTRON_FRACTION_EARTH_CORE) < earth.matter_potential(3.0)
+
+
+def test_the_uniform_potential_is_untouched_by_the_mass_change():
+    r"""Everything frozen rests on this."""
+    assert earth.matter_potential(3.0) == gd.VCC_EARTH_CRUST
+    assert earth.matter_potential_nc(3.0) == gd.VNC_EARTH_CRUST
+
+
+@pytest.mark.parametrize('costhz', [-1.0, -0.9, -0.84, -0.3])
+@pytest.mark.parametrize('n_slabs_per_segment', [2, 4])
+def test_slab_radii_are_the_radii_the_densities_were_taken_at(
+        costhz, n_slabs_per_segment):
+    r"""`earth_slab_radii` inverts the geometry `earth_slabs` used.
+
+    Re-evaluating PREM at the returned radii has to give back the very
+    densities `earth_slabs` reports, or the electron fractions built
+    from them would belong to different slabs.
+    """
+    widths, densities = earth.earth_slabs(costhz, n_slabs_per_segment)
+    radii = earth.earth_slab_radii(costhz, n_slabs_per_segment)
+
+    assert radii.shape == densities.shape
+    assert np.allclose(earth.density_prem(radii), densities, rtol=0.0,
+                       atol=1.0e-12)
+
+
+def test_the_default_earth_probabilities_do_not_move():
+    r"""One half throughout is still what the routines assume.
+
+    The frozen references, the figures and the notebook outputs all rest
+    on it, so this pins the default against a per-slab array that spells
+    the same thing out.
+    """
+    h = h_vacuum_3nu()
+    half = gd.ELECTRON_FRACTION_EARTH_CRUST
+    uniform = earth.electron_fraction_prem(
+        earth.earth_slab_radii(-0.9, 4),
+        core=half, mantle=half, crust=half, ocean=half)
+
+    assert np.allclose(
+        earth.probabilities_3nu_earth(h, 1.0e9, -0.9, n_slabs_per_segment=4),
+        earth.probabilities_3nu_earth(h, 1.0e9, -0.9, n_slabs_per_segment=4,
+                                      electron_fraction=uniform),
+        rtol=0.0, atol=ATOL)
+
+
+def test_a_radial_electron_fraction_changes_the_probabilities():
+    r"""And it is not a rounding-level change."""
+    h = h_vacuum_3nu()
+    prem = earth.electron_fraction_prem(earth.earth_slab_radii(-1.0, 4))
+
+    default = np.ravel(earth.probabilities_3nu_earth(
+        h, 1.0e9, -1.0, n_slabs_per_segment=4))
+    varied = np.ravel(earth.probabilities_3nu_earth(
+        h, 1.0e9, -1.0, n_slabs_per_segment=4, electron_fraction=prem))
+
+    assert abs(default[0] - varied[0]) > 0.01
+
+
+def test_a_mismatched_electron_fraction_array_is_refused():
+    r"""With the slab count named, not as a NumPy broadcast error."""
+    h = h_vacuum_3nu()
+    with pytest.raises(ValueError, match='one entry per slab'):
+        earth.probabilities_3nu_earth(h, 1.0e9, -0.9, n_slabs_per_segment=4,
+                                      electron_fraction=np.array([0.5, 0.4]))
+
+
+def test_a_callable_electron_fraction_survives_refinement():
+    r"""An array cannot: `rtol` and `atol` choose the slab count.
+
+    This is the reason the callable form exists.  An array built for one
+    subdivision is the wrong length for the next, and the tolerance
+    routines are the documented way to ask for a chord.
+    """
+    h = h_vacuum_3nu()
+    array_for_four = earth.electron_fraction_prem(
+        earth.earth_slab_radii(-0.9, 4))
+
+    for keywords in ({'atol': 1.0e-4}, {'rtol': 1.0e-3}):
+        # The callable goes through
+        earth.probabilities_3nu_earth(h, 1.0e9, -0.9,
+                                      electron_fraction=(
+                                          earth.electron_fraction_prem),
+                                      **keywords)
+        # The array cannot, and says why
+        with pytest.raises(ValueError, match='callable of radius'):
+            earth.probabilities_3nu_earth(h, 1.0e9, -0.9,
+                                          electron_fraction=array_for_four,
+                                          **keywords)
+
+    assert earth.slabs_for_tolerance(
+        h, 1.0e9, -0.9, atol=1.0e-4,
+        electron_fraction=earth.electron_fraction_prem) > 0
+
+
+@pytest.mark.parametrize('n_energies', [1, 4000])
+def test_callable_and_array_agree_on_every_path(n_energies):
+    r"""Scalar, batched and compiled paths resolve it the same way.
+
+    The large stack crosses `fastkernels.worthwhile_slabs`, which builds
+    its potentials somewhere else entirely; both places have to give the
+    callable the same reading.
+    """
+    h = h_vacuum_3nu()
+    energy = (1.0e9 if n_energies == 1
+              else np.logspace(0.0, 2.0, n_energies)*1.0e9)
+    array = earth.electron_fraction_prem(earth.earth_slab_radii(-0.9, 4))
+
+    from_array = earth.probabilities_3nu_earth(
+        h, energy, -0.9, n_slabs_per_segment=4, electron_fraction=array)
+    from_callable = earth.probabilities_3nu_earth(
+        h, energy, -0.9, n_slabs_per_segment=4,
+        electron_fraction=earth.electron_fraction_prem)
+
+    assert np.array_equal(np.ravel(from_array), np.ravel(from_callable))
+
+
+def test_a_callable_electron_fraction_reaches_four_flavors():
+    r"""Where it also layers the neutral-current potential."""
+    h = hamiltonians4nu.hamiltonian_4nu_vacuum_energy_independent(
+        np.sqrt(gd.S12_NO_BF), np.sqrt(gd.S23_NO_BF), np.sqrt(gd.S13_NO_BF),
+        np.sqrt(0.1), np.sqrt(0.1), 0.0, gd.DCP_NO_BF, gd.D21_NO_BF,
+        gd.D31_NO_BF, 1.0)
+    array = earth.electron_fraction_prem(earth.earth_slab_radii(-0.9, 4))
+
+    for antineutrino in (False, True):
+        assert np.array_equal(
+            np.ravel(earth.probabilities_4nu_earth(
+                h, 1.0e12, -0.9, n_slabs_per_segment=4,
+                electron_fraction=array, antineutrino=antineutrino)),
+            np.ravel(earth.probabilities_4nu_earth(
+                h, 1.0e12, -0.9, n_slabs_per_segment=4,
+                electron_fraction=earth.electron_fraction_prem,
+                antineutrino=antineutrino)))
+
+
+def test_a_callable_electron_fraction_reaches_an_oscillogram():
+    r"""Every distinct angle gets its own radii."""
+    h = h_vacuum_3nu()
+    energies = np.logspace(0.0, 1.0, 5)*1.0e9
+    angles = np.array([-1.0, -0.6, -0.2])
+
+    grid = earth.probabilities_3nu_earth(
+        h, energies[None, :], angles[:, None], n_slabs_per_segment=4,
+        electron_fraction=earth.electron_fraction_prem)
+
+    assert grid.shape == (3, 5, 9)
+    for i, costhz in enumerate(angles):
+        row = earth.probabilities_3nu_earth(
+            h, energies, costhz, n_slabs_per_segment=4,
+            electron_fraction=earth.electron_fraction_prem)
+        assert np.array_equal(grid[i], row)
+
+
+def test_electron_fraction_prem_refuses_radii_outside_the_earth():
+    r"""As `density_prem` does, so the companions cannot disagree.
+
+    Out of range it would otherwise return the core's value or the
+    ocean's, and say nothing.
+    """
+    with pytest.raises(ValueError, match='cannot be negative'):
+        earth.electron_fraction_prem(-1.0)
+    with pytest.raises(ValueError, match='cannot exceed'):
+        earth.electron_fraction_prem(gd.EARTH_RADIUS + 1.0)
+    with pytest.raises(ValueError, match='cannot exceed'):
+        earth.electron_fraction_prem([1000.0, gd.EARTH_RADIUS + 1.0])
+
+    # The ends of a chord sit just inside, and must not trip it
+    earth.electron_fraction_prem([0.0, gd.EARTH_RADIUS])
+
+
+@pytest.mark.parametrize('costhz', [-1.0, -0.5, -0.01])
+@pytest.mark.parametrize('n_slabs_per_segment', [1, 8])
+def test_slab_radii_stay_inside_the_earth(costhz, n_slabs_per_segment):
+    r"""So that the callable form never trips the check above."""
+    radii = earth.earth_slab_radii(costhz, n_slabs_per_segment)
+
+    assert radii.min() >= 0.0
+    assert radii.max() <= gd.EARTH_RADIUS
+    earth.electron_fraction_prem(radii)
+
+
+def test_a_callable_electron_fraction_reaches_between_locations():
+    r"""The slab count there comes from the two place names."""
+    h = h_vacuum_3nu()
+    first, second = sorted(earth.LOC_COORDS_DMS)[:2]
+
+    for keywords in ({'n_slabs_per_segment': 4}, {'atol': 1.0e-5}):
+        probabilities = earth.probabilities_3nu_between_locations(
+            h, 2.0e9, first, second,
+            electron_fraction=earth.electron_fraction_prem, **keywords)
+        assert np.all(np.isfinite(probabilities))

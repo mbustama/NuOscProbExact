@@ -683,6 +683,12 @@ def psi_roots(h2: Union[int, float], h3: Union[int, float]) -> List[float]:
     = 0`, which are the eigenvalues of minus the traceless part of the
     Hamiltonian.  The roots are independent of the baseline.
 
+    Note the sign: :func:`oscprob4nu.psi_roots_4nu` returns the
+    eigenvalues of the traceless part *itself*.  Each module is
+    consistent within itself and the difference cannot be seen from
+    outside, but an expression moved between them needs the sign of its
+    odd-order terms changed.
+
     .. versionadded:: 1.0.0
 
     .. versionchanged:: 1.1.0
@@ -1542,9 +1548,10 @@ def probabilities_3nu(
        at most :data:`SMALL_BATCH` elements is evaluated one at a time
        through the scalar path, because a batched call carries a fixed
        cost that a handful of points does not amortise.  Larger stacks
-       are evaluated by a compiled kernel instead, if the optional
-       `numba` extra is installed; for three flavors that kernel wins at
-       every size.  See :mod:`fastkernels`.
+       are evaluated by a compiled kernel instead, which for three
+       flavors wins at every size; ``numba`` is a dependency, so that
+       path is present unless it has been switched off with
+       ``fastkernels.USE_NUMBA``.  See :mod:`fastkernels`.
 
     Parameters
     ----------
