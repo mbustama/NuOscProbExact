@@ -7,6 +7,7 @@ the two disagreeing is worse than either being absent: the reader gets
 two different answers to the same question.
 """
 
+import importlib
 import inspect
 import re
 import typing
@@ -120,3 +121,33 @@ def test_annotations_resolve(module):
 def test_globaldefs_defines_no_routines():
     r"""globaldefs holds constants only, so it has nothing to annotate."""
     assert routines(globaldefs, private=True) == []
+
+
+@pytest.mark.parametrize('module_name', [
+    'earth', 'oscprob2nu', 'oscprob3nu', 'oscprob4nu', 'slabs',
+    'hamiltonians2nu', 'hamiltonians3nu', 'hamiltonians4nu',
+])
+def test_the_module_summary_lists_every_public_function(module_name):
+    r"""``__all__`` and the module docstring's list agree.
+
+    Each module opens with a ``* name - description`` summary, which is
+    what a reader of the API pages meets first.  Adding a function to
+    ``__all__`` and forgetting the summary leaves it undiscoverable
+    there, and nothing else notices.
+
+    ``fastkernels`` is left out on purpose: it exports its compiled
+    kernels for testing and does not summarise them.
+    """
+    module = importlib.import_module(module_name)
+
+    listed = set(re.findall(r'^\s*\*\s+(\w+)\s+-\s', module.__doc__ or '',
+                            re.M))
+    public = {name for name in module.__all__
+              if callable(getattr(module, name, None))}
+
+    assert not public - listed, (
+        '%s: in __all__ but missing from the module summary: %s'
+        % (module_name, sorted(public - listed)))
+    assert not listed - public, (
+        '%s: in the module summary but not in __all__: %s'
+        % (module_name, sorted(listed - public)))

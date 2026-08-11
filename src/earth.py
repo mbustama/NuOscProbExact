@@ -51,6 +51,8 @@ Routine listings
     * dms_to_decimal - Degrees, minutes, seconds to decimal degrees
     * coordinates_of_named_location - Coordinates of a named site
     * density_prem - PREM density at a radius
+    * electron_fraction_prem - PREM-layered electron fraction
+    * earth_slab_radii - Radius at the midpoint of each slab
     * matter_potential - Charged-current potential from a density
     * matter_potential_nc - Neutral-current potential, for a sterile state
     * distance_traveled_inside_earth - Chord length for a given costhz
