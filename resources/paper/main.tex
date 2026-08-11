@@ -13,7 +13,7 @@
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\documentclass[final,5p,times,twocolumn]{elsarticle}
+\documentclass[final,5p,times,twocolumn,sort,compress]{elsarticle}
 
 % Line numbers, for a referee.  elsarticle's own "review" option does not do
 % this -- it only sets preprint mode and 1.5 spacing, and would discard the
@@ -27,7 +27,6 @@
 \linenostrue         % \linenosfalse for the camera-ready
 \iflinenos\linenumbers\fi
 
-
 \usepackage{amsmath}
 \usepackage{amsfonts}
 \usepackage{amssymb}
@@ -39,13 +38,21 @@
 \graphicspath{{figs/}}
 \usepackage{bm}
 \usepackage{array}
-\usepackage{hyperref}
 \usepackage{listings}
 \usepackage{color}
 % ulem is for main_diff.tex, whose deletions are struck
 % through with \sout; nothing in this file uses it.
 \usepackage[normalem]{ulem}
+\usepackage[dvipsnames]{xcolor}
+\usepackage[colorlinks=true,breaklinks=true]{hyperref}
 
+\definecolor{darkred}{rgb}{0.5,0,0}
+\definecolor{darkblue}{rgb}{0,0,0.5}
+\definecolor{firebrick}{rgb}{0.75,0.125,0.125}
+\definecolor{darkgreen}{rgb}{0,0.5,0}
+\hypersetup{urlcolor=darkblue,
+	    citecolor=darkgreen,
+	    linkcolor=firebrick}
 
 \newcommand{\ie}{{\it i.e.}}
 \newcommand{\Ie}{{\it I.e.}}
@@ -208,39 +215,34 @@ Microseconds to milliseconds per neutrino-oscillation probability, depending on 
 
 Neutrinos are created and detected in weak interactions as flavor states---$\nu_e$, $\nu_\mu$, $\nu_\tau$---but they propagate as superpositions of propagation states---in vacuum, these are the mass eigenstates $\nu_1$, $\nu_2$, $\nu_3$.  Because the superposition evolves with time, a neutrino created with a certain flavor has a non-zero probability of being detected later with a different flavor\ \cite{Pontecorvo:1967fh, Barger:1980hs, Bilenky:2004sn, Fantini:2018itu}.  The observation of oscillations in solar, atmospheric, reactor, and accelerator neutrinos has led to the momentous discovery of neutrino mass and of flavor mixing in leptons\ \cite{Kajita:2016cak, McDonald:2016ixn}.
 
-Computing the probabilities of flavor transition is integral to studying oscillations, and computing them exactly typically involves diagonalizing the Hamiltonian that drives the time-evolution.  Because the expressions involved are often complex, it is notoriously hard to produce exact analytical expressions that also provide physical insight; oscillations in vacuum are the exception\ \cite{Kayser:1981ye, Giunti:2007ry, Tanabashi:2018oca}.  Beyond that, a large body of work derives exact probabilities for particular scenarios---see, \eg, \Refs\ \cite{Barger:1980tf, Petcov:1987zj, Zaglauer:1988gz, TorrenteLujan:1995qi, Balantekin:1997jp, Coleman:1998ti, Gago:2001xg, Kimura:2002wd, Harrison:2003fi, Kostelecky:2003xn, Kostelecky:2003cr, GonzalezGarcia:2004wg, Blennow:2004qd, Meloni:2009ia, Ando:2009ts, Abe:2014wla, Flores:2015mah, Popov:2018seq} --- but they are long, and beyond two flavors their complexity can defeat the insight they were derived for.
+Computing the probabilities of flavor transition is integral to studying oscillations, and computing them exactly typically involves diagonalizing the Hamiltonian that drives the time-evolution.  Because the expressions involved are often complex, it is notoriously hard to produce exact analytical expressions that also provide physical insight.  Oscillations in vacuum and in matter of constant density are the exception\ \cite{Kayser:1981ye, Giunti:2007ry, Tanabashi:2018oca}.  Beyond that, a large body of work derives exact probabilities for particular scenarios---see, \eg, \Refs\ \cite{Barger:1980tf, Petcov:1987zj, Zaglauer:1988gz, TorrenteLujan:1995qi, Balantekin:1997jp, Coleman:1998ti, Gago:2001xg, Kimura:2002wd, Harrison:2003fi, Kostelecky:2003xn, Kostelecky:2003cr, GonzalezGarcia:2004wg, Blennow:2004qd, Meloni:2009ia, Ando:2009ts, Abe:2014wla, Flores:2015mah, Popov:2018seq}---but they are long, and beyond two-flavor treatments their complexity can defeat the insight they were derived for.
 
-More often, carefully selected perturbative expansions are used instead, to cast the probabilities in interpretable form.  Many such approximations exist\ \cite{Gago:2002na, Blennow:2008eb, Diaz:2009qk, Meloni:2009ia, Chaves:2018sih}, especially for oscillations in matter\ \cite{Petcov:1986qg, Hirota:1998wv, Cervera:2000kp, Freund:2001pn, Akhmedov:2004ny, Friedland:2006pi, Ioannisian:2008ve, Supanitsky:2008eq, Minakata:2015gra, Flores:2015mah, Li:2016pzm, Denton:2016wmg, Parke:2019vbs}, reaching the percent level or better.  There is no systematic way to produce them, however (though see \Ref\ \cite{Denton:2018fex}): each is tailored to a specific Hamiltonian, its derivation is not trivial, and its validity is limited to a range of some perturbative parameter.  Where high precision is wanted, the better course is to compute the probabilities exactly, numerically.
+More often, carefully selected perturbative expansions are used instead, to cast the probabilities in interpretable form.  Many such approximations exist\ \cite{Gago:2002na, Blennow:2008eb, Diaz:2009qk, Meloni:2009ia, Chaves:2018sih}, especially for oscillations in matter\ \cite{Petcov:1986qg, Hirota:1998wv, Cervera:2000kp, Freund:2001pn, Akhmedov:2004ny, Friedland:2006pi, Ioannisian:2008ve, Supanitsky:2008eq, Minakata:2015gra, Flores:2015mah, Li:2016pzm, Denton:2016wmg, Parke:2019vbs}, reaching the percent level or better.  However, there is no systematic way to produce them (nonetheless, see the calculation program proposed by \Ref\ \cite{Denton:2018fex}): each is tailored to a specific Hamiltonian, its derivation is not trivial, and its validity is limited to a range of some perturbative parameter.  Where high precision is wanted, the better course is to compute the probabilities exactly, numerically.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{figure}[t!]
  \centering
  \includegraphics[width=\columnwidth]{validation.pdf}
- \caption{\label{fig:validation}{\it Top}: survival probability $P_{\nu_e \to \nu_e}$ computed with {\tt NuOscProbExact}\ \cite{NuOscProbExact}.  For each case the same probability was also obtained by direct numerical exponentiation of the same Hamiltonian, with {\tt scipy.linalg.expm}; the two curves are indistinguishable at this scale, so only one is drawn.  The two-flavor case is in matter, the three-flavor case with NSI, and the four-flavor case is a 3+1 system in matter with $\Delta m_{41}^2 = 1$~eV$^2$ and $\sin^2\theta_{14} = \sin^2\theta_{24} = 0.1$; baselines are $L = 1300$~km for the first two and $L = 600$~m for the third, which is the scale an eV-mass sterile neutrino sets.  {\it Bottom}: the absolute difference between the two, with the dotted line marking the double-precision unit round-off.  The closed forms and the numerical exponential agree to round-off in every case, which is what ``exact'' means here.}
+ \caption{\label{fig:validation}{\it Top}: Survival probability $P_{\nu_e \to \nu_e}$ computed with {\tt NuOscProbExact}\ \cite{NuOscProbExact}.  For each case the same probability was also obtained by direct numerical exponentiation of the same Hamiltonian (using {\tt scipy.linalg.expm} from the SciPy Python library), as reference; the two curves are indistinguishable at this scale, so only one is drawn.  The two-flavor case is in matter, the three-flavor case with non-standard neutrino-matter interactions (NSI), and the four-flavor case is a 3+1 system (one sterile neutrino) in matter with $\Delta m_{41}^2 = 1$~eV$^2$ and $\sin^2\theta_{14} = \sin^2\theta_{24} = 0.1$.  Baselines are $L = 1300$~km for the first two and $L = 600$~m for the third, which is the scale an eV-mass sterile neutrino sets.  {\it Bottom}: The absolute difference between the {\tt NuOscProbExact} and reference calculations, with the dotted line marking the double-precision unit round-off.  The two agree to round-off, which is what ``exact'' means here in practice}
 \end{figure}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Figure~\ref{fig:validation} shows what ``exactly'' means here: at two, three, and four flavors the probabilities agree with direct numerical exponentiation of the same Hamiltonian to round-off.  Exactness alone is not the point, since exponentiating the Hamiltonian numerically is also exact.  The point is what it costs and what it accepts.  We introduce {\tt NuOscProbExact}\ \cite{NuOscProbExact}, a lightweight code that evaluates exact, closed-form expressions for the probabilities; it takes an arbitrary Hermitian Hamiltonian without modification, and handles varying environments by composing consecutive constant-Hamiltonian steps.  
+Figure~\ref{fig:validation} shows what ``exactly'' means here: at two, three, and four flavors (when adding an additional, ``sterile'' neutrino) the probabilities agree with direct numerical exponentiation of the same Hamiltonian---which represents the time-evolution of the neutrino state---to round-off.  Yet exactness alone is not the point, since exponentiating the Hamiltonian numerically is also exact.  The point is what it costs and what it accepts.  We introduce {\tt NuOscProbExact}\ \cite{NuOscProbExact}, a lightweight code that evaluates exact, closed-form expressions for the probabilities; it takes an arbitrary Hermitian Hamiltonian without modification, encoding standard or new neutrino physics, and capable of handling static and varying environments (\ie, Hamiltonians that are time- and position-dependent and -independent).
 
-Three properties recommend it, and they are hard to come by together.  It is \emph{flexible}: any Hermitian Hamiltonian at two, three, or four flavors is the same call, so a scenario nobody has yet proposed costs no more to evaluate than one solved decades ago.  It is \emph{fast}: through the Earth it is the quickest of the codes we compare, at every accuracy finer than the coarsest setting they share, and a scan evaluated in one call rather than looped costs two orders of magnitude less per probability.  And it is \emph{exact}: handed a Hamiltonian, it returns the probability to round-off, four decades finer at constant density than the closest of the others reaches.  Only at the coarsest settings through the Earth does a specialized code come out ahead, and at constant density a closed form specialized to three flavors is faster still (Section \ref{sec:comparison}).  That combination suits the exploration of non-standard scenarios, where broad parameter spaces must be scanned without knowing \textit{a priori} which regions matter, and without waiting for a tailored approximation to be derived.
+Three properties recommend {\tt NuOscProbExact}, and they are hard to come by together.  It is \emph{flexible}: any Hermitian Hamiltonian at two, three, or four flavors is the same call, so a scenario nobody has yet proposed costs no more to evaluate than one solved decades ago.  It is \emph{fast}: for calculation of oscillation probabilities of neutrinos going through the Earth it is the quickest of the codes we compare, at every accuracy finer than the coarsest setting they share.  And it is \emph{exact}: handed a Hamiltonian, it returns the probability to round-off, four decades finer at constant density than the closest of the others reaches.  Only at the coarsest settings through the Earth does a specialized code come out ahead, and at constant density a closed form specialized to three flavors is faster still (Section \ref{sec:comparison}).  That combination suits the exploration of non-standard scenarios, where broad parameter spaces must be scanned without knowing \textit{a priori} which regions matter, and without waiting for a tailored approximation to be derived.
 
-In lieu of diagonalizing the Hamiltonian, {\tt NuOscProbExact} computes exact oscillation probabilities by expanding the operators that drive the time-evolution in terms of SU($n$) matrices, with $n$ the number of flavors. For two and three flavors this approach was developed by Ohlsson \& Snellman (hereafter, OS)\ \cite{Ohlsson:1999xb, Ohlsson:1999um, Ohlsson:2000zz, Ohlsson:2001et}.  More broadly, for any number of flavors, it rests on a nineteenth-century spectral identity known as Sylvester's formula\ \cite{Sylvester:1883}, which bypasses the costly computation of eigenvectors. {\tt NuOscProbExact} implements this expansion for two, three, and four flavors.  The method has two essential assumptions:
+In lieu of diagonalizing the Hamiltonian, {\tt NuOscProbExact} computes exact probabilities by expanding the quantum operators that drive the neutrino time-evolution in terms of SU($n$) matrices, with $n$ the number of flavors. For two and three flavors this approach was developed by Ohlsson \& Snellman (hereafter, OS)\ \cite{Ohlsson:1999xb, Ohlsson:1999um, Ohlsson:2000zz, Ohlsson:2001et}.  More broadly, for any number of flavors, it rests on a nineteenth-century identity known as Sylvester's formula\ \cite{Sylvester:1883}, which bypasses the costly computation of eigenvectors. {\tt NuOscProbExact} implements this for two, three, and four flavors.  The method has two essential assumptions:
 \begin{enumerate}
  \item
-  The system must be closed, \ie, it must conserve the number of neutrinos
-  summed over all flavors.  Equivalently, $\mathbb{H}$ must be Hermitian: that
-  is the same requirement written in matrix form, and it is what makes the
-  evolution unitary.  The spectral identity below holds without it; the
-  probabilities do not.
+  The system must be closed, \ie, it must conserve the number of neutrinos summed over all flavors.  Equivalently, the Hamiltonian must be Hermitian for  the evolution to be unitary.  (Sylvester's formula holds without unitarity; the probabilities do not.)
  \item
-  The Hamiltonian must be time- or position-independent along the neutrino
-  path.
+  The Hamiltonian must be time- or position-independent along the neutrino path.
 \end{enumerate}
-Both hold in many scenarios studied in the literature---oscillations in vacuum, in matter of constant density, with non-standard interactions, and in diverse new-physics settings---but not in others, notably propagation through the Earth.  For those, we extend the method to Hamiltonians that vary along the path, by treating the profile as piecewise constant: the approximation is in the profile, never in the propagation through it.
+Both conditions hold in many scenarios studied in the literature---oscillations in vacuum, in matter of constant density, and in diverse new-physics settings---but not in others, notably propagation through the Earth.  For those, we extend the method to Hamiltonians that vary along the path, by treating the density profile as piecewise constant: the approximation is in the profile, never in the propagation through it.
 
-The one insurmountable limitation of the method is that it does not apply to scenarios where neutrinos ``leak out'' of the system.  This includes, \eg, neutrino decays into invisible products\ \cite{Joshipura:2002fb, Beacom:2002cb, Beacom:2002vi, GonzalezGarcia:2008ru, Baerwald:2012kc, Berryman:2014yoa} or open systems, like those with decoherence\ \cite{Benatti:2000ph, Lisi:2000zt, Ohlsson:2000mj, Carpio:2017nui, Coloma:2018idr}.  Whether a system leaks depends in part on how much of it one chooses to describe---a 3+1 sterile scenario appears to leak when written in three flavors, and is closed and unitary over all four---but that freedom does not extend to genuinely open evolution, which is generated on the $n^2$-dimensional space of density matrices rather than on the $n$-dimensional space of states.  No enlargement of the flavor basis avoids that, and it is what puts these scenarios outside the method for good, not for now; Section \ref{sec:what_to_use} says what to use.
+The one insurmountable limitation of the method is that it does not apply to scenarios where neutrinos ``leak out'' of the system.  This includes, \eg, neutrino decays into invisible products\ \cite{Joshipura:2002fb, Beacom:2002cb, Beacom:2002vi, GonzalezGarcia:2008ru, Baerwald:2012kc, Berryman:2014yoa} or open systems, like those with decoherence\ \cite{Benatti:2000ph, Lisi:2000zt, Ohlsson:2000mj, Carpio:2017nui, Coloma:2018idr}.  Whether a system leaks depends in part on how much of it one chooses to describe: written in three flavors a 3+1 sterile scenario appears to leak, and over all four it is closed and unitary. Adding the missing states works when they are neutrinos, and decoherence and invisible decay leave out an environment instead. Their evolution acts on the $n^2$ components of a density matrix, not on the $n$ amplitudes of a state, and no number of extra flavors bridges that. Section \ref{sec:what_to_use} says what to use instead of closed-form expansions.
 
-Section \ref{sec:scope} sets the scope and context.  Section \ref{sec:general_remarks} recaps the basics of oscillations and fixes the goal of the computation.  Section \ref{sec:general_n} presents the construction for any number of flavors, of which the OS method is one reading; Sections \ref{sec:two_flavors}, \ref{sec:three_flavors} and \ref{sec:four_flavors} work it out for two, three, and four.  Section \ref{sec:code} describes {\tt NuOscProbExact}, and Section \ref{sec:examples} shows examples of its use.  Sections \ref{sec:performance} and \ref{sec:comparison} measure its speed and accuracy, and compare it against six other public codes. Section \ref{sec:conclusions} concludes.  The appendices hold the supporting detail.
+Section \ref{sec:scope} sets the scope and context.  Section \ref{sec:general_remarks} recaps the basics of oscillations and fixes the goal of the computation.  Section \ref{sec:general_n} presents the construction for any number of flavors, of which the OS method is one reading. Sections \ref{sec:two_flavors}, \ref{sec:three_flavors} and \ref{sec:four_flavors} work it out for two, three, and four flavors.  Section \ref{sec:code} describes {\tt NuOscProbExact}.  Section \ref{sec:examples} shows examples of its use.  Sections \ref{sec:performance} and \ref{sec:comparison} measure its speed and accuracy, and compare it against six other public codes. Section \ref{sec:conclusions} concludes.  The appendices hold supporting detail.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -251,24 +253,23 @@ Section \ref{sec:scope} sets the scope and context.  Section \ref{sec:general_re
 
 \subsection{Overview of our methods}
 
-We compute oscillation probabilities by expanding the evolution operator in the basis of SU($n$) generators: this is the OS method at two and three flavors, and the same construction at four.  References\ \cite{Ohlsson:1999xb, Ohlsson:1999um, Ohlsson:2000zz, Ohlsson:2001et} introduced expressions applicable to generic oscillation scenarios, and also found analytic expressions\ \cite{Ohlsson:1999xb} for the probabilities in the cases of two flavors in matter and three flavors in vacuum and matter.  The problem has a longer history than the OS papers alone.  \Ref\ \cite{Barger:1980tf} gave the three-flavor probabilities in constant matter, \Ref\ \cite{Zaglauer:1988gz} the exact eigenvalues and mixing parameters in matter, and \Refs\ \cite{Kimura:2002wd, Harrison:2003fi} obtained exact three-flavor matter probabilities in a form that, like the one used here, does not require the eigenvectors to be constructed explicitly.  What this paper adds to that literature is not a new closed form for a particular scenario: the expressions specialized to three flavors in vacuum and in matter are already available and are lengthy, and we neither reproduce nor extend them.  It is a general-purpose implementation, at two, three, and four flavors, for a Hamiltonian that is arbitrary rather than chosen in advance.
+We compute oscillation probabilities by expanding the evolution operator in the basis of SU($n$) generators: this is the OS method at two and three flavors, and the same construction at four.  References\ \cite{Ohlsson:1999xb, Ohlsson:1999um, Ohlsson:2000zz, Ohlsson:2001et} introduced expressions applicable to generic oscillation scenarios, and also found analytic expressions\ \cite{Ohlsson:1999xb} for the probabilities in the cases of two flavors in matter and three flavors in vacuum and matter.  Yet the problem has a longer history than the OS papers alone.  \Ref\ \cite{Barger:1980tf} gave the three-flavor probabilities in constant matter, \Ref\ \cite{Zaglauer:1988gz} the exact eigenvalues and mixing parameters in matter, and \Refs\ \cite{Kimura:2002wd, Harrison:2003fi} obtained exact three-flavor matter probabilities in a form that, like the one used here, does not require the eigenvectors to be constructed explicitly.  What the present paper adds to that literature is not a new closed form for a particular scenario: the expressions specialized to three flavors in vacuum and in matter are already available and are lengthy, and we neither reproduce nor extend them.  Instead, ours is a general-purpose implementation, at two, three, and four flavors, for a Hamiltonian that is arbitrary rather than chosen in advance.
 
-Later, we work through the method.  Here, we give an overview.  We start by expanding the Hamiltonian in the basis of SU($n$) generators: of $2 \times 2$ Pauli matrices in the case of two flavors, of $3 \times 3$ Gell-Mann matrices in the case of three flavors, or of the $4 \times 4$ generators of SU(4) in the case of four flavors.  \ref{app:matrices} shows these matrices.  When studying neutrino oscillations, these expansions are sometimes performed not on the Hamiltonian, but on the associated density matrix.  This approach is particularly useful to study oscillations in the early Universe\ \cite{McKellar:1992ja, Bell:1998ds, Hannestad:2001iy, Wong:2002fa, Hannestad:2012ky, Boriero:2017tkh} and in supernovae\ \cite{Pantaleone:1994ns, Sigl:1994hc, Pastor:2002we, Balantekin:2004ug, Fogli:2007bk, Dasgupta:2007ws, Duan:2010bg, Mirizzi:2015eza}.  
+Later, we work through the method.  Here, we give an overview.  We start by expanding the Hamiltonian in the basis of SU($n$) generators: of $2 \times 2$ Pauli matrices in the case of two flavors, of $3 \times 3$ Gell-Mann matrices in the case of three flavors, or of the $4 \times 4$ generators of SU(4) in the case of four flavors.  \ref{app:matrices} shows these matrices.  (When studying neutrino oscillations, these expansions are sometimes performed not on the Hamiltonian, but on the associated density matrix.  This approach is particularly useful to study oscillations in the early Universe\ \cite{McKellar:1992ja, Bell:1998ds, Hannestad:2001iy, Wong:2002fa, Hannestad:2012ky, Boriero:2017tkh} and in supernovae\ \cite{Pantaleone:1994ns, Sigl:1994hc, Pastor:2002we, Balantekin:2004ug, Fogli:2007bk, Dasgupta:2007ws, Duan:2010bg, Mirizzi:2015eza}.)
 
-In the OS method, we instead first expand the Hamiltonian, $\mathbb{H}$, and then the associated evolution operator, $e^{-i \mathbb{H} L}$.  For the latter, we use the exponential expansions of Pauli and Gell-Mann matrices\ \cite{MacFarlane:1968vc, Curtright:2015iba, VanKortryk:2015kua}.  These expansions follow from the Cayley-Hamilton theorem, which states that a matrix satisfies its own characteristic equation; the consequence used here is that an analytic function of an $n \times n$ matrix is a polynomial of degree at most $n-1$ in that matrix.  The coefficients of the expansion are computed using SU(2), SU(3), and SU(4) invariants, which allows us to bypass the explicit Hamiltonian diagonalization that would otherwise be needed to compute the probabilities.
+In the OS method, we instead first expand the Hamiltonian, $\mathbb{H}$, and then the associated evolution operator, $e^{-i\mathbb{H}L}$. The coefficients of that second expansion come, at two and three flavors, from the exponential identity for Pauli and Gell-Mann matrices \cite{MacFarlane:1968vc, Curtright:2015iba, VanKortryk:2015kua}, which follows from the Cayley-Hamilton theorem, that a matrix satisfies its own characteristic equation.  The consequence used here is that an analytic function of an $n \times n$ matrix is a polynomial of degree at most $n-1$ in that matrix. At four flavors they come from Sylvester's formula, \equ{sylvester}, instead.  Either way they are built from SU($n$) invariants, and that is what bypasses the explicit diagonalization the probabilities would otherwise need.
 
-The OS papers treat two and three flavors, and observe that beyond three the characteristic equation must be solved numerically, since, by the Abel-Ruffini theorem, only polynomial equations up to degree four are solvable in radicals~\cite{Kusnezov:1995, VanKortryk:2015kua}.  That remark identifies $n=4$ as reachable without carrying it out.  It has been reached since: \Ref~\cite{Kamo:2002sj} obtained the four-flavor case for oscillations in matter.  Three things therefore need separating, so that this paper is not read as claiming more than it does.  The four-flavor expressions are not new, and are not an OS result; we do not present them as either.  What Section \ref{sec:general_n} sets out is the statement they follow from, of which the OS expansion is one reading among several --- a nineteenth-century identity, not a new one.  It holds at any $n$; what ends at four is not the identity but the closed form for the eigenvalues it needs.  And what is new here is narrower and practical: an implementation, at two, three, and four flavors, that takes an arbitrary Hermitian Hamiltonian rather than one specialized to matter or to any other scenario fixed in advance.
-% , and {\tt NuSQuIDS}\ \cite{Delgado:2014kpa, NuSQuIDS} treats up to $n=6$\ \cite{Salvado:Private}.
+OS remark that beyond three flavors the characteristic equation must be solved numerically---though the theorem they cite for it allows radicals up to degree four~\cite{Kusnezov:1995, VanKortryk:2015kua}, so their own remark identifies $n=4$ as reachable without carrying it out.  It has been reached since: \Ref~\cite{Kamo:2002sj} obtained the four-flavor case for oscillations in matter.  Three items therefore need separating, so that our paper is not read as claiming more than it does.  The four-flavor expressions are not new, and are not an OS result; we do not present them as either.  The statement they follow from predates both, and the OS expansion is one reading of it among several; it holds at any $n$, and what ends at four is not the statement but the closed form for the eigenvalues it needs.  And what is new here is narrower and practical: an implementation that takes an arbitrary Hermitian Hamiltonian rather than one specialized to matter or to any other scenario fixed in advance.
 
 \subsection{Relation to other oscillation codes}
 
-Oscillation probabilities are already available from several mature codes: {\tt GLoBES}\ \cite{GLoBES}, an experiment-simulation framework; {\tt Prob3++}\ \cite{Prob3pp}, the analytic three-flavor treatment of \Ref\ \cite{Barger:1980tf}; {\tt nuCraft}\ \cite{nuCraft}, a numerical integration along a trajectory through Earth; {\tt NuFast-LBL}\ \cite{Denton:2024pzc} and {\tt NuFast-Earth}\ \cite{Denton:2025oxf}, fast specializations of the three-flavor case at constant density and through Earth; and {\tt nuSQuIDS}\ \cite{Delgado:2014kpa, NuSQuIDS}, the most general of them.  Section \ref{sec:comparison} takes each in turn and measures it, and Section \ref{sec:performance} shows how the ranking against {\tt NuFast-LBL}, the fastest of them at constant density, depends on how many probabilities are asked for at once.  What belongs here is only the relation.  {\tt nuSQuIDS} is the near relative: it expands in the same SU($n$) generator basis, but applies it to the density matrix rather than to the state and integrates the resulting equations of motion, which admits time dependence, interactions, and non-unitary terms, at the cost of solving a differential equation.  The construction used here is the analytic kernel of those equations, restricted to closed systems at constant density, as Section \ref{sec:general_n} makes precise.
+Oscillation probabilities are already available from several mature codes: {\tt GLoBES}\ \cite{GLoBES}, an experiment-simulation framework; {\tt Prob3++}\ \cite{Prob3pp}, the analytic three-flavor treatment of \Ref\ \cite{Barger:1980tf}; {\tt nuCraft}\ \cite{nuCraft}, a numerical integration along a trajectory through Earth; {\tt NuFast-LBL}\ \cite{Denton:2024pzc} and {\tt NuFast-Earth}\ \cite{Denton:2025oxf}, fast specializations of the three-flavor case at constant density and through Earth; and {\tt nuSQuIDS}\ \cite{Delgado:2014kpa, NuSQuIDS}, the most general of them.  Section \ref{sec:comparison} takes each in turn and measures it, and Section \ref{sec:performance} shows how their runtime performance depends on how many probabilities are asked for at once.  What belongs here is only their relation to {\tt NuOscProbExact}.  {\tt nuSQuIDS} is the near relative: it expands in the same SU($n$) generator basis, but applies it to the density matrix rather than to the state and integrates the resulting equations of motion, a procedure that admits time dependence, interactions, and non-unitary terms, at the cost of solving a differential equation, which is, in general, computationally taxing.  The construction used by {\tt NuOscProbExact} is the analytic kernel of those equations, restricted to closed systems at constant density, as Section \ref{sec:general_n} makes precise.
 
-The claim made for this code is correspondingly narrow, and two qualifications belong with it from the start.  It evaluates the exact probability for any Hermitian Hamiltonian, at two, three, or four flavors, with no approximation and no numerical integration; none of the \emph{physics} has to be anticipated, and a Hamiltonian nobody has yet written down is the same call as one that has been solved for decades.  The Hamiltonian must be Hermitian --- which is closedness in matrix form --- and constant over the interval it is applied to, as Section \ref{sec:introduction} states; where a density varies continuously, as through Earth, the profile is replaced by piecewise constant regions and it is there --- and only there --- that an approximation enters.  And the generality is paid for: the construction exploits no structure, so for the standard three-flavor case at constant density, which is what {\tt NuFast-LBL} is built for, it is slower, and the accuracy it gains there is far finer than any experiment can use.  Both qualifications are taken up later.  Sections \ref{sec:performance} and \ref{sec:comparison} measure both halves of that statement, and \figu{prem_plane} shows where the ordering reverses.
+The claim made for {\tt NuOscProbExact} is a strong one, and it is a claim about a class rather than about a case: inside the closed, constant-Hamiltonian class just described, there is no scenario it does not reach.  That generality costs nothing in accuracy---\textbf{none of the above codes is more accurate than ours anywhere, at any setting it exposes}---and, due to the batched evaluation and compiled kernels of Section \ref{sec:code}, it costs almost nothing in speed: \textbf{only {\tt NuFast-LBL}, on the standard three-flavor case at constant density, and {\tt NuFast-Earth}, at its coarsest setting, are ever quicker}.  One condition comes with all of that, as Section \ref{sec:introduction} states: the Hamiltonian must be Hermitian --- which is closedness in matrix form---and constant over the interval it is applied to; where a density varies continuously, as through Earth, {\tt NuOscProbExact} partitions the profile into piecewise-constant regions, and it is there---and only there---that an approximation enters.  Sections \ref{sec:performance} and \ref{sec:comparison} measure both the generality and its two exceptions.
 
 \medskip
 
-What follows is expository but condensed: enough detail to present the method and to implement it, with earlier work cited for the rest.
+What follows is expository but condensed: enough to present and implement the method; earlier work is cited for the rest.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -278,7 +279,7 @@ What follows is expository but condensed: enough detail to present the method an
 \section{Neutrino oscillation recap}
 \label{sec:general_remarks}
 
-Let $\nu$ represent the flavor state of a neutrino.  The state evolves according to the Schr\"odinger equation
+Let $\nu$ represent the flavor state of a neutrino.  The state evolves according to the Schr\"odinger equation,
 \begin{equation}
  i \frac{d\nu}{dt} = H \nu \;,
 \end{equation}
@@ -291,13 +292,13 @@ We restrict the discussion to time- or position-independent Hamiltonians, so tha
  = \mathbb{U}(L) \nu_\alpha
  = e^{-i \mathbb{H} L} \nu_\alpha \;.
 \end{equation}
-Since $\mathbb{H}$ is Hermitian, the evolution operator $\mathbb{U}$ is unitary, and so $\sum_\beta P_{\nu_\alpha \to \nu_\beta} = 1$ for every $\alpha$: the neutrino is found in some flavor.
+Since $\mathbb{H}$ is Hermitian, the evolution operator $\mathbb{U}$ is unitary, and so $\sum_\beta P_{\nu_\alpha \to \nu_\beta} = 1$ for every $\alpha$: the neutrino is found in one of the $n$ flavors, and does not abandon this system.
 
-One simplification is available at the outset and is used throughout.  Split $\mathbb{H} = h_0 \mathbb{1} + \tilde{\mathbb{H}}$ into its trace and its traceless part, where $h_0 = \frac{1}{n}{\rm Tr}\,\mathbb{H}$.  Because $h_0 \mathbb{1}$ commutes with everything, the exponential factorizes exactly, $\mathbb{U}(L) = e^{-i h_0 L} e^{-i \tilde{\mathbb{H}} L}$, and the first factor is a phase common to every amplitude, which cancels in $\lvert \cdot \rvert^2$.  It may therefore be discarded, and the sections that follow work with $\tilde{\mathbb{H}}$ alone.
+One simplification is available at the outset and is used throughout.  Split $\mathbb{H} = h_0 \mathbb{1} + \tilde{\mathbb{H}}$ into its trace and its traceless part, where $h_0 = \frac{1}{n}{\rm Tr}\,\mathbb{H}$.  Because $h_0 \mathbb{1}$ commutes with everything, the exponential factorizes exactly, $\mathbb{U}(L) = e^{-i h_0 L} e^{-i \tilde{\mathbb{H}} L}$, and the first factor is a phase common to every amplitude, which cancels in the operation $\lvert \cdot \rvert^2$ that renders the probability.  It may therefore be discarded, and the sections that follow work with $\tilde{\mathbb{H}}$ alone.
 
 Because the Hamiltonian in flavor space is non-diagonal, \ie, because it mixes flavor states, after propagating for a distance $L$, the neutrino of initial flavor $\nu_\alpha$ becomes a superposition of neutrinos of all flavors, each with a different probability amplitude, $\nu_\beta^\dagger \nu_\alpha(L)$.  The probability of detecting the neutrino with flavor $\beta$ is $P_{\nu_\alpha \to \nu_\beta}(L) = \lvert \nu_\beta^\dagger \nu_\alpha(L) \rvert^2$.
 
-Evaluating \equ{evolved_state} means exponentiating $\mathbb{H}$.  Were $\nu_\alpha$ an eigenstate the exponential would act as a phase and there would be nothing to do, but in flavor space it is not, so the usual procedure is to diagonalize the Hamiltonian, evolve in the basis of its eigenvectors, and rotate back to flavor space to obtain $\nu_\alpha(L)$.  Those steps are generally carried out numerically, especially for $n \geq 3$, because the closed forms become unwieldy; {\tt GLoBES}\ \cite{GLoBES, Kopp:2006wp, Huber:2007ji} is one code that does it efficiently, and Section \ref{sec:scope} places the others.  What follows instead never builds the eigenvectors: it evaluates the exponential directly, by the route Section \ref{sec:general_n} sets out, in which the OS method is the two- and three-flavor case.
+Evaluating \equ{evolved_state} means exponentiating $\mathbb{H}$.  Were $\nu_\alpha$ an eigenstate the exponential would act as a phase and there would be nothing more to do, but in flavor space it is not, so the usual procedure is to diagonalize the Hamiltonian, evolve in the basis of its eigenvectors, and rotate back to flavor space to obtain $\nu_\alpha(L)$.  Those steps are often carried out numerically, especially for $n \geq 3$, because the closed forms become unwieldy; {\tt GLoBES}\ \cite{GLoBES, Kopp:2006wp, Huber:2007ji} is one code that does it efficiently, and Section \ref{sec:scope} overviews the others.  The method adopted by {\tt NuOscProbExact}, presented in Section \ref{sec:general_n} below, instead never builds the eigenvectors: it evaluates the exponential directly.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -310,7 +311,7 @@ Evaluating \equ{evolved_state} means exponentiating $\mathbb{H}$.  Were $\nu_\al
 \subsection{The evolution operator}
 \label{sec:evolution_operator}
 
-Let $\mathbb{H}$ be an arbitrary Hermitian $n \times n$ Hamiltonian in the flavor basis, constant over a baseline $L$, and let $\tilde{\mathbb{H}}$ be its traceless part.  We write $\psi_m$ for the eigenvalues of $-\tilde{\mathbb{H}}$, the \emph{latent roots}, and $\chi(\psi) = \det(\psi \mathbb{1} + \tilde{\mathbb{H}})$ for their characteristic polynomial.  That sign is a convention and nothing more --- it is the one used in the rest of this paper and in the code, and it turns the $e^{-i \tilde{\mathbb{H}} L}$ of Section \ref{sec:general_remarks} into phases of the form $e^{+i \psi_m L}$.  For a non-degenerate spectrum, the evolution operator is
+Let $\mathbb{H}$ be an arbitrary Hermitian $n \times n$ Hamiltonian in the flavor basis, constant over a baseline $L$, and let $\tilde{\mathbb{H}}$ be its traceless part.  We write $\psi_m$ for the eigenvalues of $-\tilde{\mathbb{H}}$, the \emph{latent roots}, and $\chi(\psi) = \det(\psi \mathbb{1} + \tilde{\mathbb{H}})$ for their characteristic polynomial.  That sign is a convention and nothing more---it is the one used in the rest of this paper and in the code, and it turns the $e^{-i \tilde{\mathbb{H}} L}$ of Section \ref{sec:general_remarks} into phases of the form $e^{+i \psi_m L}$.  For a non-degenerate eigenvalue spectrum, the evolution operator is
 \begin{equation}
  \label{equ:sylvester}
  \mathbb{U}(L)
@@ -321,14 +322,12 @@ Let $\mathbb{H}$ be an arbitrary Hermitian $n \times n$ Hamiltonian in the flavo
  =
  \frac{{\rm adj}\left(\psi_m \mathbb{1} + \tilde{\mathbb{H}}\right)}{\chi^\prime\left(\psi_m\right)} \;,
 \end{equation}
-with $\mathbb{P}_m$ the orthogonal projector onto the $m$-th eigenspace, and ${\rm adj}(\mathbb{A})$ the adjugate of matrix $\mathbb{A}$ (\ie, the transpose of the cofactor matrix of $\mathbb{A}$).  This is Sylvester's interpolation formula\ \cite{Sylvester:1883} 
-% --- already invoked in Section \ref{sec:three_flavors} for the $3 \times 3$ case --- 
-and $\mathbb{P}_m$ are the Frobenius covariants; the underlying statements are nineteenth-century.
+with $\mathbb{P}_m$ the orthogonal projector onto the $m$-th eigenspace, and ${\rm adj}(\mathbb{A})$ the adjugate of matrix $\mathbb{A}$ (\ie, the transpose of the cofactor matrix of $\mathbb{A}$).  This is Sylvester's interpolation formula\ \cite{Sylvester:1883} and $\mathbb{P}_m$ are the Frobenius covariants, both nineteenth-century developments in matrix theory.
 
-\subsection{One object, several readings}
+\subsection{Coefficients from traces, not eigenvectors}
 \label{sec:readings}
 
-Equation (\ref{equ:sylvester}) is one object, and several methods in the oscillation literature are readings of it.  Contracting it with the trace metric, $u_0 = \frac{1}{n}{\rm Tr}\,\mathbb{U}$ and $u_a = -\frac{i}{2}{\rm Tr}(\lambda^a \mathbb{U})$ --- in the convention $\mathbb{U} = u_0 \mathbb{1} + i u_a \lambda^a$ used throughout, \equ{u3_def} --- keeps the whole matrix in the generator basis and gives the OS expansion.  Keeping instead its columns gives the adjugate method\ \cite{Sylvester:1883}; keeping its diagonal gives the eigenvector-eigenvalue identity; writing it as a polynomial with Vandermonde-determined coefficients gives the Cayley-Hamilton form in \Ref\ \cite{Ohlsson:1999xb}.  What differs between them is which slice is kept, and in which basis.  Seen this way, the OS coefficients are the SU($n$)-basis components of the adjugate, and another value of $n$ requires no new idea.
+Equation (\ref{equ:sylvester}) is one object, and several methods in the oscillation literature are readings of it.  Contracting it with the trace metric, $u_0 = \frac{1}{n}{\rm Tr}\,\mathbb{U}$ and $u_a = -\frac{i}{2}{\rm Tr}(\lambda^a \mathbb{U})$---in the convention $\mathbb{U} = u_0 \mathbb{1} + i u_a \lambda^a$ used throughout, \equ{u3_def}---keeps the whole matrix in the generator basis and gives the OS expansion.  Keeping instead its columns gives the adjugate method\ \cite{Sylvester:1883}; keeping its diagonal gives the eigenvector-eigenvalue identity; writing it as a polynomial with Vandermonde-determined coefficients gives the Cayley-Hamilton form in \Ref\ \cite{Ohlsson:1999xb}.  What differs between them is which slice is kept, and in which basis.  Seen this way, the OS coefficients are the SU($n$)-basis components of the adjugate, and another value of $n$ requires no new idea.
 
 Carrying this out, $u_0 = \frac{1}{n}\sum_m e^{i\psi_m L}$ and
 \begin{equation}
@@ -339,7 +338,7 @@ Carrying this out, $u_0 = \frac{1}{n}\sum_m e^{i\psi_m L}$ and
  \frac{N_a\left(\psi_m\right)}{\chi^\prime\left(\psi_m\right)} \;,~~
  N_a(\psi) \equiv -\tfrac{i}{2}{\rm Tr}\!\left[\lambda^a\,{\rm adj}\left(\psi\mathbb{1}+\tilde{\mathbb{H}}\right)\right] \;.
 \end{equation}
-Here $h^a = \frac{1}{2}{\rm Tr}\left(\lambda^a \tilde{\mathbb{H}}\right)$ are the components of the Hamiltonian in the generator basis, so that $\tilde{\mathbb{H}} = h_a \lambda^a$, and $\ast$ is the symmetric product those components inherit from the generator algebra,
+Here, $h^a = \frac{1}{2}{\rm Tr}\left(\lambda^a \tilde{\mathbb{H}}\right)$ are the components of the Hamiltonian in the generator basis, so that $\tilde{\mathbb{H}} = h_a \lambda^a$, and $\ast$, the ``star product,'' is the symmetric product those components inherit from the generator algebra, \ie,
 \begin{equation}
  \label{equ:star}
  \lambda^a \lambda^b
@@ -351,30 +350,28 @@ Here $h^a = \frac{1}{2}{\rm Tr}\left(\lambda^a \tilde{\mathbb{H}}\right)$ are th
  \equiv
  d^{abc} x^b y^c \;,
 \end{equation}
-with $f^{abc}$ the antisymmetric structure constants and $d^{abc} = \frac{1}{4}{\rm Tr}\left(\left\{\lambda^a,\lambda^b\right\}\lambda^c\right)$ the totally symmetric $d$ tensor.  For SU(2) the anticommutator of two generators is proportional to the identity, so $d^{abc}$ vanishes identically and the star product with it; this is why the two-flavor case of Section \ref{sec:two_flavors} carries none.
+where repeated indices are summed over (also in later sections), $f^{abc}$ is the antisymmetric structure constants, and $d^{abc} = \frac{1}{4}{\rm Tr}\left(\left\{\lambda^a,\lambda^b\right\}\lambda^c\right)$ is the totally symmetric $d$ tensor.  For SU(2), the anticommutator of two generators is proportional to the identity, so $d^{abc}$ vanishes identically and the star product with it; this is why the two-flavor case of Section \ref{sec:two_flavors} carries none.
 
-The numerator $N_a$ has degree $n-2$ in $\psi$ --- the leading $\psi^{n-1}$ of the adjugate multiplies the identity, which $\lambda^a$ traces away --- and its coefficients are, up to normalization, $h$, $h \ast h$, $\left(h \ast h\right) \ast h$, and so on: a star-product tower of length $n-1$, terminated by the Cayley-Hamilton theorem.  Everything needed is a trace: the latent roots follow from traces of powers of $\tilde{\mathbb{H}}$, through the invariants, and the coefficients from traces against the generators.  The $d$ tensor is never contracted at runtime --- its non-zero entries are written out in closed form --- and, above all, \textbf{no eigenvectors are ever required}; this is where the method derives its speed from.
-% The eigenvalues are the only non-polynomial input.
+The numerator $N_a$ has degree $n-2$ in $\psi$---the leading $\psi^{n-1}$ of the adjugate multiplies the identity, which $\lambda^a$ traces away---and its coefficients are, up to normalization, $h$, $h \ast h$, $\left(h \ast h\right) \ast h$, and so on: the generator-basis components of successive powers of $\tilde{\mathbb{H}}$, a tower that Cayley-Hamilton closes at $n-1$ rungs, since $\tilde{\mathbb{H}}^n$ is a combination of the powers below it.  Everything needed is a trace: the latent roots follow from traces of powers of $\tilde{\mathbb{H}}$, through the invariants, and the coefficients from traces against the generators.  The $d$ tensor is fixed by the algebra, and mostly zeros (Table~\ref{tab:d_tensor} lists them at $n=3$): each star product takes a few products (three to five at $n = 3$) rather than the $\left(n^2-1\right)^2$ terms of the sum over $b$ and $c$.  And, above all, \textbf{no eigenvectors are ever required}.  This is what makes the method, implemented in {\tt NuOscProbExact}, fast: whatever the Hamiltonian, a probability is the same short run of arithmetic---traces, one root formula, a handful of products---so computationally cheap that Section \ref{sec:performance} finds the call pattern, not the algebra, sets what it costs.
 
-One further reading fixes the relation to codes that propagate a density matrix rather than a state, which is the more general formulation and the one Section \ref{sec:scope} refers to.  With no jump operators and a Hamiltonian constant over the interval, the Liouville-von Neumann equation ${\rm d}\rho/{\rm d}L = -i\left[\mathbb{H}, \rho\right]$ has the closed-form solution $\rho(L) = \mathbb{U}(L) \, \rho(0) \, \mathbb{U}^\dagger(L)$, with $\mathbb{U}$ given by \equ{sylvester}.  What such a code obtains by integrating along the trajectory is, in that limit, what \equ{sylvester} returns in a single evaluation; what differs between the two is the terms that limit removes --- interactions, attenuation, and the open-system terms of Section \ref{sec:limitations} --- not the oscillation itself.
+One further reading fixes the relation to codes that propagate a density matrix rather than a state, which is the more general formulation referred to in Section \ref{sec:scope}.  With the evolution generated by the Hamiltonian alone, and that Hamiltonian constant over the interval, the Liouville-von Neumann equation, ${\rm d}\rho/{\rm d}L = -i\left[\mathbb{H}, \rho\right]$, has the closed-form solution $\rho(L) = \mathbb{U}(L) \, \rho(0) \, \mathbb{U}^\dagger(L)$, with $\mathbb{U}$ given by \equ{sylvester}.  What such a method obtains by integrating along the neutrino trajectory is, in that limit, what \equ{sylvester} returns in a single evaluation; what differs between the two is the terms that limit removes---interactions, attenuation, and the open-system terms mentioned in Section \ref{sec:limitations}---not the oscillation itself.
 
-The eigenvalues are the only quantity in \equ{sylvester} that is not a polynomial in the Hamiltonian.  Everything else---the projectors, the probabilities---is rational in them.  That is why the construction extends to any $n$ for which the eigenvalues can be had, and why the accuracy of the whole procedure is set by the accuracy of the roots, $\psi_m$.  Section \ref{sec:beyond_four} takes up what happens where they cannot be had in closed form.
-
+The eigenvalues are the only quantity in \equ{sylvester} that is not a polynomial in the Hamiltonian; with them in hand, the projectors are rational in $\tilde{\mathbb{H}}$ and the rest is the phases $e^{i \psi_m L}$.  That is why the construction extends to any $n$ for which the eigenvalues can be had, and why the accuracy of the whole procedure is set by the accuracy of the roots, $\psi_m$.  Section \ref{sec:beyond_four} takes up what happens where they cannot be had in closed form, at $n \geq 5$.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{figure}[t!]
  \centering
  \includegraphics[width=\columnwidth]{slabs_composition.pdf}
- \caption{\label{fig:slabs}Composition of the evolution operators of \equ{composition}, for a neutrino crossing a path divided into regions of constant Hamiltonian.  A neutrino enters as $\nu_\alpha$ on the left and leaves as $\nu_\beta$ on the right.  Each region $k$ has its own width $L_k$ and Hamiltonian $\mathbb{H}_k$, and is solved exactly to give its own evolution operator $\mathbb{U}_k(L_k)$; the operators are then multiplied.  Drawn here for the commonest case, in which what changes from one region to the next is the matter density $\rho_k$, though nothing in the construction requires that.  Note the order, indicated by the crossing dashed lines: because the operators act to the left on the initial state, the region crossed \emph{first} is applied first and so appears \emph{rightmost} in the product, $\mathbb{U} = \mathbb{U}_4(L_4) \, \mathbb{U}_3(L_3) \, \mathbb{U}_2(L_2) \, \mathbb{U}_1(L_1)$.  Reversing the order describes a neutrino crossing the same path in the opposite direction, and gives different probabilities.  Section \ref{sec:layered_earth} puts this to work on the profile of Earth.}
+ \caption{\label{fig:slabs}Composition of the evolution operators of \equ{composition}, for a neutrino crossing a path divided into regions of constant Hamiltonian.  A neutrino enters as $\nu_\alpha$ on the left and leaves as $\nu_\beta$ on the right.  Each region $k$ has its own width $L_k$ and Hamiltonian $\mathbb{H}_k$, and is solved exactly to give its own evolution operator $\mathbb{U}_k(L_k)$; the operators are then multiplied.  Drawn here for the commonest case, in which what changes from one region to the next is the matter density $\rho_k$, though nothing in the construction requires that.  Because the operators act to the left on the initial state, the region crossed \emph{first} is applied first and so appears \emph{rightmost} in the product, $\mathbb{U} = \mathbb{U}_4(L_4) \, \mathbb{U}_3(L_3) \, \mathbb{U}_2(L_2) \, \mathbb{U}_1(L_1)$.  Section \ref{sec:layered_earth} applies this to the internal matter profile of Earth.}
 \end{figure}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \subsection{Conjugate Hamiltonians}
 \label{sec:conjugation}
 
-One symmetry of the construction saves repeating the whole of it for conjugated Hamiltonians.  Under $\mathbb{H} \to \mathbb{H}^\ast$ the generators divide: those that are real and symmetric are unchanged, those that are imaginary and antisymmetric change sign.  The coefficients follow, $h_a \to h_a$ on the first set and $h_a \to -h_a$ on the second.
+One symmetry of the construction saves repeating the whole of it for conjugated Hamiltonians.  Under $\mathbb{H} \to \mathbb{H}^\ast$ the generators divide: those that are real and symmetric are unchanged, those that are imaginary and antisymmetric change sign.  The coefficients of the SU($n$) expansion of the Hamiltonian follow: $h_a \to h_a$ on the first set and $h_a \to -h_a$ on the second.
 
-The latent roots do not move at all.  The characteristic polynomial of a Hermitian matrix has real coefficients, and conjugation leaves them alone, so $\chi$ and every $\psi_m$ are the same for $\mathbb{H}$ and $\mathbb{H}^\ast$; only the numerators $N_a$ of \equ{ua_general} feel the change, and they feel it as those signs.  What comes out is that the probabilities for $\mathbb{H}^\ast$ are those for $\mathbb{H}$ with each channel exchanged for its reverse,
+The latent roots, $\psi_m$, do not change.  The characteristic polynomial of a Hermitian matrix has real coefficients, and conjugation leaves them alone, so $\chi$ and every $\psi_m$ are the same for $\mathbb{H}$ and $\mathbb{H}^\ast$; only the numerators $N_a$ of \equ{ua_general} feel the change, and they feel it as those signs.  As a result, the probabilities for $\mathbb{H}^\ast$ are those for $\mathbb{H}$ with each channel exchanged for its reverse,
 \begin{equation}
  \label{equ:conjugation}
  P_{\nu_\alpha \to \nu_\beta}\!\left(\mathbb{H}^\ast\right)
@@ -386,7 +383,7 @@ so a conjugated Hamiltonian needs no new calculation: the tables of Sections \re
 \subsection{Piece-wise constant Hamiltonians}
 \label{sec:composition}
 
-Equation (\ref{equ:sylvester}) does require a constant $\mathbb{H}$, as Section \ref{sec:introduction} states, but only over the interval to which it is applied, and nothing ties that interval to the whole path.  If the path divides into $N$ regions, in the $j$-th of which a Hamiltonian $\mathbb{H}_j$ is constant over a length $L_j$, then \equ{sylvester} applies within each region separately, and the evolution operator for the whole path is their ordered product,
+Equation (\ref{equ:sylvester}) does require a constant $\mathbb{H}$, as Section \ref{sec:introduction} states, but only over the interval to which it is applied, and nothing ties that interval to the whole path traveled by the neutrino.  If the path divides into $N$ regions, in the $j$-th of which a Hamiltonian $\mathbb{H}_j$ is constant over a length $L_j$, then \equ{sylvester} applies within each region, or ``slab,'' separately, and the evolution operator for the whole path is their ordered product,
 \begin{equation}
  \label{equ:composition}
  \mathbb{U}\left(\left\{L_j\right\}\right)
@@ -395,34 +392,35 @@ Equation (\ref{equ:sylvester}) does require a constant $\mathbb{H}$, as Section 
  \mathbb{U}_2\left(L_2\right) \,
  \mathbb{U}_1\left(L_1\right) \;,
 \end{equation}
-so that a neutrino created as $\nu_\alpha$ is detected as $\nu_\beta$ with probability $P_{\nu_\alpha \to \nu_\beta}(\{L_j\}) = \lvert \nu_\beta^\dagger \, \mathbb{U}(\{L_j\}) \, \nu_\alpha \rvert^2$.  The region crossed \emph{first} stands \emph{rightmost}, since the operators act on the state to their right.  Because the $\mathbb{U}_j$ do not commute in general, writing the product in the opposite order describes a neutrino crossing the same path backwards, and gives a different answer.
+so that a neutrino created as $\nu_\alpha$ is detected as $\nu_\beta$ with probability $P_{\nu_\alpha \to \nu_\beta}(\{L_j\}) = \lvert \nu_\beta^\dagger \, \mathbb{U}(\{L_j\}) \, \nu_\alpha \rvert^2$.  
 
-Two things about \equ{composition} make it more than a convenience.  It is \emph{exact}: each region is solved exactly by \equ{sylvester} and the operators are composed exactly, so nothing is approximated in the stitching.  And it is indifferent to \emph{why} the Hamiltonians differ.  The familiar case is a change in matter density, but a non-standard interaction that switches on in part of the path, a long-range potential that varies with radius, or any combination of these is the same statement and the same product.
+Figure~\ref{fig:slabs} illustrates the composition for four slabs: a neutrino enters as $\nu_\alpha$ on the left, crosses widths $L_1$ to $L_4$ whose densities are constant but different, and leaves as $\nu_\beta$ on the right.  The crossing dashed lines carry the ordering: the region crossed \emph{first} stands \emph{rightmost} in \equ{composition}, since the operators act on the state to their right.  Because the $\mathbb{U}_j$ do not commute in general, writing the product in the opposite order describes a neutrino crossing the same path backwards, and gives a different answer.
 
-An approximation enters only when the true Hamiltonian varies \emph{continuously} and is replaced by a piecewise constant one---as for a neutrino crossing Earth, whose density profile is smoothly varying within each shell.  The approximation is then in the profile, never in the propagation through it, which is why the number of regions is a precision setting rather than a modeling choice, and why refining it converges.  Section \ref{sec:examples} treats that case, which is by far the most common in practice.
+Two features of \equ{composition} make it more than a convenience.  It is \emph{exact}: each region is solved exactly by \equ{sylvester} and the operators are composed exactly, so nothing is approximated in the stitching.  And it is indifferent to \emph{why} the Hamiltonians differ.  The familiar case is a change in matter density, but a non-standard interaction that switches on in part of the path, a long-range potential that varies with radius, or any combination of these is the same statement and the same product.
 
+An approximation enters only when the true Hamiltonian varies \emph{continuously} and is replaced by a piecewise constant one---as for a neutrino crossing Earth, whose density profile is smoothly varying within each shell~\cite{Dziewonski:1981xy}.  The approximation is then in the profile, never in the propagation through it, which is why the number of regions is a precision setting rather than a modeling choice, and why refining it converges.  Section \ref{sec:examples} treats that case, which is by far the most common in practice.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-
-
-\subsection{Why the construction stops at four}
+\subsection{Why the construction stops at four flavors}
 \label{sec:beyond_four}
 
-At $n \geq 5$ the Abel-Ruffini theorem removes the closed-form-in-radicals eigenvalues: the general quintic is not soluble in radicals, because the symmetric group $S_5$ is not soluble while $S_2$, $S_3$, and $S_4$ are.  The obstruction is a theorem, not a gap in anyone's algebra, and it is external to neutrino physics entirely.
+At $n \geq 5$, the Abel-Ruffini theorem removes the closed-form-in-radicals eigenvalues: the characteristic polynomial, $\chi$, is then a quintic or higher-order polynomial, and the general quintic is not soluble in radicals because the symmetric group $S_5$ is not soluble, while $S_2$, $S_3$, and $S_4$ are.  The obstruction is a theorem, external to neutrino physics entirely.
 
-Three remarks calibrate what is actually lost.  First, closed form survives, uselessly: the general quintic is solvable beyond radicals, through the Bring radical and elliptic modular functions or through hypergeometric functions, but those special functions are themselves evaluated iteratively, so nothing is gained over applying Newton's method to $\chi$.  The radicals were never the point; the eigenvalue-only structure was.  Second, and consequently, the practical scheme at $n \geq 5$ is to seed the eigenvalues --- from an approximation, or from the closed-form $n \leq 4$ solution of a decoupled sub-block when a hierarchy permits --- and polish them with Newton's method; the assembly in \equ{sylvester} then proceeds unchanged.  Third, everything structural continues: \equ{ua_general} needs only that $\psi_m$ be a root of $\chi$, not that it be available in radicals.  What ends at four is the formula, not the method.
+Three remarks calibrate what is actually lost.  First, a closed-form solution survives, but uselessly: the general quintic is solvable beyond radicals, through the Bring radical and elliptic modular functions or through hypergeometric functions, but those special functions are themselves evaluated iteratively, so nothing is gained over applying Newton's method to the solution of $\chi$.  The radicals were never the point; the eigenvalue-only structure was.  What they give at $n \leq 4$ is a method that can be written down: the roots, and the expressions built on them in Sections \ref{sec:two_flavors}--\ref{sec:four_flavors}, are implementable in any programming language without a linear-algebra library, and checkable by hand.  
+
+Second, and consequently, the practical scheme at $n \geq 5$ is to seed the eigenvalues---from an approximation, or from the closed-form $n \leq 4$ solution of a decoupled sub-block when a hierarchy permits---and polish them with Newton's method; the assembly in \equ{sylvester} then proceeds unchanged.  Third, everything structural continues: \equ{ua_general} needs only that $\psi_m$ be a root of $\chi$, not that it be available in radicals.  What ends at four is the closed-form formula, not the method.
 
 \section{Two-flavor oscillations}
 \label{sec:two_flavors}
 
-We consider first oscillations between only two neutrino flavors; later, we consider three flavors.  It is a good approximation wherever one mass-squared splitting dominates, as in short-baseline reactor experiments and in accelerator and atmospheric analyses restricted to the leading oscillation; CP violation and the matter resonance need the three-flavor treatment of Section \ref{sec:three_flavors}.  We represent the two-neutrino Hamiltonian operator by a $2 \times 2$ matrix $\mathbb{H}_2$.  The three traceless, Hermitian Pauli matrices $\sigma^k$ ($k=1,2,3$) --- with $\sigma^k/2$ the generators of the SU(2) algebra --- plus the identity matrix $\mathbb{1}$ form an orthogonal basis of the Hermitian $2 \times 2$ matrices.  Thus, we expand the Hamiltonian as
+Two flavors is the natural place to start: it is a good approximation wherever one mass-squared splitting dominates, as in short-baseline reactor experiments and in accelerator and atmospheric analyses restricted to the leading oscillation, and it is the case in which the construction of Section \ref{sec:general_n} is shortest.  Sections \ref{sec:three_flavors} and \ref{sec:four_flavors} carry the same construction to three flavors and to four.  We represent the two-neutrino Hamiltonian operator by a $2 \times 2$ matrix $\mathbb{H}_2$.  The three traceless, Hermitian Pauli matrices $\sigma^k$ ($k=1,2,3$)---with $\sigma^k/2$ the generators of the SU(2) algebra, and written out in \ref{app:matrices}---plus the identity matrix $\mathbb{1}$ form an orthogonal basis of the Hermitian $2 \times 2$ matrices.  Thus, we expand the Hamiltonian as
 \begin{equation}
  \label{equ:h2_expansion}
- \mathbb{H}_2 = h_0 \mathbb{1} + h_k \sigma^k \;,
+ \mathbb{H}_2 = h_0 \mathbb{1} + h_k \sigma^k \;.
 \end{equation}
-where, here and below, we assume the Einstein convention of summing over repeated indices.  The coefficients $h_0$ and $h_k$ are functions of the components of the Hamiltonian, and are real because $\mathbb{H}_2$ is Hermitian --- a traceless $2 \times 2$ matrix that is not would need complex ones; we show their explicit expressions in Table \ref{tab:h2_coefficients}.  In the two-neutrino case, the neutrino state at any time is $\nu(L) = f_\alpha(L) \nu_\alpha + f_\beta(L) \nu_\beta$, where $f_\alpha$ and $f_\beta$ are, respectively, the probability amplitudes of measuring the state to be a $\nu_\alpha$ or a $\nu_\beta$ (with $\alpha \neq \beta$).  We represent the neutrino state as a two-component column vector; the pure states are $\nu_\alpha = \left(1~0\right)^{\rm T}$ and $\nu_\beta = \left(0~1\right)^{\rm T}$.
+The coefficients $h_0$ and $h_k$ are functions of the components of the Hamiltonian, and are real because $\mathbb{H}_2$ is Hermitian; we show their explicit expressions in Table \ref{tab:h2_coefficients}.  (For non-Hermitian matrices, the coefficients may be complex, and some of the expressions below would have to exchange $h_i$ for $|h_i|^2$.)  In the two-neutrino case, the neutrino state at any time is $\nu(L) = f_\alpha(L) \nu_\alpha + f_\beta(L) \nu_\beta$, where $f_\alpha$ and $f_\beta$ are, respectively, the probability amplitudes of measuring the state to be a $\nu_\alpha$ or a $\nu_\beta$ (with $\alpha \neq \beta$).  We represent the neutrino state as a two-component column vector; the pure states are $\nu_\alpha = \left(1~0\right)^{\rm T}$ and $\nu_\beta = \left(0~1\right)^{\rm T}$.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 {\def\arraystretch{1.2}
@@ -442,43 +440,45 @@ where, here and below, we assume the Einstein convention of summing over repeate
 }
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Thus, the evolution operator is $\mathbb{U}_2\left(L\right) = e^{-i \mathbb{H}_2 L}$, and, discarding the global phase as in Section \ref{sec:general_remarks}, $\mathbb{U}_2\left(L\right) = e^{-ih_k\sigma^kL}$.
-
-To compute the action of $\mathbb{U}_2$, we use a well-known identity of Pauli matrices that generalizes Euler's formula --- and which is \equ{sylvester} at $n = 2$, the two projectors being $\mathbb{P}_\pm = \frac{1}{2}\left(\mathbb{1} \pm \hat{a}_k \sigma^k\right)$ ---
+Thus, the evolution operator is $\mathbb{U}_2\left(L\right) = e^{-i \mathbb{H}_2 L}$, and, discarding the global phase as in Section \ref{sec:general_remarks}, $\mathbb{U}_2\left(L\right) = e^{-ih_k\sigma^kL}$.  To compute the action of $\mathbb{U}_2$, we use a well-known identity of Pauli matrices that generalizes Euler's formula, 
 \begin{equation}
  \label{equ:pauli_identity}
  e^{\pm i a_k \sigma^k}
  =
  \cos\left(\left\vert a \right\vert \right) \mathbb{1}
- \pm 
- i \hat{a}_k\sigma^k\sin\left(\left\vert a\right\vert \right) \;, 
+ \pm
+ i \hat{a}_k\sigma^k\sin\left(\left\vert a\right\vert \right) \;,
 \end{equation}
-valid for real $a_k$, where $\hat{a}$ is a unit vector in the direction of the vector $a = (a_1, a_2, a_3)$ and $\lvert a \rvert$ is its modulus.  So we can write the evolution operator as in \Ref\ \cite{Ohlsson:1999xb},
+valid for real $a_k$, where $\hat{a}$ is a unit vector in the direction of the vector $a = (a_1, a_2, a_3)$ and $\lvert a \rvert$ is its modulus.  [This is also \equ{sylvester} at $n = 2$, the two projectors being $\mathbb{P}_\pm = \frac{1}{2}\left(\mathbb{1} \pm \hat{a}_k \sigma^k\right)$.]  So we can write the evolution operator as in \Ref\ \cite{Ohlsson:1999xb},
 \begin{equation}
  \label{equ:evol_op_2nu}
- \mathbb{U}_2\left(L\right) 
+ \mathbb{U}_2\left(L\right)
  =
  \cos\left(\left\vert h\right\vert L\right) \mathbb{1}
  -
  i \frac{\sin\left(\left\vert h\right\vert L\right)}{\lvert h \rvert} h_k\sigma^k  \;,
 \end{equation}
-where $\lvert h \rvert^2 \equiv h_1^2 + h_2^2 + h_3^2$ is the squared modulus of the vector $h$.  At $n = 2$ the latent roots of Section \ref{sec:evolution_operator} are simply $\pm \lvert h \rvert$, the eigenvalues of the traceless part, and \equ{evol_op_2nu} is the expansion $\mathbb{U}_2 = u_0 \mathbb{1} + i u_k \sigma^k$ of \equ{u3_def} with
-\begin{equation*}
+where $\lvert h \rvert^2 \equiv h_1^2 + h_2^2 + h_3^2$ is the squared modulus of the vector $h$.  At $n = 2$ the latent roots of Section \ref{sec:evolution_operator} are $\psi_\pm = \pm \lvert h \rvert$, the eigenvalues of $-\tilde{\mathbb{H}}_2 = -h_k \sigma^k$, and \equ{evol_op_2nu} is the expansion $\mathbb{U}_2 = u_0 \mathbb{1} + i u_k \sigma^k$ [\equ{u3_def} at $n = 2$] with
+\begin{equation}
  u_0 = \cos\left(\lvert h \rvert L\right) \;, \qquad
  u_k = -\frac{\sin\left(\lvert h \rvert L\right)}{\lvert h \rvert} h_k \;,
-\end{equation*}
+\end{equation}
 which is \equ{ua_general} at $n=2$.
 
-The evolved state $\nu_\alpha (L)$ of a neutrino that was created with flavor $\alpha$, \ie, with $f_\alpha(0) = 1$ and $f_\beta(0) = 0$, is $\nu_\alpha\left(L\right) = \mathbb{U}_2(L) \nu_\alpha$.  After some manipulation, the flavor-transition probability $P_{\nu_\alpha \to \nu_\beta}(L) = \lvert \nu_\beta^\dagger \mathbb{U}_2(L) \nu_\alpha \rvert^2$ is
+One condition attaches to these expressions, as it does to \equ{sylvester}: each divides by $\lvert h \rvert$, and the two latent roots coincide where it vanishes.  At two flavors, that happens only at $h = 0$, with $\tilde{\mathbb{H}}_2$ zero and no oscillation left to compute.  A matter resonance is not such a point, and Table \ref{tab:h2_coefficients} says why: the two-flavor matter potential $\mathbb{A}_2$---collected with the other two-flavor potentials in \ref{app:sample_2nu_hamiltonians}---is diagonal, so it enters $h_0$ and $h_3$ alone and leaves $h_1$ and $h_2$, which carry the off-diagonal entry that does the mixing, exactly where they were.  The resonance is the density at which the potential cancels $h_3$; the mixing is maximal there, but the separation between the roots bottoms out at $2\sqrt{h_1^2 + h_2^2}$ rather than closing.  Section \ref{sec:limitations} says what {\tt NuOscProbExact} returns at $h = 0$, and what the same condition costs at three flavors and four.
+
+The evolved state $\nu_\alpha (L)$ of a neutrino that was created with flavor $\alpha$, \ie, with $f_\alpha(0) = 1$ and $f_\beta(0) = 0$, is $\nu_\alpha\left(L\right) = \mathbb{U}_2(L) \nu_\alpha$.  After some manipulation, the flavor-transition probability $P_{\nu_\alpha \to \nu_\beta}(L) = \lvert \nu_\beta^\dagger \mathbb{U}_2(L) \nu_\alpha \rvert^2$ becomes
 \begin{equation}
  \label{equ:prob_2nu_general}
  P_{\nu_\alpha \to \nu_\beta}(L)
  = \frac{h_1^2 + h_2^2}
  {\left\vert h\right\vert^2} \sin^2\left(\left\vert h\right\vert L\right) \;\; (\alpha \neq \beta) \;,
 \end{equation}
-where $h_1^2 + h_2^2 = \lvert (\mathbb{H}_2)_{12} \rvert^2$ and $\lvert h \rvert^2 = \lvert (\mathbb{H}_2)_{12} \rvert^2 + \left[ (\mathbb{H}_2)_{11} - (\mathbb{H}_2)_{22} \right]^2 / 4$.  Because of the conservation of probability, $P_{\nu_\alpha \rightarrow \nu_\alpha}\left(L\right) = 1 - P_{\nu_\alpha \rightarrow \nu_\beta}\left(L\right)$.  Equation (\ref{equ:prob_2nu_general}) is symmetric under $\alpha \leftrightarrow \beta$: a rephasing of the two states removes $h_2$, so $\mathbb{H}_2$ can always be taken real and is then unchanged by the conjugation of \equ{conjugation}, which returns the probabilities transposed.  This is why CP violation requires three flavors.  \ref{app:derivation_prob_2nu_general} contains the derivation of \equ{prob_2nu_general}.  \ref{app:2nu_vacuum} shows a simple application to two-flavor oscillations in vacuum.  Equation (\ref{equ:prob_2nu_general}) is our final result in the two-neutrino case.  \ref{app:sample_2nu_hamiltonians} gives the two-flavor Hamiltonians for vacuum, matter, non-standard interactions, and a Lorentz-violating background, with the parameter values used in \figu{prob_2nu}.  
+where $h_1^2 + h_2^2 = \lvert (\mathbb{H}_2)_{12} \rvert^2$ and $\lvert h \rvert^2 = \lvert (\mathbb{H}_2)_{12} \rvert^2 + \left[ (\mathbb{H}_2)_{11} - (\mathbb{H}_2)_{22} \right]^2 / 4$.  Because of the conservation of probability, $P_{\nu_\alpha \rightarrow \nu_\alpha}\left(L\right) = 1 - P_{\nu_\alpha \rightarrow \nu_\beta}\left(L\right)$.  Equation (\ref{equ:prob_2nu_general}) is our final result in the two-neutrino case.  \ref{app:derivation_prob_2nu_general} contains its derivation, \ref{app:2nu_vacuum} shows a simple application to two-flavor oscillations in vacuum, and \ref{app:sample_2nu_hamiltonians} gives the two-flavor Hamiltonians for vacuum, matter, non-standard interactions, and a Lorentz-violating background.
 
-What made \equ{prob_2nu_general} short was the Pauli-matrix identity, \equ{pauli_identity}.  The three-flavor case in Section \ref{sec:three_flavors} proceeds the same way, through the analogous identity for the Gell-Mann matrices.
+Equation (\ref{equ:prob_2nu_general}) does not distinguish $\alpha$ from $\beta$ on its right-hand side, so $P_{\nu_\alpha \to \nu_\beta} = P_{\nu_\beta \to \nu_\alpha}$ for any $\mathbb{H}_2$.  Nor is there a phase left to violate the CP symmetry with: a rephasing of the two states removes $h_2$, leaving $\mathbb{H}_2$ real and so unmoved by the conjugation of \equ{conjugation}, which returns the probabilities transposed.  That is why CP violation in oscillations needs three flavors.
+
+What made \equ{prob_2nu_general} short was the Pauli-matrix identity, \equ{pauli_identity}.  Section \ref{sec:three_flavors} proceeds the same way, through the analogous identity for the Gell-Mann matrices.
 
 \section{Three-flavor oscillations}
 \label{sec:three_flavors}
@@ -498,7 +498,7 @@ What made \equ{prob_2nu_general} short was the Pauli-matrix identity, \equ{pauli
    $h_5$ & $-\text{Im}\left[{\left(\mathbb{H}_3\right)_{13}}\right]$ \\
    $h_6$ & $\text{Re}\left[{\left(\mathbb{H}_3\right)_{23}}\right]$ \\
    $h_7$ & $-\text{Im}\left[{\left(\mathbb{H}_3\right)_{23}}\right]$ \\
-   $h_8$ & $\frac{\sqrt{3}}{6}\left[\left(\mathbb{H}_3\right)_{11}+\left(\mathbb{H}_3\right)_{22}-2\left(\mathbb{H}_3\right)_{33}\right]$ 
+   $h_8$ & $\frac{\sqrt{3}}{6}\left[\left(\mathbb{H}_3\right)_{11}+\left(\mathbb{H}_3\right)_{22}-2\left(\mathbb{H}_3\right)_{33}\right]$
   \end{tabular}
   \caption{\label{tab:h3_coefficients}Coefficients in the expansion of the three-neutrino Hamiltonian $\mathbb{H}_3$ in \equ{h3_expansion}.  The coefficient $h_0$ contributes only the global phase, and is included for completeness.}
 %  \end{ruledtabular}
@@ -506,39 +506,37 @@ What made \equ{prob_2nu_general} short was the Pauli-matrix identity, \equ{pauli
 }
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The three-flavor case runs as the two-flavor one did, both being \equ{sylvester} at their own $n$.  We represent the three-neutrino Hamiltonian by a $3 \times 3$ matrix $\mathbb{H}_3$.  The eight traceless, Hermitian Gell-Mann matrices $\lambda^k$ ($k=1,\ldots,8$) --- with $\lambda^k/2$ the generators of the SU(3) algebra --- plus the identity matrix $\mathbb{1}$ form an orthogonal basis of the Hermitian $3 \times 3$ matrices.  Thus, we expand the Hamiltonian as
+The three-flavor case runs as the two-flavor one did, both being \equ{sylvester} at their own $n$.  We represent the three-neutrino Hamiltonian by a $3 \times 3$ matrix $\mathbb{H}_3$.  The eight traceless, Hermitian Gell-Mann matrices $\lambda^k$ ($k=1,\ldots,8$)---with $\lambda^k/2$ the generators of the SU(3) algebra, and written out in \ref{app:matrices}---plus the identity matrix $\mathbb{1}$ form an orthogonal basis of the Hermitian $3 \times 3$ matrices.  Thus, we expand the Hamiltonian as
 \begin{equation}
  \label{equ:h3_expansion}
  \mathbb{H}_3 = h_0 \mathbb{1} + h_k \lambda^k \;,
 \end{equation}
-where $h_0$ and $h_k$ are now functions of the components of $\mathbb{H}_3$; we show their explicit expressions in Table \ref{tab:h3_coefficients}.  The neutrino state at any time is $\nu(L) = f_e(L) \nu_e + f_\mu(L) \nu_\mu + f_\tau(L) \nu_\tau$, where $f_e$, $f_\mu$, and $f_\tau$ are, respectively, the probability amplitudes of measuring the state to be a $\nu_e$, $\nu_\mu$, or $\nu_\tau$.  We represent the neutrino state as a three-component column vector; the pure states are $\nu_e = \left(1~0~0\right)^{\rm T}$, $\nu_\mu=\left(0~1~0\right)^{\rm T}$, and $\nu_\tau=\left(0~0~1\right)^{\rm T}$. 
+where $h_0$ and $h_k$ are now functions of the components of $\mathbb{H}_3$; we show their explicit expressions in Table \ref{tab:h3_coefficients}.  The neutrino state at any time is $\nu(L) = f_e(L) \nu_e + f_\mu(L) \nu_\mu + f_\tau(L) \nu_\tau$, where $f_e$, $f_\mu$, and $f_\tau$ are, respectively, the probability amplitudes of measuring the state to be a $\nu_e$, $\nu_\mu$, or $\nu_\tau$.  We represent the neutrino state as a three-component column vector; the pure states are $\nu_e = \left(1~0~0\right)^{\rm T}$, $\nu_\mu=\left(0~1~0\right)^{\rm T}$, and $\nu_\tau=\left(0~0~1\right)^{\rm T}$.
 
-The evolution operator is $\mathbb{U}_3\left(L\right) = e^{-i \mathbb{H}_3 L}$, and, discarding the global phase as before, $\mathbb{U}_3\left(L\right) = e^{-ih_k\lambda^kL}$.  
-
-Next we compute the action of $\mathbb{U}_3$ on a neutrino state.  We wish to expand $\mathbb{U}_3$ using an identity for the Gell-Mann matrices that is similar to the identity for the Pauli matrices, \equ{pauli_identity}, and that allows us to write
+The evolution operator is $\mathbb{U}_3\left(L\right) = e^{-i \mathbb{H}_3 L}$, and, discarding the global phase as before, $\mathbb{U}_3\left(L\right) = e^{-ih_k\lambda^kL}$.  We compute the action of $\mathbb{U}_3$ on a neutrino state.  We wish to expand $\mathbb{U}_3$ using an identity for the Gell-Mann matrices that is similar to the identity for the Pauli matrices, \equ{pauli_identity}, and that allows us to write
 \begin{equation}
  \label{equ:u3_def}
- \mathbb{U}_3\left(L\right) 
- = 
+ \mathbb{U}_3\left(L\right)
+ =
  u_0 \mathbb{1} + i u_k \lambda^k \;,
 \end{equation}
-where the complex coefficients $u_0$ and $u_k$ are functions of $L$ and the $h_k$.  Reference\ \cite{MacFarlane:1968vc} introduced and demonstrated such an identity; below, we make use of their results, leaving most of the proofs to the reference.  See also \Refs\ \cite{Lehrer-Ilamed:1964, Rosen:1971nt, Torruella:1975, Kusnezov:1995, Curtright:2015iba, VanKortryk:2015kua} for further details.
+where the complex coefficients $u_0$ and $u_k$ are functions of $L$ and the $h_k$.  Reference\ \cite{MacFarlane:1968vc} introduced and demonstrated such an identity; below, we make use of it, leaving most of the proofs to the reference.  See also \Refs\ \cite{Lehrer-Ilamed:1964, Rosen:1971nt, Torruella:1975, Kusnezov:1995, Curtright:2015iba, VanKortryk:2015kua} for further details.
 
-The coefficients in \equ{u3_def} can be trivially written as $u_0=\frac{1}{3}\text{Tr}~\mathbb{U}_3$ and $u_k=-\frac{i}{2}\text{Tr}(\lambda^k \mathbb{U}_3)$; next we unpack these forms.  An application of Sylvester's formula\ \cite{Sylvester:1883} to $3 \times 3$ matrices --- that is, of \equ{ua_general} at $n = 3$ --- allows us to express the coefficients in terms of the two SU(3) invariants,
-\begin{eqnarray*}
- && I_2 \equiv \left\vert h \right\vert^2 = h_kh^k = \tfrac{1}{2}{\rm Tr}\,\tilde{\mathbb{H}}_3^2 \;, \\
- && I_3 \equiv \langle h \rangle = d_{ijk}h^ih^jh^k = \tfrac{1}{2}{\rm Tr}\,\tilde{\mathbb{H}}_3^3 \;,
-\end{eqnarray*}
-where the trace forms are the ones that carry over unchanged to four flavors, and are how {\tt NuOscProbExact} evaluates them.  The tensor $d_{ijk} = \frac{1}{4} \text{Tr} \left( \lbrace\lambda_i,\lambda_j\rbrace\lambda_k \right)$, where the brackets represent the anticommutator.  It is totally symmetric, and appears in the product law of Gell-Mann matrices alongside the antisymmetric structure constants $f_{ijk}$, which come from the commutator instead; see \equ{star}.  Table \ref{tab:d_tensor} shows all non-zero components.
+The coefficients in \equ{u3_def} are the trace contractions of Section \ref{sec:readings}; next we unpack them.  An application of Sylvester's formula\ \cite{Sylvester:1883} to $3 \times 3$ matrices---that is, of \equ{ua_general} at $n = 3$---expresses them in terms of the two SU(3) invariants,
+\begin{eqnarray}
+ && I_2 \equiv \left\vert h \right\vert^2 = h_a h^a = \tfrac{1}{2}{\rm Tr}\,\tilde{\mathbb{H}}_3^2 \;, \\
+ && I_3 \equiv \langle h \rangle = d^{abc}h_ah_bh_c = \tfrac{1}{2}{\rm Tr}\,\tilde{\mathbb{H}}_3^3 \;,
+\end{eqnarray}
+where the contractions are how {\tt NuOscProbExact} evaluates the two invariants, and the trace forms are the ones Section \ref{sec:four_flavors} carries over for four flavors.  The tensor is the $d^{abc}$ of the star product in \equ{star}; Table \ref{tab:d_tensor} gives its non-zero components.
 
-Next, we solve the characteristic equation of $-h_k\lambda^kL$, \ie, $\phi^3 - L^2 \left\vert h \right\vert^2 \phi + \frac{2}{3} L^3 \langle h \rangle = 0$.  The equation follows from the Cayley-Hamilton theorem, written conveniently in terms of invariants\ \cite{MacFarlane:1968vc, Curtright:2015iba}.  Its three latent roots, or eigenvalues, are $\phi_m \equiv \psi_m L$ ($m=1,2,3$), with
+Next, we solve the characteristic equation of $-\tilde{\mathbb{H}}_3$, which the invariants write as $\chi\left(\psi\right) = \psi^3 - \left\vert h \right\vert^2 \psi + \frac{2}{3} \langle h \rangle = 0$, with $\chi$ the characteristic polynomial of Section \ref{sec:evolution_operator}.  That form follows from the Cayley-Hamilton theorem, written conveniently in terms of invariants\ \cite{MacFarlane:1968vc, Curtright:2015iba}.  Solving it is a separate step: because $\tilde{\mathbb{H}}_3$ is Hermitian, its three roots are real, and Vi\`ete's trigonometric solution of the depressed cubic returns them as the latent roots $\psi_m$ ($m=1,2,3$),
 \begin{equation}
  \label{equ:psi_m}
  \psi_m
- \equiv
- \frac{2 \left\vert h \right\vert}{\sqrt{3}} \cos\left[\frac{1}{3}\left(\chi+2\pi m \right)\right] \;,
+ =
+ \frac{2 \left\vert h \right\vert}{\sqrt{3}} \cos\left[\frac{1}{3}\left(\varphi+2\pi m \right)\right] \;,
 \end{equation}
-where $\cos\left(\chi\right) = -\sqrt{3} \langle h \rangle / \lvert h \rvert^3$.  The step above is key: writing the eigenvalues in terms of the SU(3) invariants allows us to bypass an explicit diagonalization\ \cite{Curtright:2015iba}.
+where $\cos\varphi = -\sqrt{3} \langle h \rangle / \lvert h \rvert^3$, an expression the reality of the roots keeps between $-1$ and $1$.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 {\def\arraystretch{1.2}
@@ -547,13 +545,13 @@ where $\cos\left(\chi\right) = -\sqrt{3} \langle h \rangle / \lvert h \rvert^3$.
   \begin{tabular}{lc}
    Tensor component ($3\nu$) & Value \\
    \hline
-   $d_{(118)} = d_{(228)} = d_{(338)}$                         & $\frac{1}{\sqrt{3}}$ \\
-   $d_{(146)} = d_{(157)} = d_{(256)} = d_{(344)} = d_{(355)}$ & $\frac{1}{2}$ \\
-   $d_{(247)} = d_{(366)} = d_{(377)}$                         & $-\frac{1}{2}$ \\
-   $d_{(448)} = d_{(558)} = d_{(668)} = d_{(778)}$             & $-\frac{1}{2\sqrt{3}}$ \\
-   $d_{888}$                                                   & $-\frac{1}{\sqrt{3}}$
+   $d^{(118)} = d^{(228)} = d^{(338)}$                         & $\frac{1}{\sqrt{3}}$ \\
+   $d^{(146)} = d^{(157)} = d^{(256)} = d^{(344)} = d^{(355)}$ & $\frac{1}{2}$ \\
+   $d^{(247)} = d^{(366)} = d^{(377)}$                         & $-\frac{1}{2}$ \\
+   $d^{(448)} = d^{(558)} = d^{(668)} = d^{(778)}$             & $-\frac{1}{2\sqrt{3}}$ \\
+   $d^{888}$                                                   & $-\frac{1}{\sqrt{3}}$
   \end{tabular}
-  \caption{\label{tab:d_tensor}All of the non-zero components of the tensor $d_{ijk}$, defined in the main text.  The tensor is completely symmetric in its indices.  Here, $i$, $j$, and $k$ can each take integer values between 1 and 8.  The notation $\left( ijk \right)$ represents all permutations of the indices in parentheses.  A component vanishes if the number of indices in the set $\left\{ 2,5,7 \right\}$ is odd.}
+  \caption{\label{tab:d_tensor}All of the non-zero components of the totally symmetric tensor $d^{abc}$ of \equ{star}, at $n = 3$.  Here, $a$, $b$, and $c$ can each take integer values between 1 and 8, and the notation $\left( abc \right)$ represents all permutations of the indices in parentheses.  A component vanishes if the number of indices in the set $\left\{ 2,5,7 \right\}$ is odd.}
 %  \end{ruledtabular}
 \end{table}
 }
@@ -569,7 +567,7 @@ With this, the coefficients in \equ{u3_def} are
  i\sum_{m=1}^3
  e^{i L \psi_m} \frac{\psi_m h_k - \left(h \ast h\right)_k}{3\psi_m^2 - \left\vert h \right\vert^2} \;,
 \end{eqnarray}
-where $\left(h\ast h\right)_i \equiv d_{ijk}h^jh^k$.  \ref{app:derivation_uk_expanded} contains the derivation of \equ{uk_expanded}.  Using Eqs.\ (\ref{equ:psi_m}), (\ref{equ:u0}), and (\ref{equ:uk_expanded}), we write the evolution operator concisely as in \Ref\ \cite{Ohlsson:1999xb},
+where $h \ast h$ is the star product of \equ{star}.  \ref{app:derivation_uk_expanded} contains the derivation of \equ{uk_expanded}.  Using Eqs.\ (\ref{equ:psi_m}), (\ref{equ:u0}), and (\ref{equ:uk_expanded}), we write the evolution operator concisely as in \Ref\ \cite{Ohlsson:1999xb},
 \begin{equation}
  \label{equ:u3_expanded}
  \mathbb{U}_3(L)
@@ -582,9 +580,9 @@ where $\left(h\ast h\right)_i \equiv d_{ijk}h^jh^k$.  \ref{app:derivation_uk_exp
  \frac{\psi_m h_k - \left( h \ast h \right)_k}{3\psi_m^2-\lvert h \rvert^2} \lambda^k
  \right] \;.
 \end{equation}
-\equ{u3_expanded} was introduced in \Refs\ \cite{Ohlsson:1999xb, Ohlsson:1999um, Ohlsson:2000zz}, and applied to find analytic expressions of the probabilities in the cases of oscillations in vacuum and matter.  For a numerical implementation of \equ{u3_expanded} it is convenient to calculate the coefficients $u_0$ and $u_k$ with Eqs.\ (\ref{equ:u0}) and (\ref{equ:uk_expanded}), and use them to directly expand $\mathbb{U}_3$ in \equ{u3_def}.  This is the strategy that we adopt in {\tt NuOscProbExact}\ \cite{NuOscProbExact}.
+Equation~\ref{equ:u3_expanded} was introduced in \Refs\ \cite{Ohlsson:1999xb, Ohlsson:1999um, Ohlsson:2000zz}, and applied to find analytic expressions of the probabilities in the cases of oscillations in vacuum and matter.  For a numerical implementation, it is convenient to calculate the coefficients $u_0$ and $u_k$ with Eqs.\ (\ref{equ:u0}) and (\ref{equ:uk_expanded}), and to build the entries of $\mathbb{U}_3$ from them as in \equ{u3_def}.  This is the strategy that we adopt in {\tt NuOscProbExact}\ \cite{NuOscProbExact}: where the evolution operator itself is wanted, as in the composition of \equ{composition}, it is assembled; where only the probabilities are, the entries are squared as they are produced, which is what Table \ref{tab:prob_3nu} calls for.
 
-One condition attaches to both expressions.  Their denominator is $\chi^\prime(\psi_m)$, which vanishes when two latent roots coincide, so they hold for a non-degenerate spectrum, as \equ{sylvester} does.  That is not only the trivial case $\lvert h \rvert = 0$, where all three roots vanish together: any two eigenvalues of $\tilde{\mathbb{H}}_3$ may meet at any $\lvert h \rvert$, and a matter resonance is an approach to it.  The interpolation is then taken over the distinct roots instead.  Section \ref{sec:limitations} describes how {\tt NuOscProbExact} does this, and what a near-degenerate spectrum costs in accuracy.  
+One condition attaches to Eqs.~(\ref{equ:uk_expanded}) and (\ref{equ:u3_expanded}), as it does to \equ{sylvester}.  Their denominator, $3\psi_m^2 - \lvert h \rvert^2$, is $\chi^\prime(\psi_m)$, and it vanishes when two latent roots coincide, so they hold for a non-degenerate eigenvalue spectrum.  That is not only the trivial case $\lvert h \rvert = 0$, where all three roots vanish together: any two eigenvalues of $\tilde{\mathbb{H}}_3$ may meet at any $\lvert h \rvert$, and a matter resonance is an approach to it.  A third flavor is what opens that possibility: with only two roots, the gap between them is the entire spectral spread, and can close only by the spectrum collapsing altogether, which is why the resonance of Section \ref{sec:two_flavors} bottoms the gap out rather than approaching a crossing.  Where roots do coincide, the interpolation is taken over the distinct ones instead, and Section \ref{sec:limitations} describes how {\tt NuOscProbExact} does that, and what a near-degenerate spectrum costs in accuracy.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 {\def\arraystretch{1.3}
@@ -592,7 +590,7 @@ One condition attaches to both expressions.  Their denominator is $\chi^\prime(\
 %  \begin{ruledtabular}
   \begin{tabular}{lc}
    Three-flavor probability & Expression \\
-   \hline 
+   \hline
    $P_{\nu_e \to \nu_e}$        & $\left\vert u_0 + i u_3 + i \frac{u_8}{\sqrt{3}} \right\vert^2$ \\
    $P_{\nu_e \to \nu_\mu}$      & $\left\vert i u_1 - u_2 \right\vert^2$ \\
    $P_{\nu_e \to \nu_\tau}$     & $\left\vert i u_4 - u_5 \right\vert^2$ \\
@@ -603,48 +601,82 @@ One condition attaches to both expressions.  Their denominator is $\chi^\prime(\
    $P_{\nu_\tau \to \nu_\mu}$   & $\left\vert i u_6 + u_7 \right\vert^2$ \\
    $P_{\nu_\tau \to \nu_\tau}$  & $\left\vert u_0 - i \frac{2 u_8}{\sqrt{3}} \right\vert^2$ \\
   \end{tabular}
-  \caption{\label{tab:prob_3nu}Exact three-neutrino oscillation probabilities, for an arbitrary time-independent Hamiltonian.  The complex coefficients $u_0$ and $u_k$ are computed in Eqs.\ (\ref{equ:u0}) and (\ref{equ:uk_expanded}).}
+  \caption{\label{tab:prob_3nu}Exact three-neutrino oscillation probabilities, for an arbitrary time- or position-independent Hamiltonian.  The complex coefficients $u_0$ and $u_k$ are computed in Eqs.\ (\ref{equ:u0}) and (\ref{equ:uk_expanded}).}
 %  \end{ruledtabular}
 \end{table}
 }
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The evolved state of a neutrino created as $\nu_\alpha$ is $\nu_\alpha(L) = \mathbb{U}_3(L) \nu_\alpha$.  Therefore, the flavor-transition probability is $P_{\nu_\alpha \to \nu_\beta}(L) = \lvert \nu_\beta^\dagger \mathbb{U}_3(L) \nu_\alpha \rvert^2$.   Table \ref{tab:prob_3nu} shows the expressions for the probabilities in terms of the coefficients $u_0$ and $u_k$.  These are our final results in the three-neutrino case.  
+The evolved state of a neutrino created as $\nu_\alpha$ is $\nu_\alpha(L) = \mathbb{U}_3(L) \nu_\alpha$.  Therefore, the flavor-transition probability is $P_{\nu_\alpha \to \nu_\beta}(L) = \lvert \nu_\beta^\dagger \mathbb{U}_3(L) \nu_\alpha \rvert^2$.   Table \ref{tab:prob_3nu} shows the expressions for the probabilities in terms of the coefficients $u_0$ and $u_k$.  These are our final results in the three-neutrino case.
 
-Because the algebra of Gell-Mann matrices is more complicated than that of Pauli matrices, the identity that expands the exponential of Gell-Mann matrices in \equ{u3_def} is notoriously more complicated than the identity that expands the exponential of Pauli matrices, \equ{evol_op_2nu}.  As pointed out by \Ref\ \cite{MacFarlane:1968vc}, this may seem a disappointing generalization of \equ{pauli_identity} to SU(3).  However, when constructing an exponential parametrization of SU(3), there is no way to avoid the solution of at least a cubic equation.  Regardless, following the procedure above yields exact three-neutrino flavor-transition probabilities for arbitrary time-independent Hamiltonians.
-
+The identity that expands the exponential of the Gell-Mann matrices, \equ{u3_expanded}, is longer than the Pauli one it generalizes, \equ{pauli_identity}, and \Ref\ \cite{MacFarlane:1968vc} gives the reason it must be: an exponential parametrization of SU(3) cannot avoid solving a cubic, and \equ{psi_m} is that cubic solved.  What the extra length buys is the whole of the three-flavor case at once, \equ{u3_expanded} holding for any Hermitian $\mathbb{H}_3$.  At four flavors the same steps meet a quartic instead of a cubic, and Section \ref{sec:four_flavors} solves it.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 
 \section{Four-flavor oscillations}
 \label{sec:four_flavors}
 
-Sections \ref{sec:two_flavors} and \ref{sec:three_flavors} are \equ{sylvester} at $n=2$ and $n=3$; the expansions there, and the closed forms built on them, are due to OS.  This section is the same construction at $n=4$ --- which their own remark on the solvability of the characteristic equation identifies as reachable without carrying it out; see Section \ref{sec:scope} --- and which is the last value for which the eigenvalues can be written down in closed form.
+Sections \ref{sec:two_flavors} and \ref{sec:three_flavors} are \equ{sylvester} at $n=2$ and $n=3$; the expansions there, and the closed forms built on them, are due to OS.  This section is the same construction at $n=4$, which their own remark on the solvability of the characteristic equation identifies as reachable without carrying it out (see Section \ref{sec:scope}), and which is the last value at which the eigenvalues can be written in radicals.
 
 \subsection{The four-flavor case}
 \label{sec:4nu_case}
 
-SU(4) has rank three, so $\tilde{\mathbb{H}}_4$ carries three invariants, all obtainable from traces,
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+{\def\arraystretch{1.2}
+\begin{table}[t!]
+  \begin{tabular}{ll}
+   Coefficient ($4\nu$) & Expression \\
+   \hline
+   $h_0$    & $\frac{1}{4}\left[\left(\mathbb{H}_4\right)_{11}+\left(\mathbb{H}_4\right)_{22}+\left(\mathbb{H}_4\right)_{33}+\left(\mathbb{H}_4\right)_{44}\right]$ \\
+   $h_1$    & $\text{Re}\left[\left(\mathbb{H}_4\right)_{12}\right]$ \\
+   $h_2$    & $-\text{Im}\left[\left(\mathbb{H}_4\right)_{12}\right]$ \\
+   $h_3$    & $\text{Re}\left[\left(\mathbb{H}_4\right)_{13}\right]$ \\
+   $h_4$    & $-\text{Im}\left[\left(\mathbb{H}_4\right)_{13}\right]$ \\
+   $h_5$    & $\text{Re}\left[\left(\mathbb{H}_4\right)_{14}\right]$ \\
+   $h_6$    & $-\text{Im}\left[\left(\mathbb{H}_4\right)_{14}\right]$ \\
+   $h_7$    & $\text{Re}\left[\left(\mathbb{H}_4\right)_{23}\right]$ \\
+   $h_8$    & $-\text{Im}\left[\left(\mathbb{H}_4\right)_{23}\right]$ \\
+   $h_9$    & $\text{Re}\left[\left(\mathbb{H}_4\right)_{24}\right]$ \\
+   $h_{10}$ & $-\text{Im}\left[\left(\mathbb{H}_4\right)_{24}\right]$ \\
+   $h_{11}$ & $\text{Re}\left[\left(\mathbb{H}_4\right)_{34}\right]$ \\
+   $h_{12}$ & $-\text{Im}\left[\left(\mathbb{H}_4\right)_{34}\right]$ \\
+   $h_{13}$ & $\frac{1}{2}\left[\left(\mathbb{H}_4\right)_{11}-\left(\mathbb{H}_4\right)_{22}\right]$ \\
+   $h_{14}$ & $\frac{\sqrt{3}}{6}\left[\left(\mathbb{H}_4\right)_{11}+\left(\mathbb{H}_4\right)_{22}-2\left(\mathbb{H}_4\right)_{33}\right]$ \\
+   $h_{15}$ & $\frac{\sqrt{6}}{12}\left[\left(\mathbb{H}_4\right)_{11}+\left(\mathbb{H}_4\right)_{22}+\left(\mathbb{H}_4\right)_{33}-3\left(\mathbb{H}_4\right)_{44}\right]$
+  \end{tabular}
+  \caption{\label{tab:h4_coefficients}Coefficients in the expansion $\mathbb{H}_4 = h_0 \mathbb{1} + h_k \lambda^k$ of the four-neutrino Hamiltonian, in the generator ordering of \ref{app:matrices_4nu}.  The coefficient $h_0$ contributes only the global phase, and is included for completeness.  Two coefficients belong to each flavor pair, the real and the negated imaginary part of one off-diagonal entry; of the three Cartan coefficients, $h_{13}$ and $h_{14}$ are the $h_3$ and $h_8$ of Table \ref{tab:h3_coefficients} unchanged, and $h_{15}$ is the one the fourth flavor adds.}
+\end{table}
+}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+We represent the four-neutrino Hamiltonian by a $4 \times 4$ matrix $\mathbb{H}_4$ and expand it as $\mathbb{H}_4 = h_0 \mathbb{1} + h_k \lambda^k$ ($k = 1, \ldots, 15$) in the SU(4) generators of \ref{app:matrices_4nu}, with the coefficients of Table \ref{tab:h4_coefficients}.  SU(4) has rank three, so $\tilde{\mathbb{H}}_4$ carries three invariants, all obtainable from traces,
 \begin{equation}
  \label{equ:invariants_4nu}
  I_2 = \tfrac{1}{2}{\rm Tr}\,\tilde{\mathbb{H}}_4^2 \;, \quad I_3 = \tfrac{1}{2}{\rm Tr}\,\tilde{\mathbb{H}}_4^3 \;, \quad I_4 = \tfrac{1}{2}\left({\rm Tr}\,\tilde{\mathbb{H}}_4^4 - I_2^2\right) \;,
 \end{equation}
-the first two being the $\lvert h \rvert^2$ and $\langle h \rangle$ of Section \ref{sec:three_flavors}, and $I_4$ the one that SU(4) adds.  The characteristic equation is the depressed quartic $\chi(\psi) = \psi^4 - I_2\psi^2 + \frac{2}{3}I_3\psi + \frac{1}{4}(I_2^2 - 2I_4) = 0$, which Ferrari-Euler reduction turns into the resolvent cubic
+the first two being the $\lvert h \rvert^2$ and $\langle h \rangle$ of Section \ref{sec:three_flavors}, and $I_4$ the one that SU(4) adds.  The characteristic equation is a quartic, and a depressed one: $\tilde{\mathbb{H}}_4$ is traceless, so its latent roots sum to zero and the cubic term is absent, \ie,
+\begin{equation}
+ \chi\left(\psi\right) = \psi^4 - I_2\psi^2 + \tfrac{2}{3}I_3\psi + \tfrac{1}{4}\left(I_2^2 - 2I_4\right) = 0 \;.
+\end{equation}
+
+Ferrari-Euler reduction builds the roots of such a quartic out of those of an auxiliary cubic, the resolvent,
 \begin{equation}
  \label{equ:resolvent_cubic}
  z^3 - 2I_2 z^2 + 2I_4 z - \tfrac{4}{9}I_3^2 = 0 \;.
 \end{equation}
-Its roots are $z_i = (\psi_j+\psi_k)^2$, real and non-negative precisely because $\tilde{\mathbb{H}}_4$ is Hermitian.  Depressed by $z \to z + \frac{2}{3}I_2$, \equ{resolvent_cubic} therefore yields to the same trigonometric formula already used at three flavors, \equ{psi_m}, and
+Its three roots are the $\left(\psi_j+\psi_k\right)^2$ formed by the three ways of splitting the four latent roots into two pairs.  Each splitting gives two sums, one from each pair, and they add to zero because the four roots do; the two are therefore negatives of each other, and only the square they share is well defined.  Six sums collapse to three squares, which is why the resolvent is a cubic.  Squaring is what makes them well defined: the roots sum to zero, so each splitting gives one pair sum that is minus the other, and only the square is common to the two.  They are real and non-negative  because $\tilde{\mathbb{H}}_4$ is Hermitian, which makes the $\psi_m$ real and the $z_i$ squares of real numbers, so the $\sqrt{z_i}$ below are real as well.  
+
+Depressing \equ{resolvent_cubic} in turn, by $z \to z + \frac{2}{3}I_2$, removes its quadratic term and leaves a cubic of the form already solved at three flavors, so the same trigonometric formula, \equ{psi_m}, returns the three $z_i$, read with $\lvert h \rvert^2 \to \frac{4}{3}I_2^2 - 2I_4$ and $\langle h \rangle \to 2I_2I_4 - \frac{8}{9}I_2^3 - \frac{2}{3}I_3^2$, and with $\frac{2}{3}I_2$ added back at the end.  Each $\sqrt{z_i}$ recovers the pair sum that $z_i$ came from, up to the sign that squaring discarded, and $s_i$ is that sign.  Adding the three pair sums that contain a given latent root returns twice that root---each carries it once, and the other three sum to minus it---so half of their sum is the root itself,
 \begin{equation}
+ \label{equ:psi_m_4nu}
  \psi_m = \tfrac{1}{2}\left(s_1\sqrt{z_1}+s_2\sqrt{z_2}+s_3\sqrt{z_3}\right) \;,
  \quad
- s_i = \pm 1 \;,
+ s_i = \pm 1 \;.
 \end{equation}
-with the signs fixed by $s_1s_2s_3\sqrt{z_1z_2z_3} = -\frac{2}{3}I_3$.  The three-flavor machinery sits literally inside the four-flavor solution, which is why the extension needs no new idea --- though it is not free at run time, as Section \ref{sec:performance} shows.
+Not every sign pattern is admissible: $s_1s_2s_3\sqrt{z_1z_2z_3} = -\frac{2}{3}I_3$ pins the product $s_1s_2s_3$, leaving four of the eight, one for each latent root.  The three-flavor machinery sits inside \equ{psi_m_4nu}, which is why the extension needs no new idea, only more of the same arithmetic.
 
-Two accidents that make $n=3$ compact both fail here.  The rank is three rather than two, so $I_4$ appears alongside $I_2$ and $I_3$.  And the SU(3) identity $\left(h \ast h\right) \ast h = \frac{1}{3}\lvert h \rvert^2 h$, which truncates the tower of \equ{ua_general} at one rung, is a Cayley-Hamilton accident of $n=3$: at $n=4$ the theorem constrains $\tilde{\mathbb{H}}_4^4$, and hence $(h \ast h) \ast (h \ast h)$, but leaves $(h \ast h) \ast h$ free.  Numerically the identity is violated at the level of tens of percent for random $h$, so the second rung enters as independent data.  With that, Eqs.\ (\ref{equ:u0}) and (\ref{equ:uk_expanded}) become
+Two accidents that make $n=3$ compact both fail here.  The rank is three rather than two, so $I_4$ appears alongside $I_2$ and $I_3$.  And the SU(3) identity $\left(h \ast h\right) \ast h = \frac{1}{3}\lvert h \rvert^2 h$, which truncates the tower of \equ{ua_general} at one rung, is a Cayley-Hamilton accident of $n=3$: at $n=4$ the theorem constrains $\tilde{\mathbb{H}}_4^4$, and hence $(h \ast h) \ast (h \ast h)$, but leaves $(h \ast h) \ast h$ free, so it must be included.  With that, Eqs.\ (\ref{equ:u0}) and (\ref{equ:uk_expanded}) become
 \begin{eqnarray}
  \label{equ:u0_4nu}
  \!\!\!\!\!\!\!\!\!\!
@@ -660,9 +692,9 @@ Two accidents that make $n=3$ compact both fail here.  The rank is three rather 
  \frac{\left(\psi_m^2 - \frac{1}{2}I_2\right)h_k - \psi_m \left(h \ast h\right)_k + \left(\left(h \ast h\right)\ast h\right)_k}
       {4\psi_m^3 - 2I_2\psi_m + \frac{2}{3}I_3} \;,
 \end{eqnarray}
-in the convention of Section \ref{sec:evolution_operator}, kept throughout: the $\psi_m$ are the latent roots, the eigenvalues of $-\tilde{\mathbb{H}}_4$, and $\mathbb{U}_4 = u_0\mathbb{1} + iu_k\lambda^k$ as in \equ{u3_def}.  The denominator is $\chi^\prime(\psi_m)$, exactly as the $3\psi_m^2 - \lvert h \rvert^2$ of \equ{uk_expanded} is.  Comparing the two makes the pattern of \equ{ua_general} concrete: one more power of $\psi_m$ in the numerator, and one more rung of the star tower.
+in the convention of Section \ref{sec:evolution_operator}, kept throughout: the $\psi_m$ are the latent roots, the eigenvalues of $-\tilde{\mathbb{H}}_4$, and $\mathbb{U}_4 = u_0\mathbb{1} + iu_k\lambda^k$, which is \equ{u3_def} at $n = 4$.  The denominator is $\chi^\prime(\psi_m)$, exactly as the $3\psi_m^2 - \lvert h \rvert^2$ of \equ{uk_expanded} is.  Comparing the two makes the pattern of \equ{ua_general} concrete: one more power of $\psi_m$ in the numerator, and one more rung of the star tower.
 
-The closed-form SU(4) exponential is not new outside neutrino physics: \Refs\ \cite{VanKortryk:2015kua} give the SU(4) and SU(5) exponentials directly in the trace invariants of \equ{invariants_4nu}.  Within the four-flavor oscillation problem, the characteristic quartic has been arrived at more than once\ \cite{Kamo:2002sj}.  What we add is the implementation, and the probability table below.
+The closed-form SU(4) exponential is not new outside neutrino physics: \Ref\ \cite{VanKortryk:2015kua} gives the SU(4) and SU(5) exponentials directly in the trace invariants of \equ{invariants_4nu}.  Within the four-flavor oscillation problem, the characteristic quartic has been obtained before\ \cite{Kamo:2002sj}.  What we add is the implementation, and the probability table of Table \ref{tab:prob_4nu}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 {\def\arraystretch{1.3}
@@ -687,58 +719,97 @@ The closed-form SU(4) exponential is not new outside neutrino physics: \Refs\ \c
    $P_{\nu_s \to \nu_\tau}$     & $\left\vert i u_{11} + u_{12} \right\vert^2$ \\
    $P_{\nu_s \to \nu_s}$        & $\left\vert u_0 - i \frac{3 u_{15}}{\sqrt{6}} \right\vert^2$ \\
   \end{tabular}
-  \caption{\label{tab:prob_4nu}Exact four-neutrino oscillation probabilities, for an arbitrary time-independent Hamiltonian.  The complex coefficients $u_0$ and $u_k$ are computed in Eqs.\ (\ref{equ:u0_4nu}) and (\ref{equ:uk_4nu}).  This is the four-flavor counterpart of Table \ref{tab:prob_3nu}; dropping the entries that involve $\nu_s$ does \emph{not} recover it, because the $u_k$ are different objects at each $n$.  The generator ordering is that of \ref{app:matrices_4nu}.  Reverse channels, and antineutrinos, follow by the exchange of \equ{conjugation}.  Every entry has been verified against direct diagonalization, to $5 \cdot 10^{-15}$ over twenty random Hamiltonians.}
+  \caption{\label{tab:prob_4nu}Exact four-neutrino oscillation probabilities, for an arbitrary time- or position-independent Hamiltonian.  The complex coefficients $u_0$ and $u_k$ are computed in Eqs.\ (\ref{equ:u0_4nu}) and (\ref{equ:uk_4nu}), from the $h_k$ of Table \ref{tab:h4_coefficients}.  This is the four-flavor counterpart of Table \ref{tab:prob_3nu}; dropping the entries that involve $\nu_s$ does \emph{not} recover it, because the $u_k$ are different objects at each $n$, even where the $h_k$ are not.  The generator ordering is that of \ref{app:matrices_4nu}.  Reverse channels, and antineutrinos, follow by the exchange of \equ{conjugation}.  Every entry has been verified against direct diagonalization, to $10^{-14}$ over three hundred random Hamiltonians.}
 \end{table}
 }
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\subsection{Probabilities, and what four flavors buys}
+\subsection{The probabilities at any $n$}
 
-Fixing the generator basis, the probabilities take the same shape at every $n$.  For each unordered flavor pair exactly two generators are supported, one symmetric and one antisymmetric; the remaining $n-1$ are the Cartan generators.  Table \ref{tab:prob_4nu} gives the result at $n=4$.  Three structural features follow for any $n$, and are useful as run-time checks: the off-diagonal entries come in $T$-conjugate pairs differing only in the sign of the antisymmetric coefficient, so that $T$ violation resides entirely there; unitarity is inherited rather than imposed, appearing as the constraints $\sum_\beta P_{\nu_\alpha \to \nu_\beta} = 1$; and the number of physical Dirac phases entering the off-diagonal entries is $(n-1)(n-2)/2$ --- none at $n=2$, one at $n=3$, and three at $n=4$.
+Tables \ref{tab:prob_3nu} and \ref{tab:prob_4nu} hold just two shapes between them, and fixing the generator basis is what fixes them, at any $n$.  Off the diagonal ($\alpha \neq \beta$), every entry is $\lvert i u_a \mp u_b \rvert^2$: only two generators have an entry in a given off-diagonal slot, one symmetric and one antisymmetric, and $u_a$ and $u_b$ are their coefficients.  The two signs are the two directions: $\lvert i u_a - u_b \rvert^2$ for one channel of that pair ($\nu_\alpha \to \nu_\beta$), and $\lvert i u_a + u_b \rvert^2$ for its reverse ($\nu_\beta \to \nu_\alpha$).  On the diagonal ($\alpha = \beta$), every entry is $\lvert u_0 + i \, c_\alpha \rvert^2$, with $c_\alpha$ a combination of the $n-1$ Cartan coefficients fixed by the flavor $\alpha$.
 
-Because \equ{uk_4nu} takes an arbitrary Hermitian $\mathbb{H}_4$, it covers short-baseline 3+1 fits, the sterile matter resonance for Earth-crossing neutrinos, and 3+1 combined with NSI or LIV, with no further derivation.  The Hamiltonians themselves are collected in \ref{app:sample_2nu_hamiltonians}.
+Three features hold at any $n$.  First, a channel and its reverse differ by $P_{\nu_\alpha \to \nu_\beta} - P_{\nu_\beta \to \nu_\alpha} \equiv 4\,{\rm Im}\left(u_a \bar{u}_b\right)$, so T-violation is carried by the relative phase of the pair's two coefficients, and vanishes when they share one.  (In vacuum, the CP asymmetry equals the T asymmetry, by CPT conservation.  In matter it does not: CP would replace electrons with positrons, and an experiment sends its antineutrinos through the same matter instead.)  Second, unitarity is inherited from $\mathbb{U}$: the rows sum to one, $\sum_\beta P_{\nu_\alpha \to \nu_\beta} = 1$, as do the columns, $\sum_\alpha P_{\nu_\alpha \to \nu_\beta} = 1$.  And, third, the off-diagonal entries can carry $(n-1)(n-2)/2$ physical Dirac phases: none at $n=2$, which is why Section \ref{sec:two_flavors} had none to report, one at $n=3$, and three at $n=4$.
+
+Nothing above singled out a scenario, so a 3+1 system with non-standard interactions or a Lorentz-violating term needs no further derivation, only its own $\mathbb{H}_4$.  \ref{app:sample_2nu_hamiltonians} collects those, Section \ref{sec:sterile_earth} runs one through Earth, and Section \ref{sec:code} turns to the code that evaluates them.
 
 \section{Code description}
 \label{sec:code}
 
-\subsection{Description}  
+\subsection{Scope and interface}
 
-The code {\tt NuOscProbExact} that we provide is a lightweight numerical implementation of the construction of Section \ref{sec:general_n}, which is the OS reading of it where OS applies and Sylvester's formula at four flavors, where it does not (Section \ref{sec:4nu_case}).  It computes exact oscillation probabilities in the often-studied two- and three-flavor cases, and in the four-flavor case, for arbitrary time-independent Hamiltonians.  (For time-dependent Hamiltonians, see {\tt nuSQuIDS}\ \cite{NuSQuIDS}.  A density profile that varies smoothly, rather than in steps, is better served by a Magnus-type method than by the slab decomposition described below.)   {\tt NuOscProbExact} is fully written in {\tt Python}, and requires version 3.9 or later; it is open source, and publicly available in a GitHub repository\ \cite{NuOscProbExact}.  \ref{app:structure} shows how its modules fit together.
+The code {\tt NuOscProbExact} that we provide is a lightweight numerical implementation of the construction of Section \ref{sec:general_n}, \equ{sylvester}: its coefficients come from the OS reading at two (Section~\ref{sec:two_flavors}) and three (Section~\ref{sec:three_flavors}) neutrino flavors, and from \equ{sylvester} itself at four (Section \ref{sec:four_flavors}), where OS does not reach.   It computes exact oscillation probabilities in every one of those cases, for an arbitrary Hermitian Hamiltonian, time- or position-independent.   A Hamiltonian that varies along the path of the neutrino is handled by composing regions of constant Hamiltonian, \equ{composition}, each solved exactly; Sections \ref{sec:layered_earth} and \ref{sec:sterile_earth} do this for the profile of Earth.  The open-system content falls outside---interactions, absorption, and other non-unitary terms---and for it {\tt nuSQuIDS}\ \cite{NuSQuIDS} is the tool; Section \ref{sec:limitations} sets out the rest.  {\tt NuOscProbExact} is fully written in {\tt Python}, and requires version 3.9 or later; it is open source, and publicly available in a GitHub repository\ \cite{NuOscProbExact}.  \ref{app:structure} shows how its modules fit together.
 
-The main input to {\tt NuOscProbExact} is the Hamiltonian matrix $\mathbb{H}_2$, $\mathbb{H}_3$, or $\mathbb{H}_4$, provided as a $2 \times 2$, $3 \times 3$, or $4 \times 4$ array or nested list.  The code internally computes the coefficients $h_a = \frac{1}{2}{\rm Tr}(\lambda^a \tilde{\mathbb{H}})$ of Section \ref{sec:readings}: written out, these are Table \ref{tab:h2_coefficients} at two flavors and Table \ref{tab:h3_coefficients} at three, and at four they are evaluated directly, there being fifteen of them.  It then evaluates \equ{prob_2nu_general} at two flavors, and the expressions of Tables \ref{tab:prob_3nu} and \ref{tab:prob_4nu} at three and four.
+The main input to {\tt NuOscProbExact} is the Hamiltonian matrix $\mathbb{H}_2$, $\mathbb{H}_3$, or $\mathbb{H}_4$, provided as a $2 \times 2$, $3 \times 3$, or $4 \times 4$ array or nested list.  The code internally computes the coefficients $h_a = \frac{1}{2}{\rm Tr}(\lambda^a \tilde{\mathbb{H}})$ of Section \ref{sec:readings}: written out, these are Tables \ref{tab:h2_coefficients}, \ref{tab:h3_coefficients}, and \ref{tab:h4_coefficients} at two, three, and four flavors, respectively.  It then evaluates \equ{prob_2nu_general} at two flavors, and the expressions of Tables \ref{tab:prob_3nu} and \ref{tab:prob_4nu} at three and four.
 
-The same routines also accept a stack of Hamiltonians, an array of baselines, or both, broadcast against each other, and evaluate them without a Python-level loop.  For the scans of energy that produce \figu{prob_3nu} and \figu{prob_2nu}, and for oscillograms in energy and arrival direction, this is between ten and forty times faster than calling the scalar routine in a loop, according to how many points are asked for at once.  A compiled backend, installed with the code, gives a further factor of four to seven on top of that, and agrees with the pure-{\tt numpy} path to round-off; it is used only above the stack sizes where it has been measured to win, which is every stack at three and four flavors and only large ones at two.  Section \ref{sec:performance} quantifies all of this.  By default the code also checks that the Hamiltonian it is given is Hermitian, and raises an error if it is not, rather than silently returning quantities that still sum to one.
+The same routines also accept a stack of Hamiltonians, an array of baselines, or both, broadcast against each other, and evaluate them without a {\tt Python}-level loop, using instead the fast broadcasting provided by the {\tt numpy} library.  What that saves depends on how many probability calculations are asked for at once: the energy scans behind \figu{prob_3nu} and \figu{prob_2nu} ask for a few thousand, and the oscillograms in energy and arrival direction for tens of thousands, where the saving is a factor of thirty to forty over calling the scalar routine in a loop.  A compiled backend based on the {\tt Numba} just-in-time compiler, and installed with the code, gives a further factor of four to seven on top of that, and agrees with the pure-{\tt NumPy} path to round-off; it is used only above the stack sizes where it has been measured to win, which is every stack at three and four flavors and only large ones at two.  Section \ref{sec:performance} quantifies all of this.  By default, the code also checks that the Hamiltonian it is given is Hermitian, and raises an error if it is not, rather than silently returning quantities that still sum to one.
 
-\smallskip
-
-\subsection{Documentation}
+\subsection{Documentation and executable examples}
 \label{sec:documentation}
 
-The main source of documentation is the accompanying site\ \cite{NuOscProbExactDocs}, whose source is in the repository beside the code.  Besides an API reference generated from the source, it carries three things that do not fit in a paper: a methodology section that works through the construction of Sections \ref{sec:general_n}--\ref{sec:four_flavors} in the form in which it is implemented, including the conditioning behavior discussed below; a set of numerical recipes for the cases users actually meet --- layered profiles, oscillograms, antineutrinos, parameter scans; and twenty executable notebooks, one of which generates every figure in this paper, listed in \ref{app:notebooks}.  Every notebook is executed in continuous integration whenever the code changes, and one that carries no stored output fails the build, so the documented behavior and the shipped behavior cannot drift apart.
+The main source of documentation is the accompanying site\ \cite{NuOscProbExactDocs}, whose source is in the repository beside the code.  Besides an API (application programming interface) reference generated from the source, it carries three things that do not fit in a paper: a methodology section that works through the construction of Sections \ref{sec:general_n}--\ref{sec:four_flavors} in the form in which it is implemented, including the conditioning behavior discussed below; a set of numerical recipes for the cases users actually meet, including layered profiles, oscillograms, antineutrinos, parameter scans; and twenty executable notebooks, one of which generates every figure in this paper, listed in \ref{app:notebooks}.  
 
 \subsection{Installation}
 
-The code is on the Python Package Index\ \cite{NuOscProbExactPyPI} and is installed with {\tt pip install nuoscprobexact}.  Its dependencies are {\tt numpy} and {\tt numba}, so a plain install carries the compiled backend.
+The latest released version of the code (v1.13.1 at the time of writing) is on the Python Package Index\ \cite{NuOscProbExactPyPI}, from which it is installed with
+\begin{verbatim}
+pip install nuoscprobexact
+\end{verbatim}
+Its dependencies are {\tt NumPy} and {\tt Numba}, so a plain install carries the compiled backend.
+
+Installing from a clone of the repository\ \cite{NuOscProbExact} instead brings what the package omits --- the notebooks of \ref{app:notebooks} and the test suite of \ref{app:tests}:
+\begin{verbatim}
+git clone \
+  https://github.com/mbustama/NuOscProbExact.git
+cd NuOscProbExact
+pip install -e .
+\end{verbatim}
+and is also the way to a version that has not yet been released.
 
 \subsection{Code availability}
 
-Development happens in the public GitHub repository\ \cite{NuOscProbExact}, which carries the source, the test suite, the notebooks, and the change log, and from which the code may also be installed directly.  It is released under the MIT license.
+Development is version-controlled and happens in the public GitHub repository\ \cite{NuOscProbExact}, which carries the source, test suite, notebooks, and change log, and from which the code may also be installed (see above).  It is released under the MIT license.
 
-\subsection{Validation}
+\subsection{Code validation}
 \label{sec:validation}
 
-The repository carries a test suite of 829 tests, which covers every line and branch of the library to achieve 100\% code coverage in v1.13.1 of {\tt NuOscProbExact}; \ref{app:tests} groups them by what they cover.  Beyond internal consistency, the results are checked against independent sources: against {\tt nuSQuIDS}\ \cite{Delgado:2014kpa, NuSQuIDS}, an independently written code, with which the three-flavor probabilities agree to $10^{-11}$ and the four-flavor ones to $10^{-9}$ once conventions are matched; against the closed-form eigenvalues of Zaglauer \& Schwarzer\ \cite{Zaglauer:1988gz} for the three-flavor matter spectrum; against direct numerical exponentiation of the Hamiltonian, as in \figu{validation}; and, in the two-flavor vacuum case, against the standard analytic formula.  Where a residual remains --- as in the four-flavor case, whose eigenvalue cluster can be stiff --- the tests establish which side of the comparison it belongs to rather than absorbing it into a loose tolerance.
+The repository carries a test suite of 829 tests, which cover every line and branch of the library in v1.13.1 of {\tt NuOscProbExact}; \ref{app:tests} groups them by what they cover.  Beyond internal consistency, the results are checked against independent sources: against {\tt nuSQuIDS}\ \cite{Delgado:2014kpa, NuSQuIDS}, an independently written code, with which the three-flavor probabilities agree to $10^{-11}$ and the four-flavor ones to $10^{-9}$ once conventions are matched; against the closed-form eigenvalues of Zaglauer \& Schwarzer\ \cite{Zaglauer:1988gz} for the three-flavor matter spectrum; against direct numerical exponentiation of the Hamiltonian, as in \figu{validation}; and, in the two-flavor vacuum case, against the standard analytic formula.
+
+Where a residual remains---as at four flavors, where a large $\Delta m_{41}^2$ crowds three of the four latent roots together and leaves the fourth far off, the near-degeneracy that Section \ref{sec:limitations} quantifies---the wider tolerance it needs is not left to stand on its own.  A third reference settles where the residual belongs.  It could have either of two sources: the accuracy limit of the closed form near a near-degenerate spectrum, or a convention the two codes match imperfectly.  Against direct exponentiation of the same Hamiltonian, the error of the expansion and its disagreement with {\tt nuSQuIDS} come out the same size, which leaves only the first: {\tt nuSQuIDS} sits where the exponential does, and the whole residual is from the closed form.
 
 \subsection{Limitations}
 \label{sec:limitations}
 
+Limitations are of two kinds.  Those of the method are assumptions that no better programming would remove; those of the implementation are contingent on choices made in the code.
 
-Two kinds need separating.  The method assumes what Section \ref{sec:introduction} states: a closed system, and a Hamiltonian constant along the path --- neither a limitation that better programming would remove.  Decay to invisible products and genuinely open systems --- decoherence, and any Lindblad term --- fall outside it, and require the density-matrix formalism that {\tt nuSQuIDS}\ \cite{Delgado:2014kpa, NuSQuIDS} integrates, at a structural cost: a Lindbladian lives on the $n^2$-dimensional space of operators, so it is diagonalized in $O(n^6)$ against $O(n^3)$ for a Hamiltonian, and any integrator must resolve the oscillation phase, its step count growing with $\Delta m^2 L / 2E$ where \equ{sylvester} is evaluated once.  A non-Hermitian Hamiltonian, used to describe absorption, is a subtler case: \equ{sylvester} survives formally, but everything downstream that used the reality of the spectrum does not, including the trigonometric root formulas and the identification of the moduli with probabilities.  A density that varies continuously is handled here only by approximating it as piecewise constant; for a smooth profile a Magnus-type integrator is the better tool, with \equ{sylvester} supplying its exponential map at each step.  And, as Section \ref{sec:beyond_four} sets out, the closed form ends at four flavors.
+\subsubsection{Limitations of the method}
 
-Of this implementation, four limitations and one deliberate choice should be known.  First and most important, the closed form is not the most accurate route near a level crossing, which is where the resonances are.  Forming the characteristic polynomial from traces and then extracting its roots costs a power of the relative spectral gap: if $r$ eigenvalues cluster, the error in the roots grows as $g^{-(r-1)}$, with $g$ the gap in units of the spectral spread.  That is the classical instability of taking eigenvalues from a characteristic polynomial, and it is repairable neither by a more careful evaluation nor by the usual divided-difference remedy, the error being already in the roots; where a spectrum is nearly degenerate, a backward-stable eigensolver is the better choice, and its error does not depend on the gap at all.  At four flavors the code carries one as an alternative route to the roots, beside the $32$-digit arithmetic it forms the invariants in by default.  Second, exact degeneracy is handled by clustering roots that lie within a tolerance of one another and interpolating over distinct clusters; without that step the formulas divide by zero.  At two flavors that is the whole of it: the latent roots $\pm \lvert h \rvert$ meet only at $h = 0$, where $\mathbb{H}_2$ is a multiple of the identity, nothing oscillates, and the code returns $P_{\nu_\alpha \to \nu_\beta} = 0$ from a branch of its own.  Nor does approaching that point cost anything, the gap between two roots being the whole spectral spread however small it is: we have checked that \equ{prob_2nu_general} holds to $8 \cdot 10^{-16}$ in relative terms over twelve orders of magnitude in $\lvert h \rvert L$, so the accuracy above is lost only at three flavors and four.  Third, the electron density is computed as stated in Section \ref{sec:prob_3nu_matter}, which is about $0.8\%$ low.  Fourth, the compiled backend ships with the code, and {\tt numba} declares its own ceiling on the {\tt numpy} version, which this code inherits; the pure-{\tt numpy} path remains available, through an install without dependencies or by setting {\tt fastkernels.USE\_NUMBA = False}, and is tested on every push, where it agrees to round-off.  Last, and a choice rather than a limitation, the mixing parameters carried by the code are pinned to NuFit 4.0, so that the examples here remain reproducible.
+The method assumes what Section \ref{sec:introduction} states: a closed system, and a Hamiltonian constant over each interval that \equ{sylvester} is applied to (which, by \equ{composition}, need not be the whole path).  What follows are the cases they exclude.
 
-``No diagonalization'' is easy to oversell, so here it is plainly, in both directions.  The construction is branch-free, vectorizes well, takes an arbitrary Hermitian Hamiltonian, and differentiates exactly.  (Probability derivatives follow from implicit differentiation of the characteristic polynomial, with no eigenvector ever differentiated; the code exposes no derivative interface, so this is a property of the method rather than a feature on offer.)  But ``no eigenvectors are required'' does not mean they are never wanted: the mixing matrix in matter, and with it the matter-dressed angles and resonance conditions, is eigenvector information, and obtaining it means taking one of the other readings of \equ{sylvester}.
+\smallskip
 
+\textit{Open systems.---}Decay to invisible products and genuinely open systems--- decoherence, and any Lindblad term--- fall outside the method, and require the density-matrix formalism that {\tt nuSQuIDS}\ \cite{Delgado:2014kpa, NuSQuIDS} integrates, at a structural cost: a Lindbladian lives on the $n^2$-dimensional space of operators, so it is diagonalized in $O(n^6)$ against $O(n^3)$ for a Hamiltonian, and any integrator must resolve the oscillation phase, its step count growing with $\Delta m^2 L / 2E$ where \equ{sylvester} is evaluated once.
+
+\smallskip
+
+\textit{Non-Hermitian Hamiltonians.---}Used to describe absorption, these are a subtler case: \equ{sylvester} survives formally, but everything downstream that used the reality of the eigvenvalue spectrum does not, including the trigonometric root formulas and the identification of the moduli with probabilities.
+
+\smallskip
+
+\textit{Continuously varying densities.---}A density that varies continuously is handled here only by approximating it as piecewise constant.  For a smooth profile, a solver based on the Magnus expansion of the evolution operator might be the better tool: each of its steps ends in a matrix exponential, which \equ{sylvester} supplies in closed form.
+
+\smallskip
+
+\textit{Beyond four flavors.---}As Section \ref{sec:beyond_four} states, the eigenvalues can be written in radicals only up to four flavors.  What stops there is the closed form for the roots, not the construction: \equ{ua_general} asks only for a root of $\chi$, however obtained, and at $n \geq 5$ it is obtained numerically, though {\tt NuOscProbExact} implements two, three, and four.
+
+\subsubsection{Limitations of the implementation}
+
+\textit{Accuracy near a level crossing.---}The closed form is not the most accurate route near an eigenvalue-level crossing, which is where resonances are.  Forming the characteristic polynomial from traces and then extracting its roots costs a power of the relative spectral gap: if $r$ eigenvalues cluster, the error in the roots grows as $g^{-(r-1)}$, with $g$ the gap in units of the spectral spread.  That is the classical instability of taking eigenvalues from a characteristic polynomial, and it is repairable neither by a more careful evaluation nor by the usual divided-difference remedy, the error being already in the roots.  What does remove it is carrying more digits into it.  
+
+At four flavors, where a 3+1 spectrum crowds three roots together and $g^{-(r-1)}$ is correspondingly large, the code forms the invariants in $32$-digit arithmetic by default: measured at $2.3 \cdot 10^9$, that factor then multiplies $10^{-32}$ rather than $10^{-16}$ and lands at $10^{-23}$, so what limits the roots is the final rounding and not the algebra.  They are checked (on every push to the GitHub code repository) against fifty-digit reference values over spectra reaching down to a pair of roots separated by $10^{-16}$.  A backward-stable eigensolver, whose error does not depend on the gap at all, is carried beside it as a second route to the roots.  (Fewer flavors need less of this.  At three, only two roots can approach, which makes the exponent one rather than two, and the gap stays far wider than a large $\Delta m_{41}^2$ leaves it at four.  At two, the gap between the roots is the whole spectral spread however small the spread becomes, so $g = 1$ always and there is nothing to amplify: \equ{prob_2nu_general} holds to $8 \cdot 10^{-16}$ in relative terms over twelve orders of magnitude in $\lvert h \rvert L$.)
+
+\smallskip
+
+\textit{Exact degeneracy.---}This is handled by clustering roots that lie within a tolerance of one another and interpolating over distinct clusters; without that step the formulas divide by zero.  At two flavors, that is the whole of it: the latent roots $\pm \lvert h \rvert$ meet only at $h = 0$, where $\mathbb{H}_2$ is a multiple of the identity, nothing oscillates, and the code returns $P_{\nu_\alpha \to \nu_\beta} = 0$ without evaluating a formula that would divide by zero.
 
 \section{{\tt NuOscProbExact} examples}
 \label{sec:examples}
@@ -1310,7 +1381,7 @@ For completeness, and to avoid any ambiguity in the method presented in the main
 \subsection{Two neutrino flavors, SU(2)}
 
 The three Pauli matrices, $\sigma_k = \sigma^k$, are:
-\begin{equation*}
+\begin{equation}
  \sigma_1
  =
  \left(\begin{array}{cc}
@@ -1331,12 +1402,12 @@ The three Pauli matrices, $\sigma_k = \sigma^k$, are:
   1 & 0 \\
   0 & -1 \\
  \end{array}\right) \;.
-\end{equation*}
+\end{equation}
 
 \subsection{Three neutrino flavors, SU(3)}
 
 The eight Gell-Mann matrices, $\lambda_k = \lambda^k$, are:
-\begin{eqnarray*}
+\begin{eqnarray}
  &&
  \lambda_1
  =
@@ -1353,7 +1424,7 @@ The eight Gell-Mann matrices, $\lambda_k = \lambda^k$, are:
   i &  0 & 0 \\
   0 &  0 & 0 \\
  \end{array}\right)
- \;, \\
+ \;, \nonumber \\
  &&
  \lambda_3
  =
@@ -1370,7 +1441,7 @@ The eight Gell-Mann matrices, $\lambda_k = \lambda^k$, are:
   0 & 0 & 0 \\
   1 & 0 & 0 \\
  \end{array}\right)
- \;, \\
+ \;, \nonumber \\
  &&
  \lambda_5
  =
@@ -1387,7 +1458,7 @@ The eight Gell-Mann matrices, $\lambda_k = \lambda^k$, are:
   0 & 0 & 1 \\
   0 & 1 & 0 \\
  \end{array}\right)
- \;, \\
+ \;, \nonumber \\
  &&
  \lambda_7
  =
@@ -1406,25 +1477,25 @@ The eight Gell-Mann matrices, $\lambda_k = \lambda^k$, are:
   0 & 0 & -2 \\
  \end{array}\right)
  \;.
-\end{eqnarray*}
+\end{eqnarray}
 
 \subsection{Four neutrino flavors, SU(4)}
 \label{app:matrices_4nu}
 
 For $n=2$ and $n=3$ the numbering of the generators is fixed by convention.  For $n=4$ none exists, so we state ours; it is the one used in Table \ref{tab:prob_4nu} and in {\tt NuOscProbExact}.  Writing $E_{\alpha\beta}$ for the $4 \times 4$ matrix with a single $1$ in row $\alpha$ and column $\beta$, the fifteen SU(4) generators are, in order,
-\begin{equation*}
+\begin{equation}
  \lambda^{2p-1} = E_{\alpha\beta} + E_{\beta\alpha} \;, \quad
  \lambda^{2p} = -i\left(E_{\alpha\beta} - E_{\beta\alpha}\right) \;,
-\end{equation*}
+\end{equation}
 for $p = 1, \ldots, 6$ running over the six flavor pairs $(\alpha,\beta)$ in lexicographic order---$(e,\mu)$, $(e,\tau)$, $(e,s)$, $(\mu,\tau)$, $(\mu,s)$, $(\tau,s)$---followed by the three Cartan generators,
-\begin{equation*}
+\begin{equation}
  \lambda^{12+l}
  =
  \sqrt{\frac{2}{l\left(l+1\right)}}\,
  {\rm diag}\big(\underbrace{1, \ldots, 1}_{l}, -l, 0, \ldots\big) \;,
  \quad
  l = 1, 2, 3 \;.
-\end{equation*}
+\end{equation}
 So, for instance, $\lambda^1 = E_{e\mu} + E_{\mu e}$ has a $1$ in the $(e,\mu)$ and $(\mu,e)$ slots, $\lambda^2 = -i(E_{e\mu} - E_{\mu e})$ is its antisymmetric partner, and $\lambda^{13} = {\rm diag}(1,-1,0,0)$ is the first Cartan generator.  They satisfy ${\rm Tr}(\lambda^a\lambda^b) = 2\delta^{ab}$, as do the Pauli and Gell-Mann matrices.
 
 Three properties motivate this choice.  The eight Gell-Mann matrices survive it: deleting the six generators of the pairs that involve the fourth state leaves them exactly, on the upper-left $3 \times 3$ block, so the SU(3) subalgebra is embedded as it stands.  The two generators of a given pair are adjacent, so the $T$-conjugate structure of \tabl{prob_4nu} reads off consecutive indices.  And the generator that singles out the sterile state, $\lambda^{15}$, comes last, so that a fourth state appends to the three-flavor labelling rather than renumbering it.
@@ -1629,24 +1700,24 @@ The two-flavor probabilities follow from a single matrix product.  Operating on 
 and each entry carries one of the probabilities, with the coefficients $h_k$ of Table \ref{tab:h2_coefficients}: contracting on the left with $\nu_\alpha^\dagger$ keeps the first, and with $\nu_\beta^\dagger = \left(0~1\right)$ the second.
 
 Take the transition first.  The identity term of \equ{evol_op_2nu} is diagonal and cannot connect $\nu_\alpha$ to $\nu_\beta$, so the whole amplitude comes from the second entry of \equ{h_on_nu_2nu},
-\begin{equation*}
+\begin{equation}
  \nu_\beta^\dagger \mathbb{U}_2(L) \nu_\alpha
  =
  -i \frac{\sin\left(\lvert h \rvert L\right)}{\lvert h \rvert}
  \left(h_1 + i h_2\right) \;,
-\end{equation*}
+\end{equation}
 whose squared modulus is \equ{prob_2nu_general}: the prefactor contributes $\sin^2\left(\lvert h \rvert L\right)/\lvert h \rvert^2$, and $\lvert h_1 + i h_2 \rvert^2 = h_1^2 + h_2^2$ because both are real.
 
 The first entry gives the survival probability, and the two then sum to one.  The amplitude is
-\begin{equation*}
+\begin{equation}
  \nu_\alpha^\dagger \mathbb{U}_2(L) \nu_\alpha
  =
  \cos\left(\left\vert h\right\vert L\right)
  -
  i \frac{h_3}{\lvert h \rvert} \sin\left(\left\vert h\right\vert L\right) \;,
-\end{equation*}
+\end{equation}
 whose two terms are its real and imaginary parts, $h_3$ being real, so that the squared modulus is the sum of their squares:
-\begin{equation*}
+\begin{equation}
  P_{\nu_\alpha \to \nu_\alpha}(L)
  =
  \cos^2(\lvert h \rvert L)
@@ -1654,7 +1725,7 @@ whose two terms are its real and imaginary parts, $h_3$ being real, so that the 
  \frac{h_3^2}{\lvert h \rvert^2} \sin^2(\lvert h \rvert L)
  =
  1 - \frac{h_1^2 + h_2^2}{\lvert h \rvert^2} \sin^2(\lvert h \rvert L) \;,
-\end{equation*}
+\end{equation}
 the second step using $h_3^2 = \lvert h \rvert^2 - h_1^2 - h_2^2$.  This is $1 - P_{\nu_\alpha \to \nu_\beta}$, as conservation of probability requires.  Starting from $\nu_\beta$ reverses the sign of the $h_3$ term and leaves the modulus untouched, so a two-flavor system has only these two numbers in it: $P_{\nu_\beta \to \nu_\beta} = P_{\nu_\alpha \to \nu_\alpha}$, and $P_{\nu_\beta \to \nu_\alpha} = P_{\nu_\alpha \to \nu_\beta}$, the latter already plain in \equ{prob_2nu_general}, whose right-hand side carries no flavor label at all.
 
 Both moduli divide by $\lvert h \rvert^2$, which vanishes at one point only; Section \ref{sec:limitations} says what the code returns there.
@@ -1693,17 +1764,17 @@ where $\mathbb{M}_2^2~\equiv~$${\rm diag}(-\Delta m^2/2, \Delta m^2/2)$ is the m
 Two conventions meet here.  Section \ref{sec:three_flavors}, and the four-flavor Hamiltonians of \ref{app:sample_2nu_hamiltonians}, put the zero on $\nu_1$ rather than making the mass matrix traceless, as is usual at three and four flavors; the two differ by a multiple of the identity, which Section \ref{sec:general_remarks} discards, so nothing below turns on which is used.  The other convention is which eigenstate carries the larger $m_i^2$, and that one is not free of consequences --- the paragraph that closes this appendix says where they fall.
 
 Using Table \ref{tab:h2_coefficients}, we identify the squares that \equ{prob_2nu_general} calls for,
-\begin{equation*}
+\begin{equation}
  h_1^2 = \left(\frac{\Delta m^2}{4E}\right)^2 \sin^2\left(2\theta\right) \;, \;\;
  h_3^2 = \left(\frac{\Delta m^2}{4E}\right)^2 \cos^2\left(2\theta\right) \;,
-\end{equation*}
+\end{equation}
 with $h_2 = 0$, so that $\lvert h \rvert^2 = \left(\Delta m^2/4E\right)^2$ and $h_1^2 / \lvert h \rvert^2  = \sin^2\left(2\theta\right)$.  From \equ{prob_2nu_general}, the probability is
-\begin{equation*}
+\begin{equation}
  P_{\nu_e \to \nu_\mu}^{\rm vac} (E, L)
  =
  \sin^2 \left(2\theta\right)
  \sin^2\left(\frac{\Delta m^2}{4E}L\right) \;,
-\end{equation*}
+\end{equation}
 which is the standard expression for two-neutrino oscillations in vacuum; see, \eg, \Refs\ \cite{Giunti:2007ry, Tanabashi:2018oca}.
 
 Now the ordering.  Putting the larger $m_i^2$ on the first mass eigenstate instead gives the negative of $\mathbb{M}_2^2$, and hence of $\mathbb{H}_2^{\rm vac}$, which nothing above would notice: the probability depends on the $h_k$ only through $h_1^2 + h_2^2$, $\lvert h \rvert^2$, and $\sin^2\left(\lvert h \rvert L\right)$, each of them even under $h_k \to -h_k$, so the formula just recovered stands either way.  What the sign does affect is every Hamiltonian that \emph{adds} a term to $\mathbb{H}_2^{\rm vac}$: the matter, NSI, and LIV cases of \ref{app:sample_2nu_hamiltonians}.  Negating only the vacuum term reverses its sign relative to the matter potential, and what comes out is the negative of the antineutrino Hamiltonian of \equ{antineutrino}, up to the sign of $h_2$ --- which \equ{prob_2nu_general} does not see either.  The probabilities are therefore exactly those of the corresponding \emph{antineutrino} process, and for the LIV case those of the CPT-conjugate one, with $b_i \to -b_i$: an identity, not a numerical near-agreement, and the code returns the two bit for bit.
@@ -1728,27 +1799,27 @@ Those cases also fix the labels that vacuum leaves free, each in its own way.  T
 \appresetfloats
 
 We start from the definition $u_k = -\frac{i}{2}{\rm Tr}\left(\lambda^k \mathbb{U}_3\right)$ of Section \ref{sec:readings}, and assume throughout the non-degenerate spectrum that \equ{sylvester} and \equ{uk_expanded} both require.  The definition lets $u_k$ be obtained by differentiating ${\rm Tr}\,\mathbb{U}_3$, which needs the latent roots and nothing else, since the projectors are then rank one and ${\rm Tr}\,\mathbb{P}_m = 1$; evaluating ${\rm Tr}\left(\lambda^k \mathbb{U}_3\right)$ directly would need the projectors themselves.  So
-\begin{eqnarray*}
+\begin{eqnarray}
  u_k 
  &=& -\frac{1}{2}{\rm Tr}\frac{\partial}{\partial\left(-h_kL\right)}e^{-ih_a\lambda^aL}  \\
  &=& -\frac{1}{2}\frac{\partial}{\partial\left(-h_kL\right)}{\rm Tr}~\mathbb{U}_3 \\
  &=& -\frac{i}{2}\sum_{m=1}^3 e^{iL\psi_m} \frac{\partial\left(L\psi_m\right)}{\partial\left(-h_kL\right)} \;,
-\end{eqnarray*}
+\end{eqnarray}
 where the first step holds under the trace and not outside it: $\lambda^k$ does not commute with $h_a \lambda^a$, so differentiating the exponential term by term leaves a $\lambda^k$ in every position of every power, and it is the cyclic property of the trace that gathers them into ${\rm Tr}\left(i \lambda^k \mathbb{U}_3\right)$.  The last step uses ${\rm Tr}\,\mathbb{U}_3 = \sum_m e^{iL\psi_m}$ and brings down a factor of $i$ from each exponential.  What is left is the derivative of a latent root, which follows from implicit differentiation of $\chi\left(\psi_m\right) = 0$; the assumption above is what makes that step legitimate, since it is $\chi^\prime\left(\psi_m\right) = 3\psi_m^2 - \lvert h \rvert^2$ that must not vanish, the same quantity that ends up as the denominator of \equ{uk_expanded}.  The baseline is held fixed, so it cancels:
-\begin{equation*}
+\begin{equation}
  \frac{\partial\left(L\psi_m\right)}{\partial\left(-h_kL\right)}
  =
  \frac{\partial\psi_m}{\partial\left(-h_k\right)}
  =
  \frac{2\left[\left(h \ast h\right)_k - \psi_m h_k\right]}{3\psi_m^2-\lvert h \rvert^2} \;.
-\end{equation*}
+\end{equation}
 Substituting this into the sum that closes the first display --- the $2$ canceling the $\tfrac{1}{2}$, and the bracket written the other way round to absorb the sign that is left --- gives
-\begin{equation*}
+\begin{equation}
  u_k
  =
  i\sum_{m=1}^3
  e^{i L \psi_m} \frac{\psi_m h_k - \left(h \ast h\right)_k}{3\psi_m^2 - \left\vert h \right\vert^2} \;,
-\end{equation*}
+\end{equation}
 which is \equ{uk_expanded} of the main text.
 
 
@@ -1767,32 +1838,32 @@ Here we present the two- and four-flavor Hamiltonians included as examples in {\
 Figure \ref{fig:prob_2nu} shows the probabilities $P_{\nu_e \to \nu_e}$, $P_{\nu_\mu \to \nu_e}$, and $P_{\nu_\mu \to \nu_\mu}$ for the same four scenarios as in \figu{prob_3nu}, computed using {\tt NuOscProbExact}\ \cite{NuOscProbExact}.  Again, we set the baseline to $L = 1300$~km.  The parameters and their values used in each example case are introduced below; they are a selection of the ones used in \figu{prob_3nu}.  The two non-standard cases follow the two-flavor treatments of \Refs\ \cite{GonzalezGarcia:2004wg, GonzalezGarcia:2005xw}; Section \ref{sec:examples} carries the references for the physics itself.
 
 For oscillations in vacuum, we use \equ{h2_vacuum}, \ie,
-\begin{equation*}
+\begin{equation}
  \mathbb{H}_2^{\rm vac}(E)
  =
  \frac{1}{2E}
  \mathbb{R}_{2,\theta}
  \mathbb{M}_2^2
  \mathbb{R}_{2,\theta}^\dagger \;,
-\end{equation*}
+\end{equation}
 where the rotation matrix $\mathbb{R}_{2,\theta}$ is given in \equ{u_rotation_2nu}, in terms of the mixing angle $\theta$.  In \figu{prob_2nu}, we set $\theta$ and $\Delta m^2$, respectively, to the values of $\theta_{23}$ and $\Delta m_{31}^2$ used in \figu{prob_3nu}.  The labels $e$ and $\mu$ on a pair carrying atmospheric-sector parameters --- and $\theta_{23}$ with $\Delta m_{31}^2$ rather than $\Delta m_{32}^2$, which differ by $3\%$ --- are names the vacuum panel does not fix, as \ref{app:2nu_vacuum} notes; in the other three it is the state that feels $V_{\rm CC}$ that is $\nu_e$.  These are also the values used by the two-neutrino examples in the repository, and they are the ones the figure requires: with $\Delta m_{21}^2$ the first minimum of $P_{\nu_e \to \nu_e}$ at $L = 1300$~km would fall at $E \simeq 0.08$~GeV, far below the range plotted, and its depth would be set by $\sin^2 2\theta_{12}$; \figu{prob_2nu} instead shows that minimum at $E \simeq 2.6$~GeV with near-maximal depth, which is what $\Delta m_{31}^2$ and $\theta_{23}$ give.
 
 For oscillations in matter, we use
-\begin{equation*}
+\begin{equation}
  \mathbb{H}_2^{\rm matt}(E) 
  = 
  \mathbb{H}_2^{\rm vac}(E)  + \mathbb{A}_2 \;,
-\end{equation*}
+\end{equation}
 where $\mathbb{A}_2 \equiv {\rm diag}(V_{\rm CC}, 0)$ and $V_{\rm CC}$ is defined as before.  In \figu{prob_2nu}, we set $\rho = 3$~g~cm$^{-3}$.
 
 For oscillations in matter with non-standard interactions, we use
-\begin{equation*}
+\begin{equation}
  \mathbb{H}_2^{\rm NSI}(E) 
  = 
  \mathbb{H}_2^{\rm vac}(E) + \mathbb{A}_2 + \mathbb{V}_2 \;,
-\end{equation*}
+\end{equation}
 where $\mathbb{V}_2 \equiv V_{\rm CC} \epsilon_2$ and the matrix of NSI strength parameters is
-\begin{equation*}
+\begin{equation}
  \epsilon_2
  =
  \left(
@@ -1801,15 +1872,15 @@ where $\mathbb{V}_2 \equiv V_{\rm CC} \epsilon_2$ and the matrix of NSI strength
    \epsilon_{e\mu}^\ast  & \epsilon_{\mu\mu}       \\
   \end{array}
  \right) \;.
-\end{equation*}
+\end{equation}
 In \figu{prob_2nu}, we set $\epsilon_{ee} = -\epsilon_{e\mu} = 0.06$ and $\epsilon_{\mu\mu} = 1.2$.
 
 For oscillations in a CPT-odd Lorentz-violating background, we use
-\begin{equation*}
+\begin{equation}
  \mathbb{H}_2^{\rm LIV}(E) 
  = 
  \mathbb{H}_2^{\rm vac}(E) + \frac{E}{\Lambda} \mathbb{R}_{2,\xi} \mathbb{B}_2 \mathbb{R}_{2,\xi}^\dagger \;,
-\end{equation*}
+\end{equation}
 where $\mathbb{R}_{2,\xi}$ is a $2 \times 2$ rotation matrix, like \equ{u_rotation_2nu}, but evaluated at a different mixing angle $\xi$.  In \figu{prob_2nu}, we set $\mathbb{R}_{2,\xi} = \mathbb{1}$, $b_1/\Lambda = 10^{-21}$, and $b_2/\Lambda = 2 \cdot 10^{-21}$.  These are the first and the third of the three eigenvalues that {\tt globaldefs} carries for \figu{prob_3nu}, and deliberately not the first two: that set has $b_1 = b_2$, which would make $\mathbb{B}_2$ proportional to the identity and leave the probabilities untouched.  A two-flavor Lorentz-violating term needs two \emph{different} eigenvalues, as a two-flavor mass matrix needs two different masses.
 
 \subsection{Four-flavor Hamiltonians}
@@ -1817,16 +1888,16 @@ where $\mathbb{R}_{2,\xi}$ is a $2 \times 2$ rotation matrix, like \equ{u_rotati
 The four-flavor examples are 3+1 systems: the three active flavors, plus one sterile state $\nu_s$ that has no standard-model interactions.  \figu{validation} shows one such case and \figu{sterile_earth} another; in both, $\Delta m_{41}^2 = 1$~eV$^2$ and $\sin^2\theta_{14} = \sin^2\theta_{24} = 0.1$, with $\theta_{34} = 0$, and the three active parameters keep the values used elsewhere in this paper.
 
 For oscillations in vacuum, we use
-\begin{equation*}
+\begin{equation}
  \mathbb{H}_4^{\rm vac}(E)
  =
  \frac{1}{2E}
  \mathbb{R}_4
  \mathbb{M}_4^2
  \mathbb{R}_4^\dagger \;,
-\end{equation*}
+\end{equation}
 where $\mathbb{M}_4^2 = {\rm diag}\left(0, \Delta m_{21}^2, \Delta m_{31}^2, \Delta m_{41}^2\right)$ and $\mathbb{R}_4$ is the $4 \times 4$ mixing matrix, built from the six angles $\theta_{12}$, $\theta_{13}$, $\theta_{23}$, $\theta_{14}$, $\theta_{24}$, $\theta_{34}$, and three phases, of which the code takes $\delta_{14}$ and $\delta_{24}$ to be zero by default.  Section \ref{sec:three_flavors} writes the three-flavor matrix out because conventions differ between codes.  No standard ordering exists at $3+1$, any more than one exists for the SU(4) generators of \ref{app:matrices_4nu}, so we state ours,
-\begin{equation*}
+\begin{equation}
  \mathbb{R}_4
  =
  \mathbb{R}_{34}
@@ -1835,15 +1906,15 @@ where $\mathbb{M}_4^2 = {\rm diag}\left(0, \Delta m_{21}^2, \Delta m_{31}^2, \De
  \mathbb{R}_{23}
  \mathbb{R}_{13}\left(\delta_{\rm CP}\right)
  \mathbb{R}_{12} \;,
-\end{equation*}
+\end{equation}
 with $\mathbb{R}_{ij}$ the rotation by $\theta_{ij}$ in the $i$--$j$ plane: $\cos\theta_{ij}$ in its $\left(i,i\right)$ and $\left(j,j\right)$ entries, $\sin\theta_{ij} e^{-i\delta}$ in its $\left(i,j\right)$ entry, $-\sin\theta_{ij} e^{i\delta}$ in its $\left(j,i\right)$ entry, $1$ on the rest of the diagonal and $0$ everywhere else, and $\delta = 0$ where no phase is shown.  Setting the three new angles to zero leaves $\mathbb{R}_{23} \mathbb{R}_{13}\left(\delta_{\rm CP}\right) \mathbb{R}_{12}$, which is \equ{pmns}, so $\mathbb{H}_3^{\rm vac}$ returns in the active block and $\nu_s$ decouples.
 
 For oscillations in matter, we use
-\begin{equation*}
+\begin{equation}
  \mathbb{H}_4^{\rm matt}(E)
  =
  \mathbb{H}_4^{\rm vac}(E) + \mathbb{A}_4 \;,
-\end{equation*}
+\end{equation}
 where
 \begin{equation}
  \label{equ:a4}
@@ -1854,7 +1925,7 @@ where
 so that $V_s$ is exactly half of $V_{\rm CC}$ wherever there is one neutron per electron, which is what {\tt globaldefs} takes the crust to be.  That last entry is the one feature with no two- or three-flavor counterpart, and it is not a convention: the neutral-current potential is common to the three active flavors and may be removed as a global phase, but the sterile state never had it, and subtracting a term it does not feel leaves $-V_{\rm NC}$ behind.  The sterile state does not feel the charged-current potential either, while the other three do not feel $V_s$; it is that difference that drives the resonance of \figu{sterile_earth}.  A 3+1 system is therefore sensitive to the neutron density as well as the electron density, which no active-only scenario is.  In \figu{sterile_earth} the density is the PREM profile\ \cite{Dziewonski:1981xy} along the chord, so both $V_{\rm CC}$ and $V_{\rm NC}$ vary from slab to slab.
 
 For oscillations in matter with non-standard interactions, we use
-\begin{equation*}
+\begin{equation}
  \mathbb{H}_4^{\rm NSI}(E)
  =
  \mathbb{H}_4^{\rm vac}(E) + \mathbb{A}_4 + \mathbb{V}_4 \;,
@@ -1866,15 +1937,15 @@ For oscillations in matter with non-standard interactions, we use
    0          & 0 \\
   \end{array}
  \right) \;,
-\end{equation*}
+\end{equation}
 where $\epsilon_3$ is the $3 \times 3$ matrix of Section\ \ref{sec:examples}.  The sterile row and column vanish because a state with no standard-model interactions has no non-standard ones either.  The sterile entry keeps the $-V_{\rm NC}$ of $\mathbb{A}_4$.
 
 For oscillations in a CPT-odd Lorentz-violating background, we use
-\begin{equation*}
+\begin{equation}
  \mathbb{H}_4^{\rm LIV}(E)
  =
  \mathbb{H}_4^{\rm vac}(E) + \frac{E}{\Lambda} \mathbb{R}_{4,\xi} \mathbb{B}_4 \mathbb{R}_{4,\xi}^\dagger \;,
-\end{equation*}
+\end{equation}
 with $\mathbb{B}_4 = {\rm diag}\left(b_1, b_2, b_3, b_4\right)$ and $\mathbb{R}_{4,\xi}$ ordered as $\mathbb{R}_4$ above but carrying its own six angles $\xi_{ij}$ and one phase.  Here, unlike in $\mathbb{A}_4$ and $\mathbb{V}_4$, nothing privileges the fourth state: $b_4$ is an eigenvalue like the others, so the sterile neutrino may couple to the Lorentz-violating background even though it is blind to matter.  Setting the three new angles to zero recovers the three-flavor term in the active block whatever $b_4$ is --- with $\mathbb{R}_{4,\xi}$ block diagonal, $b_4$ acts on $\nu_s$ alone, and a term on a decoupled state is a phase.  We have checked that the active probabilities are unchanged to $10^{-13}$ as $b_4$ is varied over four orders of magnitude and both signs.
 
 Neither of these last two Hamiltonians is drawn in this paper.  Every four-flavor figure in it rests on $\mathbb{H}_4^{\rm matt}$ instead: the four-flavor case of \figu{validation}, at constant density, and \figu{sterile_earth} and \figu{prem_plane_3plus1}, slab by slab through PREM, the first of those two with the antineutrino exchange of \equ{antineutrino}.  The suite of \ref{app:tests} exercises the NSI and the Lorentz-violating Hamiltonians, and notebook 16 of \ref{app:notebooks} works through the NSI one.
