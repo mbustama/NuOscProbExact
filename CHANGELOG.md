@@ -28,11 +28,15 @@ and the project uses [Semantic Versioning](https://semver.org/).
   any one baseline, so a chord to a detector under rock should pass
   `ocean=` the crust's value.
 
-  `earth.earth_slab_radii` gives the radii of a chord's slabs, in the
-  order `earth.earth_slabs` returns them, so the per-slab array can be
-  built and handed to any of the `earth` routines through the
-  `electron_fraction` argument they already take.  A mismatched array is
-  now refused with a message naming the slab count, where before it
+  Every `earth` routine's `electron_fraction` now takes one value for the
+  chord, one per slab, or **a callable of radius** -- pass
+  `electron_fraction_prem` itself.  The callable is the form to prefer,
+  and the only one that works with `rtol` and `atol`: those choose the
+  slab count, so an array built for one subdivision is the wrong length
+  for the next.  `earth.earth_slab_radii` gives a chord's slab radii, in
+  the order `earth.earth_slabs` returns them, for inspecting a profile or
+  building an array at a fixed `n_slabs_per_segment`.  A mismatched array
+  is refused with a message naming the slab count, where before it
   surfaced as a NumPy broadcast error.
 
   **No default changes.**  Every `earth` routine still assumes

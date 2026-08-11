@@ -946,3 +946,90 @@ def test_a_mismatched_electron_fraction_array_is_refused():
     with pytest.raises(ValueError, match='one entry per slab'):
         earth.probabilities_3nu_earth(h, 1.0e9, -0.9, n_slabs_per_segment=4,
                                       electron_fraction=np.array([0.5, 0.4]))
+
+
+def test_a_callable_electron_fraction_survives_refinement():
+    r"""An array cannot: `rtol` and `atol` choose the slab count.
+
+    This is the reason the callable form exists.  An array built for one
+    subdivision is the wrong length for the next, and the tolerance
+    routines are the documented way to ask for a chord.
+    """
+    h = h_vacuum_3nu()
+    array_for_four = earth.electron_fraction_prem(
+        earth.earth_slab_radii(-0.9, 4))
+
+    for keywords in ({'atol': 1.0e-4}, {'rtol': 1.0e-3}):
+        # The callable goes through
+        earth.probabilities_3nu_earth(h, 1.0e9, -0.9,
+                                      electron_fraction=(
+                                          earth.electron_fraction_prem),
+                                      **keywords)
+        # The array cannot, and says why
+        with pytest.raises(ValueError, match='callable of radius'):
+            earth.probabilities_3nu_earth(h, 1.0e9, -0.9,
+                                          electron_fraction=array_for_four,
+                                          **keywords)
+
+    assert earth.slabs_for_tolerance(
+        h, 1.0e9, -0.9, atol=1.0e-4,
+        electron_fraction=earth.electron_fraction_prem) > 0
+
+
+@pytest.mark.parametrize('n_energies', [1, 4000])
+def test_callable_and_array_agree_on_every_path(n_energies):
+    r"""Scalar, batched and compiled paths resolve it the same way.
+
+    The large stack crosses `fastkernels.worthwhile_slabs`, which builds
+    its potentials somewhere else entirely; both places have to give the
+    callable the same reading.
+    """
+    h = h_vacuum_3nu()
+    energy = (1.0e9 if n_energies == 1
+              else np.logspace(0.0, 2.0, n_energies)*1.0e9)
+    array = earth.electron_fraction_prem(earth.earth_slab_radii(-0.9, 4))
+
+    from_array = earth.probabilities_3nu_earth(
+        h, energy, -0.9, n_slabs_per_segment=4, electron_fraction=array)
+    from_callable = earth.probabilities_3nu_earth(
+        h, energy, -0.9, n_slabs_per_segment=4,
+        electron_fraction=earth.electron_fraction_prem)
+
+    assert np.array_equal(np.ravel(from_array), np.ravel(from_callable))
+
+
+def test_a_callable_electron_fraction_reaches_four_flavors():
+    r"""Where it also layers the neutral-current potential."""
+    h = hamiltonians4nu.hamiltonian_4nu_vacuum_energy_independent(
+        np.sqrt(gd.S12_NO_BF), np.sqrt(gd.S23_NO_BF), np.sqrt(gd.S13_NO_BF),
+        np.sqrt(0.1), np.sqrt(0.1), 0.0, gd.DCP_NO_BF, gd.D21_NO_BF,
+        gd.D31_NO_BF, 1.0)
+    array = earth.electron_fraction_prem(earth.earth_slab_radii(-0.9, 4))
+
+    for antineutrino in (False, True):
+        assert np.array_equal(
+            np.ravel(earth.probabilities_4nu_earth(
+                h, 1.0e12, -0.9, n_slabs_per_segment=4,
+                electron_fraction=array, antineutrino=antineutrino)),
+            np.ravel(earth.probabilities_4nu_earth(
+                h, 1.0e12, -0.9, n_slabs_per_segment=4,
+                electron_fraction=earth.electron_fraction_prem,
+                antineutrino=antineutrino)))
+
+
+def test_a_callable_electron_fraction_reaches_an_oscillogram():
+    r"""Every distinct angle gets its own radii."""
+    h = h_vacuum_3nu()
+    energies = np.logspace(0.0, 1.0, 5)*1.0e9
+    angles = np.array([-1.0, -0.6, -0.2])
+
+    grid = earth.probabilities_3nu_earth(
+        h, energies[None, :], angles[:, None], n_slabs_per_segment=4,
+        electron_fraction=earth.electron_fraction_prem)
+
+    assert grid.shape == (3, 5, 9)
+    for i, costhz in enumerate(angles):
+        row = earth.probabilities_3nu_earth(
+            h, energies, costhz, n_slabs_per_segment=4,
+            electron_fraction=earth.electron_fraction_prem)
+        assert np.array_equal(grid[i], row)

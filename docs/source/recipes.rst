@@ -207,26 +207,34 @@ PREM is a density model: it fixes :math:`\rho`, not what the rock is made
 of, so the electron fraction :math:`Y_e` has to come from somewhere else.
 The routines above take one half throughout, which is exactly isoscalar
 matter and is what no layer of the Earth actually is.
-:func:`earth.electron_fraction_prem` gives the composition of each layer,
-and :func:`earth.earth_slab_radii` gives the radii to evaluate it at, in
-the order the slabs come in.
+:func:`earth.electron_fraction_prem` gives the composition of each layer.
+Pass the function itself, not its values: it is then evaluated at whatever
+slabs are cut, which is what lets it work with a tolerance.
 
 .. jupyter-execute::
 
-    costhz, n = -1.0, 6
-
-    radii = earth.earth_slab_radii(costhz, n)
-    y_e = earth.electron_fraction_prem(radii)
+    costhz = -1.0
 
     uniform = earth.probabilities_3nu_earth(
-        h_vacuum, 2.0*GEV, costhz, n_slabs_per_segment=n)
+        h_vacuum, 2.0*GEV, costhz, atol=1.0e-5)
     layered = earth.probabilities_3nu_earth(
-        h_vacuum, 2.0*GEV, costhz, n_slabs_per_segment=n,
-        electron_fraction=y_e)
+        h_vacuum, 2.0*GEV, costhz, atol=1.0e-5,
+        electron_fraction=earth.electron_fraction_prem)
+
+    print('P_mue   one half: %.6f   layered: %.6f' % (uniform[3], layered[3]))
+
+:func:`earth.earth_slab_radii` gives the radii of a chord's slabs, in the
+order they come in, for inspecting the profile or building an array by
+hand.  An array works only at a fixed ``n_slabs_per_segment``, since a
+tolerance chooses the count itself and an array cannot follow it.
+
+.. jupyter-execute::
+
+    radii = earth.earth_slab_radii(costhz, 6)
+    y_e = earth.electron_fraction_prem(radii)
 
     print('Y_e runs from %.4f to %.4f over %d slabs'
           % (y_e.min(), y_e.max(), len(y_e)))
-    print('P_mue   one half: %.6f   layered: %.6f' % (uniform[3], layered[3]))
 
 The difference is not cosmetic.  Through the diameter it is order unity;
 through the mantle alone a few percent; on a shallow chord well under one.
@@ -264,8 +272,11 @@ for a land baseline.
 
 .. jupyter-execute::
 
-    land = earth.electron_fraction_prem(
-        radii, ocean=gd.ELECTRON_FRACTION_EARTH_CRUST_LAYER)
+    def land_electron_fraction(r):
+        return earth.electron_fraction_prem(
+            r, ocean=gd.ELECTRON_FRACTION_EARTH_CRUST_LAYER)
+
+    land = land_electron_fraction(radii)
 
     print('ocean slabs, as PREM has them: %d'
           % int((y_e == gd.ELECTRON_FRACTION_EARTH_OCEAN).sum()))

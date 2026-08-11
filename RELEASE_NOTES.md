@@ -183,9 +183,10 @@ routine takes one half throughout, which is exactly isoscalar matter — and no 
 Earth is. The values that belong to the material of each layer are now in the code, and
 `earth.electron_fraction_prem` returns them by radius: **0.4656** in the core (iron),
 **0.4957** in the mantle (peridotite), **0.4952** in the crust (granitic), and **0.5551** in
-the ocean (seawater, above one half because hydrogen has `Z/A = 1`). `earth.earth_slab_radii`
-gives the radii of a chord's slabs, so the per-slab array can be built and passed today
-through the `electron_fraction` argument every routine already takes.
+the ocean (seawater, above one half because hydrogen has `Z/A = 1`). Every routine's
+`electron_fraction` argument now accepts a callable of radius, so passing
+`earth.electron_fraction_prem` itself is all it takes -- and that is the form that works
+alongside `rtol` and `atol`, which choose the slab count for you.
 
 **Nothing changes yet.** One half remains the default, so every result in this release is what
 it was. The change is deferred because it is not small: over 0.3–30 GeV the median change in
