@@ -48,7 +48,11 @@ __all__ = ['CONV_KM_TO_INV_EV', 'CONV_CM_TO_INV_EV', 'CONV_INV_EV_TO_CM',
            'ELECTRON_FRACTION_EARTH_CRUST',
            'DENSITY_MATTER_CRUST_G_PER_CM3', 'NUM_DENSITY_E_EARTH_CRUST',
            'VCC_EARTH_CRUST', 'NEUTRON_FRACTION_EARTH_CRUST',
-           'NUM_DENSITY_N_EARTH_CRUST', 'VNC_EARTH_CRUST', 'S12_NO_BF',
+           'NUM_DENSITY_N_EARTH_CRUST', 'VNC_EARTH_CRUST',
+           'ELECTRON_FRACTION_EARTH_CORE', 'ELECTRON_FRACTION_EARTH_MANTLE',
+           'ELECTRON_FRACTION_EARTH_CRUST_LAYER',
+           'ELECTRON_FRACTION_EARTH_OCEAN',
+           'S12_NO_BF',
            'S23_NO_BF', 'S13_NO_BF', 'DCP_NO_BF', 'D21_NO_BF',
            'D31_NO_BF', 'S12_IO_BF', 'S23_IO_BF', 'S13_IO_BF',
            'DCP_IO_BF', 'D21_IO_BF', 'D32_IO_BF', 'D31_IO_BF', 'EPS_EE',
@@ -197,6 +201,61 @@ NUM_DENSITY_N_EARTH_CRUST = NUM_DENSITY_E_EARTH_CRUST \
 r"""float: Neutron number density in the Earth's crust.
 
 Units: [eV\ :sup:`3`].
+"""
+
+
+###############################################################################
+# Electron fraction inside the Earth
+###############################################################################
+
+ELECTRON_FRACTION_EARTH_CORE = 0.4656
+r"""float: Electron fraction in the Earth's core, :math:`r \leq 3480` km.
+
+Iron, :math:`Z/A = 26/55.845`.  The core is neutron-richer than anything
+above it, so this is the lowest of the four.
+
+PREM\ [1]_ is a density model and carries no composition, so an electron
+fraction has to come from somewhere else; these four values do, and each
+is quoted with the material it belongs to.  Assuming one half everywhere
+instead is exactly isoscalar matter, which no part of the Earth is.
+
+None of the four is a default anywhere: `ELECTRON_FRACTION_EARTH_CRUST`,
+one half throughout, remains what `earth` assumes unless asked
+otherwise.  See `earth.electron_fraction_prem`.
+
+Units: [adimensional].
+
+References
+----------
+.. [1] A. M. Dziewonski and D. L. Anderson, "Preliminary reference Earth
+   model", Phys. Earth Planet. Interiors 25, 297 (1981).
+"""
+
+ELECTRON_FRACTION_EARTH_MANTLE = 0.4957
+r"""float: Electron fraction in the mantle, :math:`3480 < r \leq 6346.6` km.
+
+Peridotite.  See `ELECTRON_FRACTION_EARTH_CORE` for why PREM does not
+supply this.  Units: [adimensional].
+"""
+
+ELECTRON_FRACTION_EARTH_CRUST_LAYER = 0.4952
+r"""float: Electron fraction in the crust, :math:`6346.6 < r \leq 6368` km.
+
+Granitic, and within :math:`0.1\%` of the mantle's, so it is here for
+explicitness rather than for effect.  Named apart from
+`ELECTRON_FRACTION_EARTH_CRUST`, which is one half and is the uniform
+value the code assumes by default.  Units: [adimensional].
+"""
+
+ELECTRON_FRACTION_EARTH_OCEAN = 0.5551
+r"""float: Electron fraction in the ocean, :math:`r > 6368` km.
+
+Seawater, :math:`Z/A = 10/18.015`.  Above one half, unlike every other
+layer, because hydrogen has :math:`Z/A = 1`.
+
+PREM's ocean is a global average, so it is a layer of the model rather
+than of any particular baseline: a detector under rock has none.  For a
+land chord, pass the crust's value here.  Units: [adimensional].
 """
 
 VNC_EARTH_CRUST = -GF*NUM_DENSITY_N_EARTH_CRUST/np.sqrt(2.0)

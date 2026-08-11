@@ -51,6 +51,8 @@ Routine listings
     * dms_to_decimal - Degrees, minutes, seconds to decimal degrees
     * coordinates_of_named_location - Coordinates of a named site
     * density_prem - PREM density at a radius
+    * electron_fraction_prem - PREM-layered electron fraction
+    * earth_slab_radii - Radius at the midpoint of each slab
     * matter_potential - Charged-current potential from a density
     * matter_potential_nc - Neutral-current potential, for a sterile state
     * distance_traveled_inside_earth - Chord length for a given costhz
@@ -80,7 +82,8 @@ __all__ = ['LOC_COORDS_DMS', 'PREM_BOUNDARIES',
            'CHUNK_BYTES_FALLBACK', 'CHUNK_BYTES_MIN', 'CHUNK_BYTES_MAX',
            'MIN_CHUNK_ENERGIES', 'MAX_CHUNK_BYTES',
            'dms_to_decimal', 'coordinates_of_named_location',
-           'density_prem', 'matter_potential', 'matter_potential_nc',
+           'density_prem', 'electron_fraction_prem', 'earth_slab_radii',
+           'matter_potential', 'matter_potential_nc',
            'distance_traveled_inside_earth',
            'earth_radial_distance_from_depth',
            'prem_layer_edges_along_chord', 'chord_length_inside_earth',
@@ -94,7 +97,7 @@ __all__ = ['LOC_COORDS_DMS', 'PREM_BOUNDARIES',
 
 import os
 from functools import lru_cache
-from typing import Optional, Tuple, Union
+from typing import Callable, Optional, Tuple, Union
 
 import numpy as np
 
@@ -253,6 +256,235 @@ def coordinates_of_named_location(
     return entry['lat'], entry['lon']
 
 
+def _resolve_electron_fraction(
+    electron_fraction: Union[int, float, np.ndarray, Callable],
+    costhz: float,
+    n_slabs_per_segment: int,
+    widths_km: np.ndarray,
+    densities: np.ndarray
+) -> Union[float, np.ndarray]:
+    r"""Returns a per-slab electron fraction, from whatever was given.
+
+    Both paths that build potentials from a chord's slabs go through
+    this, so that a scalar, an array and a callable mean the same thing
+    whichever one runs.
+
+    A callable is evaluated at the radii of the slabs actually cut,
+    which is the only form that survives refinement: an array is tied to
+    one slab count, and asking for a tolerance changes it.
+
+    Parameters
+    ----------
+    electron_fraction : int, float, numpy.ndarray or callable
+        One value for the chord, one per slab, or a function of radius
+        in km, as `electron_fraction_prem` is.
+    costhz : float
+        Cosine of the zenith angle, for the geometry and the message.
+    n_slabs_per_segment : int
+        Slabs per shell crossing, for the message.
+    widths_km : numpy.ndarray
+        The slab widths, in units of km.
+    densities : numpy.ndarray
+        The slab densities, whose shape a per-slab array must match.
+
+    Returns
+    -------
+    float or numpy.ndarray
+        The electron fraction, ready for `matter_potential`.
+
+    Raises
+    ------
+    ValueError
+        If an array is given whose length is not the slab count.
+    """
+    if callable(electron_fraction):
+        midpoints = np.cumsum(widths_km) - widths_km/2.0
+        electron_fraction = electron_fraction(
+            earth_radial_distance_from_depth(costhz, midpoints))
+
+    # Anything else broadcasts into a shape nothing downstream expects,
+    # so it is caught here rather than surfacing as a NumPy error about
+    # operands.
+    if np.ndim(electron_fraction) != 0 \
+            and np.shape(electron_fraction) != np.shape(densities):
+        raise ValueError(
+            'electron_fraction must be a scalar, one entry per slab, or a '
+            'callable of radius; the slab count is %d for costhz = %g at '
+            'n_slabs_per_segment = %d, and an array of shape %s was given.  '
+            'Pass earth.electron_fraction_prem itself, rather than its '
+            'values, and it is evaluated at whatever slabs are cut'
+            % (len(densities), costhz, n_slabs_per_segment,
+               np.shape(electron_fraction)))
+
+    return electron_fraction
+
+
+def _mean_nucleon_mass(
+    electron_fraction: Union[int, float, np.ndarray]
+) -> Union[float, np.ndarray]:
+    r"""Returns the mean nucleon mass for an electron fraction.
+
+    :math:`\bar{m} = Y_e m_p + (1 - Y_e) m_n`, which is the mass per
+    nucleon of matter with :math:`Y_e` electrons per nucleon.  It is not
+    a free quantity: the neutron fraction is :math:`1 - Y_e`, so a
+    caller who varies :math:`Y_e` and leaves the mass alone is
+    describing matter that is neutron-rich in its charge and isoscalar
+    in its mass at once.
+
+    At :math:`Y_e = 1/2` this is :math:`(m_p + m_n)/2` bit for bit,
+    which is what the routines here used before they took a varying
+    :math:`Y_e`, so nothing computed at one half moves.  Away from it
+    the shift is small --- :math:`5 \cdot 10^{-5}` in relative terms at
+    the core's :math:`Y_e` --- and it is carried for consistency rather
+    than for its size.
+
+    Parameters
+    ----------
+    electron_fraction : int, float or numpy.ndarray
+        Electrons per nucleon.
+
+    Returns
+    -------
+    float or numpy.ndarray
+        The mean nucleon mass, in units of eV.
+    """
+    return (electron_fraction*gd.MASS_PROTON
+            + (1.0 - electron_fraction)*gd.MASS_NEUTRON)
+
+
+def electron_fraction_prem(
+    r: Union[int, float, list, np.ndarray],
+    core: float = gd.ELECTRON_FRACTION_EARTH_CORE,
+    mantle: float = gd.ELECTRON_FRACTION_EARTH_MANTLE,
+    crust: float = gd.ELECTRON_FRACTION_EARTH_CRUST_LAYER,
+    ocean: float = gd.ELECTRON_FRACTION_EARTH_OCEAN
+) -> Union[float, np.ndarray]:
+    r"""Returns the electron fraction inside the Earth, by radius.
+
+    The companion to `density_prem`: that one gives :math:`\rho`, this
+    one gives :math:`Y_e`, and `matter_potential` needs both.  PREM is a
+    density model and carries no composition, so the four values here
+    come from the material of each layer rather than from PREM, and any
+    of them may be overridden.  Assuming one half throughout instead is
+    exactly isoscalar matter, which no part of the Earth is.
+
+    The three splits are radii PREM already has, in
+    ``PREM_BOUNDARIES``: :math:`3480` km for the core, :math:`6346.6`
+    km for the mantle, and :math:`6368` km for the crust, with the
+    ocean above that.
+
+    PREM's ocean is a global average rather than a feature of any one
+    baseline: a neutrino arriving at a detector under rock crosses none
+    of it.  For a land chord, pass ``ocean=`` the crust's value.
+
+    Nothing calls this by default.  The Earth routines assume
+    `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`, one half throughout,
+    unless an electron fraction is passed to them explicitly; see
+    `earth_slab_radii` for building the per-slab array to pass.
+
+    Parameters
+    ----------
+    r : int, float, list or numpy.ndarray
+        Radial distance from the center of the Earth, in units of km.
+    core : float, optional
+        Electron fraction at :math:`r \leq 3480` km.  Default:
+        `globaldefs.ELECTRON_FRACTION_EARTH_CORE`.
+    mantle : float, optional
+        Electron fraction at :math:`3480 < r \leq 6346.6` km.  Default:
+        `globaldefs.ELECTRON_FRACTION_EARTH_MANTLE`.
+    crust : float, optional
+        Electron fraction at :math:`6346.6 < r \leq 6368` km.  Default:
+        `globaldefs.ELECTRON_FRACTION_EARTH_CRUST_LAYER`.
+    ocean : float, optional
+        Electron fraction at :math:`r > 6368` km.  Default:
+        `globaldefs.ELECTRON_FRACTION_EARTH_OCEAN`.
+
+    Returns
+    -------
+    float or numpy.ndarray
+        The electron fraction, adimensional, of the same shape as `r`.
+
+    Examples
+    --------
+    .. jupyter-execute::
+
+        import earth
+
+        for radius in [1000.0, 6000.0, 6350.0, 6370.0]:
+            print('%.4f' % earth.electron_fraction_prem(radius))
+    """
+    scalar_input = (np.ndim(r) == 0)
+    r = np.asarray(r, dtype=float)
+
+    # Refused for the same radii `density_prem` refuses, so that the two
+    # companions cannot disagree about what is inside the Earth.  A
+    # radius out of range would otherwise pick up the core's value or
+    # the ocean's and say nothing.
+    if np.any(r < 0.0):
+        raise ValueError('electron_fraction_prem: radial distance cannot '
+                         'be negative')
+    if np.any(r > gd.EARTH_RADIUS):
+        raise ValueError(
+            'electron_fraction_prem: radial distance cannot exceed the '
+            'radius of the Earth, %g km' % gd.EARTH_RADIUS)
+
+    # Selects rather than branches, so that the batched path stays
+    # branch-free, as everything else along it is.  The boundaries are
+    # taken as belonging to the layer above, so that a radius exactly on
+    # one gets the same answer `density_prem` gives it.
+    fraction = np.where(
+        r <= PREM_BOUNDARIES[1], float(core),
+        np.where(r <= PREM_BOUNDARIES[6], float(mantle),
+                 np.where(r <= PREM_BOUNDARIES[8], float(crust),
+                          float(ocean))))
+
+    return float(fraction) if scalar_input else fraction
+
+
+def earth_slab_radii(
+    costhz: Union[int, float],
+    n_slabs_per_segment: int = 8
+) -> np.ndarray:
+    r"""Returns the radius at the midpoint of each slab along a chord.
+
+    `earth_slabs` returns the width and the density of every slab; this
+    returns the radius each density was evaluated at, which is what
+    `electron_fraction_prem` needs to give a per-slab electron fraction.
+    Call both with the same `costhz` and `n_slabs_per_segment`, or the
+    arrays will not correspond.
+
+    Parameters
+    ----------
+    costhz : int or float
+        Cosine of the zenith angle of arrival, in :math:`[-1, 0]`.
+    n_slabs_per_segment : int, optional
+        Slabs per PREM shell crossing.  Default: ``8``.
+
+    Returns
+    -------
+    numpy.ndarray
+        The radii, in units of km, one per slab, in the order that
+        `earth_slabs` returns its slabs in.
+
+    Examples
+    --------
+    .. jupyter-execute::
+
+        import earth
+
+        radii = earth.earth_slab_radii(-1.0, 2)
+        print(len(radii))
+        print('%.1f' % radii.min())
+    """
+    widths, _ = earth_slabs(costhz, n_slabs_per_segment)
+
+    # The slabs tile the chord from one end, so the midpoint of each is
+    # its own half-width past the end of everything before it.
+    midpoints = np.cumsum(widths) - widths/2.0
+
+    return earth_radial_distance_from_depth(costhz, midpoints)
+
+
 def density_prem(
     r: Union[int, float, list, np.ndarray],
     tol: float = 1.e-8
@@ -325,7 +557,8 @@ def density_prem(
 
 def matter_potential(
     density: Union[int, float, list, np.ndarray],
-    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST
+    electron_fraction: Union[int, float, np.ndarray]
+    = gd.ELECTRON_FRACTION_EARTH_CRUST
 ) -> Union[float, np.ndarray]:
     r"""Returns the charged-current matter potential for a density.
 
@@ -340,10 +573,11 @@ def matter_potential(
     ----------
     density : int, float, list or numpy.ndarray
         Matter density, in units of g cm\ :sup:`-3`.
-    electron_fraction : float, optional
-        Electrons per nucleon.  Default:
-        `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`, which is 0.5 and is
-        a good approximation everywhere in the Earth.
+    electron_fraction : int, float or numpy.ndarray, optional
+        Electrons per nucleon, one value or one per density.  Default:
+        `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`, one half, which is
+        exactly isoscalar matter and so is no layer of the Earth; see
+        `electron_fraction_prem` for the layered values.
 
     Returns
     -------
@@ -364,7 +598,7 @@ def matter_potential(
     # Electron number density in eV^3, by the same route as
     # globaldefs.NUM_DENSITY_E_EARTH_CRUST
     num_density_e = (density*gd.CONV_G_TO_EV
-                     / ((gd.MASS_PROTON+gd.MASS_NEUTRON)/2.0)
+                     / _mean_nucleon_mass(electron_fraction)
                      * electron_fraction
                      / pow(gd.CONV_CM_TO_INV_EV, 3.0))
     potential = np.sqrt(2.0)*gd.GF*num_density_e
@@ -375,7 +609,8 @@ def matter_potential(
 def matter_potential_nc(
     density: Union[int, float, list, np.ndarray],
     neutron_fraction: Optional[float] = None,
-    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST
+    electron_fraction: Union[int, float, np.ndarray]
+    = gd.ELECTRON_FRACTION_EARTH_CRUST
 ) -> Union[float, np.ndarray]:
     r"""Returns the neutral-current matter potential for a density.
 
@@ -397,12 +632,20 @@ def matter_potential_nc(
     density : int, float, list or numpy.ndarray
         Matter density, in units of g cm\ :sup:`-3`.
     neutron_fraction : float, optional
-        Neutrons per nucleon.  Default: ``1 - electron_fraction``, the
-        isoscalar value, since a nucleon is either a proton --- matched
-        by an electron --- or a neutron.
-    electron_fraction : float, optional
-        Electrons per nucleon, used only to derive `neutron_fraction`
-        when that is not given.  Default:
+        Neutrons per nucleon.  Default: ``1 - electron_fraction``, since
+        a nucleon is either a proton --- matched by an electron --- or a
+        neutron, so for ordinary matter the two are one quantity and not
+        two.  Giving a value that is not the complement is therefore
+        describing something other than protons and neutrons, and is
+        accepted rather than refused only because it is occasionally
+        useful for testing sensitivity; the mean nucleon mass still
+        follows `electron_fraction`, so the two are mixed in that case.
+        The `earth` chord routines never pass this, and so always derive
+        it.
+    electron_fraction : int, float or numpy.ndarray, optional
+        Electrons per nucleon, one value or one per density.  Sets the
+        mean nucleon mass, and derives `neutron_fraction` when that is
+        not given.  Default:
         `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`.
 
     Returns
@@ -428,7 +671,7 @@ def matter_potential_nc(
     # Neutron number density in eV^3, by the same route as the electron
     # one in `matter_potential`
     num_density_n = (density*gd.CONV_G_TO_EV
-                     / ((gd.MASS_PROTON+gd.MASS_NEUTRON)/2.0)
+                     / _mean_nucleon_mass(electron_fraction)
                      * neutron_fraction
                      / pow(gd.CONV_CM_TO_INV_EV, 3.0))
     potential = -gd.GF*num_density_n/np.sqrt(2.0)
@@ -931,6 +1174,8 @@ def _earth_hamiltonians(
     # the multiplication below allocates its own result.
     widths_km, densities = _earth_slabs_cached(float(costhz),
                                                int(n_slabs_per_segment))
+    electron_fraction = _resolve_electron_fraction(
+        electron_fraction, costhz, n_slabs_per_segment, widths_km, densities)
     potentials = matter_potential(densities, electron_fraction)
     # Only four flavors need the neutral-current potential: with three
     # active states it is common to all of them and drops out, so at two
@@ -1251,6 +1496,9 @@ def _probabilities_earth_batch(
     if fastkernels.worthwhile_slabs(n_flavors,
                                     flat.shape[0]*widths_km.shape[0]):
         widths = widths_km*gd.CONV_KM_TO_INV_EV
+        electron_fraction = _resolve_electron_fraction(
+            electron_fraction, costhz, n_slabs_per_segment, widths_km,
+            densities)
         potentials = matter_potential(densities, electron_fraction)
         # As above: only the four-flavor kernel is handed this one.
         potentials_nc = (
@@ -1311,7 +1559,8 @@ def slabs_for_tolerance(
     atol: Optional[float] = None,
     n_start: int = 8,
     n_max: int = slabs.N_SLABS_MAX,
-    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST
+    electron_fraction: Union[int, float, np.ndarray, Callable]
+    = gd.ELECTRON_FRACTION_EARTH_CRUST
 ) -> int:
     r"""Returns the subdivision an Earth crossing needs for a tolerance.
 
@@ -1359,9 +1608,14 @@ def slabs_for_tolerance(
         returned.  Default: 8, the default of the probability routines.
     n_max : int, optional
         Largest subdivision to try.  Default: `slabs.N_SLABS_MAX`.
-    electron_fraction : float, optional
-        Electrons per nucleon.  Default:
-        `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`.
+    electron_fraction : int, float, numpy.ndarray or callable, optional
+        Electrons per nucleon: one value for the whole chord, one per
+        slab, or a function of radius in km, such as
+        `electron_fraction_prem`.  Prefer the callable, which is the
+        only form that survives a slab count chosen from a tolerance.
+        Default: `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`, one half
+        throughout, which is exactly isoscalar matter and so is no layer
+        of the Earth.
 
     Returns
     -------
@@ -1639,7 +1893,8 @@ def probabilities_2nu_earth(
     energy: Union[int, float, list, np.ndarray],
     costhz: Union[int, float, list, np.ndarray],
     n_slabs_per_segment: int = 8,
-    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST,
+    electron_fraction: Union[int, float, np.ndarray, Callable]
+    = gd.ELECTRON_FRACTION_EARTH_CRUST,
     rtol: Optional[float] = None,
     atol: Optional[float] = None,
     n_max: int = slabs.N_SLABS_MAX,
@@ -1683,9 +1938,14 @@ def probabilities_2nu_earth(
         Number of equal sub-slabs per chord segment.  A segment runs
         between consecutive PREM boundary crossings; a chord crosses most
         shells twice, so there are more segments than shells.  Default: 8.
-    electron_fraction : float, optional
-        Electrons per nucleon.  Default:
-        `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`.
+    electron_fraction : int, float, numpy.ndarray or callable, optional
+        Electrons per nucleon: one value for the whole chord, one per
+        slab, or a function of radius in km, such as
+        `electron_fraction_prem`.  Prefer the callable, which is the
+        only form that survives a slab count chosen from a tolerance.
+        Default: `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`, one half
+        throughout, which is exactly isoscalar matter and so is no layer
+        of the Earth.
     rtol : float, optional
         Relative tolerance on every returned probability.  Default:
         None, meaning ``n_slabs_per_segment`` is used as given.  When
@@ -1758,7 +2018,8 @@ def probabilities_3nu_earth(
     energy: Union[int, float, list, np.ndarray],
     costhz: Union[int, float, list, np.ndarray],
     n_slabs_per_segment: int = 8,
-    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST,
+    electron_fraction: Union[int, float, np.ndarray, Callable]
+    = gd.ELECTRON_FRACTION_EARTH_CRUST,
     rtol: Optional[float] = None,
     atol: Optional[float] = None,
     n_max: int = slabs.N_SLABS_MAX,
@@ -1806,9 +2067,14 @@ def probabilities_3nu_earth(
         Number of equal sub-slabs per chord segment.  A segment runs
         between consecutive PREM boundary crossings; a chord crosses most
         shells twice, so there are more segments than shells.  Default: 8.
-    electron_fraction : float, optional
-        Electrons per nucleon.  Default:
-        `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`.
+    electron_fraction : int, float, numpy.ndarray or callable, optional
+        Electrons per nucleon: one value for the whole chord, one per
+        slab, or a function of radius in km, such as
+        `electron_fraction_prem`.  Prefer the callable, which is the
+        only form that survives a slab count chosen from a tolerance.
+        Default: `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`, one half
+        throughout, which is exactly isoscalar matter and so is no layer
+        of the Earth.
     rtol : float, optional
         Relative tolerance on every returned probability.  Default:
         None, meaning ``n_slabs_per_segment`` is used as given.  When
@@ -1889,7 +2155,8 @@ def probabilities_2nu_between_locations(
     loc_name_1: str,
     loc_name_2: str,
     n_slabs_per_segment: int = 8,
-    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST,
+    electron_fraction: Union[int, float, np.ndarray, Callable]
+    = gd.ELECTRON_FRACTION_EARTH_CRUST,
     rtol: Optional[float] = None,
     atol: Optional[float] = None,
     n_max: int = slabs.N_SLABS_MAX,
@@ -1924,9 +2191,14 @@ def probabilities_2nu_between_locations(
         Number of equal sub-slabs per chord segment.  A segment runs
         between consecutive PREM boundary crossings; a chord crosses most
         shells twice, so there are more segments than shells.  Default: 8.
-    electron_fraction : float, optional
-        Electrons per nucleon.  Default:
-        `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`.
+    electron_fraction : int, float, numpy.ndarray or callable, optional
+        Electrons per nucleon: one value for the whole chord, one per
+        slab, or a function of radius in km, such as
+        `electron_fraction_prem`.  Prefer the callable, which is the
+        only form that survives a slab count chosen from a tolerance.
+        Default: `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`, one half
+        throughout, which is exactly isoscalar matter and so is no layer
+        of the Earth.
     rtol : float, optional
         Relative tolerance on every returned probability.  Default:
         None, meaning ``n_slabs_per_segment`` is used as given.  When
@@ -2000,7 +2272,8 @@ def probabilities_3nu_between_locations(
     loc_name_1: str,
     loc_name_2: str,
     n_slabs_per_segment: int = 8,
-    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST,
+    electron_fraction: Union[int, float, np.ndarray, Callable]
+    = gd.ELECTRON_FRACTION_EARTH_CRUST,
     rtol: Optional[float] = None,
     atol: Optional[float] = None,
     n_max: int = slabs.N_SLABS_MAX,
@@ -2036,9 +2309,14 @@ def probabilities_3nu_between_locations(
         Number of equal sub-slabs per chord segment.  A segment runs
         between consecutive PREM boundary crossings; a chord crosses most
         shells twice, so there are more segments than shells.  Default: 8.
-    electron_fraction : float, optional
-        Electrons per nucleon.  Default:
-        `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`.
+    electron_fraction : int, float, numpy.ndarray or callable, optional
+        Electrons per nucleon: one value for the whole chord, one per
+        slab, or a function of radius in km, such as
+        `electron_fraction_prem`.  Prefer the callable, which is the
+        only form that survives a slab count chosen from a tolerance.
+        Default: `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`, one half
+        throughout, which is exactly isoscalar matter and so is no layer
+        of the Earth.
     rtol : float, optional
         Relative tolerance on every returned probability.  Default:
         None, meaning ``n_slabs_per_segment`` is used as given.  When
@@ -2144,7 +2422,8 @@ def probabilities_4nu_earth(
     energy: Union[int, float, list, np.ndarray],
     costhz: Union[int, float, list, np.ndarray],
     n_slabs_per_segment: int = 8,
-    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST,
+    electron_fraction: Union[int, float, np.ndarray, Callable]
+    = gd.ELECTRON_FRACTION_EARTH_CRUST,
     rtol: Optional[float] = None,
     atol: Optional[float] = None,
     n_max: int = slabs.N_SLABS_MAX,
@@ -2195,10 +2474,16 @@ def probabilities_4nu_earth(
         Number of equal sub-slabs per chord segment.  A segment runs
         between consecutive PREM boundary crossings; a chord crosses most
         shells twice, so there are more segments than shells.  Default: 8.
-    electron_fraction : float, optional
-        Electrons per nucleon.  The neutron fraction is taken as its
-        complement, which is what sets :math:`V_{NC}`.  Default:
-        `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`.
+    electron_fraction : int, float, numpy.ndarray or callable, optional
+        Electrons per nucleon: one value for the whole chord, one per
+        slab, or a function of radius in km, such as
+        `electron_fraction_prem`.  Prefer the callable, which is the
+        only form that survives a slab count chosen from a tolerance.
+        The neutron fraction is taken as its complement, which is what
+        sets :math:`V_{NC}`, so a layered electron fraction layers that
+        too.  Default: `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`, one
+        half throughout, which is exactly isoscalar matter and so is no
+        layer of the Earth.
     rtol : float, optional
         Relative tolerance on every returned probability.  Default:
         None, meaning ``n_slabs_per_segment`` is used as given.  When
@@ -2274,7 +2559,8 @@ def probabilities_4nu_between_locations(
     loc_name_1: str,
     loc_name_2: str,
     n_slabs_per_segment: int = 8,
-    electron_fraction: float = gd.ELECTRON_FRACTION_EARTH_CRUST,
+    electron_fraction: Union[int, float, np.ndarray, Callable]
+    = gd.ELECTRON_FRACTION_EARTH_CRUST,
     rtol: Optional[float] = None,
     atol: Optional[float] = None,
     n_max: int = slabs.N_SLABS_MAX,
@@ -2309,9 +2595,14 @@ def probabilities_4nu_between_locations(
         Number of equal sub-slabs per chord segment.  A segment runs
         between consecutive PREM boundary crossings; a chord crosses most
         shells twice, so there are more segments than shells.  Default: 8.
-    electron_fraction : float, optional
-        Electrons per nucleon.  Default:
-        `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`.
+    electron_fraction : int, float, numpy.ndarray or callable, optional
+        Electrons per nucleon: one value for the whole chord, one per
+        slab, or a function of radius in km, such as
+        `electron_fraction_prem`.  Prefer the callable, which is the
+        only form that survives a slab count chosen from a tolerance.
+        Default: `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`, one half
+        throughout, which is exactly isoscalar matter and so is no layer
+        of the Earth.
     rtol : float, optional
         Relative tolerance on every returned probability.  Default:
         None, meaning ``n_slabs_per_segment`` is used as given.  When

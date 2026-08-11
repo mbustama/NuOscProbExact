@@ -7,132 +7,58 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Changed
-
-- **The Earth speed-accuracy figures are re-measured against the compiled
-  slab path.**  Their timings were taken before the evolution-operator
-  kernel existed, when the Earth routines still evaluated one energy at a
-  time and composed the slabs in a serial Python loop.  Both figures now
-  call the batched path: at three flavors the same accuracy that cost
-  9010 us costs 119 us, and this library moves from the right-hand edge of
-  the plane to the lower-left corner, ahead of GLoBES and NuFast-Earth at
-  every accuracy the six codes share.  The accuracies are unchanged to the
-  last digit, and the arbitrary-precision referee moved by 7e-18, which is
-  the check that the speed-up left the physics alone.
-
-- **The 3+1 panel now carries one curve per `oscprob4nu.ROOT_STRATEGY`.**
-  On this problem the two routes are indistinguishable: bit-identical
-  probabilities at every slab count, and costs within 0.4% of each other.
-  Two things had to be fixed before that could be said. Timing the routes
-  in blocks made the eigensolver look 1.4x slower, which was the ordering
-  and not the code; they are now interleaved with the sweep direction
-  reversed on alternate passes. And single-shot timing of a call that can
-  finish in a few hundred microseconds produced a three-flavor curve whose
-  cost *fell* between 64 and 128 slabs per segment, so the timer now
-  autoranges the way `timeit` does.
-
 ### Added
 
-- **`tests/const_density_scan.json`**, the exact reference for the
-  constant-density comparison figure, with GLoBES and Prob3++ on the same
-  150-energy grid.  That figure had been plotting every code's residual
-  against this library's own answer, which made it its own referee; it is
-  now refereed the same way the speed-accuracy plane is, by a 50-digit
-  `mpmath` matrix exponential of the same Hamiltonian.  Against it this
-  library sits at 1e-15, GLoBES at 3e-8, NuFast-LBL at two Newton steps at
-  2e-8, nuSQuIDS at 9e-8, Prob3++ at 3e-5, and the second-order expansion at
-  7e-3.
+- **The electron fraction inside the Earth can now vary with radius.**
+  PREM is a density model and carries no composition, so `Y_e` has to be
+  supplied from elsewhere; taking it as one half everywhere is exactly
+  isoscalar matter, which no part of the Earth is.
+  `earth.electron_fraction_prem` returns `Y_e` at a radius, split at
+  radii PREM already has, with one overridable value per layer:
 
-### Changed
+  | layer  | radius (km)          | `Y_e`  | composition            |
+  |--------|----------------------|--------|------------------------|
+  | core   | `r <= 3480`          | 0.4656 | iron, 26/55.845        |
+  | mantle | `3480 < r <= 6346.6` | 0.4957 | peridotite             |
+  | crust  | `6346.6 < r <= 6368` | 0.4952 | granitic               |
+  | ocean  | `r > 6368`           | 0.5551 | seawater, 10/18.015    |
 
-- **`performance.pdf` gains NuFast-LBL at two Newton steps.**  It had only
-  its default of zero, which is a truncation at 1.5e-5, so the figure was
-  timing that code at an accuracy no other entry was near.  The accurate
-  setting costs 1.14x to 1.38x, measured in alternated pairs: run as two
-  blocks it came out *faster* than the default, which is not something more
-  Newton steps can be, and is the same ordering artefact that turned up
-  between the two four-flavor root strategies.
+  The ocean is the only layer above one half, because hydrogen has
+  `Z/A = 1`.  PREM's ocean is a global average rather than a feature of
+  any one baseline, so a chord to a detector under rock should pass
+  `ocean=` the crust's value.
 
-- **The architecture diagram's middle column is aligned with its
-  neighbours.**  The core box's top now lines up with the two upper boxes
-  and the kernel box with the two lower ones, which is what the arrows
-  describe; the kernel box is also taller, so its second line no longer sits
-  on the border.
+  Every `earth` routine's `electron_fraction` now takes one value for the
+  chord, one per slab, or **a callable of radius** -- pass
+  `electron_fraction_prem` itself.  The callable is the form to prefer,
+  and the only one that works with `rtol` and `atol`: those choose the
+  slab count, so an array built for one subdivision is the wrong length
+  for the next.  `earth.earth_slab_radii` gives a chord's slab radii, in
+  the order `earth.earth_slabs` returns them, for inspecting a profile or
+  building an array at a fixed `n_slabs_per_segment`.  A mismatched array
+  is refused with a message naming the slab count, where before it
+  surfaced as a NumPy broadcast error.
 
-- **The constant-density plane is restyled to match the two Earth ones**, so
-  a code keeps its colour and marker across all three, and shows only this
-  library's batched-plus-kernel point: the other two routes are what the
-  performance figure is for, and here they were three labels on one
-  horizontal line.  Its y-axis reads "vs." rather than "against", and both
-  ends of each swept knob are labelled rather than only one.
-
-- **The architecture diagram's middle two boxes no longer overlap.**  The
-  green box was 5.0 tall for four lines of body, leaving its lower half
-  empty and its rounded corner meeting the orange box's; it is shorter now,
-  with a clear gap, and the orange box's second line is no longer clipped by
-  the axis.
-
-- **The tolerance is now the primary dial in both Earth figures**, with the
-  explicit slab count drawn behind it.  It is the only dial on any curve in
-  those figures where the user states the quantity the vertical axis
-  measures.  The convenience costs about a factor of two: 6.3e-7 takes
-  134 us when the code is told to use 256 slabs and 252 us when it is asked
-  to find that number, since the search evaluates at 1, 2, 4, ... and keeps
-  the last.
-
-- **The tolerance sweep now starts its search at one slab.**
-  `_n_for_tolerance` begins at `n_slabs_per_segment` and only doubles
-  upward, so leaving that at its default of 8 pinned the coarse end of the
-  curve at the accuracy of eight slabs however loose the tolerance: it was a
-  truncated copy of the slab sweep rather than an independent span of it.
-  The two curves are now coextensive, 1 to 1024 slabs either way.
+  **No default changes.**  Every `earth` routine still assumes
+  `ELECTRON_FRACTION_EARTH_CRUST`, one half throughout, so every frozen
+  reference, figure and notebook output is untouched.  The effect when it
+  is asked for is large: over 0.3-30 GeV the median change in
+  `P(nu_mu -> nu_e)` is 61% on a chord through the diameter, 3% through
+  the mantle alone, and 0.7% on a shallow one.  Flipping the default
+  therefore belongs to its own release, together with re-measuring the
+  comparisons against external codes, which are handed a matched
+  potential.
 
 ### Fixed
 
-- **nuSQuIDS was being driven one energy at a time in the Earth figures.**
-  It has a multiple-energy constructor, and the performance figure already
-  used it; the PREM scan did not, and rebuilding the solver twelve times
-  cost it a factor of 1.4 to 1.8 it does not have to pay.  Now fixed, which
-  moves its best point from 894 to 459 us.  nuCraft's `CalcWeights` takes a
-  particle list and is now given one, though that turns out to be worth
-  nothing -- 1.00x and bit-identical, because it loops internally.  GLoBES
-  and Prob3++ expose no batched entry point at all, so looping them is
-  their interface rather than a handicap.
-
-### Changed
-
-- **Both Earth panels now show this library on its other dial.**  As well
-  as an explicit slab count, `rtol` is swept, letting the routine choose
-  the count itself: the same kind of knob nuSQuIDS and nuCraft take, and a
-  fairer thing to compare against them.  It reaches 1024 slabs per segment
-  and 3.9e-8 where the explicit sweep stops at 256 and 6.3e-7.  Below
-  rtol = 1e-5 it cannot be met within `slabs.N_SLABS_MAX`, because rtol is
-  relative and the smallest probability in the stack is 0.026.
-
-- **The figures are recoloured and rearranged.**  `NuOscProbExact` is red
-  across all three, having swapped with `nuCraft`, and carries the same open
-  circle everywhere so that one code is followed by eye between the
-  constant-density and Earth planes.  The Earth panels' y-axis label now fits
-  on one line.  The four-flavor panel draws one curve rather than two: both
-  root strategies are still measured and frozen, but they agree to the last
-  bit and cost the same to within 0.4%, so two labels sat on one line.
-
-- **`performance.pdf` gains `GLoBES` and `Prob3++`, and `nuSQuIDS` reaches
-  30 000 energies.**  It also drops to two curves for this library, the
-  compiled kernel and one point at a time, with the plain array path between
-  them left out; and the legend moves above the panel in two columns to make
-  room.  The new codes are flat lines, which is the point: none of the four
-  external codes has a batched entry point over energies, and `nuSQuIDS`'
-  multiple-energy mode amortises building the solver rather than the
-  integration.  `nuCraft` is not there because it has no constant-density
-  mode to time.
-
-- **`nuCraft` now appears in the 3+1 Earth panel**, flat at 2.8e-3.  It was
-  left out on the grounds that publishing that floor would misrepresent its
-  solver; drawn with a caption that says where the floor comes from -- two
-  independently rounded constants whose ratio is 0.5016 against an exact
-  0.5 -- it misrepresents nothing, and it is what a user of released nuCraft
-  gets.
+- **The mean nucleon mass now follows the electron fraction.**  Both
+  matter potentials divided the density by `(m_p + m_n)/2`, the
+  isoscalar mass, which is the mass per nucleon only when `Y_e = 1/2`.
+  With `Y_e` free that described matter neutron-rich in its charge and
+  isoscalar in its mass at once.  It is now `Y_e m_p + (1 - Y_e) m_n`,
+  which at one half is `(m_p + m_n)/2` bit for bit, so nothing computed
+  at the default moves; away from it the shift is 5e-5 in relative terms
+  at the core's `Y_e`, carried for consistency rather than for its size.
 
 ## [1.13.1] - 2026-08-09
 

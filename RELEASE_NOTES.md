@@ -173,6 +173,31 @@ a change.
 - **The convergence order of the slab product was being quoted as first.** It is second, which
   is what the midpoint sampling gives.
 
+## Coming in a future release: the Earth's electron fraction
+
+**The default `electron_fraction` will change from 0.5 to per-layer values.** It is announced
+here so that it is not discovered later.
+
+PREM is a density model and carries no composition, so `Y_e` has to be supplied. Every `earth`
+routine takes one half throughout, which is exactly isoscalar matter — and no layer of the
+Earth is. The values that belong to the material of each layer are now in the code, and
+`earth.electron_fraction_prem` returns them by radius: **0.4656** in the core (iron),
+**0.4957** in the mantle (peridotite), **0.4952** in the crust (granitic), and **0.5551** in
+the ocean (seawater, above one half because hydrogen has `Z/A = 1`). Every routine's
+`electron_fraction` argument now accepts a callable of radius, so passing
+`earth.electron_fraction_prem` itself is all it takes -- and that is the form that works
+alongside `rtol` and `atol`, which choose the slab count for you.
+
+**Nothing changes yet.** One half remains the default, so every result in this release is what
+it was. The change is deferred because it is not small: over 0.3–30 GeV the median change in
+`P(νμ→νe)` is **61% through the diameter, 3% through the mantle alone, and 0.7% on a shallow
+chord**, and flipping it also means re-measuring the comparisons against external codes, which
+are handed a matched potential.
+
+**What to do about it.** If you want the layered values now, build the array as above. If you
+want today's numbers to survive the change, pass `electron_fraction=0.5` explicitly; that will
+keep working and will mean the same thing before and after.
+
 ## The paper now travels with the code
 
 `resources/paper/` carries the source of the Computer Physics Communications article that
