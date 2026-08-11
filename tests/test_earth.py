@@ -808,32 +808,85 @@ def test_antineutrinos_reach_the_compiled_four_flavor_kernel():
 # Electron fraction inside the Earth
 ###############################################################################
 
-def test_electron_fraction_prem_splits_at_the_core_mantle_boundary():
-    r"""Core below 3480 km, mantle above, and the boundary is mantle."""
-    cmb = earth.PREM_BOUNDARIES[1]
-    assert earth.electron_fraction_prem(cmb - 1.0) \
+def test_electron_fraction_prem_gives_each_layer_its_own_value():
+    r"""Four layers, split at radii PREM already has."""
+    assert earth.electron_fraction_prem(1000.0) \
         == gd.ELECTRON_FRACTION_EARTH_CORE
-    assert earth.electron_fraction_prem(cmb) \
+    assert earth.electron_fraction_prem(5000.0) \
         == gd.ELECTRON_FRACTION_EARTH_MANTLE
-    assert earth.electron_fraction_prem(cmb + 1.0) \
-        == gd.ELECTRON_FRACTION_EARTH_MANTLE
+    assert earth.electron_fraction_prem(6350.0) \
+        == gd.ELECTRON_FRACTION_EARTH_CRUST_LAYER
+    assert earth.electron_fraction_prem(6370.0) \
+        == gd.ELECTRON_FRACTION_EARTH_OCEAN
 
 
-def test_electron_fraction_prem_keeps_the_shape_it_is_given():
-    r"""Scalar in, scalar out; array in, array of the same shape out."""
-    assert isinstance(earth.electron_fraction_prem(6000.0), float)
-    fractions = earth.electron_fraction_prem([1000.0, 6000.0, 3000.0])
-    assert fractions.shape == (3,)
-    assert np.array_equal(
-        fractions, [gd.ELECTRON_FRACTION_EARTH_CORE,
-                    gd.ELECTRON_FRACTION_EARTH_MANTLE,
-                    gd.ELECTRON_FRACTION_EARTH_CORE])
+@pytest.mark.parametrize('index, below, above', [
+    (1, gd.ELECTRON_FRACTION_EARTH_CORE, gd.ELECTRON_FRACTION_EARTH_MANTLE),
+    (6, gd.ELECTRON_FRACTION_EARTH_MANTLE,
+     gd.ELECTRON_FRACTION_EARTH_CRUST_LAYER),
+    (8, gd.ELECTRON_FRACTION_EARTH_CRUST_LAYER,
+     gd.ELECTRON_FRACTION_EARTH_OCEAN),
+])
+def test_each_boundary_belongs_to_the_layer_below_it(index, below, above):
+    r"""As `density_prem` treats them, so a radius on one agrees."""
+    edge = earth.PREM_BOUNDARIES[index]
+    assert earth.electron_fraction_prem(edge) == below
+    assert earth.electron_fraction_prem(edge + 1.0e-6) == above
 
 
-def test_electron_fraction_prem_takes_both_values_from_the_caller():
-    r"""Neither value is baked in."""
-    assert earth.electron_fraction_prem(6000.0, mantle=0.49, core=0.47) == 0.49
-    assert earth.electron_fraction_prem(1000.0, mantle=0.49, core=0.47) == 0.47
+def test_the_ocean_is_the_only_layer_above_one_half():
+    r"""Hydrogen has Z/A = 1, and nothing else in the Earth does."""
+    assert gd.ELECTRON_FRACTION_EARTH_OCEAN > 0.5
+    for fraction in (gd.ELECTRON_FRACTION_EARTH_CORE,
+                     gd.ELECTRON_FRACTION_EARTH_MANTLE,
+                     gd.ELECTRON_FRACTION_EARTH_CRUST_LAYER):
+        assert fraction < 0.5
+
+
+def test_the_layer_values_are_the_compositions_they_claim():
+    r"""Iron for the core, seawater for the ocean, to four places."""
+    assert gd.ELECTRON_FRACTION_EARTH_CORE == round(26.0/55.845, 4)
+    assert gd.ELECTRON_FRACTION_EARTH_OCEAN == round(10.0/18.015, 4)
+
+
+def test_electron_fraction_prem_takes_every_value_from_the_caller():
+    r"""No layer's value is baked in.
+
+    The ocean matters most: PREM's is a global average, and a chord to a
+    detector under rock crosses none of it, so that caller has to be
+    able to spell it as crust.
+    """
+    assert earth.electron_fraction_prem(6000.0, mantle=0.49) == 0.49
+    assert earth.electron_fraction_prem(1000.0, core=0.47) == 0.47
+    assert earth.electron_fraction_prem(6350.0, crust=0.48) == 0.48
+    assert earth.electron_fraction_prem(6370.0, ocean=0.48) == 0.48
+
+
+def test_the_mean_nucleon_mass_follows_the_electron_fraction():
+    r"""Y_e and the neutron fraction are one quantity, not two.
+
+    Varying Y_e while holding the mass at the isoscalar value describes
+    matter that is neutron-rich in its charge and isoscalar in its mass
+    at once.  At one half the two agree bit for bit, which is what keeps
+    every default untouched.
+    """
+    isoscalar = (gd.MASS_PROTON + gd.MASS_NEUTRON)/2.0
+
+    assert earth._mean_nucleon_mass(0.5) == isoscalar
+    assert earth._mean_nucleon_mass(0.0) == gd.MASS_NEUTRON
+    assert earth._mean_nucleon_mass(1.0) == gd.MASS_PROTON
+    # Neutron-richer matter is heavier per nucleon, so a fixed density
+    # holds fewer nucleons, and the potential falls.
+    assert earth._mean_nucleon_mass(
+        gd.ELECTRON_FRACTION_EARTH_CORE) > isoscalar
+    assert earth.matter_potential(
+        3.0, gd.ELECTRON_FRACTION_EARTH_CORE) < earth.matter_potential(3.0)
+
+
+def test_the_uniform_potential_is_untouched_by_the_mass_change():
+    r"""Everything frozen rests on this."""
+    assert earth.matter_potential(3.0) == gd.VCC_EARTH_CRUST
+    assert earth.matter_potential_nc(3.0) == gd.VNC_EARTH_CRUST
 
 
 @pytest.mark.parametrize('costhz', [-1.0, -0.9, -0.84, -0.3])
@@ -862,10 +915,10 @@ def test_the_default_earth_probabilities_do_not_move():
     the same thing out.
     """
     h = h_vacuum_3nu()
+    half = gd.ELECTRON_FRACTION_EARTH_CRUST
     uniform = earth.electron_fraction_prem(
         earth.earth_slab_radii(-0.9, 4),
-        mantle=gd.ELECTRON_FRACTION_EARTH_CRUST,
-        core=gd.ELECTRON_FRACTION_EARTH_CRUST)
+        core=half, mantle=half, crust=half, ocean=half)
 
     assert np.allclose(
         earth.probabilities_3nu_earth(h, 1.0e9, -0.9, n_slabs_per_segment=4),

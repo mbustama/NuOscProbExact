@@ -254,24 +254,63 @@ def coordinates_of_named_location(
     return entry['lat'], entry['lon']
 
 
+def _mean_nucleon_mass(
+    electron_fraction: Union[int, float, np.ndarray]
+) -> Union[float, np.ndarray]:
+    r"""Returns the mean nucleon mass for an electron fraction.
+
+    :math:`\bar{m} = Y_e m_p + (1 - Y_e) m_n`, which is the mass per
+    nucleon of matter with :math:`Y_e` electrons per nucleon.  It is not
+    a free quantity: the neutron fraction is :math:`1 - Y_e`, so a
+    caller who varies :math:`Y_e` and leaves the mass alone is
+    describing matter that is neutron-rich in its charge and isoscalar
+    in its mass at once.
+
+    At :math:`Y_e = 1/2` this is :math:`(m_p + m_n)/2` bit for bit,
+    which is what the routines here used before they took a varying
+    :math:`Y_e`, so nothing computed at one half moves.  Away from it
+    the shift is small --- :math:`5 \cdot 10^{-5}` in relative terms at
+    the core's :math:`Y_e` --- and it is carried for consistency rather
+    than for its size.
+
+    Parameters
+    ----------
+    electron_fraction : int, float or numpy.ndarray
+        Electrons per nucleon.
+
+    Returns
+    -------
+    float or numpy.ndarray
+        The mean nucleon mass, in units of eV.
+    """
+    return (electron_fraction*gd.MASS_PROTON
+            + (1.0 - electron_fraction)*gd.MASS_NEUTRON)
+
+
 def electron_fraction_prem(
     r: Union[int, float, list, np.ndarray],
+    core: float = gd.ELECTRON_FRACTION_EARTH_CORE,
     mantle: float = gd.ELECTRON_FRACTION_EARTH_MANTLE,
-    core: float = gd.ELECTRON_FRACTION_EARTH_CORE
+    crust: float = gd.ELECTRON_FRACTION_EARTH_CRUST_LAYER,
+    ocean: float = gd.ELECTRON_FRACTION_EARTH_OCEAN
 ) -> Union[float, np.ndarray]:
     r"""Returns the electron fraction inside the Earth, by radius.
 
     The companion to `density_prem`: that one gives :math:`\rho`, this
-    one gives :math:`Y_e`, and `matter_potential` needs both.  PREM
-    fixes the density but not the composition, so the two values here
-    come from a compositional model rather than from PREM, and either
-    may be overridden.
+    one gives :math:`Y_e`, and `matter_potential` needs both.  PREM is a
+    density model and carries no composition, so the four values here
+    come from the material of each layer rather than from PREM, and any
+    of them may be overridden.  Assuming one half throughout instead is
+    exactly isoscalar matter, which no part of the Earth is.
 
-    The split is at the core-mantle boundary, ``PREM_BOUNDARIES[1]``,
-    which is $3480$ km: below it the iron-nickel core, above it the
-    silicate mantle and the crust above that.  The crust is treated as
-    mantle, which matters little --- it is thin, and a neutrino spends
-    almost none of a chord in it.
+    The three splits are radii PREM already has, in
+    ``PREM_BOUNDARIES``: :math:`3480` km for the core, :math:`6346.6`
+    km for the mantle, and :math:`6368` km for the crust, with the
+    ocean above that.
+
+    PREM's ocean is a global average rather than a feature of any one
+    baseline: a neutrino arriving at a detector under rock crosses none
+    of it.  For a land chord, pass ``ocean=`` the crust's value.
 
     Nothing calls this by default.  The Earth routines assume
     `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`, one half throughout,
@@ -282,12 +321,18 @@ def electron_fraction_prem(
     ----------
     r : int, float, list or numpy.ndarray
         Radial distance from the center of the Earth, in units of km.
-    mantle : float, optional
-        Electron fraction above the core-mantle boundary.  Default:
-        `globaldefs.ELECTRON_FRACTION_EARTH_MANTLE`.
     core : float, optional
-        Electron fraction below it.  Default:
+        Electron fraction at :math:`r \leq 3480` km.  Default:
         `globaldefs.ELECTRON_FRACTION_EARTH_CORE`.
+    mantle : float, optional
+        Electron fraction at :math:`3480 < r \leq 6346.6` km.  Default:
+        `globaldefs.ELECTRON_FRACTION_EARTH_MANTLE`.
+    crust : float, optional
+        Electron fraction at :math:`6346.6 < r \leq 6368` km.  Default:
+        `globaldefs.ELECTRON_FRACTION_EARTH_CRUST_LAYER`.
+    ocean : float, optional
+        Electron fraction at :math:`r > 6368` km.  Default:
+        `globaldefs.ELECTRON_FRACTION_EARTH_OCEAN`.
 
     Returns
     -------
@@ -300,15 +345,21 @@ def electron_fraction_prem(
 
         import earth
 
-        print('%.4f' % earth.electron_fraction_prem(6000.0))
-        print('%.4f' % earth.electron_fraction_prem(1000.0))
+        for radius in [1000.0, 6000.0, 6350.0, 6370.0]:
+            print('%.4f' % earth.electron_fraction_prem(radius))
     """
     scalar_input = (np.ndim(r) == 0)
     r = np.asarray(r, dtype=float)
 
-    # A select rather than a branch, so that the batched path stays
-    # branch-free, as everything else along it is.
-    fraction = np.where(r < PREM_BOUNDARIES[1], float(core), float(mantle))
+    # Selects rather than branches, so that the batched path stays
+    # branch-free, as everything else along it is.  The boundaries are
+    # taken as belonging to the layer above, so that a radius exactly on
+    # one gets the same answer `density_prem` gives it.
+    fraction = np.where(
+        r <= PREM_BOUNDARIES[1], float(core),
+        np.where(r <= PREM_BOUNDARIES[6], float(mantle),
+                 np.where(r <= PREM_BOUNDARIES[8], float(crust),
+                          float(ocean))))
 
     return float(fraction) if scalar_input else fraction
 
@@ -468,7 +519,7 @@ def matter_potential(
     # Electron number density in eV^3, by the same route as
     # globaldefs.NUM_DENSITY_E_EARTH_CRUST
     num_density_e = (density*gd.CONV_G_TO_EV
-                     / ((gd.MASS_PROTON+gd.MASS_NEUTRON)/2.0)
+                     / _mean_nucleon_mass(electron_fraction)
                      * electron_fraction
                      / pow(gd.CONV_CM_TO_INV_EV, 3.0))
     potential = np.sqrt(2.0)*gd.GF*num_density_e
@@ -532,7 +583,7 @@ def matter_potential_nc(
     # Neutron number density in eV^3, by the same route as the electron
     # one in `matter_potential`
     num_density_n = (density*gd.CONV_G_TO_EV
-                     / ((gd.MASS_PROTON+gd.MASS_NEUTRON)/2.0)
+                     / _mean_nucleon_mass(electron_fraction)
                      * neutron_fraction
                      / pow(gd.CONV_CM_TO_INV_EV, 3.0))
     potential = -gd.GF*num_density_n/np.sqrt(2.0)
