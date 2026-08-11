@@ -1033,3 +1033,43 @@ def test_a_callable_electron_fraction_reaches_an_oscillogram():
             h, energies, costhz, n_slabs_per_segment=4,
             electron_fraction=earth.electron_fraction_prem)
         assert np.array_equal(grid[i], row)
+
+
+def test_electron_fraction_prem_refuses_radii_outside_the_earth():
+    r"""As `density_prem` does, so the companions cannot disagree.
+
+    Out of range it would otherwise return the core's value or the
+    ocean's, and say nothing.
+    """
+    with pytest.raises(ValueError, match='cannot be negative'):
+        earth.electron_fraction_prem(-1.0)
+    with pytest.raises(ValueError, match='cannot exceed'):
+        earth.electron_fraction_prem(gd.EARTH_RADIUS + 1.0)
+    with pytest.raises(ValueError, match='cannot exceed'):
+        earth.electron_fraction_prem([1000.0, gd.EARTH_RADIUS + 1.0])
+
+    # The ends of a chord sit just inside, and must not trip it
+    earth.electron_fraction_prem([0.0, gd.EARTH_RADIUS])
+
+
+@pytest.mark.parametrize('costhz', [-1.0, -0.5, -0.01])
+@pytest.mark.parametrize('n_slabs_per_segment', [1, 8])
+def test_slab_radii_stay_inside_the_earth(costhz, n_slabs_per_segment):
+    r"""So that the callable form never trips the check above."""
+    radii = earth.earth_slab_radii(costhz, n_slabs_per_segment)
+
+    assert radii.min() >= 0.0
+    assert radii.max() <= gd.EARTH_RADIUS
+    earth.electron_fraction_prem(radii)
+
+
+def test_a_callable_electron_fraction_reaches_between_locations():
+    r"""The slab count there comes from the two place names."""
+    h = h_vacuum_3nu()
+    first, second = sorted(earth.LOC_COORDS_DMS)[:2]
+
+    for keywords in ({'n_slabs_per_segment': 4}, {'atol': 1.0e-5}):
+        probabilities = earth.probabilities_3nu_between_locations(
+            h, 2.0e9, first, second,
+            electron_fraction=earth.electron_fraction_prem, **keywords)
+        assert np.all(np.isfinite(probabilities))

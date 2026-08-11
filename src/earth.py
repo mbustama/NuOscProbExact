@@ -414,6 +414,18 @@ def electron_fraction_prem(
     scalar_input = (np.ndim(r) == 0)
     r = np.asarray(r, dtype=float)
 
+    # Refused for the same radii `density_prem` refuses, so that the two
+    # companions cannot disagree about what is inside the Earth.  A
+    # radius out of range would otherwise pick up the core's value or
+    # the ocean's and say nothing.
+    if np.any(r < 0.0):
+        raise ValueError('electron_fraction_prem: radial distance cannot '
+                         'be negative')
+    if np.any(r > gd.EARTH_RADIUS):
+        raise ValueError(
+            'electron_fraction_prem: radial distance cannot exceed the '
+            'radius of the Earth, %g km' % gd.EARTH_RADIUS)
+
     # Selects rather than branches, so that the batched path stays
     # branch-free, as everything else along it is.  The boundaries are
     # taken as belonging to the layer above, so that a radius exactly on
@@ -618,12 +630,20 @@ def matter_potential_nc(
     density : int, float, list or numpy.ndarray
         Matter density, in units of g cm\ :sup:`-3`.
     neutron_fraction : float, optional
-        Neutrons per nucleon.  Default: ``1 - electron_fraction``, the
-        isoscalar value, since a nucleon is either a proton --- matched
-        by an electron --- or a neutron.
+        Neutrons per nucleon.  Default: ``1 - electron_fraction``, since
+        a nucleon is either a proton --- matched by an electron --- or a
+        neutron, so for ordinary matter the two are one quantity and not
+        two.  Giving a value that is not the complement is therefore
+        describing something other than protons and neutrons, and is
+        accepted rather than refused only because it is occasionally
+        useful for testing sensitivity; the mean nucleon mass still
+        follows `electron_fraction`, so the two are mixed in that case.
+        The `earth` chord routines never pass this, and so always derive
+        it.
     electron_fraction : int, float or numpy.ndarray, optional
-        Electrons per nucleon, one value or one per density, used only
-        to derive `neutron_fraction` when that is not given.  Default:
+        Electrons per nucleon, one value or one per density.  Sets the
+        mean nucleon mass, and derives `neutron_fraction` when that is
+        not given.  Default:
         `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`.
 
     Returns
