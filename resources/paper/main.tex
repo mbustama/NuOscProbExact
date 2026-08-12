@@ -816,9 +816,9 @@ At four flavors, where a 3+1 spectrum crowds three roots together and $g^{-(r-1)
 
 Listing\ \ref{lst:3nu_examples} shows a basic code example of how to use {\tt NuOscProbExact} to compute three-neutrino probabilities in four representative oscillation scenarios: in vacuum, in matter of constant density, with non-standard interactions in matter, and with Lorentz invariance violation.  Bundled with the code we provide further examples, also for two-neutrino oscillations.
 
-Below, we introduce each of them briefly; we do not explore their phenomenology, but we provide references.  Following our tenet, we do not derive analytic expressions for the probabilities, only numerically evaluate them.
+Below, we introduce each of them briefly, with references for the phenomenology we do not explore.  As Section \ref{sec:scope} states, we derive no analytic expression for any of them; each is evaluated numerically, from its Hamiltonian.
 
-Four other subsections go beyond them: antineutrinos, which need no separate construction; matter of piecewise constant density and the profile of Earth; a 3+1 sterile system, which needs four flavors; and a Hamiltonian of the reader's own, for which no specialized expression exists in any of the codes of Section \ref{sec:comparison}.  The first needs no new construction, only the two operations of \equ{antineutrino}, whose effect on the probabilities is the exchange of Section \ref{sec:conjugation}; the next two extend the reach of the method, to matter that varies along the trajectory and to a fourth flavor; and the last is what the code was built for.  The batched evaluation draws each of their figures in a single call.  Every figure in this paper that shows computed probabilities --- Figures \ref{fig:validation}, \ref{fig:prob_3nu}, \ref{fig:earth_oscillogram}, \ref{fig:density_arrangement}, \ref{fig:sterile_earth}, \ref{fig:lri_earth}, \ref{fig:exact_vs_approx}, and \ref{fig:prob_2nu} --- comes from one notebook in the repository, {\tt notebooks/10\_paper\_figures.ipynb}.
+We also go beyond those four scenarios: antineutrinos, which need no new construction, only the two operations of \equ{antineutrino}; matter of piecewise constant density and the profile of Earth, and a 3+1 sterile system, which extend the method's reach to matter that varies along the trajectory and to a fourth flavor; and a Hamiltonian of the reader's own, which is what the code was built for and for which no specialized expression exists in any of the codes of Section \ref{sec:comparison}.  Every figure in this paper that shows computed probabilities comes from one notebook in the repository, {\tt notebooks/10\_paper\_figures.ipynb}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -911,7 +911,7 @@ for h_matrix in [h_vacuum, h_matter, h_nsi, h_liv]:
 
 Figure \ref{fig:prob_3nu} shows the probabilities $P_{\nu_e \to \nu_e}$, $P_{\nu_\mu \to \nu_e}$, and $P_{\nu_\mu \to \nu_\mu}$ for the four scenarios, as a function of neutrino energy, computed using {\tt NuOscProbExact}\ \cite{NuOscProbExact}.  We set the baseline to $L = 1300$~km to match that of the far detector of the planned DUNE experiment\ \cite{Abi:2018dnh}.  The parameters and their values used in each example case are introduced below.  All of the Hamiltonians below are written in the flavor basis.
 
-\ref{app:sample_2nu_hamiltonians} shows the two-neutrino counterparts of the example three-neutrino scenarios presented below.  We provide implementations of these two-neutrino scenarios as part of {\tt NuOscProbExact}\ \cite{NuOscProbExact}.  
+\ref{app:sample_2nu_hamiltonians} shows the two- and four-flavor counterparts of the example three-neutrino scenarios presented below.  We provide implementations of all these scenarios as part of {\tt NuOscProbExact}\ \cite{NuOscProbExact}.  
 
 
 \subsection{Oscillations in vacuum}
@@ -923,7 +923,7 @@ The Hamiltonian that drives oscillations in vacuum is
  = 
  \frac{1}{2E} \left( \mathbb{R}_{3,\theta} \mathbb{M}_3^2 \mathbb{R}_{3,\theta}^\dagger \right) \;,
 \end{equation}
-where $\mathbb{M}_3^2 \equiv {\rm diag}(0, \Delta m_{21}^2, \Delta m_{31}^2)$ is the mass-squared matrix, with $\Delta m_{21}^2 \equiv m_2^2-m_1^2$ and $\Delta m_{31}^2 \equiv m_3^2-m_1^2$, and the $3 \times 3$ complex rotation matrix $\mathbb{R}_{3,\theta}$ is the Pontecorvo-Maki-Nakagawa-Sakata (PMNS) mixing matrix.  We express it in terms of three mixing angles, $\theta_{13}$, $\theta_{12}$, $\theta_{23}$, and one CP-violation phase, $\delta_{\rm CP}$\ \cite{Tanabashi:2018oca}.  Conventions differ between codes, and are the commonest source of disagreement between them, so we write ours out.  With $c_{ij} \equiv \cos\theta_{ij}$ and $s_{ij} \equiv \sin\theta_{ij}$, and $\delta \equiv \delta_{\rm CP}$,
+where $\mathbb{M}_3^2 \equiv {\rm diag}(0, \Delta m_{21}^2, \Delta m_{31}^2)$ is the mass-squared matrix, with $\Delta m_{21}^2 \equiv m_2^2-m_1^2$ and $\Delta m_{31}^2 \equiv m_3^2-m_1^2$, and the $3 \times 3$ complex rotation matrix $\mathbb{R}_{3,\theta}$ is the Pontecorvo-Maki-Nakagawa-Sakata (PMNS) mixing matrix.  We express it in terms of three mixing angles, $\theta_{13}$, $\theta_{12}$, $\theta_{23}$, and one CP-violation phase, $\delta_{\rm CP}$.  Conventions may differ between codes, so we write ours out.  With $c_{ij} \equiv \cos\theta_{ij}$ and $s_{ij} \equiv \sin\theta_{ij}$, and $\delta \equiv \delta_{\rm CP}$,
 \begin{equation}
  \label{equ:pmns}
  \mathbb{R}_{3,\theta}
@@ -939,7 +939,7 @@ where $\mathbb{M}_3^2 \equiv {\rm diag}(0, \Delta m_{21}^2, \Delta m_{31}^2)$ is
 \end{equation}
 which is the standard parametrization of \Ref\ \cite{Tanabashi:2018oca}.  The routines take $\sin\theta_{ij}$ rather than $\theta_{ij}$, which is the other convention to state: a value passed as an angle where a sine is expected is a silent error, not a loud one.  One piece of bookkeeping goes with them, since Listing\ \ref{lst:3nu_examples} relies on it: what {\tt hamiltonian\_3nu\_vacuum\_energy\_independent} returns is $\tfrac{1}{2} \mathbb{R}_{3,\theta} \mathbb{M}_3^2 \mathbb{R}_{3,\theta}^\dagger$, with the factor of $\tfrac{1}{2}$ in \equ{h3_vacuum} already folded in, which is why the listing divides it by $E$ and not by $2E$.
 
-To compute the probabilities in \figu{prob_3nu}, we fix the mixing parameters to their best-fit values provided by the recent NuFit 4.0 global fit to oscillation data\ \cite{Esteban:2018azc, NuFit4.0}, assuming normal mass hierarchy, and including Super-Kamiokande atmospheric neutrino data: $\sin^2 \theta_{12} = 0.310$, $\sin^2 \theta_{23} = 0.582$, $\sin^2 \theta_{13} = 0.02240$, $\delta_{\rm CP} = 217^\circ$, $\Delta m_{21}^2 = 7.39 \cdot 10^{-5}$~eV$^2$, $\Delta m_{31}^2 = 2.525 \cdot 10^{-3}$~eV$^2$.  Global fits have since moved on, but the default values carried by the code remain pinned to NuFit 4.0, so that the figures and examples in this paper stay reproducible.  Users are expected to supply current values for their own analyses.
+To compute the probabilities in \figu{prob_3nu}, we fix the mixing parameters to their best-fit values from the NuFit 4.0 global fit to oscillation data\ \cite{Esteban:2018azc, NuFit4.0}, assuming normal mass hierarchy, and including Super-Kamiokande atmospheric neutrino data: $\sin^2 \theta_{12} = 0.310$, $\sin^2 \theta_{23} = 0.582$, $\sin^2 \theta_{13} = 0.02240$, $\delta_{\rm CP} = 217^\circ$, $\Delta m_{21}^2 = 7.39 \cdot 10^{-5}$~eV$^2$, $\Delta m_{31}^2 = 2.525 \cdot 10^{-3}$~eV$^2$.  Global fits have since moved on, but the default values carried by the code remain pinned to NuFit 4.0, so that the figures and examples in this paper stay reproducible.  Users are expected to supply current values for their own analyses.
 
 
 \subsection{Oscillations in matter of constant density}
@@ -955,7 +955,7 @@ The Hamiltonian that drives oscillations in matter is
 \end{equation}
 The term $\mathbb{A}_3 \equiv {\rm diag}(V_{\rm CC}, 0 ,0)$ is due to interactions with matter, where $V_{\rm CC} = \sqrt{2} G_{\rm F} n_e$ is the charged-current potential and $n_e$ is the number density of electrons.
 
-To compute the probabilities for oscillations in matter (and also with non-standard interactions) in \figu{prob_3nu}, we consider a constant matter density of $\rho = 3$~g~cm$^{-3}$, the average density of the crust of the Earth\ \cite{Dziewonski:1981xy}.  The number density of electrons is $n_e = Y_e \rho / [(m_p + m_n)/2]$, where $m_p$ and $m_n$ are the masses of the proton and neutron, respectively, and $Y_e = 0.5$ is the average electron fraction in the crust, which is electrically neutral.\footnote{Dividing by the mean free-nucleon mass, rather than by the atomic mass unit, neglects the binding energy of nucleons inside nuclei.  This undercounts $n_e$, and hence $V_{\rm CC}$, by about $0.8\%$.  The code does the same, so that it matches the expression above; the effect is far below the precision at issue in the examples here, but it should be known before the code is used where that level of accuracy matters.}  See \Refs\ \cite{Ohlsson:1999xb, Ohlsson:1999um} for the analytic form of the probabilities in matter, deduced with the OS method, and \Ref\ \cite{Freund:2001pn} for a related approximation.  In long-baseline experiments, even if there are density changes along the trajectory of the neutrino beam, using the average density is a good approximation\ \cite{Petcov:1998su, Freund:1999gy}.  
+To compute the probabilities for oscillations in matter (and also with non-standard interactions) in \figu{prob_3nu}, we consider a constant matter density of $\rho = 3$~g~cm$^{-3}$, the average density of the crust of the Earth\ \cite{Dziewonski:1981xy}.  The number density of electrons is $n_e = Y_e \rho / \bar{m}$, with $\bar{m} = Y_e m_p + (1 - Y_e) m_n$ the mean nucleon mass, $m_p$ and $m_n$ the masses of the proton and neutron, and $Y_e$ the electron fraction.  Here $Y_e = 0.5$, isoscalar matter, for which $\bar{m}$ is $(m_p+m_n)/2$.\footnote{Dividing by a free-nucleon mass, rather than by the atomic mass unit, neglects the binding energy of nucleons inside nuclei.  This undercounts $n_e$, and hence $V_{\rm CC}$, by about $0.8\%$.  The code does the same, so that it matches the expression above; the effect is far below the precision at issue in the examples here, but it should be known before the code is used where that level of accuracy matters.}  See \Refs\ \cite{Ohlsson:1999xb, Ohlsson:1999um} for the analytic form of the probabilities in matter, deduced with the OS method, and \Ref\ \cite{Freund:2001pn} for a related approximation.  In long-baseline experiments, even if there are density changes along the trajectory of the neutrino beam, using the average density is a good approximation\ \cite{Petcov:1998su, Freund:1999gy}.  
 
 
 \subsection{Oscillations with non-standard interactions}
@@ -997,7 +997,44 @@ Antineutrinos need no separate construction: conjugating the vacuum term and rev
  =
  \left[\mathbb{H}^{\rm vac}\right]^\ast - \mathbb{A} - \mathbb{V} \;,
 \end{equation}
-gives a Hamiltonian that \equ{sylvester} then treats like any other.  The two operations do different work and both are needed; applying only one is the commonest error in this kind of calculation.  The conjugation reverses the sign of $\delta_{\rm CP}$, and with it every $T$-odd term --- its effect on the probabilities is the transposition of \equ{conjugation}, so in vacuum, where it is the whole of the story, no new calculation is required.  The reversal of $\mathbb{A}$ and $\mathbb{V}$ is what makes the matter resonance appear for one sign of $\Delta m_{31}^2$ in neutrinos and the other in antineutrinos; it changes the spectrum, so in matter the Hamiltonian of \equ{antineutrino} has to be built and expanded in its own right.  For a Hamiltonian the user supplies, that is the user's job, and \equ{antineutrino} is the whole of the recipe.  For the standard scenarios the routines build themselves --- including a chord through Earth, where the potential varies from slab to slab, and where a fourth flavor adds a second potential to reverse --- the {\tt earth} routines take an {\tt antineutrino} argument that does it, which is what Listing\ \ref{lst:figures} uses.
+gives a Hamiltonian that \equ{sylvester} then treats like any other.  The two operations do different work and both are needed; applying only one is the commonest error in this kind of calculation.  The conjugation reverses the sign of $\delta_{\rm CP}$, and with it every $T$-odd term --- its effect on the probabilities is the transposition of \equ{conjugation}, so in vacuum, where it is the whole of the story, no new calculation is required.  The reversal of $\mathbb{A}$ and $\mathbb{V}$ is what makes the matter resonance appear for one sign of $\Delta m_{31}^2$ in neutrinos and the other in antineutrinos; it changes the spectrum, so in matter the Hamiltonian of \equ{antineutrino} has to be built and expanded in its own right.  For a Hamiltonian the user supplies, that is the user's job, and \equ{antineutrino} is the whole of the recipe.  For the standard scenarios the routines build themselves --- including a chord through Earth, where the potential varies from slab to slab, and where a fourth flavor adds a second potential to reverse --- the {\tt earth} routines take an {\tt antineutrino} argument that does it.
+
+Listing\ \ref{lst:antineutrinos} shows both routes: the flag, and the two operations written out for a Hamiltonian of one's own.  The cost of applying only one of them is not subtle.  At $L = 1300$~km in the crust and $E = 2.5$~GeV, $P_{\nu_\mu \to \nu_e}$ is $0.087$ for neutrinos and $0.024$ for antineutrinos; conjugating the vacuum term but leaving the potential alone gives $0.069$, which is neither, and is wrong by a factor of three.  Notebook 13 in the repository works through both ways of getting it half right.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{lstlisting}[language=Python, caption={Antineutrinos, by either route.  For the scenarios the code builds itself, {\tt antineutrino=True} conjugates the vacuum term and reverses every potential, slab by slab along a chord and for both potentials when a fourth flavor is present.  For a Hamiltonian the user supplies, \equ{antineutrino} is written out instead; both of its operations are needed, and the text gives the cost of doing one.}, label={lst:antineutrinos}, float=t]
+import numpy as np
+
+import earth
+import hamiltonians3nu
+import oscprob3nu
+from globaldefs import *
+
+energy = 2.5e9   # Neutrino energy [eV]
+costhz = -0.8    # Arrival direction, through the mantle
+
+h_vac = hamiltonians3nu.\
+    hamiltonian_3nu_vacuum_energy_independent(
+        S12_NO_BF, S23_NO_BF,
+        S13_NO_BF, DCP_NO_BF,
+        D21_NO_BF, D31_NO_BF)
+
+# The scenarios the code builds itself: one argument
+p_nu = earth.probabilities_3nu_earth(
+    h_vac, energy, costhz)
+p_nubar = earth.probabilities_3nu_earth(
+    h_vac, energy, costhz, antineutrino=True)
+
+# A Hamiltonian of your own: conjugate the vacuum term
+# *and* reverse every potential.  Doing only the first
+# is the error the main text prices
+h_nubar = np.conj(h_vac)/energy \
+    - np.diag([VCC_EARTH_CRUST, 0., 0.])
+q_nubar = oscprob3nu.probabilities_3nu(
+    h_nubar, 1300.*CONV_KM_TO_INV_EV)
+\end{lstlisting}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 \subsection{Oscillations in a Lorentz-violating background}
 
@@ -1016,7 +1053,7 @@ The Hamiltonian for CPT-odd LIV is\ \cite{Coleman:1998ti, Kostelecky:2003xn, Dig
 The second term on the right-hand side is the effective Hamiltonian that introduces LIV.  Here, $\mathbb{B}_3 \equiv {\rm diag}(b_1, b_2, b_3)$, where $b_i$ ($i=1,2,3$) are the eigenvalues of the LIV operator $\mathbb{B}_3$, and $\mathbb{R}_{3,\xi}$ is the $3 \times 3$ mixing matrix that rotates it into the flavor basis.  It has the same structure as the PMNS matrix, but different values of the mixing angles and phase.  In general, there is a relative phase between $\mathbb{R}_{3,\xi}$ and $\mathbb{R}_{3,\theta}$ that cannot be rotated away\ \cite{GonzalezGarcia:2004wg, GonzalezGarcia:2005xw}; in our simplified treatment, we set it to zero.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\begin{lstlisting}[language=Python, caption={Using {\tt NuOscProbExact} with an arbitrary, user-supplied Hamiltonian, here a long-range $L_e - L_\mu$ interaction sourced by the electrons of the Earth.  The array {\tt v\_emu} is the snippet's one input, supplied by the user; notebook 20 builds it in full and validates it}, label={lst:3nu_arbitrary}, float=tbp]
+\begin{lstlisting}[language=Python, caption={Using {\tt NuOscProbExact} with an arbitrary, user-supplied Hamiltonian, here a long-range $L_e - L_\mu$ interaction sourced by the electrons of the Earth.  The array {\tt v\_emu} is the snippet's one input, supplied by the user; notebook 20 builds it in full and validates it}, label={lst:3nu_arbitrary}, float=t]
 import numpy as np
 
 import earth
@@ -1042,7 +1079,9 @@ h = hamiltonians3nu.hamiltonian_3nu_matter(
 # v_emu [eV], one value per slab, supplied by the user:
 # the Yukawa potential sourced by the electrons of the
 # Earth, which nu_e and nu_mu feel with opposite sign.
-# Notebook 20 builds it.  Any Hermitian term would do.
+# Notebook 20 builds it; zeros here so that the snippet
+# runs as printed.  Any Hermitian term would do.
+v_emu = np.zeros(len(widths))
 q = np.diag([1., -1., 0.])
 h = h + v_emu[:, None, None]*q
 
@@ -1052,7 +1091,7 @@ Pee, Pem, Pet, Pme, Pmm, Pmt, Pte, Ptm, Ptt = \
 \end{lstlisting}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Because LIV has not been observed, the values of the eigenvalues $b_i$ and of the LIV mixing parameters $\xi$ are undetermined.  Current upper limits\ \cite{Aartsen:2017ibm} set using high-energy atmospheric neutrinos imply that $b_i/\Lambda \lesssim 10^{-28}$ (this is $\mathring{c}^{(4)}$ in the notation of \Ref\ \cite{Aartsen:2017ibm}).  The LIV energy scale is believed to be at least $\Lambda = 1$~TeV.  However, to compute the probabilities for LIV in \figu{prob_3nu} such that they exhibit features at the lower energies used in the plot, we set artificially high values: $b_1/\Lambda = b_2/\Lambda = 10^{-21}$ and $b_3/\Lambda = 2 \cdot 10^{-21}$.  For simplicity, we set all mixing angles to zero, so that $\mathbb{R}_{3,\xi} = \mathbb{1}$.  These three eigenvalues and these angles are the values carried by the {\tt globaldefs} module, and the ones with which both \figu{prob_3nu} and the output printed in Listing\ \ref{lst:3nu_examples} were produced.
+Because LIV has not been observed, the values of the eigenvalues $b_i$ and of the LIV mixing parameters $\xi$ are undetermined.  Current upper limits\ \cite{Aartsen:2017ibm} set using high-energy atmospheric neutrinos imply that $b_i/\Lambda \lesssim 10^{-28}$ (this is $\mathring{c}^{(4)}$ in the notation of \Ref\ \cite{Aartsen:2017ibm}).  The LIV energy scale is believed to be at least $\Lambda = 1$~TeV.  The values used in \figu{prob_3nu} are therefore illustrative rather than allowed, chosen so that the curves show features at the energies plotted, and are seven orders of magnitude above that limit: $b_1/\Lambda = b_2/\Lambda = 10^{-21}$ and $b_3/\Lambda = 2 \cdot 10^{-21}$.  For simplicity, we set all mixing angles to zero, so that $\mathbb{R}_{3,\xi} = \mathbb{1}$.  These three eigenvalues and these angles are the values carried by the {\tt globaldefs} module, and the ones with which both \figu{prob_3nu} and the output printed in Listing\ \ref{lst:3nu_examples} were produced.
 
 
 \subsection{Layered matter and the profile of Earth}
@@ -1082,9 +1121,11 @@ Because LIV has not been observed, the values of the eigenvalues $b_i$ and of th
 
 The case that the code meets most often is the one in which the regions of Section \ref{sec:composition} are slabs of matter, each of constant but different density.  See, \eg, \Refs\ \cite{Chizhov:1999az, Chizhov:1999he} for an overview of this scenario, and \Refs\ \cite{Ohlsson:1999um, Ohlsson:2001et, Merfeld:2014cha} for studies with the OS method.  It applies to long-baseline experiments that consider a non-uniform matter density profile\ \cite{Jacobsson:2001zk, Ohlsson:2003ip, Arguelles:2012nw, Roe:2017zdw, Kelly:2018kmb}, and to neutrinos crossing the several density layers inside Earth\ \cite{Freund:1999vc}; the amplitudes from the successive slabs are stitched together\ \cite{Giunti:2007ry} exactly as in \equ{composition}.  At three flavors each factor $\mathbb{U}^{(j)}$ is \equ{u3_expanded}, evaluated with the matter Hamiltonian at the density of the $j$-th slab.
 
-The one practical warning is the order of the factors, which \equ{composition} fixes and \figu{slabs} draws, but which is easy to get wrong by hand: the slab crossed first stands rightmost, and reversing the product sends the neutrino through the profile backwards.  This is the most common mistake made when implementing the procedure directly.
+The one practical warning is the order of the factors, which \equ{composition} fixes and \figu{slabs} draws: reversing the product sends the neutrino through the profile backwards.  The routines below compose in that order, so it is a warning for anyone implementing the composition by hand rather than for a user of the code.
 
 The composition is implemented in the {\tt slabs} module, which takes arbitrary lists of widths and densities, solves each slab exactly, and composes the resulting operators in the order above.  The {\tt earth} module builds on it, using the PREM density profile\ \cite{Dziewonski:1981xy} to generate the slabs crossed along any chord through Earth.  Those two modules are what this subsection illustrates; Section \ref{sec:sterile_earth} then adds the fourth flavor.
+
+One convention goes with them.  PREM is a density model and fixes no composition, so the electron fraction has to be supplied separately; every figure in this paper takes $Y_e = 0.5$ throughout, isoscalar matter, as Section \ref{sec:prob_3nu_matter} does.  The code carries a partition of $Y_e$ by PREM layer instead --- core, mantle, crust and ocean, each with the value its material gives --- which {\tt earth.electron\_fraction\_prem} supplies and any of whose four values may be replaced.  It is not what the routines assume unless they are asked, and the difference is not small: through the diameter it changes $P_{\nu_\mu \to \nu_e}$ by of order itself, through the mantle alone by a few percent.
 
 \figu{earth_oscillogram} shows a standard three-flavor oscillogram for neutrinos crossing Earth: the survival probability $P_{\nu_\mu \to \nu_\mu}$ over energy and arrival direction, with each trajectory decomposed into slabs of the PREM profile and each slab solved exactly.  Computing it requires the slab composition of \equ{composition}, applied once per trajectory, and it is one call: the Earth routines take an array of energies together with an array of directions, indexed on separate axes, and return the whole oscillogram.
 
@@ -1107,10 +1148,10 @@ The fourth flavor divides the codes of \tabl{codes} more sharply than anything e
 
 \figu{sterile_earth} shows one, for antineutrinos crossing Earth along the full PREM profile.  Treated as the closed four-flavor system it is, it is solved by the construction of Section \ref{sec:four_flavors}, slab by slab and composed as in \equ{composition}, and the matter resonance driven by $V_s$ in \equ{a4} appears as a broad absorption feature.
 
-Two things about it stand out.  The first is that the resonance is there at all: it is driven by the neutral-current potential, which cancels between the three active flavors and so is invisible to every three-flavor calculation, but which the sterile state does not feel and therefore cannot cancel.  A 3+1 system therefore probes the neutron density too, and \ref{app:sample_2nu_hamiltonians} sets out the $\mathbb{A}_4$ that follows.  The second is that the resonance follows the density along the chord rather than sitting at one energy.  For trajectories that stay in the mantle it is the broad feature near $4$~TeV; through the denser core it moves down, to around $1.4$~TeV, and breaks into finer structure, a core-crossing chord being about twice as long as one that grazes the mantle and so carrying twice the oscillation phase across the same range of energies.  The core-mantle boundary near $\cos\theta_z = -0.84$ separates the two.  A calculation at a single averaged density cannot show that, which is the practical reason for carrying the profile.
+Two things about it stand out.  The first is that the resonance is there at all: it is driven by the neutral-current potential, which cancels between the three active flavors and so is invisible to every three-flavor calculation, but which the sterile state does not feel and therefore cannot cancel.  A 3+1 system therefore probes the neutron density too, and \ref{app:sample_2nu_hamiltonians} sets out the $\mathbb{A}_4$ that follows.  The second is that the resonance follows the density along the chord rather than sitting at one energy.  For trajectories that stay in the mantle it is the broad feature near $4$~TeV; through the denser core it moves down, to around $1.4$~TeV, and breaks into finer structure, a core-crossing chord carrying more oscillation phase both because it is longer --- $12742$~km against $10673$ for the longest chord that stays in the mantle --- and because the potential along it is larger.  The core-mantle boundary near $\cos\theta_z = -0.84$ separates the two.  A calculation at a single averaged density cannot show that, which is the practical reason for carrying the profile.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\begin{lstlisting}[language=Python, caption={Producing Figures\ \ref{fig:earth_oscillogram}, \ref{fig:density_arrangement}, and \ref{fig:sterile_earth}.  Each snippet is the core of the calculation, with the geometry and the plotting left to the notebook.  The Earth routines take the energies and the directions on separate axes and return a whole oscillogram from one call, at three flavors and at four; the arbitrary profile of \figu{density_arrangement} is not one {\tt earth} knows about, so its slabs are composed directly, with the energies stacked the same way.  The full versions are in {\tt notebooks/10\_paper\_figures.ipynb}.}, label={lst:figures}, float=tbp]
+\begin{lstlisting}[language=Python, caption={Producing Figures\ \ref{fig:earth_oscillogram}, \ref{fig:density_arrangement}, and \ref{fig:sterile_earth}.  Each snippet is the core of the calculation, with the geometry and the plotting left to the notebook.  The Earth routines take the energies and the directions on separate axes and return a whole oscillogram from one call, at three flavors and at four; the arbitrary profile of \figu{density_arrangement} is not one {\tt earth} knows about, so its slabs are composed directly, with the energies stacked the same way.  The full versions are in {\tt notebooks/10\_paper\_figures.ipynb}.}, label={lst:figures}, float=t]
 import earth, slabs
 import hamiltonians3nu, hamiltonians4nu
 from globaldefs import *
@@ -1161,7 +1202,7 @@ The usefulness of {\tt NuOscProbExact} stems in part from its ability to compute
 
 The template is written around a concrete instance rather than a placeholder, because the placeholder hides what is being claimed.  The instance is a long-range interaction: a new neutral gauge boson $Z^\prime$ coupled to the anomaly-free combination $L_e - L_\mu$\ \cite{He:1990pn, Foot:1994vd}, under which the $\sim\!10^{51}$ electrons of the Earth source a Yukawa potential $V_{e\mu}(r)$ that $\nu_e$ and $\nu_\mu$ feel with opposite sign.  What makes it a useful example is that it is not merely a new number in an existing formula.  The potential is \emph{non-local}: at mediator masses light enough to matter, $m_{Z^\prime} \lesssim 1/R_\oplus$, its value at any radius is an integral over the whole electron distribution, so it depends on how many electrons there are and only weakly on where they sit\ \cite{Wise:2018rnb}.  It therefore cannot be absorbed into an effective density profile, and no specialized expression for it exists in any of the codes of Section \ref{sec:comparison}.  The scenario and its phenomenology are developed in \Refs\ \cite{Joshipura:2003jh, Bandyopadhyay:2006uh, Bustamante:2018mzu, Agarwalla:2024ylc}; here it is some thirty lines, and the probability that comes out is exact.
 
-\figu{lri_earth} shows the result for a neutrino crossing the full diameter of the Earth.  The two curves are the same PREM slab decomposition, evaluated with and without the extra term, and the only difference between the calculations that produced them is the single line that adds $V_{e\mu}$ to the matter Hamiltonian.  At $\alpha^\prime \equiv g^{\prime 2}/4\pi = 10^{-52}$ --- a coupling at which $V_{e\mu}$ at the center of the Earth is about $1\%$ of $V_{\rm CC}$ there --- the appearance probability is displaced by up to $0.10$ in absolute terms, with the largest effect near $4$~GeV, where the standard matter resonance sits.  The lower panel is that difference on its own scale.  The point of the figure is not the parameter value, which is chosen to make the effect visible rather than to bound anything; it is that a scenario none of the codes of Section \ref{sec:comparison} anticipates costs the user one array and one addition.  Notebook 20 in the repository builds $V_{e\mu}$ from scratch, checks it against its short- and long-range limits, and scans $\alpha^\prime$ over three decades.
+\figu{lri_earth} shows the result for a neutrino crossing the full diameter of the Earth.  The two curves are the same PREM slab decomposition, evaluated with and without the extra term, and the only difference between the calculations that produced them is the single line that adds $V_{e\mu}$ to the matter Hamiltonian.  At $\alpha^\prime \equiv g^{\prime 2}/4\pi = 10^{-52}$, and a mediator of range $1/m_{Z^\prime} = R_\oplus$, the potential at the center of the Earth is about $1\%$ of $V_{\rm CC}$ there, and the appearance probability is displaced by up to $0.10$ in absolute terms, with the largest effect near $4$~GeV, where the standard matter resonance sits.  Notebook 20 fixes the normalization of $V_{e\mu}$ and is where these numbers come from; it is the one figure here whose input the listings do not carry in full.  The lower panel is that difference on its own scale.  The point of the figure is not the parameter value, which is chosen to make the effect visible rather than to bound anything; it is that a scenario none of the codes of Section \ref{sec:comparison} anticipates costs the user one array and one addition.  Notebook 20 in the repository builds $V_{e\mu}$ from scratch, checks it against its short- and long-range limits, and scans $\alpha^\prime$ over three decades.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{figure}[t!]
@@ -1170,7 +1211,6 @@ The template is written around a concrete instance rather than a placeholder, be
  \caption{\label{fig:lri_earth}An interaction no code anticipates, at the cost of one extra term.  $P_{\nu_\mu \to \nu_e}$ for a neutrino crossing the Earth along a diameter ($\cos\theta_z = -1$), through the PREM profile, with and without a long-range $L_e - L_\mu$ interaction whose mediator has range $1/m_{Z^\prime} = R_\oplus$.  \emph{Top}: the probability.  \emph{Bottom}: the difference between them.  The Yukawa potential is sourced by the electrons of the whole Earth and evaluated at the radius of each slab; it is added to the matter Hamiltonian as $V_{e\mu}\,{\rm diag}(1,-1,0)$, which is the entirety of the modification.  Both curves are exact for their own Hamiltonian --- no expansion in $V_{e\mu}$ is made, and none is needed, since the construction does not care what the Hermitian matrix contains.  The coupling $\alpha^\prime = 10^{-52}$ is chosen for visibility.  Produced by notebook 10; notebook 20 develops and validates the potential.}
 \end{figure}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 
 \section{Performance and precision}
 \label{sec:performance}
