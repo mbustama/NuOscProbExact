@@ -7,11 +7,15 @@ the vacuum term is invisible in vacuum but reverses the sign of the
 matter potential relative to it, turning neutrinos into antineutrinos.
 """
 
+import math
+
 import numpy as np
 import pytest
 
+import globaldefs as gd
 import hamiltonians2nu
 import hamiltonians3nu
+import hamiltonians4nu
 from globaldefs import (D21_NO_BF, D31_NO_BF, DCP_NO_BF, EPS_2, EPS_3, LAMBDA,
                         S12_NO_BF, S13_NO_BF, S23_NO_BF, VCC_EARTH_CRUST)
 
@@ -236,3 +240,101 @@ def test_hamiltonian_builders_do_not_mutate_their_input():
     hamiltonians2nu.hamiltonian_2nu_liv(h2_vac, 1.0e9, 0.3, 1.0e-9, 2.0e-9,
                                         LAMBDA)
     assert np.allclose(np.array(h2_vac, dtype=complex), before, atol=ATOL)
+
+
+###############################################################################
+# Angle conventions
+###############################################################################
+
+ANGLE_CASES = [
+    (hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent,
+     (gd.S12_NO_BF, gd.S23_NO_BF, gd.S13_NO_BF), (gd.DCP_NO_BF,),
+     (gd.D21_NO_BF, gd.D31_NO_BF)),
+    (hamiltonians3nu.pmns_mixing_matrix,
+     (gd.S12_NO_BF, gd.S23_NO_BF, gd.S13_NO_BF), (gd.DCP_NO_BF,), ()),
+    (hamiltonians4nu.mixing_matrix_4nu,
+     (gd.S12_NO_BF, gd.S23_NO_BF, gd.S13_NO_BF, 0.3, 0.3, 0.1),
+     (gd.DCP_NO_BF,), ()),
+    (hamiltonians2nu.mixing_matrix_2nu, (gd.S12_NO_BF,), (), ()),
+]
+
+
+@pytest.mark.parametrize('routine, sines, phases, rest', ANGLE_CASES)
+def test_the_four_angle_conventions_describe_the_same_thing(
+        routine, sines, phases, rest):
+    r"""One parameter set, four spellings, one answer.
+
+    This is the whole point of the keyword: the published numbers are
+    not sines, and a reader who types them under the default gets a
+    legal sine of a different angle rather than an error.
+    """
+    reference = np.asarray(routine(*sines, *phases, *rest))
+    radians = tuple(math.asin(s) for s in sines)
+
+    from_sin2 = routine(*(s*s for s in sines), *phases, *rest, angles='sin2')
+    from_rad = routine(*radians, *phases, *rest, angles='rad')
+    from_deg = routine(*(math.degrees(t) for t in radians),
+                       *(math.degrees(p) for p in phases), *rest, angles='deg')
+
+    assert np.array_equal(np.asarray(from_sin2), reference)
+    assert np.array_equal(np.asarray(from_rad), reference)
+    assert np.allclose(np.asarray(from_deg), reference, rtol=0.0, atol=1.0e-15)
+
+
+def test_the_default_convention_is_unchanged():
+    r"""Every frozen reference and every figure rests on this."""
+    explicit = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(
+        gd.S12_NO_BF, gd.S23_NO_BF, gd.S13_NO_BF, gd.DCP_NO_BF,
+        gd.D21_NO_BF, gd.D31_NO_BF, angles='sin')
+    implied = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(
+        gd.S12_NO_BF, gd.S23_NO_BF, gd.S13_NO_BF, gd.DCP_NO_BF,
+        gd.D21_NO_BF, gd.D31_NO_BF)
+
+    assert np.array_equal(np.asarray(explicit), np.asarray(implied))
+
+
+def test_the_published_mixing_parameters_can_be_typed_as_printed():
+    r"""NuFit quotes sin^2; `globaldefs` carries the sines of the same.
+
+    Passing the published number under the default is the error this
+    keyword exists to make unnecessary, and it is silent: 0.310 is a
+    perfectly good sine, of a different angle.
+    """
+    from_published = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(
+        0.310, 0.582, 0.02240, gd.DCP_NO_BF, gd.D21_NO_BF, gd.D31_NO_BF,
+        angles='sin2')
+    from_constants = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(
+        gd.S12_NO_BF, gd.S23_NO_BF, gd.S13_NO_BF, gd.DCP_NO_BF,
+        gd.D21_NO_BF, gd.D31_NO_BF)
+
+    assert np.allclose(np.asarray(from_published), np.asarray(from_constants),
+                       rtol=0.0, atol=1.0e-12)
+    # And the silent error it replaces really is silent
+    wrong = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(
+        0.310, 0.582, 0.02240, gd.DCP_NO_BF, gd.D21_NO_BF, gd.D31_NO_BF)
+    assert not np.allclose(np.asarray(wrong), np.asarray(from_constants),
+                           rtol=0.0, atol=1.0e-12)
+
+
+@pytest.mark.parametrize('module', [hamiltonians2nu, hamiltonians3nu,
+                                    hamiltonians4nu])
+def test_every_convention_is_refused_outside_its_range(module):
+    r"""And an unknown name is refused by name."""
+    with pytest.raises(ValueError, match='must be one of'):
+        module.hamiltonian_2nu_vacuum_energy_independent(
+            0.5, gd.D21_NO_BF, angles='sine') if module is hamiltonians2nu \
+            else module._sine_from(0.5, 'sine', 's12', 'test')
+    with pytest.raises(ValueError, match=r"angles='sin2'"):
+        module._sine_from(1.4, 'sin2', 's12', 'test')
+    with pytest.raises(ValueError, match=r"angles='sin2'"):
+        module._sine_from(-0.1, 'sin2', 's12', 'test')
+
+
+@pytest.mark.parametrize('module', [hamiltonians2nu, hamiltonians3nu,
+                                    hamiltonians4nu])
+def test_a_phase_follows_the_angles_only_in_radians_or_degrees(module):
+    r"""A phase has no sine, so `sin` and `sin2` leave it alone."""
+    assert module._phase_from(2.5, 'sin') == 2.5
+    assert module._phase_from(2.5, 'sin2') == 2.5
+    assert module._phase_from(2.5, 'rad') == 2.5
+    assert module._phase_from(180.0, 'deg') == pytest.approx(math.pi)

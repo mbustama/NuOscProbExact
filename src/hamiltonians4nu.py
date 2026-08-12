@@ -78,6 +78,108 @@ _EE_PROJECTOR_4NU = np.diag([1.0, 0.0, 0.0, 0.0])
 _SS_PROJECTOR_4NU = np.diag([0.0, 0.0, 0.0, 1.0])
 
 
+ANGLE_CONVENTIONS = ('sin', 'sin2', 'rad', 'deg')
+r"""tuple of str: Module-level constant.
+
+The ways a mixing angle may be given to the routines here, as the
+``angles`` argument they all take.  ``'sin'`` is the default and is what
+every earlier version accepted.
+
+The other three exist because the published numbers are not sines.
+Global fits quote :math:`\sin^2\theta_{ij}` --- NuFit's :math:`0.310`,
+:math:`0.582`, :math:`0.02240` --- whose square roots are what
+``'sin'`` wants, and passing the published value under the default is a
+silent error rather than a loud one: :math:`0.310` is a perfectly legal
+sine, of a different angle.  ``'sin2'`` lets the published number be
+typed as printed.  ``'rad'`` and ``'deg'`` take the angle itself.
+
+A CP-violating phase is not a mixing angle and has no sine to pass, so
+``'sin'`` and ``'sin2'`` leave it in radians; under ``'rad'`` and
+``'deg'`` it follows the angles, which lets a whole parameter set be
+given in the units it was published in.
+"""
+
+
+def _sine_from(
+    value: Union[int, float],
+    angles: str,
+    name: str,
+    caller: str
+) -> float:
+    r"""Returns :math:`\sin\theta` from an angle in any convention.
+
+    Parameters
+    ----------
+    value : int or float
+        The angle, expressed as `angles` says.
+    angles : str
+        One of `ANGLE_CONVENTIONS`.
+    name : str
+        Name of the parameter, used in the error message.
+    caller : str
+        Name of the calling routine, used in the error message.
+
+    Returns
+    -------
+    float
+        :math:`\sin\theta`.
+
+    Raises
+    ------
+    ValueError
+        If `angles` is not one of `ANGLE_CONVENTIONS`, or if `value` is
+        outside the range that convention allows.
+    """
+    # First, and free, so that the default costs one comparison
+    if angles == 'sin':
+        return value
+
+    if angles == 'sin2':
+        if not 0.0 <= value <= 1.0:
+            raise ValueError(
+                "%s: with angles='sin2', %s is the square of a sine and so "
+                'lies in [0, 1]; got %r' % (caller, name, value))
+        # Non-negative by construction, which loses the sign a mixing
+        # angle outside the first octant would carry.  Fits quote the
+        # square precisely because that sign is conventional.
+        return math.sqrt(value)
+
+    if angles == 'rad':
+        return math.sin(value)
+
+    if angles == 'deg':
+        return math.sin(math.radians(value))
+
+    raise ValueError(
+        '%s: angles must be one of %s; got %r'
+        % (caller, ', '.join(repr(c) for c in ANGLE_CONVENTIONS), angles))
+
+
+def _phase_from(
+    value: Union[int, float],
+    angles: str
+) -> float:
+    r"""Returns a CP-violating phase in radians, in any convention.
+
+    A phase has no sine to pass --- :math:`\sin\delta` would lose the
+    quadrant --- so it is unchanged under ``'sin'`` and ``'sin2'``, and
+    follows the angles under ``'rad'`` and ``'deg'``.
+
+    Parameters
+    ----------
+    value : int or float
+        The phase, in radians unless `angles` is ``'deg'``.
+    angles : str
+        One of `ANGLE_CONVENTIONS`.
+
+    Returns
+    -------
+    float
+        The phase, in radians.
+    """
+    return math.radians(value) if angles == 'deg' else value
+
+
 def _cos_from_sin(sth: Union[int, float], name: str, caller: str) -> float:
     r"""Returns :math:`\cos\theta` from :math:`\sin\theta`, checked.
 
@@ -163,7 +265,8 @@ def mixing_matrix_4nu(
     s34: Union[int, float],
     dCP: Union[int, float],
     d14: Union[int, float] = 0.0,
-    d24: Union[int, float] = 0.0
+    d24: Union[int, float] = 0.0,
+    angles: str = 'sin'
 ) -> np.ndarray:
     r"""Returns the 3+1 lepton mixing matrix.
 
@@ -204,6 +307,14 @@ def mixing_matrix_4nu(
     d24 : int or float, optional
         Extra phase on the 2-4 rotation, in radian.  Default: 0.
 
+    angles : str, optional
+        How the mixing angles are given: ``'sin'`` for their sines, the
+        default and what earlier versions accepted; ``'sin2'`` for the
+        squares of their sines, which is how global fits publish them;
+        ``'rad'`` or ``'deg'`` for the angles themselves.  Under ``'rad'`` and
+        ``'deg'`` the phases follow; under the other two they stay in
+        radians, a phase having no sine to pass.  See
+        `ANGLE_CONVENTIONS`.
     Returns
     -------
     numpy.ndarray
@@ -224,6 +335,15 @@ def mixing_matrix_4nu(
         unitarity = mixing.conj().T @ mixing
         print('unitary to %.1e' % np.max(np.abs(unitarity - np.eye(4))))
     """
+    s12 = _sine_from(s12, angles, 's12', 'mixing_matrix_4nu')
+    s23 = _sine_from(s23, angles, 's23', 'mixing_matrix_4nu')
+    s13 = _sine_from(s13, angles, 's13', 'mixing_matrix_4nu')
+    s14 = _sine_from(s14, angles, 's14', 'mixing_matrix_4nu')
+    s24 = _sine_from(s24, angles, 's24', 'mixing_matrix_4nu')
+    s34 = _sine_from(s34, angles, 's34', 'mixing_matrix_4nu')
+    dCP = _phase_from(dCP, angles)
+    d14 = _phase_from(d14, angles)
+    d24 = _phase_from(d24, angles)
     return (_rotation_4nu(2, 3, s34)
             @ _rotation_4nu(1, 3, s24, d24)
             @ _rotation_4nu(0, 3, s14, d14)
@@ -244,7 +364,8 @@ def hamiltonian_4nu_vacuum_energy_independent(
     D31: Union[int, float],
     D41: Union[int, float],
     d14: Union[int, float] = 0.0,
-    d24: Union[int, float] = 0.0
+    d24: Union[int, float] = 0.0,
+    angles: str = 'sin'
 ) -> np.ndarray:
     r"""Returns the energy-independent four-neutrino vacuum Hamiltonian.
 
@@ -287,6 +408,14 @@ def hamiltonian_4nu_vacuum_energy_independent(
     d24 : int or float, optional
         Extra phase on the 2-4 rotation, in radian.  Default: 0.
 
+    angles : str, optional
+        How the mixing angles are given: ``'sin'`` for their sines, the
+        default and what earlier versions accepted; ``'sin2'`` for the
+        squares of their sines, which is how global fits publish them;
+        ``'rad'`` or ``'deg'`` for the angles themselves.  Under ``'rad'`` and
+        ``'deg'`` the phases follow; under the other two they stay in
+        radians, a phase having no sine to pass.  See
+        `ANGLE_CONVENTIONS`.
     Returns
     -------
     numpy.ndarray
@@ -315,6 +444,15 @@ def hamiltonian_4nu_vacuum_energy_independent(
         print('P_mumu = %.6f' % prob[5])
         print('P_mus  = %.6f' % prob[7])
     """
+    s12 = _sine_from(s12, angles, 's12', 'hamiltonian_4nu_vacuum_energy_independent')
+    s23 = _sine_from(s23, angles, 's23', 'hamiltonian_4nu_vacuum_energy_independent')
+    s13 = _sine_from(s13, angles, 's13', 'hamiltonian_4nu_vacuum_energy_independent')
+    s14 = _sine_from(s14, angles, 's14', 'hamiltonian_4nu_vacuum_energy_independent')
+    s24 = _sine_from(s24, angles, 's24', 'hamiltonian_4nu_vacuum_energy_independent')
+    s34 = _sine_from(s34, angles, 's34', 'hamiltonian_4nu_vacuum_energy_independent')
+    dCP = _phase_from(dCP, angles)
+    d14 = _phase_from(d14, angles)
+    d24 = _phase_from(d24, angles)
     mixing = mixing_matrix_4nu(s12, s23, s13, s14, s24, s34, dCP, d14, d24)
     masses = np.diag([0.0, D21, D31, D41]).astype(complex)
 
@@ -501,7 +639,8 @@ def hamiltonian_4nu_liv(
     b2: Union[int, float],
     b3: Union[int, float],
     b4: Union[int, float],
-    Lambda: Union[int, float]
+    Lambda: Union[int, float],
+    angles: str = 'sin'
 ) -> np.ndarray:
     r"""Returns the four-neutrino Hamiltonian for oscillations w/ LIV.
 
@@ -556,6 +695,14 @@ def hamiltonian_4nu_liv(
     Lambda : int or float
         Energy scale :math:`\Lambda` of the LIV operator [eV].
 
+    angles : str, optional
+        How the mixing angles are given: ``'sin'`` for their sines, the
+        default and what earlier versions accepted; ``'sin2'`` for the
+        squares of their sines, which is how global fits publish them;
+        ``'rad'`` or ``'deg'`` for the angles themselves.  Under ``'rad'`` and
+        ``'deg'`` the phases follow; under the other two they stay in
+        radians, a phase having no sine to pass.  See
+        `ANGLE_CONVENTIONS`.
     Returns
     -------
     numpy.ndarray
@@ -586,6 +733,13 @@ def hamiltonian_4nu_liv(
 
         print('P_ee with LIV = %.6f' % prob[0])
     """
+    sxi12 = _sine_from(sxi12, angles, 'sxi12', 'hamiltonian_4nu_liv')
+    sxi23 = _sine_from(sxi23, angles, 'sxi23', 'hamiltonian_4nu_liv')
+    sxi13 = _sine_from(sxi13, angles, 'sxi13', 'hamiltonian_4nu_liv')
+    sxi14 = _sine_from(sxi14, angles, 'sxi14', 'hamiltonian_4nu_liv')
+    sxi24 = _sine_from(sxi24, angles, 'sxi24', 'hamiltonian_4nu_liv')
+    sxi34 = _sine_from(sxi34, angles, 'sxi34', 'hamiltonian_4nu_liv')
+    dxiCP = _phase_from(dxiCP, angles)
     h_vacuum = np.asarray(h_vacuum_energy_independent, dtype=complex)
     energy = np.asarray(energy, dtype=float)
 

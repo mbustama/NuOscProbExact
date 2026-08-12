@@ -49,6 +49,31 @@ and the project uses [Semantic Versioning](https://semver.org/).
   comparisons against external codes, which are handed a matched
   potential.
 
+- **The mixing angles may now be given as sines, their squares, radians or
+  degrees.**  Every routine that takes an angle -- ten of them, across
+  `hamiltonians2nu`, `hamiltonians3nu` and `hamiltonians4nu`, including the
+  two `*_liv` builders whose `sxi*` arguments carry the same convention --
+  takes an `angles` keyword: `'sin'` (the default, and what every earlier
+  version accepted), `'sin2'`, `'rad'` or `'deg'`.
+
+  The default is the trap.  `globaldefs` carries sines, while global fits
+  publish squares: `S12_NO_BF` is 0.5568, and NuFit's `sin^2(theta_12)` is
+  0.310.  Typing the published number under the default is not an error --
+  0.310 is a perfectly good sine, of a different angle -- so nothing
+  complains and the answer is quietly wrong.  `angles='sin2'` lets the
+  published numbers be typed as printed.
+
+  A CP-violating phase has no sine to pass, so it stays in radians under
+  `'sin'` and `'sin2'` and follows the angles under `'rad'` and `'deg'`,
+  which lets a whole parameter set be given in the units it was published
+  in.  Out-of-range values are refused per convention.
+
+  Nothing changes at the default: `angles='sin'` reproduces every earlier
+  result bit for bit, which a test asserts.  The conversion costs one string
+  comparison per call, on routines called once per Hamiltonian rather than
+  once per probability -- 0.13 us against the 26 us the three-flavor builder
+  takes.
+
 ### Fixed
 
 - **The mean nucleon mass now follows the electron fraction.**  Both

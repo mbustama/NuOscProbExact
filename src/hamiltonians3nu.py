@@ -95,6 +95,108 @@ charged currents with the electrons in matter.
 """
 
 
+ANGLE_CONVENTIONS = ('sin', 'sin2', 'rad', 'deg')
+r"""tuple of str: Module-level constant.
+
+The ways a mixing angle may be given to the routines here, as the
+``angles`` argument they all take.  ``'sin'`` is the default and is what
+every earlier version accepted.
+
+The other three exist because the published numbers are not sines.
+Global fits quote :math:`\sin^2\theta_{ij}` --- NuFit's :math:`0.310`,
+:math:`0.582`, :math:`0.02240` --- whose square roots are what
+``'sin'`` wants, and passing the published value under the default is a
+silent error rather than a loud one: :math:`0.310` is a perfectly legal
+sine, of a different angle.  ``'sin2'`` lets the published number be
+typed as printed.  ``'rad'`` and ``'deg'`` take the angle itself.
+
+A CP-violating phase is not a mixing angle and has no sine to pass, so
+``'sin'`` and ``'sin2'`` leave it in radians; under ``'rad'`` and
+``'deg'`` it follows the angles, which lets a whole parameter set be
+given in the units it was published in.
+"""
+
+
+def _sine_from(
+    value: Union[int, float],
+    angles: str,
+    name: str,
+    caller: str
+) -> float:
+    r"""Returns :math:`\sin\theta` from an angle in any convention.
+
+    Parameters
+    ----------
+    value : int or float
+        The angle, expressed as `angles` says.
+    angles : str
+        One of `ANGLE_CONVENTIONS`.
+    name : str
+        Name of the parameter, used in the error message.
+    caller : str
+        Name of the calling routine, used in the error message.
+
+    Returns
+    -------
+    float
+        :math:`\sin\theta`.
+
+    Raises
+    ------
+    ValueError
+        If `angles` is not one of `ANGLE_CONVENTIONS`, or if `value` is
+        outside the range that convention allows.
+    """
+    # First, and free, so that the default costs one comparison
+    if angles == 'sin':
+        return value
+
+    if angles == 'sin2':
+        if not 0.0 <= value <= 1.0:
+            raise ValueError(
+                "%s: with angles='sin2', %s is the square of a sine and so "
+                'lies in [0, 1]; got %r' % (caller, name, value))
+        # Non-negative by construction, which loses the sign a mixing
+        # angle outside the first octant would carry.  Fits quote the
+        # square precisely because that sign is conventional.
+        return math.sqrt(value)
+
+    if angles == 'rad':
+        return math.sin(value)
+
+    if angles == 'deg':
+        return math.sin(math.radians(value))
+
+    raise ValueError(
+        '%s: angles must be one of %s; got %r'
+        % (caller, ', '.join(repr(c) for c in ANGLE_CONVENTIONS), angles))
+
+
+def _phase_from(
+    value: Union[int, float],
+    angles: str
+) -> float:
+    r"""Returns a CP-violating phase in radians, in any convention.
+
+    A phase has no sine to pass --- :math:`\sin\delta` would lose the
+    quadrant --- so it is unchanged under ``'sin'`` and ``'sin2'``, and
+    follows the angles under ``'rad'`` and ``'deg'``.
+
+    Parameters
+    ----------
+    value : int or float
+        The phase, in radians unless `angles` is ``'deg'``.
+    angles : str
+        One of `ANGLE_CONVENTIONS`.
+
+    Returns
+    -------
+    float
+        The phase, in radians.
+    """
+    return math.radians(value) if angles == 'deg' else value
+
+
 def _cos_from_sin(sth: Union[int, float], name: str, caller: str) -> float:
     r"""Returns :math:`\cos\theta` from :math:`\sin\theta`, checked.
 
@@ -141,7 +243,8 @@ def pmns_mixing_matrix(
     s12: Union[int, float],
     s23: Union[int, float],
     s13: Union[int, float],
-    dCP: Union[int, float]
+    dCP: Union[int, float],
+    angles: str = 'sin'
 ) -> List[List[complex]]:
     r"""Returns the :math:`3\times3` PMNS mixing matrix.
 
@@ -178,6 +281,14 @@ def pmns_mixing_matrix(
     dCP : float
         CP-violation phase :math:`\delta_{\rm CP}` [radian].
 
+    angles : str, optional
+        How the mixing angles are given: ``'sin'`` for their sines, the
+        default and what earlier versions accepted; ``'sin2'`` for the
+        squares of their sines, which is how global fits publish them;
+        ``'rad'`` or ``'deg'`` for the angles themselves.  Under ``'rad'`` and
+        ``'deg'`` the phases follow; under the other two they stay in
+        radians, a phase having no sine to pass.  See
+        `ANGLE_CONVENTIONS`.
     Returns
     -------
     list of list of complex
@@ -192,6 +303,10 @@ def pmns_mixing_matrix(
         U = hamiltonians3nu.pmns_mixing_matrix(0.55, 0.76, 0.15, 0.0)
         print('%.6f  %.6f' % (U[0][0].real, U[0][1].real))
     """
+    s12 = _sine_from(s12, angles, 's12', 'pmns_mixing_matrix')
+    s23 = _sine_from(s23, angles, 's23', 'pmns_mixing_matrix')
+    s13 = _sine_from(s13, angles, 's13', 'pmns_mixing_matrix')
+    dCP = _phase_from(dCP, angles)
     c12 = _cos_from_sin(s12, 's12', 'pmns_mixing_matrix')
     c23 = _cos_from_sin(s23, 's23', 'pmns_mixing_matrix')
     c13 = _cos_from_sin(s13, 's13', 'pmns_mixing_matrix')
@@ -221,7 +336,8 @@ def hamiltonian_3nu_vacuum_energy_independent(
     dCP: Union[int, float],
     D21: Union[int, float],
     D31: Union[int, float],
-    compute_matrix_multiplication: bool = False
+    compute_matrix_multiplication: bool = False,
+    angles: str = 'sin'
 ) -> np.ndarray:
     r"""Returns the three-neutrino Hamiltonian for vacuum oscillations.
 
@@ -272,6 +388,14 @@ def hamiltonian_3nu_vacuum_energy_independent(
         :math:`U M^2 U^\dagger` explicitly.  Both give the same result;
         the option exists as a cross-check.
 
+    angles : str, optional
+        How the mixing angles are given: ``'sin'`` for their sines, the
+        default and what earlier versions accepted; ``'sin2'`` for the
+        squares of their sines, which is how global fits publish them;
+        ``'rad'`` or ``'deg'`` for the angles themselves.  Under ``'rad'`` and
+        ``'deg'`` the phases follow; under the other two they stay in
+        radians, a phase having no sine to pass.  See
+        `ANGLE_CONVENTIONS`.
     Returns
     -------
     numpy.ndarray
@@ -288,6 +412,10 @@ def hamiltonian_3nu_vacuum_energy_independent(
                                                       0.0, 7.4e-5, 2.5e-3)
         print('%.6e' % H[0][0].real)
     """
+    s12 = _sine_from(s12, angles, 's12', 'hamiltonian_3nu_vacuum_energy_independent')
+    s23 = _sine_from(s23, angles, 's23', 'hamiltonian_3nu_vacuum_energy_independent')
+    s13 = _sine_from(s13, angles, 's13', 'hamiltonian_3nu_vacuum_energy_independent')
+    dCP = _phase_from(dCP, angles)
     caller = 'hamiltonian_3nu_vacuum_energy_independent'
     c12 = _cos_from_sin(s12, 's12', caller)
     c23 = _cos_from_sin(s23, 's23', caller)
@@ -681,7 +809,8 @@ def hamiltonian_3nu_liv(
     b1: Union[int, float],
     b2: Union[int, float],
     b3: Union[int, float],
-    Lambda: Union[int, float]
+    Lambda: Union[int, float],
+    angles: str = 'sin'
 ) -> np.ndarray:
     r"""Returns the three-neutrino Hamiltonian for oscillations w/ LIV.
 
@@ -744,6 +873,14 @@ def hamiltonian_3nu_liv(
         Energy scale :math:`\Lambda` of the LIV operator :math:`B_3`
         [eV].
 
+    angles : str, optional
+        How the mixing angles are given: ``'sin'`` for their sines, the
+        default and what earlier versions accepted; ``'sin2'`` for the
+        squares of their sines, which is how global fits publish them;
+        ``'rad'`` or ``'deg'`` for the angles themselves.  Under ``'rad'`` and
+        ``'deg'`` the phases follow; under the other two they stay in
+        radians, a phase having no sine to pass.  See
+        `ANGLE_CONVENTIONS`.
     Returns
     -------
     numpy.ndarray
@@ -764,6 +901,10 @@ def hamiltonian_3nu_liv(
                                 1.5e-9, 2.0e-9, 1.0e12)
         print('%.6e' % H[0][0].real)
     """
+    sxi12 = _sine_from(sxi12, angles, 'sxi12', 'hamiltonian_3nu_liv')
+    sxi23 = _sine_from(sxi23, angles, 'sxi23', 'hamiltonian_3nu_liv')
+    sxi13 = _sine_from(sxi13, angles, 'sxi13', 'hamiltonian_3nu_liv')
+    dxiCP = _phase_from(dxiCP, angles)
     h_vacuum = np.asarray(h_vacuum_energy_independent, dtype=complex)
     energy = np.asarray(energy, dtype=float)
 
