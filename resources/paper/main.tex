@@ -772,7 +772,7 @@ Development is version-controlled and happens in the public GitHub repository\ \
 \subsection{Code validation}
 \label{sec:validation}
 
-The repository carries a test suite of 870 tests, which cover every line and branch of the library in v1.13.1 of {\tt NuOscProbExact}; \ref{app:tests} groups them by what they cover.  Beyond internal consistency, the results are checked against independent sources: against {\tt nuSQuIDS}\ \cite{Delgado:2014kpa, NuSQuIDS}, an independently written code, with which the three-flavor probabilities agree to $10^{-11}$ and the four-flavor ones to $10^{-9}$ once conventions are matched; against the closed-form eigenvalues of Zaglauer \& Schwarzer\ \cite{Zaglauer:1988gz} for the three-flavor matter spectrum; against direct numerical exponentiation of the Hamiltonian, as in \figu{validation}; and, in the two-flavor vacuum case, against the standard analytic formula.
+The repository carries a test suite of 882 tests, which cover every line and branch of the library in v1.13.1 of {\tt NuOscProbExact}; \ref{app:tests} groups them by what they cover.  Beyond internal consistency, the results are checked against independent sources: against {\tt nuSQuIDS}\ \cite{Delgado:2014kpa, NuSQuIDS}, an independently written code, with which the three-flavor probabilities agree to $10^{-11}$ and the four-flavor ones to $10^{-9}$ once conventions are matched; against the closed-form eigenvalues of Zaglauer \& Schwarzer\ \cite{Zaglauer:1988gz} for the three-flavor matter spectrum; against direct numerical exponentiation of the Hamiltonian, as in \figu{validation}; and, in the two-flavor vacuum case, against the standard analytic formula.
 
 Where a residual remains---as at four flavors, where a large $\Delta m_{41}^2$ crowds three of the four latent roots together and leaves the fourth far off, the near-degeneracy that Section \ref{sec:limitations} quantifies---the wider tolerance it needs is not left to stand on its own.  A third reference settles where the residual belongs.  It could have either of two sources: the accuracy limit of the closed form near a near-degenerate spectrum, or a convention the two codes match imperfectly.  Against direct exponentiation of the same Hamiltonian, the error of the expansion and its disagreement with {\tt nuSQuIDS} come out the same size, which leaves only the first: {\tt nuSQuIDS} sits where the exponential does, and the whole residual is from the closed form.
 
@@ -937,7 +937,7 @@ where $\mathbb{M}_3^2 \equiv {\rm diag}(0, \Delta m_{21}^2, \Delta m_{31}^2)$ is
  \end{array}
  \right) ,
 \end{equation}
-which is the standard parametrization of \Ref\ \cite{Tanabashi:2018oca}.  The routines take $\sin\theta_{ij}$ rather than $\theta_{ij}$, which is the other convention to state: a value passed as an angle where a sine is expected is a silent error, not a loud one.  One piece of bookkeeping goes with them, since Listing\ \ref{lst:3nu_examples} relies on it: what {\tt hamiltonian\_3nu\_vacuum\_energy\_independent} returns is $\tfrac{1}{2} \mathbb{R}_{3,\theta} \mathbb{M}_3^2 \mathbb{R}_{3,\theta}^\dagger$, with the factor of $\tfrac{1}{2}$ in \equ{h3_vacuum} already folded in, which is why the listing divides it by $E$ and not by $2E$.
+which is the standard parametrization of \Ref\ \cite{Tanabashi:2018oca}.  The routines take $\sin\theta_{ij}$ rather than $\theta_{ij}$, which is the other convention to state, and the values above are quoted as $\sin^2\theta_{ij}$, as global fits publish them: passing a published number where a sine is expected is a silent error rather than a loud one, since $0.310$ is a perfectly good sine of a different angle.  Every routine that takes an angle therefore takes an {\tt angles} argument --- {\tt 'sin'} by default, or {\tt 'sin2'}, {\tt 'rad'} or {\tt 'deg'} --- so that a published parameter set can be given in the form it was published in, phases included.  One piece of bookkeeping goes with them, since Listing\ \ref{lst:3nu_examples} relies on it: what {\tt hamiltonian\_3nu\_vacuum\_energy\_independent} returns is $\tfrac{1}{2} \mathbb{R}_{3,\theta} \mathbb{M}_3^2 \mathbb{R}_{3,\theta}^\dagger$, with the factor of $\tfrac{1}{2}$ in \equ{h3_vacuum} already folded in, which is why the listing divides it by $E$ and not by $2E$.
 
 To compute the probabilities in \figu{prob_3nu}, we fix the mixing parameters to their best-fit values from the NuFit 4.0 global fit to oscillation data\ \cite{Esteban:2018azc, NuFit4.0}, assuming normal mass hierarchy, and including Super-Kamiokande atmospheric neutrino data: $\sin^2 \theta_{12} = 0.310$, $\sin^2 \theta_{23} = 0.582$, $\sin^2 \theta_{13} = 0.02240$, $\delta_{\rm CP} = 217^\circ$, $\Delta m_{21}^2 = 7.39 \cdot 10^{-5}$~eV$^2$, $\Delta m_{31}^2 = 2.525 \cdot 10^{-3}$~eV$^2$.  Global fits have since moved on, but the default values carried by the code remain pinned to NuFit 4.0, so that the figures and examples in this paper stay reproducible.  Users are expected to supply current values for their own analyses.
 
@@ -1601,7 +1601,7 @@ What cannot be added this way is anything that is not a Hermitian Hamiltonian.  
 \label{app:tests}
 \appresetfloats
 
-Table \ref{tab:tests} lists what the 870 tests of {\tt NuOscProbExact} cover; \ref{app:structure} shows the modules they exercise.  They reach every line and every branch of the library: coverage is $100\%$ in v1.13.1, held above a floor of $98\%$ that fails the build if it drops.
+Table \ref{tab:tests} lists what the 882 tests of {\tt NuOscProbExact} cover; \ref{app:structure} shows the modules they exercise.  They reach every line and every branch of the library: coverage is $100\%$ in v1.13.1, held above a floor of $98\%$ that fails the build if it drops.
 
 They run on every push and every pull request, so a contributor need not invoke them; but they are also the quickest way to confirm a local installation.  The tests are not packaged with the library, so this is from a clone:
 \begin{verbatim}
@@ -1629,12 +1629,12 @@ The suite is not only a regression net.  Roughly half of it checks the physics a
    Docstrings                               & 40 \\
    Slab composition                         & 37 \\
    Vectorized against scalar evaluation     & 36 \\
+   Sample Hamiltonians                      & 33 \\
    Physical scales and unit conversions     & 30 \\
    Agreement with {\tt nuSQuIDS}             & 28 \\
    Standard analytic formulas               & 25 \\
    Matter eigenvalues, Zaglauer--Schwarzer  & 24 \\
    SU(3) algebra and star products          & 22 \\
-   Sample Hamiltonians                      & 21 \\
    Figures reproduced from the documentation & 19 \\
    Probabilities                            & 11 \\
    Evolution operator                       & 11 \\
@@ -1643,7 +1643,7 @@ The suite is not only a regression net.  Roughly half of it checks the physics a
    Version consistency                      & 7 \\
    This paper, against the repository       & 4 \\
    \hline
-   Total                                    & 870 \\
+   Total                                    & 882 \\
   \end{tabular}
   \caption{\label{tab:tests}The test suite of {\tt NuOscProbExact} v1.13.1, grouped by what each file covers, in descending order.  Coverage of the library is complete: every line and every branch is executed.  The comparison with {\tt nuSQuIDS}\ \cite{Delgado:2014kpa, NuSQuIDS} runs against frozen reference values rather than against a live installation, so that a release of another code cannot break this one's continuous integration.}
 \end{table}
