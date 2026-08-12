@@ -46,6 +46,54 @@ The nine probabilities come back with the initial flavor varying slowest.
 Full walk-through: `notebook 01 <https://github.com/mbustama/NuOscProbExact/blob/main/notebooks/01_basics.ipynb>`_.
 
 
+Giving the mixing angles
+------------------------
+
+Every routine that takes mixing angles takes them as **sines** by default,
+which is what ``globaldefs`` carries: ``S12_NO_BF`` is
+:math:`\sin\theta_{12} = 0.5568`, not :math:`\sin^2\theta_{12} = 0.310`.
+
+That default is a trap for anyone reading from a global fit, because fits
+publish the squares.  Typing the published :math:`0.310` under the default
+is not an error --- it is a perfectly good sine, of a different angle --- so
+nothing complains and the answer is quietly wrong.  Pass ``angles=`` and the
+published numbers can be typed as printed:
+
+.. jupyter-execute::
+
+    import math
+
+    import hamiltonians3nu
+
+    # NuFit 4.0, normal ordering, as published
+    from_sin2 = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(
+        0.310, 0.582, 0.02240, gd.DCP_NO_BF, gd.D21_NO_BF, gd.D31_NO_BF,
+        angles='sin2')
+
+    # The same angles in degrees, phase included
+    from_deg = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(
+        33.83, 49.72, 8.61, 217.0, gd.D21_NO_BF, gd.D31_NO_BF,
+        angles='deg')
+
+    # And what globaldefs carries, which is the default
+    from_sin = hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(
+        gd.S12_NO_BF, gd.S23_NO_BF, gd.S13_NO_BF, gd.DCP_NO_BF,
+        gd.D21_NO_BF, gd.D31_NO_BF)
+
+    print('sin2 vs sin: %.1e' % abs(from_sin2 - from_sin).max())
+    print('deg  vs sin: %.1e' % abs(from_deg - from_sin).max())
+
+The four conventions are ``'sin'``, ``'sin2'``, ``'rad'`` and ``'deg'``.  A
+CP-violating phase has no sine to pass, so it stays in radians under the
+first two and follows the angles under the last two --- which is why the
+degrees example above gives :math:`\delta_{\rm CP}` as ``217.0``.
+
+Out-of-range values are refused per convention: ``angles='sin2'`` rejects
+anything outside :math:`[0, 1]`, ``'sin'`` anything outside
+:math:`[-1, 1]`.  Neither can catch radians passed under the default, since
+those are legal sines; that is what the keyword is for.
+
+
 A scan, without a loop
 ----------------------
 
