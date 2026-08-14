@@ -131,7 +131,8 @@ Two flavors
    import oscprob2nu
    import hamiltonians2nu
 
-   # `sth` is sin(theta), not the angle itself
+   # `sth` is sin(theta), not the angle itself -- or pass
+   # angles='sin2', 'rad' or 'deg' to give it another way
    h2_vacuum_energy_indep = \
        hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(
            S23_NO_BF, D31_NO_BF)
@@ -156,12 +157,14 @@ sterile, the flavor order is
    import hamiltonians4nu
 
    # Three extra mixing angles and one extra splitting, here
-   # Dm41^2 = 1 eV^2.  As everywhere, the angles are given as sines.
+   # Dm41^2 = 1 eV^2.  Sterile mixings are published as sin^2,
+   # like the active ones, so angles='sin2' takes them as printed
    h4_vacuum_energy_indep = \
        hamiltonians4nu.hamiltonian_4nu_vacuum_energy_independent(
-           S12_NO_BF, S23_NO_BF, S13_NO_BF,
-           np.sqrt(0.10), np.sqrt(0.10), 0.0,
-           DCP_NO_BF, D21_NO_BF, D31_NO_BF, 1.0)
+           0.310, 0.582, 0.02240,
+           0.10, 0.10, 0.0,
+           DCP_NO_BF, D21_NO_BF, D31_NO_BF, 1.0,
+           angles='sin2')
    h4_vacuum = np.multiply(1./energy, h4_vacuum_energy_indep)
 
    prob = oscprob4nu.probabilities_4nu(h4_vacuum,

@@ -99,6 +99,108 @@ charged currents with the electrons in matter.
 """
 
 
+ANGLE_CONVENTIONS = ('sin', 'sin2', 'rad', 'deg')
+r"""tuple of str: Module-level constant.
+
+The ways a mixing angle may be given to the routines here, as the
+``angles`` argument they all take.  ``'sin'`` is the default and is what
+every earlier version accepted.
+
+The other three exist because the published numbers are not sines.
+Global fits quote :math:`\sin^2\theta_{ij}` --- NuFit's :math:`0.310`,
+:math:`0.582`, :math:`0.02240` --- whose square roots are what
+``'sin'`` wants, and passing the published value under the default is a
+silent error rather than a loud one: :math:`0.310` is a perfectly legal
+sine, of a different angle.  ``'sin2'`` lets the published number be
+typed as printed.  ``'rad'`` and ``'deg'`` take the angle itself.
+
+A CP-violating phase is not a mixing angle and has no sine to pass, so
+``'sin'`` and ``'sin2'`` leave it in radians; under ``'rad'`` and
+``'deg'`` it follows the angles, which lets a whole parameter set be
+given in the units it was published in.
+"""
+
+
+def _sine_from(
+    value: Union[int, float],
+    angles: str,
+    name: str,
+    caller: str
+) -> float:
+    r"""Returns :math:`\sin\theta` from an angle in any convention.
+
+    Parameters
+    ----------
+    value : int or float
+        The angle, expressed as `angles` says.
+    angles : str
+        One of `ANGLE_CONVENTIONS`.
+    name : str
+        Name of the parameter, used in the error message.
+    caller : str
+        Name of the calling routine, used in the error message.
+
+    Returns
+    -------
+    float
+        :math:`\sin\theta`.
+
+    Raises
+    ------
+    ValueError
+        If `angles` is not one of `ANGLE_CONVENTIONS`, or if `value` is
+        outside the range that convention allows.
+    """
+    # First, and free, so that the default costs one comparison
+    if angles == 'sin':
+        return value
+
+    if angles == 'sin2':
+        if not 0.0 <= value <= 1.0:
+            raise ValueError(
+                "%s: with angles='sin2', %s is the square of a sine and so "
+                'lies in [0, 1]; got %r' % (caller, name, value))
+        # Non-negative by construction, which loses the sign a mixing
+        # angle outside the first octant would carry.  Fits quote the
+        # square precisely because that sign is conventional.
+        return math.sqrt(value)
+
+    if angles == 'rad':
+        return math.sin(value)
+
+    if angles == 'deg':
+        return math.sin(math.radians(value))
+
+    raise ValueError(
+        '%s: angles must be one of %s; got %r'
+        % (caller, ', '.join(repr(c) for c in ANGLE_CONVENTIONS), angles))
+
+
+def _phase_from(
+    value: Union[int, float],
+    angles: str
+) -> float:
+    r"""Returns a CP-violating phase in radians, in any convention.
+
+    A phase has no sine to pass --- :math:`\sin\delta` would lose the
+    quadrant --- so it is unchanged under ``'sin'`` and ``'sin2'``, and
+    follows the angles under ``'rad'`` and ``'deg'``.
+
+    Parameters
+    ----------
+    value : int or float
+        The phase, in radians unless `angles` is ``'deg'``.
+    angles : str
+        One of `ANGLE_CONVENTIONS`.
+
+    Returns
+    -------
+    float
+        The phase, in radians.
+    """
+    return math.radians(value) if angles == 'deg' else value
+
+
 def _cos_from_sin(sth: Union[int, float], name: str, caller: str) -> float:
     r"""Returns :math:`\cos\theta` from :math:`\sin\theta`, checked.
 
@@ -141,7 +243,7 @@ def _cos_from_sin(sth: Union[int, float], name: str, caller: str) -> float:
     return math.sqrt(1.0 - sth*sth)
 
 
-def mixing_matrix_2nu(sth: Union[int, float]) -> List[List[float]]:
+def mixing_matrix_2nu(sth: Union[int, float], angles: str = 'sin') -> List[List[float]]:
     r"""Returns the :math:`2\times2` rotation matrix.
 
     Computes and returns the real :math:`2\times2` rotation matrix
@@ -169,6 +271,12 @@ def mixing_matrix_2nu(sth: Union[int, float]) -> List[List[float]]:
         :math:`\sin\theta`, with :math:`\theta` in the first quadrant,
         so that :math:`\cos\theta = \sqrt{1-\sin^2\theta} \geq 0`.
 
+    angles : str, optional
+        How the mixing angles are given: ``'sin'`` for their sines, the
+        default and what earlier versions accepted; ``'sin2'`` for the
+        squares of their sines, which is how global fits publish them;
+        ``'rad'`` or ``'deg'`` for the angles themselves.  See
+        `ANGLE_CONVENTIONS`.
     Returns
     -------
     list of list of float
@@ -184,6 +292,7 @@ def mixing_matrix_2nu(sth: Union[int, float]) -> List[List[float]]:
         R = hamiltonians2nu.mixing_matrix_2nu(0.6)
         print('%.6f  %.6f' % (R[0][0], R[0][1]))
     """
+    sth = _sine_from(sth, angles, 'sth', 'mixing_matrix_2nu')
     cth = _cos_from_sin(sth, 'sth', 'mixing_matrix_2nu')
 
     return [[cth, sth], [-sth, cth]]
@@ -192,7 +301,8 @@ def mixing_matrix_2nu(sth: Union[int, float]) -> List[List[float]]:
 def hamiltonian_2nu_vacuum_energy_independent(
     sth: Union[int, float],
     Dm2: Union[int, float],
-    compute_matrix_multiplication: bool = False
+    compute_matrix_multiplication: bool = False,
+    angles: str = 'sin'
 ) -> np.ndarray:
     r"""Returns the two-neutrino Hamiltonian for vacuum oscillations.
 
@@ -236,6 +346,12 @@ def hamiltonian_2nu_vacuum_energy_independent(
         :math:`R M^2 R^T` explicitly.  Both give the same result; the
         option exists as a cross-check.
 
+    angles : str, optional
+        How the mixing angles are given: ``'sin'`` for their sines, the
+        default and what earlier versions accepted; ``'sin2'`` for the
+        squares of their sines, which is how global fits publish them;
+        ``'rad'`` or ``'deg'`` for the angles themselves.  See
+        `ANGLE_CONVENTIONS`.
     Returns
     -------
     numpy.ndarray
@@ -258,6 +374,7 @@ def hamiltonian_2nu_vacuum_energy_independent(
         H = hamiltonians2nu.hamiltonian_2nu_vacuum_energy_independent(0.5, 1.0)
         print('%.6f  %.6f' % (H[0][0].real, H[0][1].real))
     """
+    sth = _sine_from(sth, angles, 'sth', 'hamiltonian_2nu_vacuum_energy_independent')
     # Trigonometric identities, rather than arcsin followed by cos and
     # sin, keep this consistent with mixing_matrix_2nu and avoid a
     # needless round trip through the angle itself.
@@ -293,7 +410,8 @@ def probabilities_2nu_vacuum_std(
     sth: Union[int, float],
     Dm2: Union[int, float],
     energy: Union[int, float],
-    L: Union[int, float]
+    L: Union[int, float],
+    angles: str = 'sin'
 ) -> List[float]:
     r"""Returns the 2nu vacuum probabilities, standard computation.
 
@@ -326,6 +444,12 @@ def probabilities_2nu_vacuum_std(
     L : float
         Baseline [eV\ :sup:`-1`].
 
+    angles : str, optional
+        How the mixing angles are given: ``'sin'`` for their sines, the
+        default and what earlier versions accepted; ``'sin2'`` for the
+        squares of their sines, which is how global fits publish them;
+        ``'rad'`` or ``'deg'`` for the angles themselves.  See
+        `ANGLE_CONVENTIONS`.
     Returns
     -------
     list of float
@@ -344,6 +468,7 @@ def probabilities_2nu_vacuum_std(
         prob = hamiltonians2nu.probabilities_2nu_vacuum_std(0.5, 2.5e-3, 1.0e9, 5.0e12)
         print('%.6f  %.6f' % (prob[0], prob[1]))
     """
+    sth = _sine_from(sth, angles, 'sth', 'probabilities_2nu_vacuum_std')
     arg = Dm2*L/4.0/energy
     cth = np.sqrt(1.0-sth*sth)
     s2th = 2.0*sth*cth
@@ -431,7 +556,8 @@ def probabilities_2nu_matter_std(
     Dm2: Union[int, float],
     VCC: Union[int, float],
     energy: Union[int, float],
-    L: Union[int, float]
+    L: Union[int, float],
+    angles: str = 'sin'
 ) -> List[float]:
     r"""Returns the 2nu matter probabilities, standard computation.
 
@@ -475,6 +601,12 @@ def probabilities_2nu_matter_std(
     L : float
         Baseline [eV\ :sup:`-1`].
 
+    angles : str, optional
+        How the mixing angles are given: ``'sin'`` for their sines, the
+        default and what earlier versions accepted; ``'sin2'`` for the
+        squares of their sines, which is how global fits publish them;
+        ``'rad'`` or ``'deg'`` for the angles themselves.  See
+        `ANGLE_CONVENTIONS`.
     Returns
     -------
     list of float
@@ -502,6 +634,7 @@ def probabilities_2nu_matter_std(
                                             5.0e12)
         print('%.6f  %.6f' % (prob[0], prob[1]))
     """
+    sth = _sine_from(sth, angles, 'sth', 'probabilities_2nu_matter_std')
     x = 2.0*VCC*energy/Dm2
     cth = np.sqrt(1.0-sth*sth)
     s2th = 2.0*sth*cth
