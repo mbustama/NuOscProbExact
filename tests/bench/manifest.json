@@ -7,7 +7,8 @@
     "Written before anything was built, because a benchmark that cannot name",
     "the commit it measured cannot be disputed -- which is how the paper came",
     "to record three codes as version '2026-08', the month they were cloned.",
-    "Versions were verified to be the latest OFFICIAL releases on 2026-08-07, not merely the ones the paper happened to use: full tag lists, the two download pages, and a diff of each NuFast tag against its branch HEAD."
+    "Versions were verified to be the latest OFFICIAL releases on 2026-08-07, not merely the ones the paper happened to use: full tag lists, the two download pages, and a diff of each NuFast tag against its branch HEAD.",
+    "Each code's `timing_scripts` names the script that produces its numbers today. These are the drivers the new pipeline replaces with adapters under tests/bench/adapters/; one of them, the NuFast-LBL accuracy driver, is recorded as MISSING because it was never committed."
   ],
   "protocols": {
     "AMORTIZED": {
@@ -147,7 +148,19 @@
       "latest_check": {
         "verified_on": "2026-08-07",
         "how": "this repository, stamped at run time"
-      }
+      },
+      "timing_scripts": [
+        {
+          "script": "tests/prem_scan.py",
+          "produces": "tests/prem_speed_accuracy.json",
+          "figure": "Fig. 11 (Earth), speed + accuracy"
+        },
+        {
+          "script": "tests/external_drivers/const_scan.py",
+          "produces": "tests/const_density_scan.json",
+          "figure": "Fig. 9 (constant density), accuracy"
+        }
+      ]
     },
     {
       "name": "NuFast-LBL",
@@ -198,7 +211,19 @@
       "latest_check": {
         "verified_on": "2026-08-07",
         "how": "latest tag v2.0.1; HEAD af8c045 is one commit ahead and changes only Readme.md (1 line), verified by git diff --stat"
-      }
+      },
+      "timing_scripts": [
+        {
+          "script": "tests/external_drivers/nufast_lbl_perf.cpp",
+          "produces": "tests/timing_other_codes.json",
+          "figure": "Fig. 8, throughput vs stack size"
+        },
+        {
+          "script": "MISSING -- driver not in the repository",
+          "produces": "tests/nufast_scan.json",
+          "figure": "Fig. 9 accuracy; to be replaced by an adapter"
+        }
+      ]
     },
     {
       "name": "NuFast-Earth",
@@ -253,7 +278,14 @@
       "latest_check": {
         "verified_on": "2026-08-07",
         "how": "latest tag v1.2.0; HEAD 4edbad5 is two commits ahead (status output, user-guide bump), neither a capability change"
-      }
+      },
+      "timing_scripts": [
+        {
+          "script": "tests/external_drivers/nufast_drv.cpp",
+          "produces": "tests/external_drivers/nufast_earth_prem.txt",
+          "figure": "Fig. 11, Earth speed + accuracy"
+        }
+      ]
     },
     {
       "name": "nuSQuIDS",
@@ -278,7 +310,19 @@
       "latest_check": {
         "verified_on": "2026-08-07",
         "how": "latest tag v1.13.3, confirmed against the full tag list rather than a 1.13.x filter"
-      }
+      },
+      "timing_scripts": [
+        {
+          "script": "tests/external_drivers/perf_nusquids.py",
+          "produces": "tests/timing_other_codes.json",
+          "figure": "Fig. 8, throughput"
+        },
+        {
+          "script": "tests/prem_scan.py",
+          "produces": "tests/prem_speed_accuracy.json",
+          "figure": "Fig. 11, Earth"
+        }
+      ]
     },
     {
       "name": "nuCraft",
@@ -310,7 +354,14 @@
       "latest_check": {
         "verified_on": "2026-08-07",
         "how": "r22 is the only version published on nucraft.hepforge.org"
-      }
+      },
+      "timing_scripts": [
+        {
+          "script": "tests/prem_scan.py",
+          "produces": "tests/prem_speed_accuracy.json",
+          "figure": "Fig. 11, Earth"
+        }
+      ]
     },
     {
       "name": "GLoBES",
@@ -344,7 +395,24 @@
       "latest_check": {
         "verified_on": "2026-08-07",
         "how": "3.2.18 is the newest tarball on the MPIK download page"
-      }
+      },
+      "timing_scripts": [
+        {
+          "script": "tests/external_drivers/globes_perf.c",
+          "produces": "tests/timing_other_codes.json",
+          "figure": "Fig. 8, throughput"
+        },
+        {
+          "script": "tests/external_drivers/globes_scan.c",
+          "produces": "constant-density accuracy scan",
+          "figure": "Fig. 9"
+        },
+        {
+          "script": "tests/external_drivers/globes_drv.c",
+          "produces": "tests/external_drivers/globes_prem.txt",
+          "figure": "Fig. 11, Earth"
+        }
+      ]
     },
     {
       "name": "Prob3++",
@@ -377,7 +445,24 @@
       "latest_check": {
         "verified_on": "2026-08-07",
         "how": "v3r20 is the only tag and equals HEAD"
-      }
+      },
+      "timing_scripts": [
+        {
+          "script": "tests/external_drivers/prob3_perf.cpp",
+          "produces": "tests/timing_other_codes.json",
+          "figure": "Fig. 8, throughput"
+        },
+        {
+          "script": "tests/external_drivers/prob3_scan.cpp",
+          "produces": "constant-density accuracy scan",
+          "figure": "Fig. 9"
+        },
+        {
+          "script": "tests/external_drivers/prob3_drv.cpp",
+          "produces": "tests/external_drivers/prob3_prem.txt",
+          "figure": "Fig. 11, Earth"
+        }
+      ]
     }
   ]
 }

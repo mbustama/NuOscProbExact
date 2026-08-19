@@ -33,3 +33,8 @@ resources/paper/bisect_probe.*
 # tests/bench/build.sh from tests/bench/requirements.lock.  The lock file is
 # tracked; the tree it installs into is not.
 /.venv-bench/
+/.bench-build/
+
+# Jupyter's autosave copies.  These are not the notebooks; make_notebooks.py
+# generates those, and a checkpoint of one is a stale duplicate.
+.ipynb_checkpoints/

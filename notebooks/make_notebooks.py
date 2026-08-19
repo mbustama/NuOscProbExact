@@ -1458,6 +1458,92 @@ books['09_performance.ipynb'] = notebook(
     ])
 
 # ------------------------------------------------------- 10 the paper figures
+def external_code_provenance():
+    """Returns a markdown table of exactly which external codes were measured.
+
+    Generated from ``tests/bench/manifest.json`` rather than written out, so
+    that the notebook cannot drift from what the benchmark pipeline actually
+    builds.  The manifest is the single source: it pins every code by commit
+    or by tarball hash, and records how each was verified to be the latest
+    official release.
+    """
+    import json
+
+    manifest = json.load(open('tests/bench/manifest.json'))
+    rows = []
+    for code in manifest['codes']:
+        pin = code.get('pin', {})
+        if 'commit' in pin:
+            what = '`%s`' % pin['commit'][:12]
+            kind = 'tag `%s`' % pin['tag'] if pin.get('tag') else 'commit only'
+        elif 'sha256' in pin:
+            what = 'sha256 `%s`' % pin['sha256'][:12]
+            kind = pin.get('version', 'tarball')
+        else:
+            what = '_this repository_'
+            kind = 'stamped at run time'
+        url = code.get('url', '')
+        rows.append('| %s | %s | %s | %s |'
+                    % (code['name'], kind, what,
+                       ('[source](%s)' % url) if url else '--'))
+
+    lines = [
+        '## Which codes these comparisons measured',
+        '',
+        'Every external code is pinned. A version recorded as a month --- which',
+        'is how three of them were once recorded --- cannot be rebuilt, so each',
+        'entry below is a commit or a tarball hash, verified on',
+        '%s to be the latest *official* release rather than merely'
+        % manifest['codes'][1]['latest_check']['verified_on'],
+        'the version that happened to be installed.',
+        '',
+        '| Code | Release | Pinned at | Where from |',
+        '|---|---|---|---|',
+    ] + rows + [
+        '',
+        '### How they are built',
+        '',
+        'Two profiles, because one flag set cannot serve both axes:',
+        '',
+        '- **speed** --- each project\'s own upstream flags, so no code is ever',
+        '  published slower than its authors publish it.',
+        '- **accuracy** --- `-O3 -std=c++17` for everyone, no `-Ofast` and no',
+        '  `-ffast-math`, because value-changing flags make an accuracy',
+        '  measurement measure the flag instead of the code.',
+        '',
+        'Threads are whatever each code naturally uses; none is forced to one,',
+        'and the effective count is recorded per run, so a cross-code speed',
+        'claim always carries both numbers.',
+        '',
+        'One exception, recorded rather than hidden: **nuSQuIDS** is measured as',
+        'distributed, from its upstream wheel with GSL, HDF5 and SQuIDS bundled,',
+        'so its flags are the wheel\'s and the two-profile rule cannot apply.',
+        '',
+        '`tests/bench/build.sh` clones, hash-verifies and builds all of it and',
+        'writes a build record with the compiler, the CPU and the manifest hash.',
+        '`tests/bench/OBJECTIONS.md` records what each measurement answers.',
+        '',
+        '### Exactly which script produces each code\'s timings',
+        '',
+        'One row per script, so a number in a figure can be traced to the file',
+        'that made it. A script recorded as `MISSING` was never committed ---',
+        'which is itself the reason this table exists.',
+        '',
+        '| Code | Script run | What it writes | Figure |',
+        '|---|---|---|---|',
+    ] + [
+        '| %s | `%s` | `%s` | %s |' % (code['name'], t['script'],
+                                       t['produces'], t['figure'])
+        for code in manifest['codes'] for t in code.get('timing_scripts', [])
+    ] + [
+        '',
+        'These are the drivers the pipeline in `tests/bench/` replaces with',
+        'adapters, so that one harness owns every clock and no driver can time',
+        'itself.',
+    ]
+    return '\n'.join(lines)
+
+
 books['10_paper_figures.ipynb'] = notebook(
     "The paper's figures",
     r'''Every figure in [arXiv:1904.12391](https://arxiv.org/abs/1904.12391) is produced here, and only here.
@@ -1466,6 +1552,7 @@ The plotting style is the group's standard `matplotlibrc`, inlined into the setu
 
 Running this notebook writes all fourteen PDFs. Set `NUOSC_PAPER_FIGDIR` to write them straight into the paper's directory.''',
     [
+        md(external_code_provenance()),
         code(r'''import earth
 import slabs
 from scipy.linalg import expm

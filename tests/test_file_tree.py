@@ -213,6 +213,8 @@ TREE = [
      'Each objection, the measurement answering it, and its test'),
     ('tests/bench/requirements.lock',
      'Exact Python versions the benchmark venv installs'),
+    ('tests/bench/build.sh',
+     'Clones, hash-verifies and builds all seven at their pins'),
     ('tests/gen_stiff_reference.py',
      'Regenerates the fifty-digit four-flavor oracle'),
     ('tests/stiff_reference.json',
