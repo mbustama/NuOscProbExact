@@ -300,6 +300,9 @@ File tree
    │           └── Notes_on_SU_n__probability_relations.pdf
    └── tests/                           # Regression suite, run with pytest
        ├── conftest.py                  # Shared fixtures and path setup
+       ├── bench/                       # Fair-comparison benchmark pipeline
+       │   ├── manifest.json            # Pinned versions, build profiles, thread policy, capabilities
+       │   └── OBJECTIONS.md            # Each objection, the measurement answering it, and its test
        ├── gen_stiff_reference.py       # Regenerates the fifty-digit four-flavor oracle
        ├── stiff_reference.json         # That oracle, frozen: nine Hamiltonians in hexadecimal floats
        ├── test_su3_algebra.py          # d tensor, star product, SU(3) invariants

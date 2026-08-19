@@ -1,0 +1,154 @@
+{
+  "schema": "bench-manifest/1",
+  "note": [
+    "The single source of truth for what is measured and how it is built.",
+    "Nothing in tests/bench/ may hard-code a version, a compiler flag, or a",
+    "physical constant: it is read from here, or generated from here.",
+    "Written before anything was built, because a benchmark that cannot name",
+    "the commit it measured cannot be disputed -- which is how the paper came",
+    "to record three codes as version '2026-08', the month they were cloned."
+  ],
+
+  "protocols": {
+    "AMORTIZED": {
+      "definition": "Timed region is a scan of `scan.steps` steps, each step = configure(one varying parameter) + evaluate(whole grid). Everything invariant under that scan is hoisted outside: body/Earth object, engine construction, profile installation, grid arrays, all other setters.",
+      "normalization": "microseconds per grid point = total / (steps * n_points)",
+      "scan": {"param": "dcp", "steps": 25},
+      "claim": "cost inside a fit or scan, with each code's caching working as designed",
+      "rationale": "Adopted from the NuFast-Earth author's own harness, src/examples/Speed.cpp::Atmospheric_Speed, so the definition is his rather than ours."
+    },
+    "THROUGHPUT": {
+      "definition": "Timed region is one request for N points. Codes that batch get one call; codes that cannot get a loop in their own language inside evaluate(), labelled as a loop.",
+      "normalization": "microseconds per point, as a curve in N",
+      "claim": "what batching buys, and which interfaces expose it"
+    },
+    "_dropped": {
+      "ONESHOT": "Dropped by decision. It excluded JIT and import by fiat, so it was never language-fair, and it is the protocol whose numbers started the dispute. The oneshot/amortized ratio it was to provide is not published."
+    },
+    "no_crossing_rule": "Every artifact record carries a protocol stamp {name, grid}. The figure builders assert all series on one axes share one stamp, and the paper-number test refuses to bind a macro comparing two numbers with different stamps."
+  },
+
+  "grids": {
+    "CONST/N-sweep": {"L_km": 1300.0, "density_g_cm3": 3.0, "channel": "numu->nue",
+                      "energies_gev": {"log": [0.1, 31.6], "n": "swept 1..30000"}},
+    "CONST/60E":     {"L_km": 1300.0, "density_g_cm3": 3.0, "energies_gev": {"log": [0.6, 20.0], "n": 60}},
+    "CHORD/12x1":    {"costhz": [-0.9], "energies_gev": {"log": [3.0, 40.0], "n": 12},
+                      "energies_gev_3plus1": {"log": [300.0, 30000.0], "n": 12}},
+    "OSC/100x100":   {"costhz": {"lin": [-1.0, -0.1], "n": 100},
+                      "energies_gev": {"log": [1.0, 100.0], "n": 100},
+                      "why": "NuFast-Earth caches across zenith angles; a 12x1 grid hides an ~8x per-probability advantage it shows here. Objection Earth-3."}
+  },
+
+  "toolchain": {
+    "cxx": "g++", "cc": "gcc",
+    "recorded_at_run_time": ["compiler --version", "cpu model", "governor", "load average", "effective thread count per code"]
+  },
+
+  "build_profiles": {
+    "speed": {
+      "policy": "Each code is built with ITS OWN upstream flags, so we never publish a code slower than its authors do.",
+      "used_for": ["AMORTIZED", "THROUGHPUT"]
+    },
+    "accuracy": {
+      "policy": "Every code built -O3 -std=c++17, no -Ofast and no -ffast-math, because value-changing flags make an accuracy axis measure the flag.",
+      "flags_cxx": "-O3 -std=c++17",
+      "used_for": ["accuracy artifacts"]
+    },
+    "why_two": "One flag set cannot serve both axes. The previous setup used -Ofast -ffast-math for one dataset and -O3 for another and presented them as one methodology."
+  },
+
+  "thread_policy": {
+    "mode": "natural",
+    "definition": "Each code runs with the parallelism it naturally uses; no code is forced to one thread. The effective thread count is captured per code per run and recorded in the artifact.",
+    "why": "Forcing OMP_NUM_THREADS=1 would strip this library's prange kernels (16 of them) while leaving other codes' advantages intact -- not neutral, and it would silently move our own published figures.",
+    "requirement": "Any cross-code speed claim must quote the thread counts of both codes."
+  },
+
+  "codes": [
+    {
+      "name": "NuOscProbExact", "lang": "Python+numba", "kind": "self",
+      "pin": {"repo_commit": "<filled at run time by run_all.py>"},
+      "flags_speed": "n/a (interpreted; numba njit cache)",
+      "threads": "numba prange, NUMBA_NUM_THREADS default",
+      "capabilities": {"batches_energy": true, "batches_zenith": true, "max_flavors": 4,
+                       "precision_knobs": {"n_slabs_per_segment": "1..256", "rtol": "1e-3..1e-15"}}
+    },
+    {
+      "name": "NuFast-LBL", "lang": "C++", "kind": "git",
+      "url": "https://github.com/PeterDenton/NuFast.git",
+      "pin": {"tag": "v2.0.1", "commit": "a6eec95b32842727cdcd0fee65f65fb2be1a3d02"},
+      "flags_speed": "-Ofast -ffast-math -std=c++17",
+      "flags_speed_source": "Benchmarks/Makefile and compile.sh, upstream",
+      "threads": "single",
+      "capabilities": {
+        "batches_energy": true,
+        "batch_symbol": "NuFast::Probability_Matter_LBL(double,double,double,double,double,double,double,const std::vector<double>&,double,int,std::vector<std::array<std::array<double,3>,3>>&)",
+        "batches_zenith": false, "max_flavors": 3, "returns_full_matrix": true,
+        "precision_knobs": {"N_Newton": {"domain": [-1, 0, 1, 2], "sentinel": {"-1": "exact eigenvalues, added v1.1"}}}
+      },
+      "constants": [{"name": "YerhoE2a", "value": "1.52588e-4", "at": "NuFast_LBL.cpp:12"}],
+      "objections_addressed": ["LBL-1", "LBL-2", "LBL-3", "Other-1", "Other-2"]
+    },
+    {
+      "name": "NuFast-Earth", "lang": "C++", "kind": "git",
+      "url": "https://github.com/PeterDenton/NuFast-Earth.git",
+      "pin": {"tag": "v1.2.0", "commit": "499392d49f2133cf9d6859ca4532079a3f31ee35"},
+      "flags_speed": "-O3 -std=c++17",
+      "flags_speed_source": "upstream Makefile (CFlags)",
+      "threads": "single",
+      "capabilities": {
+        "batches_energy": true, "batches_zenith": true,
+        "batch_symbol": "Probability_Engine::Set_Spectra(std::vector<double>&, std::vector<double>&) then Get_Probabilities()",
+        "max_flavors": 3, "returns_full_matrix": true,
+        "has_constant_density_mode": true,
+        "constant_density_symbol": "single_trajectory_mode, added v1.1.0",
+        "precision_knobs": {"eigenvalue_precision": {"domain": [-1, 0, 1, 2], "sentinel": {"-1": "exact"}},
+                            "n_layers": "PREM_NUniformLayer(n)"}
+      },
+      "constants": [{"name": "YerhoE2a", "value": "0.0001526493231029146", "at": "src/Oscillation.cpp:13"}],
+      "objections_addressed": ["Earth-1", "Earth-2", "Earth-3", "Earth-4", "Other-1", "Other-2"]
+    },
+    {
+      "name": "nuSQuIDS", "lang": "C++ (Python iface)", "kind": "git",
+      "url": "https://github.com/arguelles/nuSQuIDS.git",
+      "pin": {"tag": "v1.13.3", "commit": "104914da5a25cb0d1548d19dd9f3161c693ce153"},
+      "flags_speed": "upstream configure defaults",
+      "threads": "single per propagation; BLAS threads captured at run time",
+      "capabilities": {"batches_energy": true, "batches_zenith": false, "max_flavors": 6,
+                       "precision_knobs": {"rel_error": "1e-3..1e-12", "abs_error": "1e-3..1e-12"}}
+    },
+    {
+      "name": "nuCraft", "lang": "Python", "kind": "tarball",
+      "url": "https://nucraft.hepforge.org/nuCraft-r22.tar.gz",
+      "pin": {"version": "r22", "sha256": "f406750025f8f0220d8bad0f521eaadb4f522ef13601479104cebd6ff3fb4490", "bytes": 31914},
+      "threads": "numpy/BLAS, captured at run time",
+      "capabilities": {"batches_energy": false, "batches_zenith": false,
+                       "batched": "interface-only -- CalcWeights takes a particle list but loops over it internally",
+                       "max_flavors": "3+n", "precision_knobs": {"numPrec": "1e-2..1e-10"}},
+      "constants": [{"name": "sterile/CC matter entries", "value": "15.256e-5 and 7.6525e-5, ratio 0.50161 where isoscalar is exactly 1/2", "at": "NuCraft.py:212"}]
+    },
+    {
+      "name": "GLoBES", "lang": "C", "kind": "tarball",
+      "url": "https://www.mpi-hd.mpg.de/personalhomes/globes/download/globes-3.2.18.tar.gz",
+      "pin": {"version": "3.2.18", "sha256": "7edd0fea67800fc1f2d5309a47aba93d4afb5710a10cb40ceddec07079041db3", "bytes": 2003810},
+      "flags_speed": "-O2", "flags_speed_source": "upstream configure default",
+      "threads": "single",
+      "capabilities": {"batches_energy": false, "batches_zenith": false, "max_flavors": 3,
+                       "note": "hard-wires 3x3 but exposes glbRegisterProbabilityEngine",
+                       "precision_knobs": {"n_shells": "1..256"}},
+      "constants": [{"name": "GLB_V_FACTOR", "value": "7.63247e-14", "at": "extracted from pinned source"}]
+    },
+    {
+      "name": "Prob3++", "lang": "C++", "kind": "git",
+      "url": "https://github.com/rogerwendell/prob3plusplus.git",
+      "pin": {"tag": null, "commit": "fa103b1e57fbbe54ac496255adacc703b656edc6",
+              "note": "upstream publishes no tags; pinned by commit, which is why the paper's '2026-08' had to go"},
+      "flags_speed": "-O2",
+      "threads": "single",
+      "capabilities": {"batches_energy": false, "batches_zenith": false, "max_flavors": 3,
+                       "precision_knobs": {"n_shells": "1..256"},
+                       "note": "takes Dmsq32 rather than Dmsq31; mosc.c/mosc3.c must be compiled as C"},
+      "constants": [{"name": "tworttwoGf", "value": "1.52588e-4", "at": "extracted from pinned source"}]
+    }
+  ]
+}
