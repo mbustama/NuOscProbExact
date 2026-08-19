@@ -41,6 +41,34 @@ def adapters():
                   if p.suffix in ('.cpp', '.c', '.py'))
 
 
+
+def _code_only(path):
+    r"""Returns `path`'s source with comments and string literals removed.
+
+    Mentioning a constant is not using one.  An adapter that says
+    ``// GLoBES's km is built on hbar c = 1.97327e-7 eV m`` is documenting where
+    its factor comes from, which is exactly what should be encouraged; the first
+    version of this test failed such a comment and would have pushed the
+    explanation out of the file to keep the check quiet.  Only code is checked.
+    """
+    text = path.read_text()
+    if path.suffix == '.py':
+        import io
+        import tokenize
+        kept = []
+        try:
+            for token in tokenize.generate_tokens(io.StringIO(text).readline):
+                if token.type not in (tokenize.COMMENT, tokenize.STRING):
+                    kept.append(token.string)
+        except (tokenize.TokenError, IndentationError):
+            return text
+        return ' '.join(kept)
+    text = re.sub(r'/\*.*?\*/', ' ', text, flags=re.S)   # /* ... */
+    text = re.sub(r'//[^\n]*', ' ', text)                 # // ...
+    text = re.sub(r'"(?:[^"\\]|\\.)*"', ' ', text)       # "..."
+    return text
+
+
 # --------------------------------------------------------------- the manifest
 def test_every_code_is_pinned():
     r"""No code may be identified by anything as soft as a month.
@@ -123,11 +151,11 @@ def test_no_adapter_types_a_physical_constant():
                 r'5\.06773', r'0\.99209', r'0\.99249',
                 r'2\.525e-3', r'7\.39e-5', r'2\.4511']
     for path in adapters():
-        text = path.read_text()
+        text = _code_only(path)
         for pattern in patterns:
             assert not re.search(pattern, text), (
-                '%s carries the literal %s; it must come from conversions'
-                % (path.name, pattern))
+                '%s carries the literal %s in code; it must come from '
+                'conversions' % (path.name, pattern))
 
 
 def test_capabilities_claims_match_the_registry():

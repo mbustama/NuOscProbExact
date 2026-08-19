@@ -15,6 +15,14 @@
 //   void          setup(const Problem&);   // hoisted; never timed
 //   void          configure(double dcp);   // timed, once per scan step
 //   double        evaluate();              // timed; returns a checksum
+//   void          probabilities(std::vector<double>&);  // untimed; the answer
+//
+// `probabilities` exists because a harness that can only return a checksum can
+// only measure speed, and the accuracy axis is where most of the disputed
+// claims live.  It is called outside every clock, once, and must append the
+// scored channel for each grid point in grid order.  A driver that does not
+// implement it will not link -- which is deliberate: an adapter that cannot be
+// checked for accuracy should not be usable for speed either.
 //
 // `setup` receives the whole problem and must do everything that does not
 // change as the scan parameter moves: build the body or Earth model, construct
@@ -77,6 +85,7 @@ bench::Capabilities  capabilities();
 void                 setup(const bench::Problem &);
 void                 configure(double dcp);
 double               evaluate();
+void                 probabilities(std::vector<double> &out);
 }  // namespace driver
 
 namespace bench {
@@ -210,6 +219,26 @@ int main(int argc, char **argv) {
 
     driver::setup(p);
     Capabilities cap = driver::capabilities();
+
+    // ACCURACY is untimed by construction: it configures once, asks for the
+    // probabilities, and prints them.  Nothing here reads a clock, so a
+    // number from this protocol can never be mistaken for a speed.
+    if (protocol == "accuracy") {
+        driver::configure(p.dcp);
+        std::vector<double> probs;
+        driver::probabilities(probs);
+        std::printf("{\n  \"code\": \"%s\",\n"
+                    "  \"protocol\": {\"name\": \"accuracy\", \"grid\": \"%s\"},\n"
+                    "  \"knob\": {\"%s\": %d},\n  \"n_points\": %zu,\n"
+                    "  \"probabilities\": [",
+                    driver::name(), grid.c_str(),
+                    cap.knob_name[0] ? cap.knob_name : "none", knob,
+                    probs.size());
+        for (std::size_t i = 0; i < probs.size(); ++i)
+            std::printf("%s%.17g", i ? ", " : "", probs[i]);
+        std::printf("]\n}\n");
+        return 0;
+    }
 
     double sink = 0.0;
     Stats st = (protocol == "throughput")

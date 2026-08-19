@@ -29,7 +29,13 @@
     "_dropped": {
       "ONESHOT": "Dropped by decision. It excluded JIT and import by fiat, so it was never language-fair, and it is the protocol whose numbers started the dispute. The oneshot/amortized ratio it was to provide is not published."
     },
-    "no_crossing_rule": "Every artifact record carries a protocol stamp {name, grid}. The figure builders assert all series on one axes share one stamp, and the paper-number test refuses to bind a macro comparing two numbers with different stamps."
+    "no_crossing_rule": "Every artifact record carries a protocol stamp {name, grid}. The figure builders assert all series on one axes share one stamp, and the paper-number test refuses to bind a macro comparing two numbers with different stamps.",
+    "ACCURACY": {
+      "definition": "Untimed. Configure once, ask for the probabilities, difference them against a 50-digit reference built in THIS CODE'S OWN convention. No clock is read, so an accuracy number can never be mistaken for a speed.",
+      "normalization": "max absolute deviation over the grid",
+      "reference": "per-code; see reference_conventions below",
+      "claim": "how accurate this code's algorithm is on the problem it was actually handed"
+    }
   },
   "grids": {
     "CONST/N-sweep": {
@@ -186,11 +192,13 @@
               -1,
               0,
               1,
-              2
+              2,
+              3
             ],
             "sentinel": {
               "-1": "exact eigenvalues, added v1.1"
-            }
+            },
+            "why_3": "The author states N_Newton=3 reaches the double-precision limit; sweeping only to 2 would repeat the omission that made the 'at any setting it exposes' claim false."
           }
         }
       },
@@ -251,11 +259,13 @@
               -1,
               0,
               1,
-              2
+              2,
+              3
             ],
             "sentinel": {
               "-1": "exact"
-            }
+            },
+            "why_3": "The author states N_Newton=3 reaches the double-precision limit; sweeping only to 2 would repeat the omission that made the 'at any setting it exposes' claim false."
           },
           "n_layers": "PREM_NUniformLayer(n)"
         }
@@ -487,6 +497,34 @@
       "dmsq32_ev2": "dmsq31 - dmsq21, for Prob3++",
       "theta_rad": "arcsin(sqrt(sNNsq)), for codes taking angles",
       "dcp_rad": "dcp_deg * pi / 180"
+    }
+  },
+  "reference_conventions": {
+    "note": [
+      "One 50-digit reference PER CODE, each built with that code's own hbar c",
+      "and its own matter normalisation, and with the SAME mixing parameters as",
+      "every other. Each code is then handed honest physical inputs and",
+      "differenced against the problem it actually solves, so the residual",
+      "measures its algorithm rather than a unit convention.",
+      "This replaces rescaling each code's density and baseline to reproduce",
+      "our potential, which made our own code the only one receiving an",
+      "apples-to-apples problem -- part of what was objected to.",
+      "The mass-defect factors therefore move from being fudges applied to",
+      "codes into inputs of the reference builder; adapters no longer carry",
+      "them at all.",
+      "A CONSEQUENCE, stated because it is a real limitation: two per-code",
+      "references describe slightly different physical problems, so these",
+      "numbers answer 'how good is each algorithm' and NOT 'do the codes agree",
+      "on the same physics'. A shared-problem comparison is kept for the Earth",
+      "figure, where profile discretisation is the point, and each figure says",
+      "which it uses."
+    ],
+    "absorbed_into_the_reference": [
+      "hbar c",
+      "the code's own matter normalisation"
+    ],
+    "never_absorbed": {
+      "nuCraft": "Its sterile and charged-current constants have ratio 0.50161 where the isoscalar value is exactly 1/2. That is not a convention, it is an error, so its reference uses its constants for units but the correct ratio -- otherwise the reference would forgive the defect and the 3e-3 floor would vanish."
     }
   }
 }
