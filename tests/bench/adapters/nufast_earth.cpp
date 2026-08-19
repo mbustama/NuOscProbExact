@@ -79,7 +79,7 @@ bench::Capabilities capabilities() {
     c.batches_zenith = true;   // Set_Spectra takes both vectors at once
     c.batch_symbol   = "Probability_Engine::Set_Spectra + Get_Probabilities";
     c.knob_name      = "eigenvalue_precision";
-    c.knob_domain    = {-1, 0, 1, 2};   // -1 is the exact-eigenvalue mode
+    c.knob_domain    = {-1, 0, 1, 2, 3};   // -1 is the exact-eigenvalue mode
     return c;
 }
 

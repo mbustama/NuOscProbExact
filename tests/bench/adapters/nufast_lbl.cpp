@@ -50,7 +50,7 @@ bench::Capabilities capabilities() {
                        "double,double,double,double,const std::vector<double>&,"
                        "double,int,std::vector<std::array<std::array<double,3>,3>>&)";
     c.knob_name      = "N_Newton";
-    c.knob_domain    = {-1, 0, 1, 2};   // -1 is the exact-eigenvalue mode
+    c.knob_domain    = {-1, 0, 1, 2, 3};   // -1 is the exact-eigenvalue mode
     return c;
 }
 

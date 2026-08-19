@@ -8,7 +8,8 @@ copy is a copy that drifts.
 
 An audit of the previous comparison found nine ways it was unfair or
 unreproducible, and an author of one of the compared codes raised nine
-objections of his own. Five of his held. The worst defect was ours and he had
+objections of his own. Six of his held outright, one partly, and one against the paper's prose
+rather than its measurements; `OBJECTIONS.md` is the authority on which. The worst defect was ours and he had
 not noticed it: our driver's density lookup scanned up to 1024 discontinuities
 on every call from inside his engine's inner loop, adding O(N^2) work to his
 measurement and inflating his published point by about 2.7x.
@@ -38,14 +39,26 @@ the machine guard, and the invariant tests.
 
 **Not yet built**, in dependency order:
 
-1. `probabilities()` in the four C++ adapters. The accuracy path was added to
+1. `probabilities()` in the four C++ adapters **and an accuracy path on the
+   Python side** --- `runner.py` accepts only `amortized|throughput` and no
+   Python adapter has a `probabilities()` method, so that half is not done
+   either. The scored channel is `numu->numu`; see `manifest.json`. The accuracy path was added to
    the contract after they were written, so they currently do not link --- which
    is the contract working, not a bug to route around.
-2. Remove the input rescaling from the adapters. They still apply
+2. Remove the input rescaling from the adapters --- **all of it, not only the
+   density**. The manifest absorbs *both* hbar c and the matter normalisation
+   into the reference, so `OUR_COSZ_HBARC_SCALE` (in `prob3.cpp`, `globes.cpp`,
+   `nusquids.py`) and the Python-side scalings in `nucraft.py` and
+   `nusquids.py` come out too. They still apply
    `OUR_PREM_MASS_DEFECT_*` to densities, which was right when all codes shared
    one reference. References are now per-code, so those factors belong to the
    reference builder and applying them in both places double-counts.
-3. The per-code reference builder. Each code is differenced against a 50-digit
+3. The per-code reference builder. Before designing it, read
+   `memory/nuoscprob-prem-figure-referee.md`: the slab product converges at
+   **second** order, the Richardson referee is `(4*P(256) - P(128))/3`, and the
+   floor is ~1e-11. A first-order referee already cost one session. Commit
+   b549a6d also decided a shared-problem comparison is kept for the Earth
+   figure --- that decision currently survives only in that commit message. Each code is differenced against a 50-digit
    reference built with its own hbar c and matter normalisation and the shared
    mixing parameters. This is the piece where an error is invisible: a reference
    in the wrong convention makes a code look *better* than it is.
@@ -75,3 +88,34 @@ first or record it and lean on the canary. The session canary baseline is
 Wall clock is the open question: 30 blocks x 2 timed protocols x 7 codes x knob
 sweeps runs to hours, and the nuSQuIDS cells on the 100x100 grid are the
 expensive ones. Decide tiering before starting, not during.
+
+## Gaps a cold reader found, still open
+
+A fresh agent was given only this directory and the manifest and asked to reach
+the runs unaided.  It got most of the way and then listed what it could not
+determine.  Four of those are fixed above and in `manifest.json`; these are not,
+and each one is a place where a wrong guess is silent rather than loud.
+
+- **`n_layers` cannot actually be swept.**  `Problem` carries a single `int
+  knob`, and `nufast_earth.cpp` hard-codes 256 layers with a comment referring
+  to a "knob's sibling" that does not exist.  The manifest's PREM layer sweep
+  therefore cannot run as written.  Either widen `Problem` or drop the sweep,
+  but do not leave the manifest promising it.
+- **The orchestrator's cell matrix is undefined.**  Nothing says which code runs
+  which grid under which protocol, nor how artifacts are named.  `run_all.py`
+  has to invent it, and an invented matrix is not reproducible.
+- **Our answers to the NuFast author's points are measurements held in one
+  place only** --- `memory/nufast-author-claims-verbatim.md`, outside this
+  repository and deliberately so, because his letter is private.  His prose
+  must stay out; *our own numbers* are ours, and belong in `OBJECTIONS.md` in
+  the repository where they can be re-checked.  Move them.  If that memory file
+  is lost before they are moved, every one of them has to be measured again.
+- **A loose thread nobody has pulled.**  `bench_nufast_earth`'s chord checksum
+  sits about 0.05 per probability away from `prob3` and `globes` at *every*
+  knob value.  A constant offset that survives refinement is not a convergence
+  error; it is a convention or a channel mismatch, and it should be understood
+  before it becomes a figure.
+- **One number in `manifest.json` disagrees with what was measured.**  The
+  manifest says nuCraft floors at 3e-3; the measurement recorded at 3+1 flavors
+  was 3.7e-4.  Neither has been re-run to settle it, and the manifest should
+  not be trusted here until one has been.

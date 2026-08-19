@@ -11,7 +11,7 @@ printed in the README.
 Each constant below is read from the *pinned* source in ``.bench-build/src``
 rather than transcribed, so a factor cannot drift from the code it converts
 for.  ``gen_conversions.py`` turns this into ``conversions.h`` for the C++
-adapters, and ``test_bench_conversions.py`` checks each factor twice: once by
+adapters, and ``tests/test_bench_pipeline.py`` checks each factor twice: once by
 derivation, and once against a vacuum residual.
 """
 

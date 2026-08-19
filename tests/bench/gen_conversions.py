@@ -6,7 +6,7 @@ Run from the repository root::
     python tests/bench/gen_conversions.py > .bench-build/conversions.h
 
 The adapters may not contain a numeric literal for any physical factor;
-`test_no_hand_typed_conversion_constants` greps for that.  This is the only
+`test_no_adapter_types_a_physical_constant` greps for that.  This is the only
 route by which such a number reaches C++.
 """
 

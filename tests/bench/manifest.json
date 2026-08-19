@@ -542,5 +542,9 @@
     "statistics": "{mean, sd, min, n}; the schema has no field for a bare scalar time.",
     "stamps": "protocol {name, grid} and conventions; series with different stamps may not share an axes.",
     "machine": "cpu, cores, governor, load average, and the session's three canary readings."
+  },
+  "scored_channel": {
+    "channel": "numu->numu",
+    "note": "bench.hpp says probabilities() appends 'the scored channel' and never said which. Every adapter's checksum already sums numu->numu (m[1][1], GetProb(2,2), _PMM=4, EvalFlavor(1)), so that is the channel, recorded here before the accuracy path is written. Note CONST/N-sweep's grid entry says numu->nue for the THROUGHPUT figure's problem statement; the scored channel for accuracy is numu->numu. A wrong guess here silently changes every accuracy figure."
   }
 }

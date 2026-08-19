@@ -173,6 +173,10 @@ build_adapter "globes" g++ -O2 -std=c++17 -I"$BUILD" -I"$PREFIX/include" \
   "$ADAPT/globes.cpp" -L"$PREFIX/lib" -Wl,-rpath,"$PREFIX/lib" \
   -lglobes -lgsl -lgslcblas -lm -o "$BIN/bench_globes"
 
+say "our_prem.h (three adapters include it)"
+python3 "$REPO/tests/external_drivers/gen_prem_header.py" > "$BUILD/our_prem.h"
+test -s "$BUILD/our_prem.h" && echo "  generated $(wc -l < "$BUILD/our_prem.h") lines" || { echo "  FAILED"; exit 1; }
+
 say "build record"
 python3 - <<PY
 import json, platform, subprocess, os
