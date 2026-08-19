@@ -29,7 +29,7 @@
     "_dropped": {
       "ONESHOT": "Dropped by decision. It excluded JIT and import by fiat, so it was never language-fair, and it is the protocol whose numbers started the dispute. The oneshot/amortized ratio it was to provide is not published."
     },
-    "no_crossing_rule": "Every artifact record carries a protocol stamp {name, grid}. The figure builders assert all series on one axes share one stamp, and the paper-number test refuses to bind a macro comparing two numbers with different stamps.",
+    "no_crossing_rule": "Every artifact record carries a protocol stamp {name, grid} and a conventions stamp, now 'own-reference' for the per-code references. The figure builders assert all series on one axes share both stamps, and the paper-number test refuses to bind a macro comparing two numbers with different stamps. Series differenced against per-code references may share an axes -- that is the point -- but may not be mixed with any series differenced against a shared reference.",
     "ACCURACY": {
       "definition": "Untimed. Configure once, ask for the probabilities, difference them against a 50-digit reference built in THIS CODE'S OWN convention. No clock is read, so an accuracy number can never be mistaken for a speed.",
       "normalization": "max absolute deviation over the grid",
@@ -503,21 +503,25 @@
     "note": [
       "One 50-digit reference PER CODE, each built with that code's own hbar c",
       "and its own matter normalisation, and with the SAME mixing parameters as",
-      "every other. Each code is then handed honest physical inputs and",
-      "differenced against the problem it actually solves, so the residual",
-      "measures its algorithm rather than a unit convention.",
-      "This replaces rescaling each code's density and baseline to reproduce",
-      "our potential, which made our own code the only one receiving an",
-      "apples-to-apples problem -- part of what was objected to.",
-      "The mass-defect factors therefore move from being fudges applied to",
-      "codes into inputs of the reference builder; adapters no longer carry",
-      "them at all.",
-      "A CONSEQUENCE, stated because it is a real limitation: two per-code",
-      "references describe slightly different physical problems, so these",
-      "numbers answer 'how good is each algorithm' and NOT 'do the codes agree",
-      "on the same physics'. A shared-problem comparison is kept for the Earth",
-      "figure, where profile discretisation is the point, and each figure says",
-      "which it uses."
+      "every other. Each code is handed honest physical inputs and differenced",
+      "against the problem it actually solves, so the residual measures its",
+      "algorithm rather than a unit convention.",
+      "This replaces rescaling each code's density and baseline to reproduce our",
+      "potential, which made our own code the only one receiving an",
+      "apples-to-apples problem -- part of what was objected to. The mass-defect",
+      "factors therefore move from being fudges applied to codes into inputs of",
+      "the reference builder; adapters no longer carry them at all.",
+      "PLOTTING: all codes still go on ONE axes, with |P - P_ref| on y, exactly as",
+      "before -- what changes is that P_ref is now each code's own reference. The",
+      "quantity is per-code but it is the same KIND of quantity for every series,",
+      "which is what makes them comparable: how well does each code solve the",
+      "problem it was handed. Every caption must say that P_ref differs per code.",
+      "A CONSEQUENCE WORTH NOTING: no figure's floor is a convention artifact any",
+      "more. The old six-ways comparison was capped near 1e-8 by a deliberate",
+      "4.2e-8 hbar-c mismatch, which is the floor that prompted the objection that",
+      "our accuracy comparison was not apples-to-apples. That cap is gone, so that",
+      "figure's framing -- 'what a convention mismatch costs' -- is now a sentence",
+      "rather than a figure, and every code can reach round-off if it can."
     ],
     "absorbed_into_the_reference": [
       "hbar c",
@@ -525,6 +529,11 @@
     ],
     "never_absorbed": {
       "nuCraft": "Its sterile and charged-current constants have ratio 0.50161 where the isoscalar value is exactly 1/2. That is not a convention, it is an error, so its reference uses its constants for units but the correct ratio -- otherwise the reference would forgive the defect and the 3e-3 floor would vanish."
+    },
+    "plotting": {
+      "y_axis": "|P - P_ref|, P_ref per code",
+      "one_axes": true,
+      "caption_must_state": "that P_ref is built in each code's own convention, with shared mixing parameters"
     }
   }
 }
