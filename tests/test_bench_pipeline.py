@@ -284,3 +284,42 @@ def test_canary_drift_invalidates_a_session():
     assert machine.canary_drift(1.00, 1.01, 1.02)[0]
     ok, why = machine.canary_drift(1.00, 1.03, 1.20)
     assert not ok and 'drifted' in why, why
+
+
+def test_our_own_constants_are_derived_not_transcribed():
+    r"""Each factor must equal the potential ratio computed from `globaldefs`.
+
+    This is the check that caught the module's own opening bug.
+    ``conversions.OURS['matter']`` began life as ``1.514423e-4``, a seven-figure
+    transcription of a value from an old driver's comment, and every factor
+    derived from it inherited a 2.4e-8 error --- in a module whose entire
+    purpose is to stop constants being typed by hand.
+
+    The four external codes express the potential as ``V = k * rhoYe / 2e9``, so
+    the same quantity for this library is ``sqrt(2) G_F N_e * 2e9 / rhoYe``.  If
+    a factor disagrees with that, something has been transcribed again.
+    """
+    import math
+    import sys
+
+    sys.path.insert(0, str(BENCH))
+    sys.path.insert(0, str(TESTS.parent / 'src'))
+    import conversions
+    import globaldefs as gd
+
+    if not pathlib.Path(conversions.BUILD).is_dir():
+        pytest.skip('external sources not built; run tests/bench/build.sh')
+
+    rho_ye = (gd.DENSITY_MATTER_CRUST_G_PER_CM3
+              * gd.ELECTRON_FRACTION_EARTH_CRUST)
+    ours = math.sqrt(2.0)*gd.GF*gd.NUM_DENSITY_E_EARTH_CRUST
+
+    for code in ('NuFast-LBL', 'NuFast-Earth', 'Prob3++', 'nuCraft'):
+        theirs, _ = conversions.extract(code)
+        expected = ours/(theirs*rho_ye/2.0e9)
+        assert abs(conversions.mass_defect(code) - expected) < 1e-14, (
+            '%s: factor %.14f but the potential ratio is %.14f'
+            % (code, conversions.mass_defect(code), expected))
+
+    assert abs(conversions.OURS['km_to_inv_ev'] - gd.CONV_KM_TO_INV_EV) == 0.0, (
+        'the length conversion must be globaldefs\' own value, not a copy')

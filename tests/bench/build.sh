@@ -56,7 +56,7 @@ fetch_verify() {                   # name url sha256 file
   echo "  $name tarball sha256 verified"
 }
 
-say "1/6  NuFast-LBL"
+say "1/7  NuFast-LBL"
 clone_at NuFast-LBL "$(pin NuFast-LBL "['url']")" "$(pin NuFast-LBL "['pin']['commit']")" nufast-lbl
 for prof in speed accuracy; do
   flags="-Ofast -ffast-math -std=c++17"; [ "$prof" = accuracy ] && flags="-O3 -std=c++17"
@@ -68,7 +68,7 @@ for prof in speed accuracy; do
   echo "  $prof profile ok  [$flags] -> nufast_lbl.$prof.o"
 done
 
-say "2/6  NuFast-Earth"
+say "2/7  NuFast-Earth"
 clone_at NuFast-Earth "$(pin NuFast-Earth "['url']")" "$(pin NuFast-Earth "['pin']['commit']")" nufast-earth
 for prof in speed accuracy; do
   flags="-O3 -std=c++17"      # upstream Makefile CFlags; same for both profiles here
@@ -83,7 +83,7 @@ for prof in speed accuracy; do
   echo "  $prof profile ok  [$flags]  ($(ls "$out"/*.o | wc -l) objects)"
 done
 
-say "3/6  Prob3++"
+say "3/7  Prob3++"
 clone_at Prob3++ "$(pin Prob3++ "['url']")" "$(pin Prob3++ "['pin']['commit']")" prob3
 for prof in speed accuracy; do
   cf="-O2"; [ "$prof" = accuracy ] && cf="-O3"
@@ -93,7 +93,7 @@ for prof in speed accuracy; do
   echo "  $prof profile ok  [$cf]  ($(ls "$out"/*.o | wc -l) objects)"
 done
 
-say "4/6  GLoBES"
+say "4/7  GLoBES"
 fetch_verify GLoBES "$(pin GLoBES "['url']")" "$(pin GLoBES "['pin']['sha256']")" globes.tar.gz
 if [ ! -f "$PREFIX/lib/libglobes.so" ] && [ ! -f "$PREFIX/lib/libglobes.a" ]; then
   tar xzf "$SRC/globes.tar.gz" -C "$SRC"
@@ -104,7 +104,7 @@ if [ ! -f "$PREFIX/lib/libglobes.so" ] && [ ! -f "$PREFIX/lib/libglobes.a" ]; th
 fi
 ls "$PREFIX"/lib/libglobes* >/dev/null 2>&1 && echo "  installed into $PREFIX" || { echo "  GLoBES BUILD FAILED, see $LOG"; exit 1; }
 
-say "5/6  nuCraft"
+say "5/7  nuCraft"
 fetch_verify nuCraft "$(pin nuCraft "['url']")" "$(pin nuCraft "['pin']['sha256']")" nucraft.tar.gz
 # The r22 tarball is FLAT -- NuCraft.py and friends sit at the top level with
 # no wrapping directory -- so --strip-components=1 silently strips the
@@ -114,7 +114,7 @@ tar xzf "$SRC/nucraft.tar.gz" -C "$SRC/nucraft"
 test -f "$SRC/nucraft/NuCraft.py" || { echo "  nuCraft: NuCraft.py not extracted"; exit 1; }
 python3 -c "import os;print('  extracted:', sorted(f for f in os.listdir('$SRC/nucraft') if f.endswith(('.py','.txt'))))"
 
-say "6/6  nuSQuIDS (pinned wheel; GSL/HDF5/SQuIDS bundled upstream)"
+say "6/7  nuSQuIDS (pinned wheel; GSL/HDF5/SQuIDS bundled upstream)"
 . "$VENV/bin/activate"
 python -m pip install -q "nuSQuIDS==$(pin nuSQuIDS "['pin']['tag'].lstrip('v')")" 2>&1 | tail -2 || true
 python - <<'PYV'
@@ -124,6 +124,54 @@ got = version('nuSQuIDS')
 print('  import ok, distribution version', got)
 assert got == '1.13.3', 'nuSQuIDS is %s, manifest pins 1.13.3' % got
 PYV
+
+say "7/7  benchmark adapters (compile + link against the harness)"
+# Each C++ adapter is compiled beside tests/bench/bench.hpp (which owns
+# main() and every clock) and linked against the per-profile objects built
+# above, into $BIN/bench_<code> (speed) and $BIN/bench_<code>_accuracy.
+# conversions.h is regenerated first so no adapter can compile against a
+# stale factor.  The exit status of every compile is checked for real: a
+# failure names its log and stops the build.
+python3 "$REPO/tests/bench/gen_conversions.py" > "$BUILD/conversions.h"
+ADAPT="$REPO/tests/bench/adapters"
+build_adapter() {                  # label command...
+  local label="$1"; shift
+  if "$@" > "$LOG/adapter_$label.log" 2>&1; then
+    echo "  PASS $label -> $(basename "${!#}")"
+  else
+    local status=$?
+    echo "  FAIL $label (exit $status, log: $LOG/adapter_$label.log)"
+    exit "$status"
+  fi
+}
+for prof in speed accuracy; do
+  sfx=""; [ "$prof" = accuracy ] && sfx="_accuracy"
+
+  # NuFast-LBL: upstream's own flags for speed, -O3 for accuracy, matching
+  # the object it links against.
+  lblflags="-Ofast -ffast-math -std=c++17"; [ "$prof" = accuracy ] && lblflags="-O3 -std=c++17"
+  build_adapter "nufast_lbl.$prof" g++ $lblflags -I"$BUILD" \
+    "$ADAPT/nufast_lbl.cpp" "$BUILD/nufast_lbl.$prof.o" \
+    -o "$BIN/bench_nufast_lbl$sfx"
+
+  # NuFast-Earth: -O3 -std=c++17 is both its upstream flag set and the
+  # accuracy profile, so the two binaries differ only in provenance.
+  build_adapter "nufast_earth.$prof" g++ -O3 -std=c++17 -I"$BUILD" \
+    -I"$SRC/nufast-earth/include" "$ADAPT/nufast_earth.cpp" \
+    "$BUILD/nufast-earth-$prof"/*.o -o "$BIN/bench_nufast_earth$sfx"
+
+  # Prob3++: upstream -O2 for speed, -O3 for accuracy, as built above.
+  p3flags="-O2 -std=c++17"; [ "$prof" = accuracy ] && p3flags="-O3 -std=c++17"
+  build_adapter "prob3.$prof" g++ $p3flags -I"$BUILD" -I"$SRC/prob3" \
+    "$ADAPT/prob3.cpp" "$BUILD/prob3-$prof"/*.o -o "$BIN/bench_prob3$sfx"
+done
+# GLoBES has ONE profile: the measured code lives in libglobes, built once
+# by upstream's configure at its default -O2; relinking the thin adapter
+# with different flags would not change the code being measured.  Recorded
+# here rather than hidden, like the nuSQuIDS wheel exception.
+build_adapter "globes" g++ -O2 -std=c++17 -I"$BUILD" -I"$PREFIX/include" \
+  "$ADAPT/globes.cpp" -L"$PREFIX/lib" -Wl,-rpath,"$PREFIX/lib" \
+  -lglobes -lgsl -lgslcblas -lm -o "$BIN/bench_globes"
 
 say "build record"
 python3 - <<PY

@@ -309,8 +309,15 @@ File tree
        │   ├── machine.py               # Environment capture, the canary, and the rejection rule
        │   ├── conversions.py           # The one place a physical conversion factor is computed
        │   ├── gen_conversions.py       # Emits conversions.h so no adapter carries a physical literal
-       │   └── adapters/                # One adapter per code, physics only
-       │       └── nufast_earth.cpp     # NuFast-Earth, batched over energy and zenith, invariants hoisted
+       │   ├── adapters/                # One adapter per code, physics only
+       │   │   ├── nufast_earth.cpp     # NuFast-Earth, batched over energy and zenith, invariants hoisted
+       │   │   ├── nufast_lbl.cpp       # NuFast-LBL, one batched call over the whole energy vector
+       │   │   ├── prob3.cpp            # Prob3++, looped in C++ because that is its interface
+       │   │   ├── globes.cpp           # GLoBES, looped, chord decomposition hoisted
+       │   │   ├── nuoscprobexact.py    # This library, batched
+       │   │   ├── nusquids.py          # nuSQuIDS through its multiple-energy constructor
+       │   │   └── nucraft.py           # nuCraft, whose batching is interface-only
+       │   └── runner.py                # The Python harness; the only place Python timing happens
        ├── test_bench_pipeline.py       # The benchmark pipeline's fairness invariants
        ├── gen_stiff_reference.py       # Regenerates the fifty-digit four-flavor oracle
        ├── stiff_reference.json         # That oracle, frozen: nine Hamiltonians in hexadecimal floats

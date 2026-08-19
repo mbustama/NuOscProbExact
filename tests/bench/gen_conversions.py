@@ -26,7 +26,8 @@ def main():
            '#pragma once', '']
     for code, macro in (('NuFast-LBL', 'OUR_PREM_MASS_DEFECT_NUFAST_LBL'),
                         ('NuFast-Earth', 'OUR_PREM_MASS_DEFECT_NUFAST_EARTH'),
-                        ('Prob3++', 'OUR_PREM_MASS_DEFECT_PROB3')):
+                        ('Prob3++', 'OUR_PREM_MASS_DEFECT_PROB3'),
+                        ('GLoBES', 'OUR_PREM_MASS_DEFECT_GLOBES')):
         theirs, path = conversions.extract(code)
         out.append('// %s carries %r, at %s'
                    % (code, theirs, os.path.relpath(path)))
@@ -48,6 +49,11 @@ def main():
     out.append('// All three compiled Earth codes hard-code hbar c = 1.97327e-7 eV m.')
     out.append('#define OUR_COSZ_HBARC_SCALE %.17g'
                % conversions.hbar_c_cosine_scale())
+    out.append('')
+    out.append('// GLoBES multiplies the density it is handed by its own')
+    out.append('// electron fraction, GLB_Ne_MANTLE; read from the pinned')
+    out.append('// source so the adapter divides by what GLoBES will multiply.')
+    out.append('#define GLOBES_NE_MANTLE %.17g' % conversions.globes_ne_mantle())
     out.append('')
     print('\n'.join(out))
 

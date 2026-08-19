@@ -38,3 +38,6 @@ resources/paper/bisect_probe.*
 # Jupyter's autosave copies.  These are not the notebooks; make_notebooks.py
 # generates those, and a checkpoint of one is a stale duplicate.
 .ipynb_checkpoints/
+
+# Python bytecode caches under the benchmark tree.
+tests/bench/**/__pycache__/

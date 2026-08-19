@@ -21,17 +21,70 @@ import re
 BUILD = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__)))), '.bench-build', 'src')
 
-#: This library's own values, from :mod:`globaldefs`.
+def _ours_matter_constant():
+    r"""Returns this library's matter constant in the codes' normalisation.
+
+    Derived from :mod:`globaldefs`, never transcribed.  The four external
+    literals express the potential as ``V = k * rhoYe / 2e9`` with ``rhoYe`` in
+    g cm^-3, so the same quantity for this library is
+    ``sqrt(2) G_F N_e * 2e9 / rhoYe`` at any density.
+
+    This function exists because the first version of this module opened with
+    ``'matter': 1.514423e-4`` --- a seven-figure transcription of the value from
+    an old driver's comment --- which is the very sin the module was written to
+    prevent.  It was 2.4e-8 off, and every factor derived from it inherited that
+    error.  Caught by checking a derived factor against the potential computed
+    from the library's own constants, which is now a test.
+    """
+    import math
+    import os
+    import sys
+
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(
+        os.path.dirname(os.path.abspath(__file__)))), 'src'))
+    import globaldefs as gd
+
+    rho_ye = gd.DENSITY_MATTER_CRUST_G_PER_CM3*gd.ELECTRON_FRACTION_EARTH_CRUST
+    potential = math.sqrt(2.0)*gd.GF*gd.NUM_DENSITY_E_EARTH_CRUST
+    return potential*2.0e9/rho_ye
+
+
+#: This library's own values.  The matter constant is derived; the length
+#: conversion is `globaldefs.CONV_KM_TO_INV_EV` itself rather than a copy.
+def _ours_km_to_inv_ev():
+    import os
+    import sys
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(
+        os.path.dirname(os.path.abspath(__file__)))), 'src'))
+    import globaldefs as gd
+    return gd.CONV_KM_TO_INV_EV
+
+
 OURS = {
-    'matter': 1.514423e-4,      # 2 sqrt(2) G_F N_A, in the codes' units
-    'km_to_inv_ev': 5.06773e9,
+    'matter': _ours_matter_constant(),
+    'km_to_inv_ev': _ours_km_to_inv_ev(),
 }
 
 #: Where each external constant lives in its pinned source.
+#:
+#: GLoBES defines GLB_V_FACTOR twice, old value behind ``#ifdef
+#: GLB_OLD_CONSTANTS`` and current value in the ``#else`` branch; the
+#: pattern anchors on the ``#else`` so it reads the one that compiles.
+#: GLB_Ne_MANTLE has a commented-out 0.497 on the line above the live 0.5,
+#: so its pattern requires the ``#define`` to start the line.
+#: nuCraft's constant is the CC entry of EarthModel's potential vector,
+#: ``A = array([15.256e-5*self.y[0], ...])`` -- same YerhoE2a convention as
+#: the NuFast codes, with Y_e carried separately by ``y[0]``.
 SITES = {
     'NuFast-LBL':   ('nufast-lbl/NuFast_LBL.cpp',      r'YerhoE2a\s*=\s*([0-9.eE+-]+)'),
     'NuFast-Earth': ('nufast-earth/src/Oscillation.cpp', r'YerhoE2a\s*=\s*([0-9.eE+-]+)'),
     'Prob3++':      ('prob3/mosc.c',                   r'tworttwoGf\s*=\s*([0-9.eE+-]+)'),
+    'GLoBES':       ('globes-3.2.18/source/glb_probability.h',
+                     r'#else\s*#define GLB_V_FACTOR\s+([0-9.eE+-]+)'),
+    'GLoBES-Ne':    ('globes-3.2.18/source/glb_probability.h',
+                     r'\n#define GLB_Ne_MANTLE\s+([0-9.eE+-]+)'),
+    'nuCraft':      ('nucraft/NuCraft.py',
+                     r'self\.A\s*=\s*array\(\[([0-9.eE+-]+)\*self\.y\[0\]'),
 }
 
 
@@ -55,9 +108,30 @@ def extract(code):
 
 
 def mass_defect(code):
-    r"""Returns ours/theirs for `code`, the factor its density must carry."""
+    r"""Returns ours/theirs for `code`, the factor its density must carry.
+
+    GLoBES's constant is in a different convention from the others'
+    ``YerhoE2a``: GLB_V_FACTOR is the potential V in eV per (g/cm^3) of
+    electron density, where the others carry :math:`A = 2 E V` per GeV.
+    The bridge is :math:`2 \times 10^9` -- the 2 from the definition of A
+    and the :math:`10^9` from GeV to eV, both exact unit factors rather
+    than measured constants.
+    """
     theirs, _ = extract(code)
+    if code == 'GLoBES':
+        theirs = 2.0e9*theirs
     return OURS['matter']/theirs
+
+
+def globes_ne_mantle():
+    r"""Returns the electron fraction GLoBES multiplies in by itself.
+
+    ``glb_probability.c`` computes ``density * GLB_V_FACTOR *
+    GLB_Ne_MANTLE``, so a density handed to GLoBES must divide our
+    :math:`Y_e` by this rather than assume the two are equal.
+    """
+    value, _ = extract('GLoBES-Ne')
+    return value
 
 
 def hbar_c_cosine_scale(their_hbar_c_ev_m=1.97327e-7):
