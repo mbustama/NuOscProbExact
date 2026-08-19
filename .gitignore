@@ -28,3 +28,8 @@ resources/paper/*.blg
 resources/paper/*.pdf
 resources/paper/main_diff.tex
 resources/paper/bisect_probe.*
+
+# The benchmark pipeline's own virtual environment, built by
+# tests/bench/build.sh from tests/bench/requirements.lock.  The lock file is
+# tracked; the tree it installs into is not.
+/.venv-bench/

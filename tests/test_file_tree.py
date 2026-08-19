@@ -211,6 +211,8 @@ TREE = [
      'Pinned versions, build profiles, thread policy, capabilities'),
     ('tests/bench/OBJECTIONS.md',
      'Each objection, the measurement answering it, and its test'),
+    ('tests/bench/requirements.lock',
+     'Exact Python versions the benchmark venv installs'),
     ('tests/gen_stiff_reference.py',
      'Regenerates the fifty-digit four-flavor oracle'),
     ('tests/stiff_reference.json',
