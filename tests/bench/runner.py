@@ -16,6 +16,11 @@ Same protocols, same statistics, same JSON shape as bench.hpp:
   before any clock.
 * ``THROUGHPUT`` -- one request for the whole grid, autoranged to a block of
   at least 0.05 s, repeated ``--samples`` times after one untimed warm-up.
+  ``reset()`` is called before every ``evaluate()``, because the repetition
+  is measurement scaffold rather than a workload -- nobody asks the same
+  question five thousand times against unchanged state -- and the mean is
+  only the cost of a request if every repetition costs what the first did.
+  AMORTIZED never calls it: there the caching is the thing being measured.
 
 An adapter is a class exposed as the module attribute ``ADAPTER``, with::
 
@@ -25,6 +30,7 @@ An adapter is a class exposed as the module attribute ``ADAPTER``, with::
     setup(problem)           # hoisted; never timed
     configure(dcp)           # timed, once per scan step
     evaluate() -> float      # timed; returns a checksum
+    reset()                  # timed; makes the next evaluate cold
 
 Oscillation parameters come from :mod:`conversions` (which reads the
 manifest) and the grids come from the manifest too, so the Python side
@@ -170,11 +176,13 @@ def amortized(driver, problem, samples, steps):
 def throughput(driver, problem, samples, min_block):
     r"""One request for the whole grid, repeated; bench.hpp's throughput."""
     driver.configure(problem.dcp)
+    driver.reset()
     sink = driver.evaluate()          # untimed warm-up
     reps = 1                          # autorange to a stable block
     while True:
         t0 = time.perf_counter()
         for _ in range(reps):
+            driver.reset()
             sink += driver.evaluate()
         dt = time.perf_counter() - t0
         if dt >= min_block or reps > (1 << 24):
@@ -184,6 +192,7 @@ def throughput(driver, problem, samples, min_block):
     for _ in range(samples):
         t0 = time.perf_counter()
         for _ in range(reps):
+            driver.reset()
             sink += driver.evaluate()
         t1 = time.perf_counter()
         per_point.append((t1 - t0)/(float(reps)*problem.points())*1.0e6)
@@ -199,7 +208,14 @@ def load_adapter(code):
         raise SystemExit(
             'adapter %s names a clock (%s); the harness times, the adapter '
             'does not' % (module.__file__, ', '.join(hits)))
-    return module.ADAPTER()
+    adapter = module.ADAPTER()
+    # The Python mirror of the C++ side's link error: an adapter with no
+    # reset() cannot be driven under THROUGHPUT without silently reusing
+    # whatever the previous repetition left behind.
+    if not hasattr(adapter, 'reset'):
+        raise SystemExit('adapter %s defines no reset(); see runner.__doc__'
+                         % module.__file__)
+    return adapter
 
 
 def main(argv=None):

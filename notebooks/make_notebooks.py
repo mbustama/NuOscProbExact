@@ -1545,13 +1545,13 @@ def external_code_provenance():
 
 
 def convention_matching():
-    """Returns markdown on the two conventions every comparison must match.
+    """Returns markdown on how each code's problem and its reference are built.
 
-    The factors are computed by ``tests/bench/conversions.py`` from the
-    constant in each code's own pinned source, so what this cell prints is
-    what the benchmark actually applies.  Three different values of one of
-    them once coexisted in the repository; showing a fourth, typed here,
-    would have been the obvious way to make that four.
+    Everything printed here is computed by ``tests/bench/conversions.py`` from
+    the constant in each code's own pinned source, so the cell cannot drift
+    from what the benchmark applies.  Three different values of one factor
+    once coexisted in the repository; a fourth, typed here, would have been
+    the obvious way to make it four.
     """
     import os
     import sys
@@ -1559,51 +1559,61 @@ def convention_matching():
     sys.path.insert(0, os.path.join('tests', 'bench'))
     import conversions
 
+    codes = ('NuFast-LBL', 'NuFast-Earth', 'Prob3++', 'GLoBES', 'nuCraft')
     rows = []
-    for code in ('NuFast-LBL', 'NuFast-Earth', 'Prob3++'):
+    for code in codes:
         theirs, path = conversions.extract(code)
-        rows.append('| %s | `%r` | `%s` | %.10f |'
-                    % (code, theirs, os.path.basename(path),
-                       conversions.mass_defect(code)))
-    cosz = conversions.hbar_c_cosine_scale()
+        rows.append('| %s | `%r` | %.9g | `%s` |'
+                    % (code, theirs, conversions.hbar_c(code),
+                       os.path.basename(path)))
     osc = conversions.oscillation_parameters()
     p3 = conversions.for_code('Prob3++')
+    nc_cc, _ = conversions.extract('nuCraft')
+    nc_nc = conversions.nucraft_nc_constant()
 
     return '\n'.join([
-        '## The two conventions that have to be matched first',
+        '## Each code is handed its own problem, and judged against its own reference',
         '',
-        'Comparing a code against a reference is only a statement about its',
-        '*propagation* if the two agree on what a kilometre is and what the',
-        'matter potential is. They do not agree natively. Each code carries its',
-        'own rounding of $2\\sqrt{2} G_F N_A$ and its own $\\hbar c$, and left',
-        'alone those differences dominate everything the comparison is about ---',
-        'all three compiled Earth codes sit near $10^{-7}$ in a vacuum check',
-        'before matching, and near $10^{-14}$ after.',
+        'Comparing a code against a reference says something about its',
+        'propagation only if the two agree on what a kilometre is and what the',
+        'matter potential is. They do not agree natively: each code carries its',
+        'own rounding of $2\\sqrt{2} G_F N_A$ and its own $\\hbar c$.',
         '',
-        '### 1. The matter constant',
+        'An earlier version of this comparison rescaled every code\'s density',
+        'and baseline so that all of them reproduced *our* potential and *our*',
+        'kilometre, and then differenced them against one shared reference.',
+        'That made this library the only code receiving the problem it was',
+        'designed for, and it capped the whole figure at the size of the',
+        'largest deliberate mismatch. It is not what is done here.',
         '',
-        'Each code is handed a **density scaled by ours-over-theirs**, so the',
-        'potential it computes internally is the one we intend. The factor is',
-        'derived from the constant in that code\'s own pinned source, never',
-        'transcribed:',
+        'Instead each code is handed honest physical inputs --- the density in',
+        'g cm$^{-3}$, the baseline in km, the same mixing parameters --- and is',
+        'differenced against a reference built in **its own** convention, using',
+        'the constants below and the profile it was actually given. The',
+        'residual then measures how well that code solves the problem it was',
+        'handed, which is the same kind of quantity for every code and is why',
+        'they may share one axes. Every caption has to say that the reference',
+        'differs per code.',
         '',
-        '| Code | Its constant | Read from | Factor applied |',
+        '| Code | Its matter constant | Its $\\hbar c$ / eV m | Read from |',
         '|---|---|---|---|',
     ] + rows + [
         '',
-        'NuFast-LBL and Prob3++ share a factor because they genuinely carry the',
-        'same rounding, `1.52588e-4` --- a coincidence that once looked like a',
-        'bug in our own bookkeeping and was not.',
+        'NuFast-LBL and Prob3++ share a matter constant because they genuinely',
+        'carry the same rounding, `1.52588e-4` --- a coincidence that once',
+        'looked like a bug in our own bookkeeping and was not. The two NuFast',
+        'codes, by contrast, do *not* share one: they differ in the fifth digit,',
+        'so a reference built for one is wrong for the other.',
         '',
-        '### 2. $\\hbar c$, which is to say the length',
-        '',
-        'All three compiled Earth codes hard-code',
-        '$\\hbar c = 1.97327 \\times 10^{-7}$ eV m, making a kilometre',
-        '$5.0677302143 \\times 10^{9}$ eV$^{-1}$ against this library\'s',
-        '$5.06773 \\times 10^{9}$ --- a relative difference of',
-        '$4.2 \\times 10^{-8}$. The chord is $L = -2R\\cos\\theta_z$, so the',
-        'mismatch is absorbed by handing each code a **cosine scaled by',
-        '`%.10f`** rather than by deforming the geometry.' % cosz,
+        '$\\hbar c$ is where the codes are least alike. Three of them agree on',
+        '$1.97327 \\times 10^{-7}$ eV m. Prob3++ does not: it hard-codes the',
+        'combination as `2.534` in `mosc.c`, four significant figures, implying',
+        '$1.9731650 \\times 10^{-7}$. That is a relative difference of',
+        '$5 \\times 10^{-5}$ in every length, and while a single shared cosine',
+        'scale was applied to all three it left exactly that error in place for',
+        'Prob3++ alone, where it showed up as an accuracy floor near',
+        '$3 \\times 10^{-4}$ that had nothing to do with the algorithm. Each',
+        'code now gets its own value, read from its own source.',
         '',
         '### One parameter set, converted rather than retyped',
         '',
@@ -1616,31 +1626,108 @@ def convention_matching():
         '$\\Delta m^2_{31} = %s$ eV$^2$, normal ordering.'
         % osc['dmsq31_ev2'],
         '',
-        'Where a code wants a different *parameterisation* of that same physics,',
-        'the conversion is derived. Prob3++ takes $\\Delta m^2_{32}$, so it is',
-        'handed `%.7e` eV$^2$, which is $\\Delta m^2_{31} - \\Delta m^2_{21}$'
+        'The mixing parameters are the one thing that is *shared* rather than',
+        'per code, and each reference is built with the same set. Where a code',
+        'wants a different *parameterisation* of that same physics, the',
+        'conversion is derived and the reference is built from the very number',
+        'the code received. Prob3++ takes $\\Delta m^2_{32}$, so it is handed',
+        '`%.7e` eV$^2$, which is $\\Delta m^2_{31} - \\Delta m^2_{21}$'
         % p3['dmsq32_ev2'],
         'rather than a second number typed by hand; nuCraft takes angles, so it',
-        'is handed $\\arcsin\\sqrt{\\sin^2\\theta}$. A hand-typed',
-        '`2.4511e-3` sitting beside a `2.525e-3` is indistinguishable from a',
-        'physics difference, which is why neither is typed.',
+        'is handed $\\arcsin\\sqrt{\\sin^2\\theta}$. A hand-typed `2.4511e-3`',
+        'sitting beside a `2.525e-3` is indistinguishable from a physics',
+        'difference, which is why neither is typed.',
         '',
-        '### What is deliberately *not* matched',
+        '### The one convention that is deliberately not absorbed',
         '',
-        'Exactly one figure keeps each code\'s native $\\hbar c$: the',
-        'six-ways-of-computing comparison, whose point is to show what a',
-        'convention mismatch costs. Every artifact carries a',
-        '`conventions: "matched" | "native"` stamp and the figure builders refuse',
-        'to draw the two on one axes. This is also why a residual quoted there',
-        'is larger than the same code reaches on the matched figure --- by',
-        'design, not by error.',
+        'nuCraft\'s charged-current and sterile matter entries are two',
+        'independently rounded constants, `%r` and `%r`, whose ratio is'
+        % (nc_cc, nc_nc),
+        '$%.5f$ where the isoscalar value is exactly $1/2$.' % (nc_nc/nc_cc),
+        'That is an error rather than a convention, so its reference uses',
+        'nuCraft\'s constants for the units but the correct ratio. A reference',
+        'that absorbed the rounding too would forgive the defect and the floor',
+        'it causes would silently vanish. It bites only at four flavors: at',
+        'three the sterile entry never enters.',
         '',
-        'One case cannot be matched at all. nuCraft\'s sterile and',
-        'charged-current entries come from two independently rounded constants',
-        'whose ratio is $0.5016$ where the isoscalar value is exactly $1/2$.',
-        'Rescaling the density scales both together, so no reweighting removes',
-        'it; it is reported as released, with the cause diagnosed.',
+        'Because no convention mismatch is left anywhere else, no figure here',
+        'has a floor that is an artifact of one. Each code can reach round-off',
+        'if its algorithm can, which is what makes the reference\'s own',
+        'precision the thing that has to be argued rather than assumed.',
     ])
+
+
+def timing_protocols():
+    """Returns markdown on what each timing protocol measures, and why.
+
+    The distinction this cell draws -- caching left standing versus every
+    repetition started afresh -- changed one code's throughput number by
+    roughly a factor of six thousand, so it is written down here rather than
+    left to be inferred from the harness.
+    """
+    return '\n'.join([
+        '## What is timed, and why each repetition starts afresh',
+        '',
+        'Two protocols are reported, and they answer different questions. The',
+        'difference between them is not a detail of the harness: applied to one',
+        'of the codes it moves the number by about a factor of 6000, so which',
+        'one a figure reports has to be stated on the figure.',
+        '',
+        '### The scan, with caching left standing',
+        '',
+        'The first protocol times a scan over $\\delta_{\\rm CP}$: each step',
+        'sets the one parameter that moves and asks for the whole grid.',
+        'Everything invariant under that scan --- the Earth model, the engine,',
+        'the profile, the grid arrays, every other setter --- is built once',
+        'before the clock starts. Each code\'s own caching is left switched on',
+        'and working, so a code that can reuse eigenvalues across zenith angles',
+        'does reuse them here. This is the cost a fit or a scan actually pays,',
+        'and the definition is taken from the NuFast-Earth author\'s own',
+        'harness rather than invented for this comparison.',
+        '',
+        '### One request, started afresh each time',
+        '',
+        'The second protocol asks a different question: what does it cost to',
+        'ask for $N$ points once? A single such call is far too fast to put a',
+        'clock around, so it is repeated until the block is long enough to',
+        'measure. Those repetitions are a measuring device, not a workload ---',
+        'nobody asks the same question thousands of times against unchanged',
+        'state --- and the average is the cost of a request only if every',
+        'repetition costs what the first one cost.',
+        '',
+        'So **every repetition starts afresh**, which is closer to what a user',
+        'does in practice: a person with a new question asks it from a standing',
+        'start, and does not inherit the intermediate results of the previous',
+        'one. Before each repetition the driver is returned to the state a',
+        'fresh request would find. What that means is drawn at the same line',
+        'for every code: the geometry and the profile were installed once and',
+        'stay installed, exactly as a user would not rebuild the Earth between',
+        'two questions about it, while everything that depends on the',
+        'oscillation parameters is computed again.',
+        '',
+        'For six of the seven codes this changes nothing, because they already',
+        'recompute everything on every call --- their reset is empty, and',
+        'honestly so. The seventh, NuFast-Earth, caches its eigenvalues and its',
+        'internal amplitudes between calls. Left alone, its second and every',
+        'later repetition timed nothing but a rotation of amplitudes that an',
+        'earlier, untimed call had left lying around, and the reported cost per',
+        'point fell by about a factor of 6000 below what one request costs.',
+        'Published unchanged, that would have shown a throughput advantage of',
+        'four orders of magnitude which was very largely an artifact of how the',
+        'measurement was taken.',
+        '',
+        'Making each repetition cold does not take that code\'s advantage away.',
+        'It is still several times faster than the other compiled codes on the',
+        'same grid, which is a claim that survives being looked at. And the',
+        'caching itself is not discarded from the comparison: it is exactly',
+        'what the first protocol measures, on its own author\'s definition, and',
+        'both numbers are reported. The gap between them *is* what the caching',
+        'buys.',
+        '',
+        'Every timed series therefore carries which protocol produced it, and',
+        'series from the two protocols are never drawn on one axes.',
+    ])
+
 
 
 books['10_paper_figures.ipynb'] = notebook(
@@ -1653,6 +1740,7 @@ Running this notebook writes all fourteen PDFs. Set `NUOSC_PAPER_FIGDIR` to writ
     [
         md(external_code_provenance()),
         md(convention_matching()),
+        md(timing_protocols()),
         code(r'''import earth
 import slabs
 from scipy.linalg import expm

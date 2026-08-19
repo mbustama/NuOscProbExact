@@ -14,8 +14,9 @@ The knob is one integer carrying both precision dials, documented in
 ``capabilities()``:
 
 * ``knob > 0``  -- ``n_slabs_per_segment = knob`` (the slab dial);
-* ``knob < 0``  -- ``rtol = 10**knob`` (the tolerance dial; the slab search
-  starts at 1 so the tolerance, not the start, picks the count);
+* ``knob < 0``  -- ``rtol = 10**knob`` (the tolerance dial, reachable for
+  knob in -3..-5; the slab search starts at 1 so the tolerance, not the
+  start, picks the count);
 * ``knob == 0`` -- the library default (``n_slabs_per_segment = 8``).
 
 Oscillation parameters arrive through the Problem, which runner.py fills
@@ -52,9 +53,15 @@ class NuOscProbExact(object):
             'batch_symbol': ('earth.probabilities_3nu_earth(E array, costhz '
                              'array) / oscprob3nu.probabilities_3nu(H stack)'),
             'knob_name': 'n_slabs_per_segment(knob>0) | rtol=10^knob(knob<0)',
-            'knob_domain': [1, 2, 4, 8, 16, 32, 64, 128, 256,
-                            -3, -4, -5, -6, -7, -8, -9, -10, -11, -12, -13,
-                            -14, -15],
+            # The slab dial runs the full 1..256.  The tolerance dial stops
+            # at 1e-5, which is where it actually stops: on CHORD/12x1 the
+            # slab product's error estimate bottoms out near 7e-8 at the
+            # 1024-slab ceiling, so rtol=1e-6 and tighter raise rather than
+            # return.  The manifest used to advertise 1e-3..1e-15; ten of
+            # those thirteen settings crash, and declaring a domain a sweep
+            # cannot survive is the mirror of the knob LBL-3 was about.
+            # Reach the small residuals through the slab dial instead.
+            'knob_domain': [1, 2, 4, 8, 16, 32, 64, 128, 256, -3, -4, -5],
         }
 
     def setup(self, problem):
@@ -87,6 +94,24 @@ class NuOscProbExact(object):
         self._h_vac = np.asarray(
             hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(
                 s12, s23, s13, dcp, self._dm21, self._dm31))
+
+    def reset(self):
+        r"""Nothing to reset, and the one cache that survives is on the right
+        side of the line.
+
+        ``evaluate()`` rebuilds the matter Hamiltonians and the whole slab
+        product on every call.  The chord geometry does NOT get rebuilt:
+        ``earth._earth_slabs_cached`` is an ``lru_cache`` keyed on
+        ``(costhz, n_slabs_per_segment)`` alone, so a second call reuses it
+        --- verified by watching ``cache_info()`` register hits.
+
+        That is deliberate and is the same side of the setup/request line
+        every other code sits on: it is pure geometry, independent of the
+        oscillation parameters, and it corresponds to GLoBES' chord
+        decomposition, Prob3++'s profile file and NuFast-Earth's
+        ``trajectories_calculated`` --- all built in ``setup`` and all left
+        standing by ``reset``.  Nothing oscillation-dependent survives a
+        repetition here, which is the property ``reset`` exists to enforce."""
 
     def evaluate(self):
         if self._costhz is not None:

@@ -88,6 +88,90 @@ SITES = {
 }
 
 
+#: Where each code's hbar c lives in its pinned source, and in what form.
+#:
+#: This exists because `hbar_c_cosine_scale` took 1.97327e-7 as a default
+#: argument that no caller ever overrode, while its own docstring asserted
+#: that all three compiled Earth codes carry that value.  Prob3++ does not:
+#: `mosc.c` hard-codes ``LoEfac = 2.534``, four significant figures, implying
+#: 1.9731650e-7.  The difference is 5.3e-5 relative -- three orders of
+#: magnitude above the 4.2e-8 the manifest calls the old figure's deliberate
+#: cap -- and it put a measured 3.4e-4 floor on Prob3++ that was pure
+#: convention rather than algorithm.
+#:
+#: Three forms appear, so each is converted rather than assumed:
+#:   'ev_m'   the value IS hbar c in eV m;
+#:   'ev_km'  hbar c in eV km, as GLoBES stores it;
+#:   'loefac' the combination ``1e-9/hbar_c*1e3/2``, as Prob3++ and nuCraft
+#:            store it, from which hbar c is 1e-6/(2*value).
+HBAR_C_SITES = {
+    'NuFast-LBL':   ('nufast-lbl/NuFast_LBL.cpp', 'ev_m',
+                     r'eVsqkm_to_GeV_over4\s*=\s*1e-9\s*/\s*([0-9.eE+-]+)'),
+    'NuFast-Earth': ('nufast-earth/src/Oscillation.cpp', 'ev_m',
+                     r'eVsqkm_to_GeV_over2\s*=\s*1\.e-9\s*/\s*([0-9.eE+-]+)'),
+    'GLoBES':       ('globes-3.2.18/globes/globes.h', 'ev_km',
+                     r'#else\s*#define GLB_EV_TO_KM_FACTOR\s+([0-9.eE+-]+)'),
+    'Prob3++':      ('prob3/mosc.c', 'loefac',
+                     r'const double LoEfac\s*=\s*([0-9.eE+-]+)'),
+    'nuCraft':      ('nucraft/NuCraft.py', 'loefac',
+                     r'exp\(-([0-9.]+)j/en'),
+}
+
+#: nuCraft's neutral-current entry, the sibling of the charged-current one in
+#: SITES.  Extracted so `reference_conventions.never_absorbed` has something
+#: to compute from: the manifest calls their ratio (0.50161 where isoscalar
+#: is exactly 1/2) an error rather than a convention, and a reference that
+#: absorbed it would forgive the defect.
+NUCRAFT_NC_SITE = ('nucraft/NuCraft.py',
+                   r'self\.A\s*=\s*array\(\[[0-9.eE+-]+\*self\.y\[0\],\s*0\.,\s*0\.\]'
+                   r'\+\[([0-9.eE+-]+)\*')
+
+
+def _read(rel, pattern, what):
+    path = os.path.join(BUILD, rel)
+    with open(path) as handle:
+        found = re.search(pattern, handle.read())
+    if not found:
+        raise RuntimeError('%s: %s not found in %s' % (what, pattern, path))
+    return float(found.group(1)), path
+
+
+def hbar_c(code):
+    r"""Returns `code`'s own hbar c in eV m, read from its pinned source.
+
+    Never a default argument.  A per-code reference has to be built in the
+    code's own units, and a code that rounds hbar c to four figures is
+    solving a measurably different problem from one that does not.
+    """
+    rel, form, pattern = HBAR_C_SITES[code]
+    value, _ = _read(rel, pattern, code + ' hbar c')
+    if form == 'ev_m':
+        return value
+    if form == 'ev_km':
+        return value*1.0e3
+    if form == 'loefac':
+        return 1.0e-6/(2.0*value)
+    raise RuntimeError('%s: unknown hbar c form %r' % (code, form))
+
+
+def km_to_inv_ev(code):
+    r"""Returns a kilometre in eV^-1 in `code`'s own convention."""
+    if code == 'nuSQuIDS':
+        import nuSQuIDS as nsq                      # its constants are its own
+        units = nsq.Const()
+        return units.km*units.eV
+    if code == 'NuOscProbExact':
+        return OURS['km_to_inv_ev']
+    return 1.0e3/hbar_c(code)
+
+
+def nucraft_nc_constant():
+    r"""Returns nuCraft's neutral-current matter entry from its own source."""
+    rel, pattern = NUCRAFT_NC_SITE
+    value, _ = _read(rel, pattern, 'nuCraft NC entry')
+    return value
+
+
 def extract(code):
     r"""Returns the matter constant a code carries, read from its own source.
 
@@ -134,7 +218,7 @@ def globes_ne_mantle():
     return value
 
 
-def hbar_c_cosine_scale(their_hbar_c_ev_m=1.97327e-7):
+def hbar_c_cosine_scale(their_hbar_c_ev_m=None, code=None):
     r"""Returns the factor a chord's cosine carries to match a code's length.
 
     All three compiled Earth codes hard-code the same
@@ -143,7 +227,14 @@ def hbar_c_cosine_scale(their_hbar_c_ev_m=1.97327e-7):
     :math:`L = -2 R \cos\theta_z`, so the mismatch is absorbed by handing them
     a cosine shrunk by this factor rather than by changing the geometry.
     """
-    theirs_km = 1.0e3/their_hbar_c_ev_m
+    if their_hbar_c_ev_m is None and code is None:
+        raise RuntimeError(
+            'hbar_c_cosine_scale needs a code: the three compiled Earth codes '
+            'do NOT share one hbar c -- Prob3++ carries 2.534, implying '
+            '1.9731650e-7 against the others\' 1.97327e-7.  Pass code=... so '
+            'the value is read from that code\'s own pinned source.')
+    theirs_km = (1.0e3/their_hbar_c_ev_m if their_hbar_c_ev_m is not None
+                 else km_to_inv_ev(code))
     return OURS['km_to_inv_ev']/theirs_km
 
 

@@ -19,9 +19,8 @@ Conventions, all derived rather than typed:
   from ``conversions.for_code('nuCraft')``, which derives
   theta = arcsin(sqrt(sin^2 theta)) from the manifest.  The CP phase rides
   on the (1,3) tuple, in degrees.
-* Density.  nuCraft's CC matter entry (15.256e-5 at NuCraft.py:212, read
-  from the pinned source by ``conversions.mass_defect('nuCraft')``) against
-  this library's constant gives the 0.99267 scale folded into the profile.
+* Density.  Not rescaled.  nuCraft's CC matter entry (NuCraft.py:212) is
+  absorbed into its own reference instead.
 * Profile.  nuCraft's file route is Python 2 only, so this library's PREM
   goes in through ``EarthModel.profInt``, exactly as tests/prem_scan.py
   does; the inner-core radius comes from ``earth.PREM_BOUNDARIES``.
@@ -84,13 +83,24 @@ class NuCraftAdapter(object):
             raise SystemExit('nuCraft has no constant-density mode; it '
                              'propagates through its Earth model only')
 
-        scale = conversions.mass_defect('nuCraft')
         em = EarthModel(
             'prem', y=(p.ye, p.ye, p.ye),
             rICore=float(np.asarray(earth.PREM_BOUNDARIES, dtype=float)[0]))
         # nuCraft's file route is Python 2 only, so the profile goes in here.
-        em.profInt = lambda r: (
-            earth.density_prem(min(float(r), gd.EARTH_RADIUS))*scale)
+        # No density rescaling: nuCraft's own matter constants are absorbed
+        # into ITS reference (with the isoscalar ratio forced to exactly 1/2,
+        # because its 0.50161 is an error rather than a convention).
+        #
+        # profInt is called from inside nuCraft's ODE right-hand side, once
+        # per solver step.  A Python lambda around this library's scalar
+        # density_prem -- which range-checks and searchsorts per call -- put
+        # our own cost inside its inner loop, which is the same mistake that
+        # inflated another code's published point.  nuCraft builds itself an
+        # InterpolatedUnivariateSpline(k=1); it gets the identical object
+        # type here, over THIS library's PREM, with the shell boundaries
+        # carried as near-duplicate knots so no interpolated segment
+        # straddles a density jump.
+        em.profInt = self._profile_spline(p.ye)
         self._em = em
 
         c = conversions.for_code('nuCraft')
@@ -109,12 +119,36 @@ class NuCraftAdapter(object):
 
         self.configure(p.dcp)
 
+    @staticmethod
+    def _profile_spline(ye, n_per_shell=200):
+        r"""This library's PREM as the spline type nuCraft builds for itself."""
+        from scipy.interpolate import InterpolatedUnivariateSpline
+        edges = np.concatenate(([0.0], np.asarray(earth.PREM_BOUNDARIES,
+                                                  dtype=float)))
+        edges = edges[edges <= gd.EARTH_RADIUS]
+        if edges[-1] < gd.EARTH_RADIUS:
+            edges = np.concatenate((edges, [gd.EARTH_RADIUS]))
+        eps = 1.0e-9                      # km, to carry the jump
+        pieces = []
+        for a, b in zip(edges[:-1], edges[1:]):
+            inner = np.linspace(a, b, n_per_shell)
+            inner[0], inner[-1] = a + eps, b - eps
+            pieces.append(inner)
+        r = np.unique(np.concatenate(([0.0], np.concatenate(pieces),
+                                      [gd.EARTH_RADIUS])))
+        rho = earth.density_prem(np.clip(r, 0.0, gd.EARTH_RADIUS))
+        return InterpolatedUnivariateSpline(r, rho, k=1)
+
     def configure(self, dcp):
         angles = [(1, 2, self._deg['12']),
                   (1, 3, self._deg['13'], math.degrees(dcp)),
                   (2, 3, self._deg['23'])]
         self._nc = NuCraft(self._masses, angles, earthModel=self._em,
                            detectorDepth=0.0, atmHeight=0.0)
+
+    def reset(self):
+        r"""Nothing to reset: ``CalcWeights`` re-integrates every particle on
+        every call, so each repetition is already cold."""
 
     def evaluate(self):
         kwargs = {'atmMode': 0, 'vacuum': _NUCRAFT_FALSE}

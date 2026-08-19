@@ -15,10 +15,14 @@
 //   * SetMNS takes Dmsq32, not Dmsq31: OSC_DMSQ32, derived in conversions.py.
 //   * On the sphere path the electron fraction comes from the profile file's
 //     Y_p column and NOT SetDensityConversion (which only reaches
-//     propagateLinear), so the mass defect OUR_PREM_MASS_DEFECT_PROB3 is
-//     folded into Y_p and the density column stays literally PREM.
-//   * Prob3++'s km is built on hbar c = 1.97327e-7 eV m; the chord is
-//     L = -2 R cos th_z, so the cosine carries OUR_COSZ_HBARC_SCALE.
+//     propagateLinear), so Y_p carries Y_e and the density column stays
+//     literally PREM.
+//   * NO rescaling of density or baseline.  Prob3++ rounds hbar c to
+//     2.534 (mosc.c:203, :489), implying 1.9731650e-7 rather than the
+//     1.97327e-7 the other compiled codes use -- a 5.3e-5 difference that
+//     an earlier shared cosine scale silently left in place, and that
+//     measured as a 3.4e-4 floor.  It belongs in this code's own
+//     reference, which conversions.hbar_c('Prob3++') supplies.
 #include "../bench.hpp"
 #include "BargerPropagator.h"
 #include "our_prem.h"
@@ -95,9 +99,9 @@ void setup(const bench::Problem &p) {
     delete g_prop;
     if (g_sphere) {
         g_z.clear();
-        for (double cz : p.costhz) g_z.push_back(cz * OUR_COSZ_HBARC_SCALE);
+        for (double cz : p.costhz) g_z.push_back(cz);   // honest cosine
         const std::string path =
-            write_profile(n, p.ye * OUR_PREM_MASS_DEFECT_PROB3);
+            write_profile(n, p.ye);
         // EarthDensity announces every profile load on stdout, which would
         // sit in front of the harness's JSON; silence cout for the one
         // untimed constructor call, then remove the file it has now read.
@@ -113,7 +117,7 @@ void setup(const bench::Problem &p) {
         g_prop = new BargerPropagator();
         // On the linear path the electron fraction enters through
         // SetDensityConversion, and the mass defect rides with it.
-        g_prop->SetDensityConversion(p.ye * OUR_PREM_MASS_DEFECT_PROB3);
+        g_prop->SetDensityConversion(p.ye);
     }
     g_prop->SetWarningSuppression(true);
 }
@@ -143,6 +147,34 @@ double evaluate() {
         sink += g_prop->GetProb(2, 2);
     }
     return sink;
+}
+
+// Nothing to reset: propagate() re-derives the per-trajectory profile and
+// SetMNS re-derives the mixing on every point, so each repetition is cold.
+void reset() {}
+
+// Untimed.  Mirrors evaluate()'s traversal exactly -- cosz outer, energy
+// inner -- so the accuracy vector and the checksum describe the same walk.
+void probabilities(std::vector<double> &out) {
+    out.reserve(out.size() + g_e.size()*(g_sphere ? g_z.size() : 1));
+    if (g_sphere) {
+        for (std::size_t j = 0; j < g_z.size(); ++j) {
+            if (g_z.size() > 1) g_prop->DefinePath(g_z[j], 0.0, false);
+            for (double e : g_e) {
+                g_prop->SetMNS(g_s12sq, g_s13sq, g_s23sq, g_dm21, OSC_DMSQ32,
+                               g_dcp, e, true, 1);
+                g_prop->propagate(1);
+                out.push_back(g_prop->GetProb(2, 2));   // numu -> numu
+            }
+        }
+        return;
+    }
+    for (double e : g_e) {
+        g_prop->SetMNS(g_s12sq, g_s13sq, g_s23sq, g_dm21, OSC_DMSQ32,
+                       g_dcp, e, true, 1);
+        g_prop->propagateLinear(1, g_L, g_rho);
+        out.push_back(g_prop->GetProb(2, 2));
+    }
 }
 
 }  // namespace driver

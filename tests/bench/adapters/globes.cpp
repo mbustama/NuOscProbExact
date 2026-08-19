@@ -16,15 +16,13 @@
 // this library's PREM.
 //
 // Matter potential.  GLoBES computes density * GLB_V_FACTOR * GLB_Ne_MANTLE
-// internally, so the density handed over carries the mass defect
-// OUR_PREM_MASS_DEFECT_GLOBES (derived in conversions.py from the pinned
-// GLB_V_FACTOR) and the ratio of our Y_e to its GLB_Ne_MANTLE -- both from
-// conversions.h, neither typed here.
+// internally, so the density handed over carries only the ratio of our Y_e
+// to its GLB_Ne_MANTLE -- a shared physical input, not a convention.  Its
+// GLB_V_FACTOR is absorbed into this code's own reference instead.
 //
-// Length.  GLoBES's km is built on hbar c = 1.97327e-7 eV m; the chord is
-// L = -2 R cos th_z, so the cosine carries OUR_COSZ_HBARC_SCALE, exactly as
-// tests/external_drivers/globes_drv.c did.  The constant-density baseline is
-// handed through unscaled, matching the frozen constant-density drivers.
+// Length.  Handed through unscaled.  GLoBES's km is built on its own
+// GLB_EV_TO_KM_FACTOR, read by conversions.hbar_c('GLoBES') and absorbed
+// into its reference, so the geometry it is given is the honest one.
 #include "../bench.hpp"
 #include "our_prem.h"
 
@@ -53,8 +51,8 @@ glb_params           g_params = nullptr;
 std::vector<double>  g_e;
 std::vector<Profile> g_profiles;   // one per zenith; one constant slab else
 
-// Chord decomposition of the radial shells for one zenith cosine (already
-// carrying OUR_COSZ_HBARC_SCALE): r(s)^2 = R^2 + s^2 - 2 s R |cos|.
+// Chord decomposition of the radial shells for one zenith cosine, unscaled:
+// r(s)^2 = R^2 + s^2 - 2 s R |cos|.
 Profile chord(double cz, int n, double rho_factor) {
     const double layers[4] = {OUR_PREM_B[0], OUR_PREM_B[1], OUR_PREM_B[2],
                               OUR_EARTH_RADIUS};
@@ -120,15 +118,17 @@ void setup(const bench::Problem &p) {
     const int n = p.knob >= 1 ? p.knob : 256;    // default: the dense grid
     // GLoBES multiplies by GLB_Ne_MANTLE itself, so the handed density
     // carries the mass defect and our Y_e over its electron fraction.
-    const double rho_factor =
-        OUR_PREM_MASS_DEFECT_GLOBES * (p.ye / GLOBES_NE_MANTLE);
+    // Only the Y_e ratio remains: GLoBES multiplies by its own
+    // GLB_Ne_MANTLE, so dividing by it hands GLoBES OUR electron fraction,
+    // which is a shared physical input rather than an absorbed convention.
+    // The mass defect is gone -- it belongs to this code's reference.
+    const double rho_factor = p.ye / GLOBES_NE_MANTLE;
 
     g_e = p.energies_gev;
     g_profiles.clear();
     if (!p.costhz.empty()) {
         for (double cz : p.costhz)
-            g_profiles.push_back(chord(cz * OUR_COSZ_HBARC_SCALE, n,
-                                       rho_factor));
+            g_profiles.push_back(chord(cz, n, rho_factor));
     } else {
         Profile prof;
         prof.length.push_back(p.L_km);
@@ -164,6 +164,25 @@ double evaluate() {
         }
     }
     return sink;
+}
+
+// Nothing to reset: glb_probability_matrix rebuilds every S-matrix from the
+// profile on each call, so each repetition is already cold.
+void reset() {}
+
+// Untimed.  Mirrors evaluate()'s traversal exactly -- one profile per cosz
+// outer, energy inner -- so both describe the same walk of the grid.
+void probabilities(std::vector<double> &out) {
+    double P[3][3];
+    out.reserve(out.size() + g_profiles.size()*g_e.size());
+    for (const Profile &prof : g_profiles) {
+        const int psteps = static_cast<int>(prof.length.size());
+        for (double e : g_e) {
+            glb_probability_matrix(P, +1, e, psteps, prof.length.data(),
+                                   prof.density.data(), -1.0, nullptr);
+            out.push_back(P[1][1]);                 // numu -> numu
+        }
+    }
 }
 
 }  // namespace driver

@@ -24,15 +24,19 @@ def main():
            '// code\'s own pinned source.  Editing this file by hand would',
            '// reintroduce the drift it exists to prevent.',
            '#pragma once', '']
-    for code, macro in (('NuFast-LBL', 'OUR_PREM_MASS_DEFECT_NUFAST_LBL'),
-                        ('NuFast-Earth', 'OUR_PREM_MASS_DEFECT_NUFAST_EARTH'),
-                        ('Prob3++', 'OUR_PREM_MASS_DEFECT_PROB3'),
-                        ('GLoBES', 'OUR_PREM_MASS_DEFECT_GLOBES')):
+    out.append('// The mass-defect factors and the hbar c cosine scale USED to')
+    out.append('// be emitted here and applied inside the adapters.  They are')
+    out.append('// gone on purpose: references are now per code, and the')
+    out.append('// manifest absorbs both hbar c and each matter normalisation')
+    out.append('// into the reference builder.  Applying them in the adapter')
+    out.append('// too would double-count.  conversions.mass_defect() and')
+    out.append('// conversions.hbar_c() still carry them, for the builder.')
+    out.append('// Each code is now handed honest physical inputs.')
+    for code in ('NuFast-LBL', 'NuFast-Earth', 'Prob3++', 'GLoBES', 'nuCraft'):
         theirs, path = conversions.extract(code)
-        out.append('// %s carries %r, at %s'
-                   % (code, theirs, os.path.relpath(path)))
-        out.append('#define %s %.17g' % (macro, conversions.mass_defect(code)))
-        out.append('')
+        out.append('//   %-13s matter %-24r hbar c %.9g eV m'
+                   % (code, theirs, conversions.hbar_c(code)))
+    out.append('')
     osc = conversions.oscillation_parameters()
     out.append('// The one parameter set every code is handed, from the')
     out.append('// manifest.  No adapter may type any of these.')
@@ -45,11 +49,6 @@ def main():
     out.append('// Prob3++ wants Dmsq32 for the same physics; derived, not typed.')
     out.append('#define OSC_DMSQ32 %.17g'
                % conversions.for_code('Prob3++')['dmsq32_ev2'])
-    out.append('')
-    out.append('// All three compiled Earth codes hard-code hbar c = 1.97327e-7 eV m.')
-    out.append('#define OUR_COSZ_HBARC_SCALE %.17g'
-               % conversions.hbar_c_cosine_scale())
-    out.append('')
     out.append('// GLoBES multiplies the density it is handed by its own')
     out.append('// electron fraction, GLB_Ne_MANTLE; read from the pinned')
     out.append('// source so the adapter divides by what GLoBES will multiply.')

@@ -1808,7 +1808,7 @@ What cannot be added this way is anything that is not a Hermitian Hamiltonian.  
 \label{app:tests}
 \appresetfloats
 
-Table \ref{tab:tests} lists what the 882 tests of {\tt NuOscProbExact} cover; \ref{app:structure} shows the modules they exercise.  They reach every line and every branch of the library: coverage is $100\%$ in v1.13.1, held above a floor of $98\%$ that fails the build if it drops.
+Table \ref{tab:tests} lists what the 904 tests of {\tt NuOscProbExact} cover; \ref{app:structure} shows the modules they exercise.  They reach every line and every branch of the library: coverage is $100\%$ in v1.13.1, held above a floor of $98\%$ that fails the build if it drops.
 
 The tests run on every push and every pull request from the GitHub repository, so a contributor need not invoke them; but they are also the quickest way to confirm a local installation.  The tests are not packaged with the library, but from a clone:
 \begin{verbatim}
@@ -1843,14 +1843,16 @@ The test suite is not only a regression net.  Roughly half of it checks the phys
    Matter eigenvalues, Zaglauer--Schwarzer  & 24 \\
    SU(3) algebra and star products          & 22 \\
    Figures reproduced from the documentation & 19 \\
+   Benchmark pipeline invariants            & 12 \\
    Probabilities                            & 11 \\
    Evolution operator                       & 11 \\
+   Benchmark adapter behavior               & 10 \\
    Vectorized Hamiltonian builders          & 9 \\
    Repository layout                        & 8 \\
    Version consistency                      & 7 \\
    This paper, against the repository       & 4 \\
    \hline
-   Total                                    & 882 \\
+   Total                                    & 904 \\
   \end{tabular}
   \caption{\label{tab:tests}The test suite of {\tt NuOscProbExact} v1.13.1, grouped by what each file covers, in descending order.  Coverage of the library is complete: every line and every branch is executed.  The comparison with {\tt nuSQuIDS}\ \cite{Delgado:2014kpa, NuSQuIDS} runs against frozen reference values rather than against a live installation, so that a release of another code cannot break this one's continuous integration.}
 \end{table}

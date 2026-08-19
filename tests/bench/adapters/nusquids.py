@@ -12,21 +12,18 @@ would rebuild the solver's advantage away.  Zenith is not batched
 (``batches_zenith = False``): with more than one zenith the tracks are
 looped inside ``evaluate()``.
 
-Conversions, all derived rather than typed:
-
-* Density.  nuSQuIDS takes rho in g/cm^3 and computes electron density as
-  ``rho * N_A * Y_e`` with ITS OWN Avogadro constant (exposed as
-  ``nsq.Const().Na``); this library carries ``Y_e rho / m_bar``.  The handed
-  density is scaled by the ratio -- the usual nuclear mass defect, here
-  0.99209 -- computed from ``globaldefs`` and nuSQuIDS' own constant.
-* Length.  nuSQuIDS' km in eV^-1 differs from this library's in the fifth
-  decimal of hbar c; the chord is L = -2 R cos th_z, so the cosine is
-  shrunk by the ratio, derived at run time from ``Const`` and
-  ``globaldefs``.
+Conventions.  Nothing is rescaled.  nuSQuIDS computes electron density as
+``rho * N_A * Y_e`` with its own Avogadro constant where this library
+carries ``Y_e rho / m_bar``, and its km differs from this library's in the
+fifth decimal of hbar c.  Both are absorbed into nuSQuIDS' OWN 50-digit
+reference -- ``conversions.km_to_inv_ev('nuSQuIDS')`` reads the second from
+``Const()`` -- so what the solver is handed here is the honest problem and
+its residual measures its algorithm.
 
 The knob is the solver tolerance: ``rel_error = abs_error = 10**-knob``
-(manifest domain 1e-3..1e-12, so knob in 3..12); ``knob <= 0`` leaves the
-solver at its own defaults.
+(manifest domain 1e-3..1e-12, so knob in 3..12).  ``knob <= 0`` does NOT
+leave the solver at its own defaults -- those fail on both Earth grids --
+but sets an explicit 1e-7; see ``setup()``.
 """
 
 import os
@@ -81,29 +78,34 @@ class NuSQuIDS(object):
 
     def setup(self, problem):
         p = problem
+        self._constant_density_mode = False
         units = nsq.Const()
         e = np.asarray(p.energies_gev, dtype=float)*units.GeV
 
-        # ours/theirs: electrons per gram from globaldefs against nuSQuIDS'
-        # own Avogadro constant -- the nuclear mass defect, derived.
-        electrons_per_gram = gd.CONV_G_TO_EV/((gd.MASS_PROTON
-                                               + gd.MASS_NEUTRON)/2.0)
-        density_scale = electrons_per_gram/units.Na
+        # No density rescaling and no cosine rescaling.  nuSQuIDS' own
+        # Avogadro constant and its own km are absorbed into ITS reference,
+        # so what it is handed here is the honest physical problem.
 
         if p.costhz:
             r = _aligned_radii(200)
             rho = earth.density_prem(np.clip(r, 0.0, gd.EARTH_RADIUS))
             body = nsq.EarthAtm((r/gd.EARTH_RADIUS).tolist(),
-                                (rho*density_scale).tolist(),
+                                rho.tolist(),
                                 np.full(r.size, p.ye).tolist())
             body.SetAtmosphereHeight(0.0)
-            # nuSQuIDS' km against ours, absorbed into the chord's cosine.
-            czscale = 1.0/((units.km*units.eV)/gd.CONV_KM_TO_INV_EV)
-            self._tracks = [body.MakeTrackWithCosine(cz*czscale)
-                            for cz in p.costhz]
+            self._tracks = [body.MakeTrackWithCosine(cz) for cz in p.costhz]
         else:
-            body = nsq.ConstantDensity(p.density*density_scale, p.ye)
+            body = nsq.ConstantDensity(p.density, p.ye)
             self._tracks = [nsq.ConstantDensity.Track(p.L_km*units.km)]
+            # Constant density has a closed form and nuSQuIDS ships it:
+            # with this set, EvolveState skips the ODE entirely and evolves
+            # each node algebraically.  A seasoned user of this code would
+            # never integrate an ODE through constant density, and running
+            # it that way is the same omission objection LBL-3 was about,
+            # aimed at a different code.  Verified against the ODE path on
+            # CONST/60E: they agree to 7.2e-7, which is the ODE's own
+            # tolerance.
+            self._constant_density_mode = True
 
         self._single = e.size == 1
         if self._single:
@@ -122,14 +124,33 @@ class NuSQuIDS(object):
         s.Set_SquareMassDifference(1, p.dm21)
         s.Set_SquareMassDifference(2, p.dm31)
         s.Set_CPPhase(0, 2, p.dcp)
-        if p.knob > 0:
-            s.Set_rel_error(10.0**-p.knob)
-            s.Set_abs_error(10.0**-p.knob)
+        # ALWAYS set the tolerance.  Leaving nuSQuIDS at its constructor
+        # defaults is not a runnable configuration for this comparison: with
+        # them the GSL solver fails outright ("Error in GSL ODE solver") on
+        # BOTH Earth grids in the manifest -- at cosz = -1.0, the first point
+        # of OSC/100x100, and at cosz = -0.9, the whole of CHORD/12x1.  Every
+        # explicit tolerance tried, 1e-6 through 1e-10, succeeds.  That went
+        # unnoticed because the cosine used to be rescaled by 1 - 1.4e-7 to
+        # absorb this code's hbar c, which nudged the angle off the failing
+        # value; removing that rescaling for the per-code references exposed
+        # it.  knob = 0 therefore means an explicit mid-sweep tolerance, not
+        # "whatever the constructor picked".
+        tolerance = 10.0**-p.knob if p.knob > 0 else 1.0e-7
+        s.Set_rel_error(tolerance)
+        s.Set_abs_error(tolerance)
+        self._tolerance = tolerance
+        if getattr(self, '_constant_density_mode', False):
+            s.Set_AllowConstantDensityOscillationOnlyEvolution(True)
         s.Set_Body(body)
         self._s = s
 
     def configure(self, dcp):
         self._s.Set_CPPhase(0, 2, dcp)
+
+    def reset(self):
+        r"""Nothing to reset: ``evaluate()`` calls ``Set_initial_state`` and
+        ``EvolveState`` for every track, so each repetition re-solves from
+        scratch and is already cold."""
 
     def evaluate(self):
         sink = 0.0
@@ -140,8 +161,13 @@ class NuSQuIDS(object):
             if self._single:
                 sink += self._s.EvalFlavor(1)      # P(nu_mu -> nu_mu)
             else:
-                sink += sum(self._s.EvalFlavor(1, float(ee))
-                            for ee in self._e)
+                # AtNode, not EvalFlavor(flavor, E): the grid energies ARE
+                # this solver's nodes, so the interpolating overload would
+                # charge nuSQuIDS an interpolation inside the timed region
+                # and carry its interpolation error into the accuracy
+                # number -- both against it, for nothing.
+                sink += sum(self._s.EvalFlavorAtNode(1, i)
+                            for i in range(self._e.size))
         return float(sink)
 
 

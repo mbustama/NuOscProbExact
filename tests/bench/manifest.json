@@ -148,7 +148,7 @@
         "max_flavors": 4,
         "precision_knobs": {
           "n_slabs_per_segment": "1..256",
-          "rtol": "1e-3..1e-15"
+          "rtol": "1e-3..1e-5, which is where it actually stops: on CHORD/12x1 the slab product's error estimate bottoms out near 7e-8 at the 1024-slab ceiling, so a tighter rtol raises rather than returns. Was advertised as 1e-3..1e-15; ten of those settings crash. The small residuals are reached through n_slabs_per_segment instead."
         }
       },
       "latest_check": {

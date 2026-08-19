@@ -62,9 +62,10 @@ void setup(const bench::Problem &p) {
     g_dm21  = p.dm21;  g_dm31  = p.dm31;
     g_delta = p.dcp;
     g_L     = p.L_km;
-    // rhoYe carries the mass-defect factor between this library's matter
-    // constant and the YerhoE2a this code hard-codes; from conversions.h.
-    g_rhoYe  = p.density * p.ye * OUR_PREM_MASS_DEFECT_NUFAST_LBL;
+    // Honest rhoYe: no mass-defect factor.  The difference between this
+    // code's YerhoE2a and this library's matter constant is absorbed into
+    // this code's own 50-digit reference instead of being applied here.
+    g_rhoYe  = p.density * p.ye;
     g_newton = p.knob;
 }
 
@@ -80,6 +81,21 @@ double evaluate() {
     double sink = 0.0;
     for (const auto &m : g_probs) sink += m[1][1];   // P(nu_mu -> nu_mu)
     return sink;
+}
+
+// Nothing to reset: Probability_Matter_LBL is a free function that recomputes
+// everything on every call, so each repetition is already cold.
+void reset() {}
+
+// Untimed.  Recomputes rather than reusing evaluate()'s buffer, because the
+// harness may call this without having called evaluate() at all.  Constant
+// density, so the grid is the energy vector and grid order is its order.
+void probabilities(std::vector<double> &out) {
+    NuFast::Probability_Matter_LBL(g_s12sq, g_s13sq, g_s23sq, g_delta,
+                                   g_dm21, g_dm31, g_L, g_e, g_rhoYe,
+                                   g_newton, g_probs);
+    out.reserve(out.size() + g_probs.size());
+    for (const auto &m : g_probs) out.push_back(m[1][1]);   // numu -> numu
 }
 
 }  // namespace driver

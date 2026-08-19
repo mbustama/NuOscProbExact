@@ -15,6 +15,7 @@
 //   void          setup(const Problem&);   // hoisted; never timed
 //   void          configure(double dcp);   // timed, once per scan step
 //   double        evaluate();              // timed; returns a checksum
+//   void          reset();                 // timed; makes the next evaluate cold
 //   void          probabilities(std::vector<double>&);  // untimed; the answer
 //
 // `probabilities` exists because a harness that can only return a checksum can
@@ -30,6 +31,25 @@
 // except the one `configure` moves.  `evaluate` must consume the WHOLE grid in
 // one call wherever the code offers a batched entry point -- what
 // capabilities() promises is checked against tests/bench/manifest.json.
+//
+// `reset` exists because THROUGHPUT repeats `evaluate` only to accumulate a
+// block long enough to time: the repetition is measurement scaffold, not a
+// workload, since no user asks the same question five thousand times against
+// unchanged state.  For that mean to be the cost of a request, every
+// repetition must cost what the first one cost.  Six of the seven codes are
+// stateless enough that this is automatic and their `reset` is empty; the
+// seventh, NuFast-Earth, caches its eigenvalues and internal amplitudes
+// across calls, so without this its second and later repetitions timed a
+// rotation of amplitudes an earlier untimed call had left lying around.
+//
+// `reset` must return the driver to the state a fresh request would find, and
+// NOT undo what `setup` legitimately hoisted.  The line is the same for every
+// code: geometry and profile installation belong to `setup`, and anything
+// depending on the oscillation parameters is per request.  It is called only
+// under THROUGHPUT.  AMORTIZED never calls it, because there the caching is
+// exactly what is being measured -- that protocol is the author of
+// NuFast-Earth's own, and defeating his caching inside it would measure
+// nothing he would recognise.
 //
 // `evaluate` returns a checksum so that no optimizer can delete the work.
 #pragma once
@@ -85,6 +105,7 @@ bench::Capabilities  capabilities();
 void                 setup(const bench::Problem &);
 void                 configure(double dcp);
 double               evaluate();
+void                 reset();
 void                 probabilities(std::vector<double> &out);
 }  // namespace driver
 
@@ -141,11 +162,12 @@ inline Stats amortized(const Problem &p, int samples, int steps, double *sink) {
 inline Stats throughput(const Problem &p, int samples, double min_block,
                         double *sink) {
     driver::configure(p.dcp);
+    driver::reset();
     *sink += driver::evaluate();                // untimed warm-up
     int reps = 1;                               // autorange to a stable block
     for (;;) {
         auto t0 = clk::now();
-        for (int r = 0; r < reps; ++r) *sink += driver::evaluate();
+        for (int r = 0; r < reps; ++r) { driver::reset(); *sink += driver::evaluate(); }
         double dt = seconds(t0, clk::now());
         if (dt >= min_block || reps > (1 << 24)) break;
         reps = dt > 0.0 ? static_cast<int>(reps * (min_block / dt) * 1.25) + 1
@@ -155,7 +177,7 @@ inline Stats throughput(const Problem &p, int samples, double min_block,
     per_point.reserve(samples);
     for (int s = 0; s < samples; ++s) {
         auto t0 = clk::now();
-        for (int r = 0; r < reps; ++r) *sink += driver::evaluate();
+        for (int r = 0; r < reps; ++r) { driver::reset(); *sink += driver::evaluate(); }
         auto t1 = clk::now();
         per_point.push_back(seconds(t0, t1) / (double(reps) * p.points()) * 1e6);
     }

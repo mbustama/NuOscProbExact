@@ -1,4 +1,7 @@
-// NuFast-Earth, driven the way its author drives it.
+// NuFast-Earth, driven the way its author drives it, in whichever of its two
+// modes the problem calls for: the Earth model for a chord, and
+// single_trajectory_mode -- Set_E_Spectra + Set_Trajectory, added in v1.1.0 --
+// for constant density.
 //
 // Everything invariant under the scan is built in setup() and therefore never
 // timed: the Earth model, the engine, the profile, the production height, the
@@ -26,20 +29,44 @@
 
 namespace {
 
-constexpr double kLayers[4] = {1221.5, 3480.0, 5701.0, 6371.0};
+// The four major PREM layers, from our_prem.h rather than typed: prob3.cpp
+// and globes.cpp cut the same boundaries, and a second copy is how "the same
+// Earth for every code" stops being true.
+const double kLayers[4] = {OUR_PREM_B[0], OUR_PREM_B[1], OUR_PREM_B[2],
+                           OUR_EARTH_RADIUS};
 
 // This library's PREM at Y_e = 0.5, cut the way the paper's appendix says:
 // four major layers, each into n equal sub-shells held at their midpoint
 // density.  n is shells PER LAYER, so n = 256 is 1024 shells in total.
 class OurPREM : public NuFast::Earth_Density {
   public:
-    OurPREM(int n_per_layer, double scale) : n_(n_per_layer) {
+    OurPREM(int n_per_layer, double ye) : n_(n_per_layer) {
         rho_.resize(4 * n_);
+        // Earth_Density's contract: the engine reads these three fields
+        // directly and validates none of them.  n_discontinuities and
+        // constant_shells have no default member initialiser, so leaving
+        // them unset is not "the default" -- it is indeterminate, and
+        // Geometry.cpp then indexes an empty `discontinuities` under a
+        // garbage bound.  Every upstream subclass sets all three.
+        discontinuities.resize(4 * n_);
+        n_discontinuities = 4 * n_;
+        // Each sub-shell is held at one density, which is what puts the
+        // engine on its cached path: one eigendecomposition per (energy,
+        // shell), reused across every zenith angle.  That reuse is the
+        // advantage objection Earth-3 exists to measure.
+        constant_shells = true;
         for (int L = 0; L < 4; ++L) {
             const double lo = L ? kLayers[L - 1] : 0.0, hi = kLayers[L];
             for (int i = 0; i < n_; ++i) {
                 const double r = lo + (i + 0.5) * (hi - lo) / n_;
-                rho_[L * n_ + i] = our_prem_rho(r) * 0.5 * scale;
+                rho_[L * n_ + i] = our_prem_rho(r) * ye;
+                // Shell k is the region BELOW discontinuities[k]: the
+                // convention Calculate_Eigens (which samples
+                // rhoYe(discontinuities[j] - 1e-8)) and
+                // Calculate_Internal_Amplitudes (which indexes with
+                // i_discontinuity + 1) already agree on.  Ascending, with
+                // the surface last, as Mean_Density's downward scan needs.
+                discontinuities[L * n_ + i] = lo + (i + 1) * (hi - lo) / n_;
             }
         }
     }
@@ -66,6 +93,9 @@ OurPREM                     *g_prem   = nullptr;
 NuFast::Probability_Engine  *g_engine = nullptr;
 std::vector<double>          g_e, g_z;
 double                       g_s12sq, g_s13sq, g_s23sq, g_dm21, g_dm31;
+double                       g_delta = 0.0;
+int                          g_knob  = 0;
+bool                         g_constant = false;   // single-trajectory mode
 
 }  // namespace
 
@@ -84,33 +114,63 @@ bench::Capabilities capabilities() {
 }
 
 void setup(const bench::Problem &p) {
-    // n_shells arrives through the knob's sibling; the runner passes it as the
-    // shell count when the sweep is over shells rather than precision.
     const int n_per_layer = 256;
-    const double scale = OUR_PREM_MASS_DEFECT_NUFAST_EARTH;  // from conversions.h
-
     delete g_engine; delete g_prem;
-    g_prem   = new OurPREM(n_per_layer, scale);
+    g_prem   = nullptr;
     g_engine = new NuFast::Probability_Engine();
 
     g_s12sq = p.s12sq; g_s13sq = p.s13sq; g_s23sq = p.s23sq;
     g_dm21  = p.dm21;  g_dm31  = p.dm31;
+    g_delta = p.dcp;
+    g_knob  = p.knob;
+    g_e     = p.energies_gev;
 
     g_engine->Set_Oscillation_Parameters(p.s12sq, p.s13sq, p.s23sq, p.dcp,
                                          p.dm21, p.dm31, true);
-    g_engine->Set_Earth(0.0, g_prem);
-    g_engine->Set_Production_Height(0.0);
     g_engine->Set_Eigenvalue_Precision(p.knob);
 
-    g_e = p.energies_gev;
-    g_z = p.costhz.empty() ? std::vector<double>{-0.9} : p.costhz;
-    g_engine->Set_Spectra(g_e, g_z);      // batched over BOTH axes, once
+    // The engine's two modes are mutually exclusive -- Set_Earth and
+    // Set_Spectra assert `not single_trajectory_mode`, Set_E_Spectra and
+    // Set_Trajectory assert `not earth_mode` -- so the choice is made once,
+    // here, and never switched.
+    g_constant = p.costhz.empty();
+    if (g_constant) {
+        // Objection Earth-4.  This code has had a constant-density mode since
+        // v1.1.0 and the previous adapter never used it: it substituted a
+        // chord at cosz = -0.9 and stamped the artifact CONST, which is a
+        // wrong answer that looks right.  One slab, honest rhoYe.
+        // Set_Production_Height must NOT be called here -- it asserts
+        // `not single_trajectory_mode`, and the constructor already defaults
+        // production_height to zero.
+        g_z.clear();
+        g_engine->Set_E_Spectra(g_e);
+        g_engine->Set_Trajectory({{p.L_km, p.density*p.ye}});
+    } else {
+        // Honest rhoYe: no mass-defect factor.  This code's YerhoE2a is
+        // absorbed into its own reference instead of being applied here.
+        g_prem = new OurPREM(n_per_layer, p.ye);
+        g_engine->Set_Earth(0.0, g_prem);
+        g_engine->Set_Production_Height(0.0);
+        g_z = p.costhz;
+        g_engine->Set_Spectra(g_e, g_z);  // batched over BOTH axes, once
+    }
 }
 
 // The one thing a fit moves.  Everything else stays cached.
 void configure(double dcp) {
+    g_delta = dcp;
     g_engine->Set_delta(dcp);
 }
+
+// The only adapter with anything to reset.  Set_Eigenvalue_Precision clears
+// eigens, internal amplitudes and probabilities together and -- the reason it
+// is the right lever rather than a convenient one -- leaves
+// trajectories_calculated alone, so the chord geometry and Mean_Densities stay
+// hoisted exactly as every other code's profile does.  The engine's own
+// invalidation graph draws the setup/request line in the same place bench.hpp
+// asks for.  The value handed back is the one already in force, so this
+// changes no physics; it only marks the cached stages stale.
+void reset() { g_engine->Set_Eigenvalue_Precision(g_knob); }
 
 double evaluate() {
     auto probs = g_engine->Get_Probabilities();   // whole grid, one call
@@ -118,6 +178,20 @@ double evaluate() {
     for (const auto &per_e : probs)
         for (const auto &m : per_e) sink += m.arr[1][1];
     return sink;
+}
+
+// Untimed.  Get_Probabilities() is indexed [energy][cosz]; grid order here is
+// cosz outer, energy inner, which is what the four Python-side adapters and
+// the two looping C++ ones already produce.  Transposing here rather than
+// re-ordering six adapters keeps one definition of grid order.
+void probabilities(std::vector<double> &out) {
+    auto probs = g_engine->Get_Probabilities();
+    const std::size_t n_e = probs.size();
+    const std::size_t n_z = n_e ? probs[0].size() : 0;
+    out.reserve(out.size() + n_e * n_z);
+    for (std::size_t j = 0; j < n_z; ++j)
+        for (std::size_t i = 0; i < n_e; ++i)
+            out.push_back(probs[i][j].arr[1][1]);   // numu -> numu
 }
 
 void teardown() { delete g_engine; delete g_prem; g_engine = nullptr; g_prem = nullptr; }
