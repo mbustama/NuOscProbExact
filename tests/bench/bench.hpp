@@ -26,6 +26,8 @@
 // `evaluate` returns a checksum so that no optimizer can delete the work.
 #pragma once
 
+#include "conversions.h"   // generated; carries the shared parameter set
+
 #include <chrono>
 #include <cmath>
 #include <cstdio>
@@ -50,10 +52,12 @@ struct Problem {
     double density = 3.0;                  // g/cm^3
     double ye      = 0.5;
     int    knob    = 0;                    // the precision setting for this run
-    // NuFit values, as the paper's appendix specifies
-    double s12sq = 0.310, s13sq = 2.240e-2, s23sq = 0.582;
-    double dcp   = 217.0 * 3.14159265358979323846 / 180.0;
-    double dm21  = 7.39e-5, dm31 = 2.525e-3;
+    // The shared parameter set, from conversions.h, which is generated from
+    // tests/bench/manifest.json.  Not typed here: every code must be handed
+    // the same numbers, and a second copy is how that stops being true.
+    double s12sq = OSC_S12SQ, s13sq = OSC_S13SQ, s23sq = OSC_S23SQ;
+    double dcp   = OSC_DCP_RAD;
+    double dm21  = OSC_DMSQ21, dm31 = OSC_DMSQ31;
 
     std::size_t points() const {
         return energies_gev.size() * (costhz.empty() ? 1 : costhz.size());

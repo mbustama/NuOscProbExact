@@ -1544,6 +1544,105 @@ def external_code_provenance():
     return '\n'.join(lines)
 
 
+def convention_matching():
+    """Returns markdown on the two conventions every comparison must match.
+
+    The factors are computed by ``tests/bench/conversions.py`` from the
+    constant in each code's own pinned source, so what this cell prints is
+    what the benchmark actually applies.  Three different values of one of
+    them once coexisted in the repository; showing a fourth, typed here,
+    would have been the obvious way to make that four.
+    """
+    import os
+    import sys
+
+    sys.path.insert(0, os.path.join('tests', 'bench'))
+    import conversions
+
+    rows = []
+    for code in ('NuFast-LBL', 'NuFast-Earth', 'Prob3++'):
+        theirs, path = conversions.extract(code)
+        rows.append('| %s | `%r` | `%s` | %.10f |'
+                    % (code, theirs, os.path.basename(path),
+                       conversions.mass_defect(code)))
+    cosz = conversions.hbar_c_cosine_scale()
+    osc = conversions.oscillation_parameters()
+    p3 = conversions.for_code('Prob3++')
+
+    return '\n'.join([
+        '## The two conventions that have to be matched first',
+        '',
+        'Comparing a code against a reference is only a statement about its',
+        '*propagation* if the two agree on what a kilometre is and what the',
+        'matter potential is. They do not agree natively. Each code carries its',
+        'own rounding of $2\\sqrt{2} G_F N_A$ and its own $\\hbar c$, and left',
+        'alone those differences dominate everything the comparison is about ---',
+        'all three compiled Earth codes sit near $10^{-7}$ in a vacuum check',
+        'before matching, and near $10^{-14}$ after.',
+        '',
+        '### 1. The matter constant',
+        '',
+        'Each code is handed a **density scaled by ours-over-theirs**, so the',
+        'potential it computes internally is the one we intend. The factor is',
+        'derived from the constant in that code\'s own pinned source, never',
+        'transcribed:',
+        '',
+        '| Code | Its constant | Read from | Factor applied |',
+        '|---|---|---|---|',
+    ] + rows + [
+        '',
+        'NuFast-LBL and Prob3++ share a factor because they genuinely carry the',
+        'same rounding, `1.52588e-4` --- a coincidence that once looked like a',
+        'bug in our own bookkeeping and was not.',
+        '',
+        '### 2. $\\hbar c$, which is to say the length',
+        '',
+        'All three compiled Earth codes hard-code',
+        '$\\hbar c = 1.97327 \\times 10^{-7}$ eV m, making a kilometre',
+        '$5.0677302143 \\times 10^{9}$ eV$^{-1}$ against this library\'s',
+        '$5.06773 \\times 10^{9}$ --- a relative difference of',
+        '$4.2 \\times 10^{-8}$. The chord is $L = -2R\\cos\\theta_z$, so the',
+        'mismatch is absorbed by handing each code a **cosine scaled by',
+        '`%.10f`** rather than by deforming the geometry.' % cosz,
+        '',
+        '### One parameter set, converted rather than retyped',
+        '',
+        'Every code is handed the same physics: $\\sin^2\\theta_{12} = %s$,'
+        % osc['s12sq'],
+        '$\\sin^2\\theta_{13} = %s$, $\\sin^2\\theta_{23} = %s$,'
+        % (osc['s13sq'], osc['s23sq']),
+        '$\\delta_{\\rm CP} = %g^\\circ$, $\\Delta m^2_{21} = %s$ eV$^2$,'
+        % (osc['dcp_deg'], osc['dmsq21_ev2']),
+        '$\\Delta m^2_{31} = %s$ eV$^2$, normal ordering.'
+        % osc['dmsq31_ev2'],
+        '',
+        'Where a code wants a different *parameterisation* of that same physics,',
+        'the conversion is derived. Prob3++ takes $\\Delta m^2_{32}$, so it is',
+        'handed `%.7e` eV$^2$, which is $\\Delta m^2_{31} - \\Delta m^2_{21}$'
+        % p3['dmsq32_ev2'],
+        'rather than a second number typed by hand; nuCraft takes angles, so it',
+        'is handed $\\arcsin\\sqrt{\\sin^2\\theta}$. A hand-typed',
+        '`2.4511e-3` sitting beside a `2.525e-3` is indistinguishable from a',
+        'physics difference, which is why neither is typed.',
+        '',
+        '### What is deliberately *not* matched',
+        '',
+        'Exactly one figure keeps each code\'s native $\\hbar c$: the',
+        'six-ways-of-computing comparison, whose point is to show what a',
+        'convention mismatch costs. Every artifact carries a',
+        '`conventions: "matched" | "native"` stamp and the figure builders refuse',
+        'to draw the two on one axes. This is also why a residual quoted there',
+        'is larger than the same code reaches on the matched figure --- by',
+        'design, not by error.',
+        '',
+        'One case cannot be matched at all. nuCraft\'s sterile and',
+        'charged-current entries come from two independently rounded constants',
+        'whose ratio is $0.5016$ where the isoscalar value is exactly $1/2$.',
+        'Rescaling the density scales both together, so no reweighting removes',
+        'it; it is reported as released, with the cause diagnosed.',
+    ])
+
+
 books['10_paper_figures.ipynb'] = notebook(
     "The paper's figures",
     r'''Every figure in [arXiv:1904.12391](https://arxiv.org/abs/1904.12391) is produced here, and only here.
@@ -1553,6 +1652,7 @@ The plotting style is the group's standard `matplotlibrc`, inlined into the setu
 Running this notebook writes all fourteen PDFs. Set `NUOSC_PAPER_FIGDIR` to write them straight into the paper's directory.''',
     [
         md(external_code_provenance()),
+        md(convention_matching()),
         code(r'''import earth
 import slabs
 from scipy.linalg import expm

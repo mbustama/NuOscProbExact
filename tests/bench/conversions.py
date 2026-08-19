@@ -71,3 +71,43 @@ def hbar_c_cosine_scale(their_hbar_c_ev_m=1.97327e-7):
     """
     theirs_km = 1.0e3/their_hbar_c_ev_m
     return OURS['km_to_inv_ev']/theirs_km
+
+
+def _manifest():
+    import json
+    here = os.path.dirname(os.path.abspath(__file__))
+    return json.load(open(os.path.join(here, 'manifest.json')))
+
+
+def oscillation_parameters():
+    r"""Returns the one parameter set every code is handed.
+
+    Read from the manifest, so there is no second copy to drift.  Values are
+    returned in this library's parameterisation; `for_code` converts.
+    """
+    return dict(_manifest()['oscillation_parameters'])
+
+
+def for_code(code):
+    r"""Returns the same physics in `code`'s own parameterisation.
+
+    Prob3++ takes :math:`\Delta m^2_{32}` where the others take
+    :math:`\Delta m^2_{31}`, and codes that want angles get
+    :math:`\theta = \arcsin\sqrt{\sin^2\theta}`.  Both are *derived* here
+    rather than typed a second time, because a hand-typed 2.4511e-3 beside a
+    2.525e-3 is indistinguishable from a physics difference.
+    """
+    import math
+
+    p = oscillation_parameters()
+    out = {
+        's12sq': p['s12sq'], 's13sq': p['s13sq'], 's23sq': p['s23sq'],
+        'dcp_rad': p['dcp_deg']*math.pi/180.0,
+        'dmsq21_ev2': p['dmsq21_ev2'], 'dmsq31_ev2': p['dmsq31_ev2'],
+    }
+    if code == 'Prob3++':
+        out['dmsq32_ev2'] = p['dmsq31_ev2'] - p['dmsq21_ev2']
+    if code in ('nuCraft',):
+        for k in ('12', '13', '23'):
+            out['theta%s_rad' % k] = math.asin(math.sqrt(p['s%ssq' % k]))
+    return out

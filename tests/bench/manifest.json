@@ -464,5 +464,29 @@
         }
       ]
     }
-  ]
+  ],
+  "oscillation_parameters": {
+    "note": [
+      "The one set of mixing parameters every code is handed. NuFit values,",
+      "as the paper's appendix specifies. No adapter may contain a literal",
+      "for any of these; conversions.h carries them into C++ and runner.py",
+      "into Python, so 'the same values for all codes' is structural rather",
+      "than a thing to remember.",
+      "Where a code wants a different PARAMETERISATION of the same physics",
+      "-- Prob3++ takes Dmsq32, nuCraft takes angles rather than sin^2 --",
+      "the conversion is derived in conversions.py, never re-typed."
+    ],
+    "ordering": "normal",
+    "s12sq": 0.31,
+    "s13sq": 0.0224,
+    "s23sq": 0.582,
+    "dcp_deg": 217.0,
+    "dmsq21_ev2": 7.39e-05,
+    "dmsq31_ev2": 0.002525,
+    "derived": {
+      "dmsq32_ev2": "dmsq31 - dmsq21, for Prob3++",
+      "theta_rad": "arcsin(sqrt(sNNsq)), for codes taking angles",
+      "dcp_rad": "dcp_deg * pi / 180"
+    }
+  }
 }

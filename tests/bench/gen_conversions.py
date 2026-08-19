@@ -32,6 +32,19 @@ def main():
                    % (code, theirs, os.path.relpath(path)))
         out.append('#define %s %.17g' % (macro, conversions.mass_defect(code)))
         out.append('')
+    osc = conversions.oscillation_parameters()
+    out.append('// The one parameter set every code is handed, from the')
+    out.append('// manifest.  No adapter may type any of these.')
+    for key, macro in (('s12sq', 'OSC_S12SQ'), ('s13sq', 'OSC_S13SQ'),
+                       ('s23sq', 'OSC_S23SQ'), ('dmsq21_ev2', 'OSC_DMSQ21'),
+                       ('dmsq31_ev2', 'OSC_DMSQ31')):
+        out.append('#define %s %.17g' % (macro, osc[key]))
+    out.append('#define OSC_DCP_RAD %.17g'
+               % conversions.for_code('generic')['dcp_rad'])
+    out.append('// Prob3++ wants Dmsq32 for the same physics; derived, not typed.')
+    out.append('#define OSC_DMSQ32 %.17g'
+               % conversions.for_code('Prob3++')['dmsq32_ev2'])
+    out.append('')
     out.append('// All three compiled Earth codes hard-code hbar c = 1.97327e-7 eV m.')
     out.append('#define OUR_COSZ_HBARC_SCALE %.17g'
                % conversions.hbar_c_cosine_scale())
