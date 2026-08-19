@@ -13,14 +13,14 @@ were wrong and are recorded as such.
 
 | id | objection | verdict | protocol / grid / knob | artifact field | test |
 |---|---|---|---|---|---|
-| LBL-1 | NuFast-LBL batches over E since v2.0.0; paper says it takes one energy per call | **holds against the paper, not the measurement** — our driver did batch; three text sites are wrong | THROUGHPUT, `CONST/N-sweep`, batched vs looped control | `fig08.series[NuFast-LBL].batched` and a `looped` series | `test_batched_codes_are_driven_batched`, `test_capabilities_match_registry` |
-| LBL-2 | Precision limited by unit conversion, not by his refinement | **partly holds** — his G_F suspicion is wrong for us (we used his own `1.52588e-4`), but Fig. 9 has ħc deliberately native | accuracy, `CONST/60E`, `conventions: matched` vs `native` | `conventions` stamp on every accuracy artifact | `test_conventions_stamp_present`, `test_no_hand_typed_conversion_constants` |
-| LBL-3 | `N_Newton < 0` gives exact eigenvalues and was never tested | **holds — his strongest point** | accuracy + AMORTIZED, `CONST/60E`, `N_Newton ∈ {-1,0,1,2}` | a point at every knob-domain endpoint | `test_every_registered_knob_extreme_was_swept` |
+| LBL-1 | NuFast-LBL batches over E since v2.0.0; paper says it takes one energy per call | **holds against the paper, not the measurement** — our driver did batch; three text sites are wrong | THROUGHPUT, `CONST/N-sweep`, batched vs looped control | `fig08.series[NuFast-LBL].batched` and a `looped` series | `test_capabilities_claims_match_the_registry`, and PENDING `test_batched_codes_are_driven_batched` |
+| LBL-2 | Precision limited by unit conversion, not by his refinement | **partly holds** — his G_F suspicion is wrong for us (we used his own `1.52588e-4`), but Fig. 9 has ħc deliberately native | accuracy, `CONST/60E`, `conventions: matched` vs `native` | `conventions` stamp on every accuracy artifact | `test_no_adapter_types_a_physical_constant`, and PENDING `test_conventions_stamp_present` |
+| LBL-3 | `N_Newton < 0` gives exact eigenvalues and was never tested | **holds — his strongest point** | accuracy + AMORTIZED, `CONST/60E`, `N_Newton ∈ {-1,0,1,2}` | a point at every knob-domain endpoint | `test_precision_knobs_include_their_exact_modes`, and PENDING `test_every_registered_knob_extreme_was_swept` |
 | Earth-1 | Is 256 shells total or per region? | **does not hold** — per major layer, 4×256 = 1024, as the paper says | AMORTIZED, `CHORD/12x1`, `n_layers` | `knob.n_layers` plus `shells_total` | `test_shell_count_semantics_recorded` |
-| Earth-2 | Setters inside the timed loop defeat his caching | **holds, and worse than alleged** — we also constructed the engine and the Earth object per repetition, and our own `rhoYe` injected O(N²) work into his inner loop | AMORTIZED (all invariants hoisted by the harness contract) | `protocol.name == AMORTIZED`, plus the O(1) callback test | `test_driver_timer_ownership`, `test_rhoye_is_constant_time`, `test_rhoye_costs_no_more_than_the_shipped_one` |
+| Earth-2 | Setters inside the timed loop defeat his caching | **holds, and worse than alleged** — we also constructed the engine and the Earth object per repetition, and our own `rhoYe` injected O(N²) work into his inner loop | AMORTIZED (all invariants hoisted by the harness contract) | `protocol.name == AMORTIZED`, plus the O(1) callback test | `test_no_adapter_owns_a_clock`, and PENDING `test_rhoye_is_constant_time`, `test_rhoye_costs_no_more_than_the_shipped_one` |
 | Earth-3 | One zenith angle hides his zenith caching | **holds** — ~8× per-probability at 1024 layers on 100×100 | AMORTIZED, **`OSC/100x100`** alongside `CHORD/12x1` | a series under each grid stamp | `test_oscillogram_grid_present` |
 | Earth-4 | NuFast-Earth does have a constant-density mode since v1.1.0 | **holds** — `single_trajectory_mode` is in the pinned source | accuracy + AMORTIZED, `CONST/60E` via single-trajectory mode | a NuFast-Earth series in the constant-density artifacts | `test_constant_density_capable_codes_appear_in_const_artifacts` |
-| Other-1 | Pin the versions used | **holds** | n/a | `manifest_sha256` in every artifact; commit/sha256 per code | `test_artifacts_share_one_manifest`, `test_every_code_is_pinned` |
+| Other-1 | Pin the versions used | **holds** | n/a | `manifest_sha256` in every artifact; commit/sha256 per code | `test_every_code_is_pinned`, `test_every_code_records_how_latest_was_verified`, and PENDING `test_artifacts_share_one_manifest` |
 | Other-2 | Repeat many times, report mean and a standard deviation | **holds** — every published figure was a minimum of a few reps | both protocols | `{mean, sd, min, n}`; no scalar-time field exists in the schema | `test_no_bare_scalar_times` |
 
 ## Things he did not raise that the audit found
@@ -45,3 +45,42 @@ alleged.
 - The `rhoYe` handed to NuFast-LBL was **not** derived from Prob3++'s
   constant. NuFast-LBL genuinely carries `1.52588e-4`, the same rounding
   Prob3++ uses; our factor was right.
+
+## PENDING
+
+These are named above but cannot exist yet, because each inspects an artifact
+and no artifact exists until a measured run has happened.  They are listed here
+so the gap between what is promised and what is built stays visible instead of
+implied; `test_every_objection_names_a_test_that_exists_or_is_declared_pending`
+fails if a name appears in the table without being either implemented or listed
+here.
+
+Needing artifacts from a run:
+`test_batched_codes_are_driven_batched`,
+`test_conventions_stamp_present`,
+`test_every_registered_knob_extreme_was_swept`,
+`test_shell_count_semantics_recorded`,
+`test_oscillogram_grid_present`,
+`test_constant_density_capable_codes_appear_in_const_artifacts`,
+`test_artifacts_share_one_manifest`,
+`test_no_bare_scalar_times`,
+`test_generated_by_exists`,
+`test_every_benchmark_number_in_the_paper_has_an_artifact`.
+
+Needing the NuFast-Earth adapter to be timed against its shipped equivalent:
+`test_rhoye_is_constant_time`,
+`test_rhoye_costs_no_more_than_the_shipped_one`.
+
+What exists today, and what each already forbids:
+`test_every_code_is_pinned` (a month is not a version),
+`test_every_code_records_how_latest_was_verified` (the paper's version is not
+necessarily the latest),
+`test_precision_knobs_include_their_exact_modes` (a sentinel must be in the
+swept domain),
+`test_no_adapter_owns_a_clock` (only the harness times),
+`test_no_adapter_types_a_physical_constant` (one generator, no fourth value),
+`test_capabilities_claims_match_the_registry` (no claiming an interface does
+not exist while calling it),
+`test_the_shared_parameter_set_has_exactly_one_home` (one set of mixing
+parameters for every code),
+`test_conversion_factors_are_derived_from_the_pinned_sources`.

@@ -224,6 +224,8 @@ TREE = [
     ('tests/bench/adapters/', 'One adapter per code, physics only'),
     ('tests/bench/adapters/nufast_earth.cpp',
      'NuFast-Earth, batched over energy and zenith, invariants hoisted'),
+    ('tests/test_bench_pipeline.py',
+     "The benchmark pipeline's fairness invariants"),
     ('tests/gen_stiff_reference.py',
      'Regenerates the fifty-digit four-flavor oracle'),
     ('tests/stiff_reference.json',

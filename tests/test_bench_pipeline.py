@@ -1,0 +1,224 @@
+# -*- coding: utf-8 -*-
+r"""Checks the benchmark pipeline's fairness invariants.
+
+An audit of the previous comparison found nine ways it was unfair or
+unreproducible, and every one of them was a lapse rather than a decision:
+setters inside a timed loop, a batched interface the paper said did not exist,
+three coexisting values of one constant, a driver that was never committed.
+Care did not prevent them and will not.
+
+So each invariant is a test here.  These do not check that the numbers are
+right --- that is what the references are for --- they check that the machinery
+*cannot* produce an unfair number: that no driver owns a clock, that no adapter
+types a physical constant, that every code is handed one parameter set, and
+that every objection raised against the comparison has a test somewhere with
+its name on it.
+"""
+
+import ast
+import json
+import os
+import pathlib
+import re
+
+import pytest
+
+
+BENCH = pathlib.Path(__file__).resolve().parent / 'bench'
+TESTS = pathlib.Path(__file__).resolve().parent
+
+
+def manifest():
+    with open(BENCH / 'manifest.json') as handle:
+        return json.load(handle)
+
+
+def adapters():
+    directory = BENCH / 'adapters'
+    if not directory.is_dir():
+        return []
+    return sorted(p for p in directory.iterdir()
+                  if p.suffix in ('.cpp', '.c', '.py'))
+
+
+# --------------------------------------------------------------- the manifest
+def test_every_code_is_pinned():
+    r"""No code may be identified by anything as soft as a month.
+
+    Three of them once were --- the paper's comparison table recorded
+    ``2026-08``, the month they were cloned --- which is not a version and
+    cannot be rebuilt.  A pin is a commit or a tarball hash, nothing else.
+    """
+    for code in manifest()['codes']:
+        pin = code['pin']
+        assert ('commit' in pin) or ('sha256' in pin) or ('repo_commit' in pin), (
+            '%s is not pinned to a commit or a hash: %r' % (code['name'], pin))
+        if 'commit' in pin and pin['commit'] != '<filled at run time by run_all.py>':
+            assert re.fullmatch(r'[0-9a-f]{40}', pin['commit']), (
+                '%s: %r is not a full commit sha' % (code['name'], pin['commit']))
+        if 'sha256' in pin:
+            assert re.fullmatch(r'[0-9a-f]{64}', pin['sha256']), (
+                '%s: %r is not a sha256' % (code['name'], pin['sha256']))
+
+
+def test_every_code_records_how_latest_was_verified():
+    r"""Pinning the version the paper used is not the same as pinning the
+    latest, and the difference is how a batched interface went unnoticed for a
+    release and a half.  Each code carries the date and the method.
+    """
+    for code in manifest()['codes']:
+        check = code.get('latest_check')
+        assert check, '%s has no latest_check' % code['name']
+        assert check.get('verified_on') and check.get('how')
+
+
+def test_precision_knobs_include_their_exact_modes():
+    r"""A code's best setting has to be in the swept domain.
+
+    The claim that no code was more accurate "at any setting it exposes" was
+    falsified by one setting we never tried: NuFast-LBL reaches exact
+    eigenvalues at a negative ``N_Newton``, documented in its release notes and
+    absent from our sweep.  Any knob whose registry entry names a sentinel must
+    have that sentinel in its domain.
+    """
+    for code in manifest()['codes']:
+        knobs = code.get('capabilities', {}).get('precision_knobs', {})
+        for name, spec in knobs.items():
+            if isinstance(spec, dict) and 'sentinel' in spec:
+                domain = spec.get('domain', [])
+                for sentinel in spec['sentinel']:
+                    assert int(sentinel) in domain, (
+                        '%s.%s: sentinel %s is not in the swept domain %r'
+                        % (code['name'], name, sentinel, domain))
+
+
+# ---------------------------------------------------------------- the drivers
+def test_no_adapter_owns_a_clock():
+    r"""The harness times; a driver supplies physics.
+
+    Enforced rather than trusted, because the previous NuFast-Earth driver
+    wrote its own loop and put the engine construction, the Earth object and
+    five setters inside it.  ``bench.hpp`` and ``runner.py`` are the only files
+    permitted to name a clock.
+    """
+    forbidden = ('chrono', 'clock_gettime', 'perf_counter', 'process_time',
+                 'time.time')
+    for path in adapters():
+        text = path.read_text()
+        for token in forbidden:
+            assert token not in text, (
+                '%s names %r; only bench.hpp and runner.py may time'
+                % (path.name, token))
+
+
+def test_no_adapter_types_a_physical_constant():
+    r"""Constants reach an adapter through the generated header, never by hand.
+
+    Three different values of one NuFast-Earth density factor once coexisted:
+    ``0.99209238`` applied in a driver, ``0.9920928`` implied by its own
+    comment, ``0.9920938`` printed in the README.  The generator makes a fourth
+    impossible.
+    """
+    patterns = [r'1\.52588', r'1\.5264932', r'7\.63247', r'1\.97327',
+                r'5\.06773', r'0\.99209', r'0\.99249',
+                r'2\.525e-3', r'7\.39e-5', r'2\.4511']
+    for path in adapters():
+        text = path.read_text()
+        for pattern in patterns:
+            assert not re.search(pattern, text), (
+                '%s carries the literal %s; it must come from conversions'
+                % (path.name, pattern))
+
+
+def test_capabilities_claims_match_the_registry():
+    r"""What an adapter says it does must be what the manifest says it does.
+
+    The paper stated that NuFast-LBL exposed no batched entry point while our
+    own driver was calling one.  Neither the registry nor the adapter can now
+    say that alone.
+    """
+    by_name = {c['name']: c for c in manifest()['codes']}
+    for path in adapters():
+        text = path.read_text()
+        found = re.search(r'return\s+"([^"]+)"\s*;\s*\}', text) or \
+            re.search(r'name\s*=\s*[\'"]([^\'"]+)[\'"]', text)
+        if not found:
+            continue
+        name = found.group(1)
+        if name not in by_name:
+            continue
+        registry = by_name[name]['capabilities']
+        if registry.get('batches_energy'):
+            assert re.search(r'batches_energy\s*=\s*true|'
+                             r'[\'"]batches_energy[\'"]\s*:\s*True', text), (
+                '%s: the manifest says this code batches over energy, so the '
+                'adapter must claim it and use the batched entry point' % path.name)
+
+
+# ------------------------------------------------------- one set of parameters
+def test_the_shared_parameter_set_has_exactly_one_home():
+    r"""Every code is handed the same physics, from one place.
+
+    ``bench.hpp`` briefly carried its own copy of the NuFit values beside the
+    Python side's, which is how "the same parameters for all codes" quietly
+    stops being true.
+    """
+    osc = manifest()['oscillation_parameters']
+    for key in ('s12sq', 's13sq', 's23sq', 'dcp_deg', 'dmsq21_ev2',
+                'dmsq31_ev2'):
+        assert key in osc, 'the manifest does not define %s' % key
+
+    header = (BENCH / 'bench.hpp').read_text()
+    assert 'OSC_S12SQ' in header, 'bench.hpp must read the shared parameters'
+    assert '0.310' not in header and '2.525e-3' not in header, (
+        'bench.hpp types a parameter value; it must use the generated macros')
+
+
+def test_conversion_factors_are_derived_from_the_pinned_sources():
+    r"""Each factor is ours-over-theirs, computed from the code's own source.
+
+    Skipped when the pinned sources are absent, since a checkout without
+    ``tests/bench/build.sh`` having run cannot verify them --- but never
+    silently passing on a wrong value.
+    """
+    import sys
+    sys.path.insert(0, str(BENCH))
+    import conversions
+
+    if not pathlib.Path(conversions.BUILD).is_dir():
+        pytest.skip('external sources not built; run tests/bench/build.sh')
+
+    for code in ('NuFast-LBL', 'NuFast-Earth', 'Prob3++'):
+        theirs, _ = conversions.extract(code)
+        expected = conversions.OURS['matter']/theirs
+        assert abs(conversions.mass_defect(code) - expected) < 1e-15
+
+
+# ------------------------------------------------------------- the objections
+def test_every_objection_names_a_test_that_exists_or_is_declared_pending():
+    r"""No objection may be quietly dropped.
+
+    ``tests/bench/OBJECTIONS.md`` maps each point raised against the comparison
+    to the test that answers it.  A name in that table must either exist in the
+    suite or appear in the file's own PENDING list, so the gap between what was
+    promised and what is built stays visible rather than implied.
+    """
+    text = (BENCH / 'OBJECTIONS.md').read_text()
+    named = set(re.findall(r'`(test_[a-z0-9_]+)`', text))
+    assert named, 'OBJECTIONS.md names no tests at all'
+
+    pending = set()
+    if 'PENDING' in text:
+        after = text.split('PENDING', 1)[1]
+        pending = set(re.findall(r'`(test_[a-z0-9_]+)`', after))
+
+    existing = set()
+    for path in TESTS.glob('test_*.py'):
+        for node in ast.walk(ast.parse(path.read_text())):
+            if isinstance(node, ast.FunctionDef) and node.name.startswith('test_'):
+                existing.add(node.name)
+
+    missing = sorted(named - existing - pending)
+    assert not missing, (
+        'OBJECTIONS.md names tests that neither exist nor are declared '
+        'pending: %s' % ', '.join(missing))

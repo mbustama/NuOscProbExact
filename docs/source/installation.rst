@@ -310,6 +310,7 @@ File tree
        │   ├── gen_conversions.py       # Emits conversions.h so no adapter carries a physical literal
        │   └── adapters/                # One adapter per code, physics only
        │       └── nufast_earth.cpp     # NuFast-Earth, batched over energy and zenith, invariants hoisted
+       ├── test_bench_pipeline.py       # The benchmark pipeline's fairness invariants
        ├── gen_stiff_reference.py       # Regenerates the fifty-digit four-flavor oracle
        ├── stiff_reference.json         # That oracle, frozen: nine Hamiltonians in hexadecimal floats
        ├── test_su3_algebra.py          # d tensor, star product, SU(3) invariants
