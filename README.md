@@ -311,6 +311,7 @@ NuOscProbExact/
     ├── conftest.py                  # Shared fixtures and path setup
     ├── bench/                       # Fair-comparison benchmark pipeline
     │   ├── manifest.json            # Pinned versions, build profiles, thread policy, capabilities
+    │   ├── README.md                # Entry point: state of play and where each decision is recorded
     │   ├── ADVERSARIAL.md           # What the adversarial check must try to break
     │   ├── OBJECTIONS.md            # Each objection, the measurement answering it, and its test
     │   ├── requirements.lock        # Exact Python versions the benchmark venv installs

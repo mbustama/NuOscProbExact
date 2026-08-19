@@ -535,5 +535,12 @@
       "one_axes": true,
       "caption_must_state": "that P_ref is built in each code's own convention, with shared mixing parameters"
     }
+  },
+  "artifact_requirements": {
+    "threads": "Every series must record the thread count the code actually used, not the policy. A cross-code speed claim without both counts is not a claim.",
+    "kernel_entered": "For NuOscProbExact, record which compiled kernel was entered (probabilities_3nu_kernel for constant density, earth_chords_3nu_kernel for a chord). Nothing currently asserts this at run time, so a missing numba would have us publish the NumPy path as ours.",
+    "statistics": "{mean, sd, min, n}; the schema has no field for a bare scalar time.",
+    "stamps": "protocol {name, grid} and conventions; series with different stamps may not share an axes.",
+    "machine": "cpu, cores, governor, load average, and the session's three canary readings."
   }
 }

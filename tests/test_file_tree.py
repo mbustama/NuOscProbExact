@@ -209,6 +209,8 @@ TREE = [
     ('tests/bench/', 'Fair-comparison benchmark pipeline'),
     ('tests/bench/manifest.json',
      'Pinned versions, build profiles, thread policy, capabilities'),
+    ('tests/bench/README.md',
+     'Entry point: state of play and where each decision is recorded'),
     ('tests/bench/ADVERSARIAL.md',
      'What the adversarial check must try to break'),
     ('tests/bench/OBJECTIONS.md',
