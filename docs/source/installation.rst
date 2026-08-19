@@ -304,7 +304,12 @@ File tree
        │   ├── manifest.json            # Pinned versions, build profiles, thread policy, capabilities
        │   ├── OBJECTIONS.md            # Each objection, the measurement answering it, and its test
        │   ├── requirements.lock        # Exact Python versions the benchmark venv installs
-       │   └── build.sh                 # Clones, hash-verifies and builds all seven at their pins
+       │   ├── build.sh                 # Clones, hash-verifies and builds all seven at their pins
+       │   ├── bench.hpp                # The C++ harness: owns main(), every clock, the statistics
+       │   ├── conversions.py           # The one place a physical conversion factor is computed
+       │   ├── gen_conversions.py       # Emits conversions.h so no adapter carries a physical literal
+       │   └── adapters/                # One adapter per code, physics only
+       │       └── nufast_earth.cpp     # NuFast-Earth, batched over energy and zenith, invariants hoisted
        ├── gen_stiff_reference.py       # Regenerates the fifty-digit four-flavor oracle
        ├── stiff_reference.json         # That oracle, frozen: nine Hamiltonians in hexadecimal floats
        ├── test_su3_algebra.py          # d tensor, star product, SU(3) invariants

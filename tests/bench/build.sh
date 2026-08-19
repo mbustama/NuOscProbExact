@@ -73,7 +73,11 @@ clone_at NuFast-Earth "$(pin NuFast-Earth "['url']")" "$(pin NuFast-Earth "['pin
 for prof in speed accuracy; do
   flags="-O3 -std=c++17"      # upstream Makefile CFlags; same for both profiles here
   out="$BUILD/nufast-earth-$prof"; mkdir -p "$out"
+  # src/main.cpp is upstream's own demo entry point.  Skipped, because
+  # bench.hpp owns main() -- linking both is a duplicate-symbol error, which is
+  # precisely the mechanism that stops an adapter timing itself.
   for f in "$SRC/nufast-earth/src"/*.cpp; do
+    [ "$(basename "$f")" = main.cpp ] && continue
     g++ $flags -c -I"$SRC/nufast-earth/include" "$f" -o "$out/$(basename "${f%.cpp}").o"
   done
   echo "  $prof profile ok  [$flags]  ($(ls "$out"/*.o | wc -l) objects)"
