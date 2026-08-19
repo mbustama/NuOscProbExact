@@ -304,6 +304,7 @@ File tree
        │   ├── manifest.json            # Pinned versions, build profiles, thread policy, capabilities
        │   ├── README.md                # Entry point: state of play and where each decision is recorded
        │   ├── ADVERSARIAL.md           # What the adversarial check must try to break
+       │   ├── FINDINGS.md              # What that check broke, and how each claim was verified
        │   ├── OBJECTIONS.md            # Each objection, the measurement answering it, and its test
        │   ├── requirements.lock        # Exact Python versions the benchmark venv installs
        │   ├── build.sh                 # Clones, hash-verifies and builds all seven at their pins
@@ -319,8 +320,10 @@ File tree
        │   │   ├── nuoscprobexact.py    # This library, batched
        │   │   ├── nusquids.py          # nuSQuIDS through its multiple-energy constructor
        │   │   └── nucraft.py           # nuCraft, whose batching is interface-only
-       │   └── runner.py                # The Python harness; the only place Python timing happens
+       │   ├── runner.py                # The Python harness; the only place Python timing happens
+       │   └── reference.py             # One 50-digit reference per code, in that code's own convention
        ├── test_bench_pipeline.py       # The benchmark pipeline's fairness invariants
+       ├── test_bench_behaviour.py      # What an adapter does, not where its constants came from
        ├── gen_stiff_reference.py       # Regenerates the fifty-digit four-flavor oracle
        ├── stiff_reference.json         # That oracle, frozen: nine Hamiltonians in hexadecimal floats
        ├── test_su3_algebra.py          # d tensor, star product, SU(3) invariants

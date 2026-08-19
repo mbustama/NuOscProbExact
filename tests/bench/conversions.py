@@ -191,6 +191,59 @@ def extract(code):
     return float(found.group(1)), path
 
 
+def matter_constant(code):
+    r"""Returns `code`'s matter constant in the shared ``A = k rhoYe / 2e9``
+    normalisation, read from that code's own source or its own header.
+
+    Five codes carry a literal, so `SITES` reads it.  Two do not:
+
+    * nuSQuIDS builds it at run time as
+      ``sqrt(2) G_F N_A cm^-3`` (`src/nuSQuIDS.cpp`, ``HI_constants``, used in
+      ``HI()`` as ``CC = HI_constants * rho * Ye``).  Every factor comes from
+      its own ``Const()``, so this is its value and not a transcription of it.
+      As a check that this reproduces the C++: the result lands within 1e-8 of
+      NuFast-Earth's independently written literal, as it should, since both
+      use the modern CODATA G_F and N_A.
+    * this library's own is derived in `_ours_matter_constant`.
+
+    Without this the reference builder had nothing to construct nuSQuIDS'
+    potential from --- ``mass_defect('nuSQuIDS')`` raised ``KeyError``.
+    """
+    if code == 'nuSQuIDS':
+        import math
+        import nuSQuIDS as nsq
+        c = nsq.Const()
+        # sqrt2 is a mathematical constant, not one of theirs to round.
+        return math.sqrt(2.0)*c.GF*c.Na*c.cm**-3.0*2.0e9
+    if code == 'NuOscProbExact':
+        return OURS['matter']
+    theirs, _ = extract(code)
+    if code == 'GLoBES':
+        # GLB_V_FACTOR is V per (g/cm^3) where the others carry A = 2 E V per
+        # GeV; the bridge is 2 (from A's definition) times 1e9 (GeV to eV),
+        # both exact unit factors rather than measured constants.
+        theirs = 2.0e9*theirs
+    return theirs
+
+
+def nc_over_cc(code):
+    r"""Returns the neutral-current to charged-current ratio `code` applies.
+
+    Only meaningful at four flavors: among three active flavors the NC term
+    is common to all of them and cancels out of any oscillation probability.
+
+    For isoscalar matter with Y_e = 1/2 the exact value is -1/2.  nuCraft is
+    the one code that does not reach it -- its two entries are independently
+    rounded and their ratio is 0.50161 -- and per the manifest that is an
+    error rather than a convention, so its reference is built with the exact
+    ratio while keeping its constants for the units.  A reference that
+    absorbed the rounding would forgive the defect.
+    """
+    if code == 'nuCraft':
+        return -0.5          # deliberately NOT nucraft_nc_constant()/its CC
+    return -0.5
+
+
 def mass_defect(code):
     r"""Returns ours/theirs for `code`, the factor its density must carry.
 
@@ -201,10 +254,7 @@ def mass_defect(code):
     and the :math:`10^9` from GeV to eV, both exact unit factors rather
     than measured constants.
     """
-    theirs, _ = extract(code)
-    if code == 'GLoBES':
-        theirs = 2.0e9*theirs
-    return OURS['matter']/theirs
+    return OURS['matter']/matter_constant(code)
 
 
 def globes_ne_mantle():
@@ -275,4 +325,10 @@ def for_code(code):
     if code in ('nuCraft',):
         for k in ('12', '13', '23'):
             out['theta%s_rad' % k] = math.asin(math.sqrt(p['s%ssq' % k]))
+    sterile = p.get('sterile_3plus1')
+    if sterile:
+        out['dmsq41_ev2'] = sterile['dmsq41_ev2']
+        for k in ('14', '24', '34'):
+            out['s%ssq' % k] = sterile['s%ssq' % k]
+            out['theta%s_rad' % k] = math.asin(math.sqrt(sterile['s%ssq' % k]))
     return out
