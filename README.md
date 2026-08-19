@@ -315,6 +315,7 @@ NuOscProbExact/
     │   ├── requirements.lock        # Exact Python versions the benchmark venv installs
     │   ├── build.sh                 # Clones, hash-verifies and builds all seven at their pins
     │   ├── bench.hpp                # The C++ harness: owns main(), every clock, the statistics
+    │   ├── machine.py               # Environment capture, the canary, and the rejection rule
     │   ├── conversions.py           # The one place a physical conversion factor is computed
     │   ├── gen_conversions.py       # Emits conversions.h so no adapter carries a physical literal
     │   └── adapters/                # One adapter per code, physics only

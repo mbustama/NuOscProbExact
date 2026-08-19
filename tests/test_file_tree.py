@@ -217,6 +217,8 @@ TREE = [
      'Clones, hash-verifies and builds all seven at their pins'),
     ('tests/bench/bench.hpp',
      'The C++ harness: owns main(), every clock, the statistics'),
+    ('tests/bench/machine.py',
+     'Environment capture, the canary, and the rejection rule'),
     ('tests/bench/conversions.py',
      'The one place a physical conversion factor is computed'),
     ('tests/bench/gen_conversions.py',

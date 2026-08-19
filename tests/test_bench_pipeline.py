@@ -222,3 +222,37 @@ def test_every_objection_names_a_test_that_exists_or_is_declared_pending():
     assert not missing, (
         'OBJECTIONS.md names tests that neither exist nor are declared '
         'pending: %s' % ', '.join(missing))
+
+
+# ------------------------------------------------------------- machine state
+def test_a_busy_machine_is_refused():
+    r"""A run that cannot be believed must write no artifact.
+
+    Timings on this hardware swing by a quarter between sessions, and the audit
+    that prompted this pipeline found a published pair whose ratio was noise.
+    The rejection rule is therefore part of the machinery, not advice.
+    """
+    import sys
+    sys.path.insert(0, str(BENCH))
+    import machine
+
+    steady = [1.00, 1.01, 0.99, 1.02, 0.98]
+    ok, why = machine.admissible(steady)
+    assert ok, why
+
+    interrupted = [1.00, 2.20, 1.02, 0.99, 1.01]
+    ok, why = machine.admissible(interrupted)
+    assert not ok and 'CV' in why, why
+
+    assert not machine.admissible([1.0])[0], 'one block cannot be judged'
+
+
+def test_canary_drift_invalidates_a_session():
+    r"""Three readings bound the drift across an hours-long sweep."""
+    import sys
+    sys.path.insert(0, str(BENCH))
+    import machine
+
+    assert machine.canary_drift(1.00, 1.01, 1.02)[0]
+    ok, why = machine.canary_drift(1.00, 1.03, 1.20)
+    assert not ok and 'drifted' in why, why
