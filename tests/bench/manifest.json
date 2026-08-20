@@ -371,7 +371,38 @@
           "produces": "tests/prem_speed_accuracy.json",
           "figure": "Fig. 11, Earth"
         }
-      ]
+      ],
+      "measured_floor": {
+        "note": [
+          "Measured, at last.  The manifest previously asserted this code",
+          "floors at 3e-3 'because of its constants'.  That was an inherited",
+          "claim about an intrinsic defect that nobody had tested, and it is",
+          "wrong by seven orders.  Swept at three flavors, E=10 GeV,",
+          "cosz=-0.9, against nuCraft's own 50-digit reference, the error",
+          "tracks numPrec the whole way down and is still falling by 3x at",
+          "the edge of the declared domain: there is no floor above 7.9e-11.",
+          "That is exactly what zvode at atol=rtol=numPrec*2e-3 predicts and",
+          "nothing else.  Asserting a floor for a dial we never turned is the",
+          "failure this pipeline exists to prevent, and it was aimed at",
+          "another author's code."
+        ],
+        "flavors": 3,
+        "energy_gev": 10.0,
+        "costhz": -0.9,
+        "error_by_numprec": {
+          "1e-2": 0.00016,
+          "1e-3": 6.3e-05,
+          "5e-4 (default)": 7.2e-06,
+          "1e-4": 8.4e-06,
+          "1e-5": 1.5e-06,
+          "1e-6": 1.3e-06,
+          "1e-7": 1.6e-08,
+          "1e-8": 3.6e-08,
+          "1e-9": 2.3e-10,
+          "1e-10": 7.9e-11
+        },
+        "generated_by": "tests/bench/audit_reference.py and the numPrec sweep recorded in FINDINGS.md"
+      }
     },
     {
       "name": "GLoBES",
@@ -541,10 +572,10 @@
     "absorbed_into_the_reference": [
       "hbar c",
       "the code's own matter normalisation",
-      "the profile it was handed, when profile_basis is 'as-handed'"
+      "the profile it was handed"
     ],
     "never_absorbed": {
-      "nuCraft": "Its sterile and charged-current constants have ratio 0.50161 where the isoscalar value is exactly 1/2. That is not a convention, it is an error, so its reference uses its constants for units but the correct ratio -- otherwise the reference would forgive the defect and the 3e-3 floor would vanish."
+      "nuCraft": "Its charged-current and sterile entries are 15.256e-5 and 7.6525e-5. nuCraft's own derivation (NuCraft.py:205-212) defines ONE prefactor for the vector (2Ye,0,0,1-Ye), so by its own formula the two must be exactly 2:1. 15.256e-5 is exactly twice that prefactor for m = 931.5 MeV, the amu; 7.6525e-5 would need m = 928.5 MeV, which is not the amu, the proton, the neutron, or the 0.939 its own comment states. The pair is therefore inconsistent with its own documented derivation rather than expressing a different convention, most likely a digit typo for 7.6325e-5 (half the modern 7.63247e-5) -- the same defect class as its rICore = 1121.5 for 1221.5. Its reference uses its constants for the units and the exact isoscalar ratio. NOTE this bites ONLY at 3+1: at three flavors the sterile entries do not exist, so no three-flavor figure is affected by this exception either way."
     },
     "plotting": {
       "y_axis": "|P - P_ref|, P_ref per code",
@@ -553,42 +584,44 @@
     },
     "profile_basis": {
       "note": [
-        "Which profile a reference is built on, which the manifest",
-        "previously left unstated.  The two choices measure different",
-        "things and neither is right for every figure.",
-        "'as-handed': the reference uses the discretised profile the code",
-        "was actually given, so the residual is that code's algorithm",
-        "alone.  Right for a figure sweeping a code's INTERNAL knob --",
-        "NuFast-Earth's eigenvalue_precision, nuSQuIDS' tolerance,",
-        "nuCraft's numPrec, this library's rtol -- where the",
-        "discretisation is held fixed and is not what is being varied.",
-        "'continuous': the reference uses the continuous PREM, so the",
-        "residual includes the discretisation.  Required for a figure",
-        "sweeping n_shells, which is Prob3++'s and GLoBES' only knob:",
-        "they solve each constant slab exactly, so against an as-handed",
-        "reference their residual is round-off at every shell count and",
-        "the sweep would measure nothing at all.",
-        "nuSQuIDS is the trap here.  An as-handed reference for it must",
-        "reproduce the AKIMA spline its EarthAtm builds over the table it",
-        "is given (body.h, AkimaSpline inter_density) -- not a linear",
-        "interpolation of the same nodes.  Akima overshoot near the",
-        "density jumps is small, structured, and shaped exactly like",
-        "solver error."
+        "Every code is judged against a reference that treats PREM exactly as that",
+        "code treats it: same discretisation, same shells or spline or slabs. The",
+        "residual then measures how well the code solves the problem it poses to",
+        "itself, which is the same KIND of quantity for every code and is what lets",
+        "them share one panel.",
+        "DECIDED after measuring the alternative. Scoring the compiled Earth codes",
+        "against the continuous PREM instead inflates Prob3++ from 1.3e-13 to",
+        "4.1e-7 and GLoBES from 8.1e-13 to 4.1e-7 -- and both land on the SAME",
+        "4.06e-7, because that number is the 1024-shell discretisation they were",
+        "handed rather than anything about either code. Mixing the two bases on one",
+        "axes would have flattered whichever codes arrived pre-discretised, and",
+        "would have read as a nine-order algorithmic gap that does not exist.",
+        "The cost of this choice, stated because the figure must carry it: for a",
+        "code whose precision knob IS its discretisation dial -- n_shells for",
+        "Prob3++ and GLoBES, n_slabs_per_segment and rtol for this library -- the",
+        "reference moves with the knob, so the sweep is flat at round-off and shows",
+        "no convergence. That is honest but uninformative, and the caption must say",
+        "what discretisation each code was handed so a reader can see who solved",
+        "which Earth. A code does not get its behaviour changed to suit the axes."
       ],
       "values": [
-        "as-handed",
-        "continuous"
+        "as-handed"
       ],
-      "rule": "Every accuracy artifact carries this stamp beside the conventions stamp, and the no_crossing_rule extends to it: series with different profile_basis may not share an axes.",
+      "rule": "Every accuracy artifact is built on the profile its code was handed. The caption must state the discretisation per code. No series is built on the continuous PREM, so no two series on one panel are scored against different Earths.",
       "by_knob": {
-        "n_shells": "continuous",
+        "n_shells": "as-handed",
         "eigenvalue_precision": "as-handed",
         "N_Newton": "as-handed",
         "log10_solver_tolerance": "as-handed",
         "log10_numPrec": "as-handed",
-        "n_slabs_per_segment": "continuous",
-        "rtol": "continuous"
-      }
+        "n_slabs_per_segment": "as-handed",
+        "rtol": "as-handed"
+      },
+      "flat_by_construction": [
+        "Prob3++",
+        "GLoBES",
+        "NuOscProbExact"
+      ]
     }
   },
   "artifact_requirements": {

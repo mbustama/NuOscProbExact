@@ -478,7 +478,17 @@ def profile_for(code, n_shells=256):
         def splined(r):
             return _mpf(float(spline(min(float(r), gd.EARTH_RADIUS))))
 
-        return [_mpf(b) for b in _earth.PREM_BOUNDARIES], splined, False
+        # EVERY spline knot is a mandatory slab edge, not just the PREM
+        # boundaries.  A spline is only piecewise smooth: its density has a
+        # kink at each knot, so a slab straddling one sees a profile with no
+        # convergent h^2 expansion and the extrapolation stalls -- measured,
+        # it stalled at 5.8e-10 for nuCraft and 2.8e-10 for nuSQuIDS, eight
+        # orders short.  Cutting at the knots puts every slab inside one
+        # polynomial piece, which is the same reason `earth_slabs` cuts at
+        # PREM boundaries.  The segments are then ~3 km wide already, so the
+        # ladder starts at one sub-slab per segment rather than thirty-two.
+        return [_mpf(v) for v in nodes if 0.0 < v < gd.EARTH_RADIUS], \
+            splined, False
 
     return bounds, continuous, False
 
@@ -504,11 +514,39 @@ def earth_chord_reference(code, energy_gev, costhz, ye, params,
         return slab_product(code, energy_gev, widths, densities, ye, params,
                             m2=m2), mp.mpf(10)**(-DPS + 5)
 
+    # A profile whose knots are already slab edges needs only a short ladder:
+    # the segments are small and the density inside each is a single smooth
+    # polynomial.  A continuous profile cut only at the nine PREM boundaries
+    # has segments hundreds of km wide and needs the long one.
+    #
+    # FIVE rungs, not four, and the reason is the error estimate rather than
+    # the value.  The estimate below is the standard Romberg one -- the gap
+    # between the returned corner and the corner one extrapolation level
+    # shallower -- so it reports the error of the corner it DISCARDS, which
+    # is conservative and correct but only useful if that shallower corner is
+    # itself good.  With four rungs the shallower corner is level 2, and its
+    # error is ~3e-10 while the returned level-3 corner is at ~2e-13: the
+    # estimate overstated the truth by a factor of 1700 and made two
+    # references look eight orders worse than they were.  A fifth rung moves
+    # the comparison to the level-3 corner and the quoted figure becomes
+    # ~2e-13 (nuCraft) and ~5e-14 (nuSQuIDS), measured.
+    #
+    # Both are comfortably below nuSQuIDS' tightest tolerance setting, which
+    # is what these references have to resolve.  A sixth rung would quote
+    # ~1e-15 and costs six minutes an entry; nothing being judged needs it,
+    # and the double-precision spline evaluation floors the whole
+    # construction near 1e-17 in any case.
+    if len(boundaries) > 64:
+        ladder = (1, 2, 4, 8, 16)
+
     values = {}
     for n in ladder:
         widths, densities = chord_slabs_mp(costhz, boundaries, n, density_fn)
         values[n] = slab_product(code, energy_gev, widths, densities, ye,
                                  params, m2=m2)
+    # The returned error is the standard Romberg estimate: how far the
+    # corner moved when the last rung was added.  It bounds the error of the
+    # shallower corner, so it is an upper bound on the returned one.
     corner, _ = romberg(values)
     shorter, _ = romberg({n: values[n] for n in ladder[:-1]})
     return corner, abs(corner - shorter)

@@ -100,11 +100,18 @@ class NuSQuIDS(object):
             # Constant density has a closed form and nuSQuIDS ships it:
             # with this set, EvolveState skips the ODE entirely and evolves
             # each node algebraically.  A seasoned user of this code would
-            # never integrate an ODE through constant density, and running
-            # it that way is the same omission objection LBL-3 was about,
-            # aimed at a different code.  Verified against the ODE path on
-            # CONST/60E: they agree to 7.2e-7, which is the ODE's own
-            # tolerance.
+            # never integrate an ODE through constant density.
+            #
+            # Measured on CONST/60E against a 50-digit reference, and it is
+            # NOT the unqualified win it looks like.  The algebraic path is
+            # exact at 59 of 60 nodes -- median error 4e-16 -- but carries a
+            # TOLERANCE-INDEPENDENT bump of 7.2e-7 around 3.4-6.5 GeV, while
+            # the ODE at tolerance 1e-12 reaches 3.5e-12 everywhere.  So this
+            # mode is typically better and five orders worse at its worst
+            # node.  An earlier version of this comment read that 7.2e-7 as
+            # the ODE's own tolerance; it is this mode's defect, not the
+            # ODE's.  Any figure quoting nuSQuIDS on constant density has to
+            # say which mode produced it.
             self._constant_density_mode = True
 
         self._single = e.size == 1

@@ -1657,6 +1657,211 @@ def convention_matching():
     ])
 
 
+def reference_precision():
+    """Returns markdown on the per-code references and how good each one is.
+
+    The table is rendered from ``tests/bench/reference_audit.json``, which is
+    produced by ``tests/bench/audit_reference.py``.  Nothing here is typed:
+    six published numbers about external codes once existed only in
+    docstrings with no stored run, and this is the shape that mistake takes
+    when it is avoided.  The audit also disagreed with what would have been
+    written by hand, which is the argument for generating it.
+    """
+    import json
+    import os
+
+    path = os.path.join('tests', 'bench', 'reference_audit.json')
+    if not os.path.exists(path):
+        return ('## The references\n\n`tests/bench/reference_audit.json` has '
+                'not been generated; run `python tests/bench/'
+                'audit_reference.py`.')
+    audit = json.load(open(path))
+    probe = audit['probe']
+
+    order = ['NuOscProbExact', 'NuFast-LBL', 'NuFast-Earth', 'Prob3++',
+             'GLoBES', 'nuSQuIDS', 'nuCraft']
+    rows = []
+    for name in order:
+        entry = audit['codes'].get(name)
+        if entry is None:
+            continue
+        fidelity = entry.get('profile_fidelity_g_per_cm3')
+        if isinstance(fidelity, float):
+            fidelity = ('exact' if fidelity == 0.0 else '%.1e' % fidelity)
+        else:
+            fidelity = 'built identically'
+        rows.append('| {\\tt %s} | %.9e | %.2f | %s | %s | %.0e |'
+                    % (name, entry['matter_constant'], entry['km_in_inv_ev'],
+                       entry['profile_kind'], fidelity,
+                       entry['reference_error']))
+
+    return '\n'.join([
+        '## How good each reference is, and what it had to match',
+        '',
+        'Each code is differenced against its own 50-digit reference, so the',
+        'reference has to solve the problem that code was handed and not a',
+        'neighbouring one. That means matching, per code, the matter',
+        'constant, $\\hbar c$, the electron fraction, the chord, and --- the',
+        'one that turned out to be hardest --- the discretised profile.',
+        '',
+        'Every number below is measured by',
+        '`tests/bench/audit_reference.py` and read from the artifact it',
+        'writes, at $\\cos\\theta_z = %g$ and $E = %g$ GeV with $Y_e = %g$,'
+        % (probe['costhz'], probe['energy_gev'], probe['ye']),
+        'at %d working digits.' % audit['working_digits'],
+        '',
+        '| Code | Matter constant | km / eV$^{-1}$ | Profile it is handed | Profile match | Reference error |',
+        '|---|---|---|---|---|---|',
+    ] + rows + [
+        '',
+        '$Y_e$ is shared by every code and every reference, and so are the',
+        'mixing parameters; everything else in that table is per code.',
+        '',
+        '### Why the errors differ by thirty-five orders of magnitude',
+        '',
+        'The three compiled Earth codes are handed a stack of uniform',
+        'shells. A stack of uniform shells has an exact answer --- a finite',
+        'product of matrix exponentials --- so their references carry no',
+        'discretisation error at all and are limited only by the arithmetic.',
+        'The same is true of every constant-density reference, which is one',
+        'exponential. Those are the entries near $10^{-45}$.',
+        '',
+        'The remaining codes are handed a profile that varies continuously,',
+        'so their references are slab products extrapolated to zero slab',
+        'width. That extrapolation is where the work is, and it failed twice',
+        'before it worked.',
+        '',
+        '### Which Earth each reference is built on, and why it matters',
+        '',
+        'A reference has to solve the problem its code was handed, and for the',
+        'Earth figure that phrase does real work. The compiled codes are given',
+        'a PREM already cut into 1024 uniform shells; this library is given the',
+        'continuous profile and cuts it itself. Those are different problems,',
+        'and scoring them against different references is not a bookkeeping',
+        'detail --- it decides what the figure appears to show.',
+        '',
+        'Measured, on one chord at three energies. Against a reference built on',
+        'the shell stack each code was handed, Prob3++ sits at $10^{-13}$ and',
+        'GLoBES at $10^{-13}$. Against a reference built on the continuous',
+        'PREM, both move to $4.06 \\times 10^{-7}$ --- the same number, to',
+        'three figures, because it is not a property of either code. It is the',
+        'discretisation they were both handed. This library, cutting the',
+        'continuous profile into 256 slabs per segment, sits in the same place.',
+        '',
+        'So a figure mixing the two conventions would have shown the compiled',
+        'codes as nine orders more accurate than this one, and that gap would',
+        'have been entirely an artifact of which reference forgave whose',
+        'discretisation. Every series here is therefore built on the profile',
+        'its own code was handed, and the caption states what discretisation',
+        'each code received, so a reader can see who solved which Earth.',
+        '',
+        'That choice has a price, paid openly: where a code\'s precision dial',
+        '*is* its discretisation dial --- the shell count for Prob3++ and',
+        'GLoBES, the slab count for this library --- the reference moves with',
+        'the dial and the residual stays at round-off however the dial is set.',
+        'Those series are flat by construction. The alternative was to hold one',
+        'code to a standard the others were excused from, which is not a',
+        'comparison. A code is not made to behave differently to suit an axis.',
+        '',
+        '### Two things that limited it, neither of them obvious',
+        '',
+        'The first was **arithmetic**. In double precision the extrapolated',
+        'slab product floors near $2 \\times 10^{-12}$: the first Richardson',
+        'pass converges cleanly at fourth order, but a second pass gains',
+        'nothing, because by then the error is accumulated round-off over the',
+        'ten thousand matrix products rather than discretisation. No amount',
+        'of extrapolation gets past that, which is why the references are',
+        'built in arbitrary precision.',
+        '',
+        'The second was **geometry**. With the arithmetic fixed, the',
+        'extrapolation still stalled near $10^{-17}$. Extrapolating the slab',
+        'count to infinity is a statement about the continuous profile, so',
+        'the chord crossing radii are part of the answer rather than an input',
+        'to it, and their double-precision representation error breaks the',
+        'smooth expansion the extrapolation assumes. Computing the chord in',
+        'arbitrary precision too --- the total path length then matches',
+        '$-2R\\cos\\theta_z$ to twenty-two digits --- removed it.',
+        '',
+        '### A third, and the two faults that were hiding each other',
+        '',
+        'Two codes are handed a *spline* rather than a stack of shells:',
+        'nuCraft gets a linear one, and nuSQuIDS builds an Akima spline',
+        'inside its own Earth model. Their references appeared to stall eight',
+        'orders short, near $5 \\times 10^{-10}$, with everything else',
+        'already correct. Two separate things were wrong, and each concealed',
+        'the other; the sequence is worth setting out, because the first',
+        'repair looked like a failure and was not.',
+        '',
+        'The first fault was real. A spline is only piecewise smooth: its',
+        'density has a kink at every knot, and a slab that straddles a kink',
+        'sees a profile with no convergent expansion in the slab width, so',
+        'the extrapolation has nothing to extrapolate. The repair is the rule',
+        'the library already applies to PREM boundaries, which are mandatory',
+        'slab edges for exactly this reason --- every spline knot became a',
+        'mandatory slab edge too, putting each slab inside a single',
+        'polynomial piece.',
+        '',
+        'That repair appeared to accomplish almost nothing. The quoted error',
+        'moved from $5.8 \\times 10^{-10}$ to $3.3 \\times 10^{-10}$ for',
+        'nuCraft, a factor of under two, and the natural reading was that the',
+        'kinks had never been the problem.',
+        '',
+        'The natural reading was wrong, and what established it was printing',
+        'the whole extrapolation table instead of the single number at its',
+        'corner. Every level of that table falls by exactly the factor it',
+        'should --- 4, then 16, then 64 --- which is what a smooth expansion',
+        'looks like and is not what a straddled kink produces. Measured',
+        'against the value now established, the pre-repair corner was',
+        '$9.6 \\times 10^{-10}$ from the truth and the post-repair corner is',
+        '$1.9 \\times 10^{-13}$: the kink repair bought three orders, not a',
+        'factor of two.',
+        '',
+        'The second fault was the *error estimate*, and it was hiding the',
+        'first. The estimate is the standard Romberg one --- how far the',
+        'corner moves when the last rung of the ladder is added --- which',
+        'bounds the error of the corner one level shallower. That is',
+        'conservative and correct, but only informative when the shallower',
+        'corner is itself good. With a four-rung ladder the shallower corner',
+        'sits two extrapolation levels back, and its error was',
+        '$3 \\times 10^{-10}$ while the returned corner was already at',
+        '$2 \\times 10^{-13}$. The number being quoted was never the',
+        'reference\'s error. It was the error of a corner that had been',
+        'computed and discarded, and it overstated the truth by a factor of',
+        'about seventeen hundred. A fifth rung moves the comparison one level',
+        'deeper and the quoted figure becomes the measured',
+        '$2 \\times 10^{-13}$ and $5 \\times 10^{-14}$.',
+        '',
+        'This is worth recording because of how it would have failed. The',
+        'profiles themselves were right the whole time --- the audit measures',
+        'nuCraft\'s as exact, since the adapter hands it the very spline',
+        'object the reference uses, and nuSQuIDS\' as agreeing to double',
+        'round-off --- so every check aimed at *whether the reference matches',
+        'the code* passed, correctly. What was wrong sat on top of a correct',
+        'profile, and its residual would have been read as those two codes\'',
+        'solver error. The general lesson is narrower than "check your work":',
+        'a single summary number can be wrong in a way the quantity it',
+        'summarises is not, and the table it came from is what says so.',
+        '',
+        '### The Akima variant, which is not a detail',
+        '',
+        'nuSQuIDS does not accept a profile; it accepts nodes and builds its',
+        'own Akima spline over them. Substituting a different library\'s',
+        'Akima looks harmless and is not: the two agree *exactly* at the data',
+        'nodes and differ by about $2 \\times 10^{-8}$ between them, which put',
+        'a relative error near $10^{-9}$ into the profile --- three orders',
+        'above the tight end of nuSQuIDS\' own tolerance dial, and shaped',
+        'exactly like solver error. Its own construction is reproduced',
+        'instead, and the reference profile now agrees with what nuSQuIDS',
+        'reports along the chord to double round-off.',
+        '',
+        'The general point is the one the whole per-code reference scheme',
+        'rests on: a reference that is subtly wrong does not announce itself.',
+        'It produces a residual of a plausible size, and that residual gets',
+        'read as the code\'s accuracy.',
+    ])
+
+
+
 def timing_protocols():
     """Returns markdown on what each timing protocol measures, and why.
 
@@ -1740,6 +1945,7 @@ Running this notebook writes all fourteen PDFs. Set `NUOSC_PAPER_FIGDIR` to writ
     [
         md(external_code_provenance()),
         md(convention_matching()),
+        md(reference_precision()),
         md(timing_protocols()),
         code(r'''import earth
 import slabs
