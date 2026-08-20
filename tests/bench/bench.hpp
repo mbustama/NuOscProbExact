@@ -291,6 +291,7 @@ int main(int argc, char **argv) {
                     "  \"looped\": %s,\n"
                     "  \"shell_density\": \"%s\",\n"
                     "  \"manifest_sha256\": \"%s\",\n"
+                    "  \"channels\": [\"numu->nue\", \"numu->numu\", \"numu->nutau\"],\n"
                     "  \"n_points\": %zu,\n"
                     "  \"probabilities\": [",
                     driver::name(), grid.c_str(),
@@ -298,7 +299,9 @@ int main(int argc, char **argv) {
                     p.n_layers, p.shells_total(),
                     p.force_loop ? "true" : "false",
                     p.mean_density ? "mean" : "midpoint", MANIFEST_SHA256,
-                    probs.size());
+                    p.points());   // grid points, NOT probs.size(): there are
+                                   // three channels per point now, and this
+                                   // field is what downstream divides by.
         for (std::size_t i = 0; i < probs.size(); ++i)
             std::printf("%s%.17g", i ? ", " : "", probs[i]);
         std::printf("]\n}\n");

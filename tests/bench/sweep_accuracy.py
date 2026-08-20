@@ -103,9 +103,16 @@ def grid_points(grid, n_e, n_z):
     return energies, costhz
 
 
+#: Bumped when the SHAPE of a cached reference changes, not just its value.
+#: v2 stores the nu_mu row (three channels) where v1 stored one; a v1 entry
+#: reused under v2 would silently supply a scalar where a row is expected.
+CACHE_SCHEMA = 'v2-numu-row'
+
+
 def _conventions_key(code):
     r"""Everything about a code's conventions that can move its reference."""
-    return '%s|%.17g|%.17g|%s' % (
+    return '%s|%s|%.17g|%.17g|%s' % (
+        CACHE_SCHEMA,
         code, conversions.matter_constant(code),
         conversions.km_to_inv_ev(code),
         json.dumps(conversions.oscillation_parameters(), sort_keys=True))
@@ -141,11 +148,12 @@ def reference_for(code, energy_gev, costhz, ye, cache, l_km=None,
         value, err = ref.earth_chord_reference(code, energy_gev, costhz, ye,
                                                params)
         error = float(err)
-    cache[key] = {'value': str(value), 'error': error, 'code': code,
+    row = [str(v) for v in value]
+    cache[key] = {'value': row, 'error': error, 'code': code,
                   'energy_gev': energy_gev, 'costhz': costhz}
     with open(CACHE, 'w') as handle:
         json.dump(cache, handle, indent=1, sort_keys=True)
-    return str(value), error, False
+    return row, error, False
 
 
 def probabilities(code, grid, knob, n_e, n_z):
@@ -214,21 +222,38 @@ def main(argv=None):
                     print('  %-16s reference E=%-8.3f cz=%-6s err %.0e'
                           % (code, e, cz, error), flush=True)
 
-        entry = {'reference_error_max': max(ref_errs), 'by_knob': {}}
+        entry = {'reference_error_max': max(ref_errs),
+                 'channels': ['numu->nue', 'numu->numu', 'numu->nutau'],
+                 'reference': [[str(v) for v in row] for row in refs],
+                 'by_knob': {}}
         for knob in KNOBS[code]:
             probs = probabilities(code, args.grid, knob, args.n_energies,
                                   args.n_zenith)
-            if probs is None or len(probs) != len(refs):
+            if probs is None or len(probs) != 3*len(refs):
                 entry['by_knob'][str(knob)] = {'failed': True}
                 print('%-16s knob %-5s FAILED' % (code, knob), flush=True)
                 continue
             from decimal import Decimal, getcontext
             getcontext().prec = 60
+            # Three channels per grid point, flattened the same way in both,
+            # so the comparison is elementwise and the per-channel split is
+            # recoverable by striding.  The probabilities are stored as well
+            # as the deviations, because a figure about the appearance
+            # channel cannot be drawn from a disappearance summary and would
+            # otherwise need its own data path -- which is how the previous
+            # figures drifted from the pipeline that fed them.
+            flat_refs = [r for row in refs for r in row]
             dev = [abs(Decimal(repr(p)) - Decimal(r)) for p, r in
-                   zip(probs, refs)]
+                   zip(probs, flat_refs)]
+            per_channel = {
+                name: [float(d) for d in dev[c::3]]
+                for c, name in enumerate(('numu->nue', 'numu->numu',
+                                          'numu->nutau'))}
             entry['by_knob'][str(knob)] = {
                 'max_abs_deviation': float(max(dev)),
                 'median_abs_deviation': float(sorted(dev)[len(dev)//2]),
+                'max_by_channel': {k: max(v) for k, v in per_channel.items()},
+                'probabilities': probs,
             }
             print('%-16s knob %-5s max %.3e  median %.3e'
                   % (code, knob, float(max(dev)), float(sorted(dev)[len(dev)//2])),

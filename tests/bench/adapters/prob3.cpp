@@ -156,7 +156,7 @@ void reset() {}
 // Untimed.  Mirrors evaluate()'s traversal exactly -- cosz outer, energy
 // inner -- so the accuracy vector and the checksum describe the same walk.
 void probabilities(std::vector<double> &out) {
-    out.reserve(out.size() + g_e.size()*(g_sphere ? g_z.size() : 1));
+    out.reserve(out.size() + 3*g_e.size()*(g_sphere ? g_z.size() : 1));
     if (g_sphere) {
         for (std::size_t j = 0; j < g_z.size(); ++j) {
             if (g_z.size() > 1) g_prop->DefinePath(g_z[j], 0.0, false);
@@ -164,7 +164,7 @@ void probabilities(std::vector<double> &out) {
                 g_prop->SetMNS(g_s12sq, g_s13sq, g_s23sq, g_dm21, OSC_DMSQ32,
                                g_dcp, e, true, 1);
                 g_prop->propagate(1);
-                out.push_back(g_prop->GetProb(2, 2));   // numu -> numu
+                for (int b = 1; b <= 3; ++b) out.push_back(g_prop->GetProb(2, b));   // numu -> numu
             }
         }
         return;
@@ -173,7 +173,7 @@ void probabilities(std::vector<double> &out) {
         g_prop->SetMNS(g_s12sq, g_s13sq, g_s23sq, g_dm21, OSC_DMSQ32,
                        g_dcp, e, true, 1);
         g_prop->propagateLinear(1, g_L, g_rho);
-        out.push_back(g_prop->GetProb(2, 2));
+        for (int b = 1; b <= 3; ++b) out.push_back(g_prop->GetProb(2, b));
     }
 }
 

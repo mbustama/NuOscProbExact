@@ -2266,6 +2266,52 @@ Running this notebook writes all fourteen PDFs. Set `NUOSC_PAPER_FIGDIR` to writ
         md(reference_precision()),
         md(external_code_methods()),
         md(timing_protocols()),
+        code(r'''# The artifacts every figure below is drawn from.
+#
+# These come from the rebuilt pipeline: tests/bench/sweep_accuracy.py for the
+# accuracy axis and tests/bench/run_all.py for the timed axes.  The figures
+# used to read six frozen files written before that pipeline existed, under a
+# shared reference, with one code's Earth model mis-initialised and another's
+# hbar c wrong.  Re-running the notebook would have faithfully reproduced
+# those figures, which is the failure this cell exists to prevent: a missing
+# artifact now raises rather than letting a stale one be plotted.
+import json
+import os
+
+BENCH = os.path.join('..', 'tests', 'bench')
+
+
+def artifact(name, what):
+    """Loads a pipeline artifact, or says exactly how to produce it."""
+    path = os.path.join(BENCH, name)
+    if not os.path.exists(path):
+        raise FileNotFoundError(
+            "%s is missing, so %s cannot be drawn from measured data.\n"
+            "Produce it with:  %s\n"
+            "The figures are deliberately NOT falling back to the pre-rebuild "
+            "files: those were taken under a shared reference and with two "
+            "codes misconfigured." % (path, what,
+                                      'python tests/bench/sweep_accuracy.py'
+                                      if name.startswith('accuracy')
+                                      else 'python tests/bench/run_all.py'))
+    with open(path) as handle:
+        return json.load(handle)
+
+
+#: Channel order in every accuracy artifact, from bench.hpp's contract.
+NUE, NUMU, NUTAU = 0, 1, 2
+
+
+def channel(record, code, knob, which):
+    """Returns one channel of one code's series, as an array."""
+    series = record['series'][code]['by_knob'][str(knob)]
+    return np.array(series['probabilities'])[which::3]
+
+
+ACC_CONST = artifact('accuracy_const.json', 'the constant-density accuracy figure')
+print('accuracy artifacts loaded; basis =', ACC_CONST['profile_basis'],
+      '| codes =', len(ACC_CONST['series']))
+'''),
         code(r'''import earth
 import slabs
 from scipy.linalg import expm

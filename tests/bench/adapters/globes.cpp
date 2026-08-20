@@ -174,13 +174,13 @@ void reset() {}
 // outer, energy inner -- so both describe the same walk of the grid.
 void probabilities(std::vector<double> &out) {
     double P[3][3];
-    out.reserve(out.size() + g_profiles.size()*g_e.size());
+    out.reserve(out.size() + 3*g_profiles.size()*g_e.size());
     for (const Profile &prof : g_profiles) {
         const int psteps = static_cast<int>(prof.length.size());
         for (double e : g_e) {
             glb_probability_matrix(P, +1, e, psteps, prof.length.data(),
                                    prof.density.data(), -1.0, nullptr);
-            out.push_back(P[1][1]);                 // numu -> numu
+            for (int b = 0; b < 3; ++b) out.push_back(P[1][b]);  // nu_mu row
         }
     }
 }

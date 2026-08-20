@@ -31,7 +31,8 @@ An adapter is a class exposed as the module attribute ``ADAPTER``, with::
     configure(dcp)           # timed, once per scan step
     evaluate() -> float      # timed; returns a checksum
     reset()                  # timed; makes the next evaluate cold
-    probabilities() -> list  # untimed; the scored channel, in grid order
+    probabilities() -> list  # untimed; the nu_mu row per grid point, in
+                             # grid order: numu->nue, numu->numu, numu->nutau
 
 Oscillation parameters come from :mod:`conversions` (which reads the
 manifest) and the grids come from the manifest too, so the Python side
@@ -259,6 +260,7 @@ def main(argv=None):
             'profile_basis': 'continuous',
             'environment': (driver.environment()
                             if hasattr(driver, 'environment') else {}),
+            'channels': ['numu->nue', 'numu->numu', 'numu->nutau'],
             'n_points': problem.points(),
             'probabilities': list(probs),
         }

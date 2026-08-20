@@ -166,11 +166,14 @@ class NuSQuIDS(object):
             self._s.Set_Track(track)
             self._s.Set_initial_state(self._state, nsq.Basis.flavor)
             self._s.EvolveState()
+            # The nu_mu row: the initial state IS nu_mu, so all three
+            # channels come from this one evolution at no extra cost.
             if self._single:
-                out.append(float(self._s.EvalFlavor(1)))
+                out.extend(float(self._s.EvalFlavor(f)) for f in (0, 1, 2))
             else:
-                out.extend(float(self._s.EvalFlavorAtNode(1, i))
-                           for i in range(self._e.size))
+                for i in range(self._e.size):
+                    out.extend(float(self._s.EvalFlavorAtNode(f, i))
+                               for f in (0, 1, 2))
         return out
 
     def evaluate(self):

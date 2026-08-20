@@ -155,8 +155,10 @@ class NuCraftAdapter(object):
         kwargs = {'atmMode': 0, 'vacuum': _NUCRAFT_FALSE}
         if self._num_prec is not None:
             kwargs['numPrec'] = self._num_prec
+        # CalcWeights returns the survival/appearance triple per particle,
+        # which is the nu_mu row already: nue, numu, nutau.
         weights = self._nc.CalcWeights(self._rows, **kwargs)
-        return [float(w[1]) for w in weights]
+        return [float(v) for w in weights for v in (w[0], w[1], w[2])]
 
     def evaluate(self):
         kwargs = {'atmMode': 0, 'vacuum': _NUCRAFT_FALSE}

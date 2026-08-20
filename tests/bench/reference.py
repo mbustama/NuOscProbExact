@@ -64,7 +64,19 @@ import conversions                                             # noqa: E402
 #: accumulated round-off that limited the double-precision build.
 DPS = 50
 
-#: The scored channel, from the manifest: P(nu_mu -> nu_mu).
+#: The nu_mu row: P(numu->nue), P(numu->numu), P(numu->nutau).  A row rather
+#: than one channel because the constant-density figure plots appearance while
+#: the accuracy sweep scores disappearance; a reference holding one cannot
+#: serve the other, and the evolution operator gives all three for free.
+# P(nu_beta -> nu_alpha) = |U[alpha][beta]|^2 for psi(L) = U psi(0), so the
+# nu_mu ROW -- P(numu->nue), P(numu->numu), P(numu->nutau) -- is the second
+# COLUMN of U, not its second row.  Taking the row instead agrees on the
+# diagonal and is wrong by 1e-2 off it, which is precisely how it hid: the
+# disappearance channel the sweep scores was correct and the two appearance
+# channels were not.
+NUMU_ROW = ((0, 1), (1, 1), (2, 1))
+
+#: Kept for callers that want the single disappearance channel.
 SCORED = (1, 1)
 
 
@@ -134,7 +146,7 @@ def constant_density(code, energies_gev, l_km, density_g_cm3, ye, params):
     out = []
     for e_gev in energies_gev:
         u = _propagate(m2, v, _mpf(e_gev)*mp.mpf('1e9'), length)
-        out.append(abs(u[SCORED])**2)
+        out.append([abs(u[c])**2 for c in NUMU_ROW])
     return out
 
 
@@ -155,7 +167,7 @@ def slab_product(code, energy_gev, widths_km, densities_g_cm3, ye, params,
     for width, rho in zip(widths_km, densities_g_cm3):
         v = matter_potential(code, rho, ye)
         u = _propagate(m2, v, energy_ev, _mpf(width)*km)*u
-    return abs(u[SCORED])**2
+    return [abs(u[c])**2 for c in NUMU_ROW]
 
 
 def richardson(coarse, fine):
@@ -166,6 +178,8 @@ def richardson(coarse, fine):
     not.  The first-order form amplifies the error it is meant to cancel, and
     getting this wrong once already cost a session's work.
     """
+    if isinstance(fine, (list, tuple)):
+        return [(4*f - c)/3 for f, c in zip(fine, coarse)]
     return (4*fine - coarse)/3
 
 
@@ -188,12 +202,18 @@ def romberg(values_by_n):
     """
     ns = sorted(values_by_n)
     row = [values_by_n[n] for n in ns]
+    vector = isinstance(row[0], (list, tuple))
     table = [row]
     j = 1
     while len(row) > 1:
         factor = mp.mpf(4)**j
-        row = [(factor*row[k + 1] - row[k])/(factor - 1)
-               for k in range(len(row) - 1)]
+        if vector:
+            row = [[(factor*b - a)/(factor - 1)
+                    for a, b in zip(row[k], row[k + 1])]
+                   for k in range(len(row) - 1)]
+        else:
+            row = [(factor*row[k + 1] - row[k])/(factor - 1)
+                   for k in range(len(row) - 1)]
         table.append(row)
         j += 1
     return table[-1][0], table
@@ -527,7 +547,7 @@ def earth_chord_reference(code, energy_gev, costhz, ye, params,
         widths, densities = chord_slabs_mp(costhz, boundaries, 1, density_fn,
                                            piecewise_constant=True)
         return slab_product(code, energy_gev, widths, densities, ye, params,
-                            m2=m2), mp.mpf(10)**(-DPS + 5)
+                            m2=m2), float(mp.mpf(10)**(-DPS + 5))
 
     # A profile whose knots are already slab edges needs only a short ladder:
     # the segments are small and the density inside each is a single smooth
@@ -564,6 +584,8 @@ def earth_chord_reference(code, energy_gev, costhz, ye, params,
     # shallower corner, so it is an upper bound on the returned one.
     corner, _ = romberg(values)
     shorter, _ = romberg({n: values[n] for n in ladder[:-1]})
+    if isinstance(corner, (list, tuple)):
+        return corner, max(abs(a - b) for a, b in zip(corner, shorter))
     return corner, abs(corner - shorter)
 
 

@@ -38,7 +38,11 @@ import earth                                                   # noqa: E402
 import hamiltonians3nu                                         # noqa: E402
 import oscprob3nu                                              # noqa: E402
 
-#: P(nu_mu -> nu_mu) in the flattened 3x3 the library returns.
+#: The nu_mu row of the flattened 3x3 the library returns: numu->nue,
+#: numu->numu, numu->nutau.  A row rather than one channel because the
+#: constant-density figure plots appearance while the accuracy sweep scores
+#: disappearance, and an artifact holding one cannot serve the other.
+_NUMU_ROW = (3, 4, 5)
 _PMM = 4
 
 
@@ -170,7 +174,7 @@ class NuOscProbExact(object):
         return [float(v) for v in self._probs().reshape(-1)]
 
     def _probs(self):
-        r"""The scored channel for the whole grid, as an array."""
+        r"""The nu_mu row for the whole grid: (..., 3), grid order then channel."""
         if self._costhz is not None:
             if self._costhz.size == 1:
                 energy, costhz = self._e_ev, float(self._costhz[0])
@@ -180,10 +184,11 @@ class NuOscProbExact(object):
                 self._h_vac, energy, costhz,
                 n_slabs_per_segment=self._n_slabs,
                 electron_fraction=self._ye, rtol=self._rtol)
-            return np.asarray(probs)[..., _PMM]
+            return np.asarray(probs)[..., _NUMU_ROW]
         h = np.asarray(hamiltonians3nu.hamiltonian_3nu_matter(
             self._h_vac, self._e_ev, self._vcc))
-        return np.asarray(oscprob3nu.probabilities_3nu(h, self._L_inv_ev))[..., _PMM]
+        return np.asarray(
+            oscprob3nu.probabilities_3nu(h, self._L_inv_ev))[..., _NUMU_ROW]
 
     def evaluate(self):
         if self._costhz is not None:

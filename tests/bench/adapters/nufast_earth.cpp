@@ -229,10 +229,14 @@ void probabilities(std::vector<double> &out) {
     auto probs = g_engine->Get_Probabilities();
     const std::size_t n_e = probs.size();
     const std::size_t n_z = n_e ? probs[0].size() : 0;
-    out.reserve(out.size() + n_e * n_z);
+    out.reserve(out.size() + 3 * n_e * n_z);
     for (std::size_t j = 0; j < n_z; ++j)
         for (std::size_t i = 0; i < n_e; ++i)
-            out.push_back(probs[i][j].arr[1][1]);   // numu -> numu
+        {                                           // the nu_mu row
+            out.push_back(probs[i][j].arr[1][0]);
+            out.push_back(probs[i][j].arr[1][1]);
+            out.push_back(probs[i][j].arr[1][2]);
+        }
 }
 
 void teardown() { delete g_engine; delete g_prem; g_engine = nullptr; g_prem = nullptr; }

@@ -115,8 +115,12 @@ void probabilities(std::vector<double> &out) {
     NuFast::Probability_Matter_LBL(g_s12sq, g_s13sq, g_s23sq, g_delta,
                                    g_dm21, g_dm31, g_L, g_e, g_rhoYe,
                                    g_newton, g_probs);
-    out.reserve(out.size() + g_probs.size());
-    for (const auto &m : g_probs) out.push_back(m[1][1]);   // numu -> numu
+    out.reserve(out.size() + 3*g_probs.size());
+    for (const auto &m : g_probs) {                 // the nu_mu row
+        out.push_back(m[1][0]);
+        out.push_back(m[1][1]);
+        out.push_back(m[1][2]);
+    }
 }
 
 }  // namespace driver
