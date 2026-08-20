@@ -1920,6 +1920,266 @@ def reference_precision():
 
 
 
+def external_code_methods():
+    """Returns markdown documenting exactly how each external code was driven.
+
+    The pins, flags and entry points come from ``tests/bench/manifest.json``
+    and the build profiles from ``tests/bench/build.sh``, so this cell cannot
+    drift from what was actually built.  The configuration decisions --- which
+    mode, which setter, what was hoisted --- are prose, because they are
+    judgements rather than data, and a referee checking this comparison will
+    want them stated rather than inferred from adapter source.
+    """
+    import json
+    import os
+
+    manifest = json.load(open(os.path.join('tests', 'bench', 'manifest.json')))
+    by_name = {c['name']: c for c in manifest['codes']}
+
+    def pin(name):
+        p = by_name[name].get('pin', {})
+        if 'commit' in p:
+            return 'tag `%s`, commit `%s`' % (p.get('tag', '--'),
+                                              p['commit'][:12])
+        if 'sha256' in p:
+            return 'version `%s`, sha256 `%s`' % (p.get('version', '--'),
+                                                  p['sha256'][:12])
+        return 'this repository, stamped at run time'
+
+    def flags(name):
+        return by_name[name].get('flags_speed', 'n/a')
+
+    def source(name):
+        return by_name[name].get('flags_speed_source', '')
+
+    def knob(name):
+        k = by_name[name].get('capabilities', {}).get('precision_knobs', {})
+        return ', '.join('`%s`' % n for n in k) or 'none'
+
+    out = [
+        '## Exactly how each code was driven',
+        '',
+        'A speed or accuracy number is only checkable if the configuration',
+        'that produced it is written down. Everything in this section is what',
+        'the benchmark actually did: the pins and flags are read from the',
+        'manifest the build script consumes, and the configuration choices are',
+        'stated so that a reader who disagrees with one can see precisely what',
+        'to change.',
+        '',
+        'Two rules were applied throughout. Each code is built with **its own',
+        'upstream flags** for the speed axis, so no code is published slower',
+        'than its authors publish it. Each is driven through **its own batched',
+        'entry point** where it has one, and looped in its own language where',
+        'it does not --- a loop that its interface requires is not a handicap',
+        'imposed from outside, and it is labelled as a loop.',
+        '',
+        '### Build profiles',
+        '',
+        'Two, because one flag set cannot serve both axes. The speed profile',
+        'uses each project\'s own flags. The accuracy profile uses',
+        '`-O3 -std=c++17` with no `-Ofast` and no `-ffast-math`, because a',
+        'value-changing flag makes an accuracy measurement measure the flag.',
+        'The previous generation of this comparison used `-Ofast -ffast-math`',
+        'for one dataset and `-O3` for another and presented them as one',
+        'methodology.',
+        '',
+        '| Code | Pin | Speed flags | Flags from |',
+        '|---|---|---|---|',
+    ]
+    for name in ('NuFast-LBL', 'NuFast-Earth', 'Prob3++', 'GLoBES',
+                 'nuSQuIDS', 'nuCraft'):
+        out.append('| {\\tt %s} | %s | `%s` | %s |'
+                   % (name, pin(name), flags(name), source(name) or '--'))
+
+    out += [
+        '',
+        '### {\\tt NuFast-LBL}',
+        '',
+        'Driven through `Probability_Matter_LBL`, the one batched entry point',
+        'in the release: it takes the whole energy vector by const reference',
+        'and fills a vector of 3x3 matrices, so `evaluate` makes exactly one',
+        'call however many energies the grid holds. The author\'s own',
+        'benchmark harness calls it the same way. There is no persistent',
+        'engine, so nothing can be cached between calls and the per-call setup',
+        'cost is paid inside the timed region, where the code itself pays it.',
+        '',
+        'The released source ships no header and carries its own demo',
+        '`main()`, so the object is compiled with `-Dmain=` renaming that',
+        'entry point --- otherwise it collides with the harness\'s `main` and',
+        'the translation unit will not link.',
+        '',
+        'Precision knob: %s, swept over `{-1, 0, 1, 2, 3}`. The negative value'
+        % knob('NuFast-LBL'),
+        'is not a sentinel for "off": it selects exact eigenvalues through the',
+        'trigonometric root rather than Newton refinement. It was absent from',
+        'the earlier comparison, which is what made the claim that no code was',
+        'more accurate "at any setting it exposes" false.',
+        '',
+        '### {\\tt NuFast-Earth}',
+        '',
+        'Driven through `Set_Spectra` followed by `Get_Probabilities`, which',
+        'batches over energy **and** zenith angle together and returns the',
+        'whole grid from one call. Everything invariant under a $\\delta_{\\rm',
+        'CP}$ scan is built once before any clock starts: the Earth model, the',
+        'engine, the profile, the production height, the eigenvalue precision,',
+        'and both spectra. The scan moves `Set_delta` alone.',
+        '',
+        'The Earth model handed to it is this library\'s PREM, cut into four',
+        'major layers of 256 uniform sub-shells each --- 1024 in total ---',
+        'declared to the engine as its discontinuity list. That list *is* the',
+        'discretisation: the engine builds one slab per interval between',
+        'consecutive entries. Its electron fraction is the shared $Y_e = 1/2$,',
+        'not the 0.466/0.494 split its own `PREM_Full` carries, so that its',
+        'matter potential matches every other code\'s.',
+        '',
+        'The detector depth is zero and the production height is zero, so the',
+        'trajectory is surface to surface, matching what the other Earth codes',
+        'are given.',
+        '',
+        'Constant-density problems use `Set_E_Spectra` with `Set_Trajectory`',
+        '--- the single-trajectory mode added in v1.1.0 --- rather than a',
+        'chord. The two modes are mutually exclusive in the engine and the',
+        'choice is made once at setup. `Set_Production_Height` must not be',
+        'called in that mode; it asserts against it, and the constructor',
+        'already defaults the height to zero.',
+        '',
+        'Precision knob: %s, swept over `{-1, 0, 1, 2, 3}` with the negative'
+        % knob('NuFast-Earth'),
+        'value selecting exact eigenvalues.',
+        '',
+        '### {\\tt Prob3++}',
+        '',
+        'Looped, one energy at a time, because that is the shape of its',
+        'interface: `SetMNS` takes the energy as an argument and `propagate`',
+        'takes no grid. The loop is in C++ inside the adapter\'s own',
+        'translation unit and the capability registry says the code does not',
+        'batch, so no reader can mistake the loop for a choice.',
+        '',
+        'It is handed a profile file holding the same 1024 sub-shells the',
+        'other Earth codes receive, with rows of outer radius, density and',
+        'electron fraction. On the spherical path the electron fraction is',
+        'read from that file\'s $Y_p$ column rather than from',
+        '`SetDensityConversion`, which reaches only the linear path.',
+        '`propagate` re-derives the per-trajectory profile on every call by',
+        'its own design, and that cost is timed as part of the code.',
+        '',
+        '`SetMNS` is called with squared-sine inputs and the neutrino type,',
+        'and takes $\\Delta m^2_{32}$ rather than $\\Delta m^2_{31}$ --- derived',
+        'from the shared parameters, never typed a second time. Warnings are',
+        'suppressed and the profile loader\'s announcement on standard output',
+        'is silenced for the one untimed constructor call, so that it cannot',
+        'land in front of the harness\'s JSON.',
+        '',
+        'Its `mosc.c` and `mosc3.c` must be compiled as C rather than C++.',
+        'Precision knob: %s, the sub-shell count per major layer.'
+        % knob('Prob3++'),
+        '',
+        '### {\\tt GLoBES}',
+        '',
+        'Looped, one energy at a time: `glb_probability_matrix` takes an',
+        'arbitrary layered profile and a single energy, and the library exposes',
+        'no batched alternative at that level. The filter is disabled by',
+        'passing a negative width, so the exact per-layer diagonalisation runs',
+        'rather than the low-pass approximation.',
+        '',
+        'It is handed the chord decomposition of the same 1024 sub-shells,',
+        'computed once in setup and never inside a clock. GLoBES multiplies',
+        'the density it is given by its own `GLB_V_FACTOR` and its own',
+        '`GLB_Ne_MANTLE` internally, so the density handed over carries the',
+        'ratio of the shared $Y_e$ to that internal electron fraction --- and',
+        'nothing else. Its `GLB_V_FACTOR` is absorbed into its own reference',
+        'instead of being applied to its input.',
+        '',
+        'The $\\delta_{\\rm CP}$ scan calls `glbSetOscParams` followed by',
+        '`glbSetOscillationParameters`, so the mixing-matrix rebuild is inside',
+        'the timed region, which is the cost the amortized protocol is defined',
+        'to include. Built once at the upstream configure default `-O2`: the',
+        'measured code lives in the installed library, so relinking the thin',
+        'adapter at other flags would not change what is being measured.',
+        'Precision knob: %s.' % knob('GLoBES'),
+        '',
+        '### {\\tt nuSQuIDS}',
+        '',
+        'Driven through the multiple-energy constructor, which is its batched',
+        'entry point, with interactions disabled. The body, the tracks, the',
+        'solver, every mixing angle and mass splitting and the tolerance are',
+        'all built in setup; the scan moves `Set_CPPhase` alone. Zenith is not',
+        'batched --- the constructor takes energies only --- so multiple angles',
+        'are looped, and the registry says so.',
+        '',
+        'Two configuration points matter and neither is a default.',
+        '',
+        'First, **the solver tolerance is always set explicitly**. Left at its',
+        'constructor defaults the GSL integrator fails outright on both Earth',
+        'grids used here, at $\\cos\\theta_z = -1$ and $-0.9$, while every',
+        'explicit tolerance from $10^{-6}$ to $10^{-10}$ succeeds. Leaving it',
+        'at "its own defaults" is therefore not a runnable configuration for',
+        'this comparison, and the knob\'s zero setting means an explicit',
+        'mid-sweep tolerance rather than whatever the constructor chose.',
+        '',
+        'Second, **constant-density problems use its exact algebraic mode**.',
+        'With `Set_AllowConstantDensityOscillationOnlyEvolution`, the solver',
+        'skips the ODE entirely and evolves each energy node in closed form,',
+        'which is what a practised user of this code would do rather than',
+        'integrate through a constant. That mode is not an unqualified',
+        'improvement and the figure says so: it is exact at 59 of 60 nodes,',
+        'with a median error of $4 \\times 10^{-16}$, but carries a',
+        'tolerance-independent excursion of $7 \\times 10^{-7}$ between roughly',
+        '3.4 and 6.5 GeV, where the tight ODE reaches $3 \\times 10^{-12}$',
+        'everywhere. Whichever produced a number, the series records it.',
+        '',
+        'Probabilities are read out at the solver\'s own nodes rather than',
+        'through the interpolating overload, since the grid energies are those',
+        'nodes: the interpolating call would charge an interpolation inside the',
+        'timed region for nothing. The Earth model is built from a table',
+        'aligned on every PREM boundary, which nuSQuIDS interpolates with an',
+        'Akima spline of its own construction; the atmosphere height is set to',
+        'zero so the chord is surface to surface. Precision knob: %s.'
+        % knob('nuSQuIDS'),
+        '',
+        '### {\\tt nuCraft}',
+        '',
+        'Its `CalcWeights` takes a particle list but loops over it internally,',
+        'so the registry records the batching as interface-only. The whole',
+        '(energy, zenith) grid is still handed over in one call, so that no',
+        'code here is looped from outside when its own interface would take the',
+        'stack.',
+        '',
+        'There is no setter for the CP phase --- it rides on the mixing-angle',
+        'list given to the constructor --- so the scan rebuilds the instance',
+        'around a hoisted Earth model. That reconstruction is the cost this',
+        'interface charges a scan, and the amortized protocol is defined to',
+        'include it.',
+        '',
+        'Mixing angles are passed in degrees, derived from the shared squared',
+        'sines rather than retyped. The profile is installed through the',
+        'model\'s interpolator, because its file route is Python 2 only, and',
+        'it is given the same object type the code builds for itself: a linear',
+        'spline over this library\'s PREM. Passing a plain Python callback',
+        'instead would put this library\'s scalar density lookup inside',
+        'nuCraft\'s integrator, which is our cost charged to its measurement.',
+        '',
+        'Its own model dictionary carries an inner-core radius of 1121.5 km',
+        'against its own profile table, which steps at 1221.5; the adapter',
+        'overrides it with the boundary from this library\'s PREM. The',
+        'trajectory is surface to surface with the atmosphere mode that takes',
+        'the zenith angle in radians rather than its cosine. Constant-density',
+        'problems are refused rather than faked: this code propagates through',
+        'its Earth model only. Precision knob: %s.' % knob('nuCraft'),
+        '',
+        '### What is hoisted, for every code alike',
+        '',
+        'The harness owns every clock; an adapter supplies physics and cannot',
+        'time anything. Before a scan is timed, each code has already built',
+        'its body or Earth model, constructed its engine, installed its',
+        'profile, allocated the grid and called every setter except the one the',
+        'scan moves. That contract is enforced rather than trusted, because the',
+        'previous generation of drivers put an engine construction, an Earth',
+        'object and five setters inside a timed loop over twelve energies.',
+    ]
+    return '\n'.join(out)
+
+
 def timing_protocols():
     """Returns markdown on what each timing protocol measures, and why.
 
@@ -2004,6 +2264,7 @@ Running this notebook writes all fourteen PDFs. Set `NUOSC_PAPER_FIGDIR` to writ
         md(external_code_provenance()),
         md(convention_matching()),
         md(reference_precision()),
+        md(external_code_methods()),
         md(timing_protocols()),
         code(r'''import earth
 import slabs
