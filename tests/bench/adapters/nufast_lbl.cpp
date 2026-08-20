@@ -35,6 +35,7 @@ std::vector<std::array<std::array<double, 3>, 3>> g_probs;
 double g_s12sq, g_s13sq, g_s23sq, g_dm21, g_dm31;
 double g_L, g_rhoYe, g_delta;
 int    g_newton;
+bool   g_loop = false;
 
 }  // namespace
 
@@ -67,6 +68,7 @@ void setup(const bench::Problem &p) {
     // this code's own 50-digit reference instead of being applied here.
     g_rhoYe  = p.density * p.ye;
     g_newton = p.knob;
+    g_loop   = p.force_loop;
 }
 
 // No engine survives between calls, so this honestly stores delta and
@@ -75,6 +77,25 @@ void setup(const bench::Problem &p) {
 void configure(double dcp) { g_delta = dcp; }
 
 double evaluate() {
+    if (g_loop) {
+        // Objection LBL-1's control series: the SAME code and the same entry
+        // point, called once per energy instead of once for the vector, so
+        // the figure can show what batching buys rather than assert it.  The
+        // paper previously claimed this code took one energy per call; it
+        // does not, and this is how that claim gets measured instead of
+        // repeated.
+        double sink = 0.0;
+        std::vector<double> one(1);
+        std::vector<std::array<std::array<double, 3>, 3>> got(1);
+        for (double e : g_e) {
+            one[0] = e;
+            NuFast::Probability_Matter_LBL(g_s12sq, g_s13sq, g_s23sq, g_delta,
+                                           g_dm21, g_dm31, g_L, one, g_rhoYe,
+                                           g_newton, got);
+            sink += got[0][1][1];
+        }
+        return sink;
+    }
     NuFast::Probability_Matter_LBL(g_s12sq, g_s13sq, g_s23sq, g_delta,
                                    g_dm21, g_dm31, g_L, g_e, g_rhoYe,
                                    g_newton, g_probs);

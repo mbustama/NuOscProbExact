@@ -150,6 +150,14 @@ class NuCraftAdapter(object):
         r"""Nothing to reset: ``CalcWeights`` re-integrates every particle on
         every call, so each repetition is already cold."""
 
+    def probabilities(self):
+        r"""Untimed.  ``self._rows`` is already zenith outer, energy inner."""
+        kwargs = {'atmMode': 0, 'vacuum': _NUCRAFT_FALSE}
+        if self._num_prec is not None:
+            kwargs['numPrec'] = self._num_prec
+        weights = self._nc.CalcWeights(self._rows, **kwargs)
+        return [float(w[1]) for w in weights]
+
     def evaluate(self):
         kwargs = {'atmMode': 0, 'vacuum': _NUCRAFT_FALSE}
         if self._num_prec is not None:

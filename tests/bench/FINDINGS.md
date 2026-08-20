@@ -476,3 +476,151 @@ small, structured, and shaped like solver error --- lands in its residual.
   (LBL-3, Earth-2, Earth-3, Other-2); 3 structurally blocked (LBL-1's looped
   control has no machinery, Earth-1, Earth-4); 2 waiting only on the
   orchestrator (LBL-2's stamp, Other-1's `manifest_sha256`).
+
+---
+
+# The accuracy axis, and four corrections that came with it
+
+Everything above concerned whether the machinery could produce a fair number.
+This section is what happened when it produced them. No timing run has
+happened yet; the accuracy protocol reads no clock, so all of this was
+measured on a machine that was not idle, which is exactly why it could be done
+first.
+
+## The reference basis, decided by measuring the alternative
+
+The question was what to difference each code against. Two candidates:
+
+* **as-handed** --- the discretised profile each code was actually given;
+* **continuous** --- the real PREM, which is the physical Earth.
+
+Measured, on one chord at three energies:
+
+| code | vs as-handed | vs continuous |
+|---|---|---|
+| Prob3++ (1024 shells) | 1.3e-13 | **4.06e-7** |
+| GLoBES (1024 shells) | 8.1e-13 | **4.06e-7** |
+| NuOscProbExact (256 slabs/segment) | 6.1e-13 | 4.3e-7 |
+
+The compiled codes land on the *same* 4.06e-7 to three figures, because that
+number is the discretisation they were both handed and not a property of
+either. Under as-handed they look six orders better than this library on
+identical physics; under continuous all three sit in one class.
+
+Both bases are internally symmetric --- the earlier unfairness came from
+**mixing** them, not from either one. The choice was made on what the axis
+means. As-handed asks "does a code evaluate its own approximation
+self-consistently", which they all do, and it makes every discretisation dial
+flat because the reference moves with the dial. Continuous asks how close the
+answer is to the Earth, which is the question a user faces, and it keeps the
+dials meaningful. **Continuous, for all seven.**
+
+## Correction: the flag that does not mean what it says
+
+`constant_shells` in NuFast-Earth's `Earth_Density` reads as though it selects
+between constant and varying shells, and this file previously recorded that
+the code "natively supports a continuous profile". It does not. `Mean_Density`
+builds **one slab per interval between declared discontinuities** whatever the
+flag says; the flag chooses only whether each slab carries the midpoint or the
+mean density. The discontinuity list *is* the discretisation.
+
+Measured the hard way: declaring the nine PREM boundaries with the
+varying-shell flag --- which looks exactly like asking for continuous
+treatment --- gives ten slabs for the whole chord and an error of **3.04e-2**,
+five orders worse than the 1024-shell configuration it replaced. With the fine
+cut restored it returns to 3.7e-7 to 3.0e-8, the same class as everyone else.
+
+Neither density choice is uniformly better: mean wins at two of three energies
+and loses threefold at the third. Three points settle nothing and the notebook
+says so.
+
+## Correction: a Romberg estimate reports the corner it discards
+
+Two references appeared to floor eight orders short, at 3.3e-10 and 2.4e-10.
+They were fine. The error estimate is the standard Romberg one --- how far the
+corner moves when the last ladder rung is added --- which bounds the error of
+the corner *one extrapolation level shallower* than the one returned. With a
+four-rung ladder that shallower corner sat two levels back at 3e-10 while the
+returned corner was already at 2e-13. **The quoted number was never the
+reference's error**; it was the error of a corner computed and thrown away,
+overstating the truth by about 1700x.
+
+Worse, it hid a real repair. Cutting the chord at every spline knot --- which
+a spline needs, since its density has a kink at each knot and a slab
+straddling one has no convergent expansion --- appeared to buy a factor of
+1.8. Measured against the value now established, the pre-repair corner was
+9.6e-10 from the truth and the post-repair corner is 1.9e-13: three orders,
+concealed by the estimator. A fifth rung fixes the estimate. nuCraft
+5.79e-10 -> 1.91e-13, nuSQuIDS 2.78e-10 -> 4.99e-14.
+
+The lesson is narrower than "check your work": a single summary number can be
+wrong in a way the quantity it summarises is not, and the table it came from
+is what says so.
+
+## Correction: nuCraft does not floor at 3e-3
+
+`manifest.json` asserted that floor and attributed it to the code's own
+constants. Nobody had turned the dial. Swept at three flavors against its own
+reference:
+
+| numPrec | 1e-2 | 5e-4 (default) | 1e-6 | 1e-8 | 1e-10 |
+|---|---|---|---|---|---|
+| error | 1.6e-4 | 7.2e-6 | 1.3e-6 | 3.6e-8 | **7.9e-11** |
+
+Still falling threefold at the edge of the declared domain. That is zvode at
+`atol = rtol = numPrec * 2e-3` and nothing else. The claim was wrong by seven
+orders and it was aimed at another author's code.
+
+Its constants exception survives but is now derived rather than asserted:
+nuCraft's own comment defines one prefactor for `(2Ye, 0, 0, 1-Ye)`, so its two
+constants must be exactly 2:1 by its own formula. `15.256e-5` is exactly twice
+that prefactor at the atomic mass unit; `7.6525e-5` would need 928.5 MeV,
+which is not the amu, the proton, the neutron, or the 0.939 its own comment
+states. Inconsistent with its own derivation, most likely a digit typo for
+`7.6325e-5` --- and irrelevant to every three-flavor figure, since the sterile
+entries do not exist at three flavors.
+
+## Correction: nuSQuIDS' exact mode is not uniformly better
+
+This repository's adapter said the exact constant-density mode and the ODE
+"agree to 7.2e-7, which is the ODE's own tolerance". Backwards. The algebraic
+path is exact at 59 of 60 nodes, median 4e-16, but carries a
+**tolerance-independent** excursion of 7.2e-7 between roughly 3.4 and 6.5 GeV;
+the ODE at 1e-12 reaches 3.5e-12 everywhere. The 7.2e-7 is the exact mode's own
+defect. Reproduced independently on a 12-energy grid at 2.3e-7 with median
+2.9e-16. Any figure quoting nuSQuIDS on constant density must say which mode
+produced it.
+
+## What the accuracy machinery now does
+
+* `runner.py` accepts `accuracy`, untimed exactly as `bench.hpp` is, and all
+  three Python adapters implement `probabilities()`. The loader refuses an
+  adapter without one, because a code that cannot be checked for accuracy
+  should not be usable for speed.
+* All **59 declared knob settings across seven codes run** --- probed before
+  sweeping, because our own rtol domain once had ten of thirteen settings
+  raising and a sweep that dies at the last rung wastes everything before it.
+* `sweep_accuracy.py` measures every code over every knob, caching references
+  on the key insight that a reference depends on the code and the grid point
+  but **not** on the knob: the knob changes what the code does, not what the
+  right answer is. A nine-point sweep costs one reference, not nine.
+* Objection Earth-1 is answerable: `Problem` carries `n_layers` beside `knob`,
+  and every artifact states `shells_total`.
+* Objection LBL-1 is answerable: `--loop` drives NuFast-LBL's own entry point
+  one energy at a time, and batched and looped return bit-identical
+  probabilities --- the same code, the same physics, a different call pattern.
+* Artifacts carry `conventions`, `profile_basis`, `n_layers`, `shells_total`
+  and `looped`.
+* ADVERSARIAL's sixth attack is closed: this library now **refuses to run** if
+  its compiled kernels are not live, and records which kernel was entered and
+  how many threads with every artifact.
+
+First real accuracy data from the new pipeline, NuFast-LBL on constant
+density, which answers objection LBL-3 outright:
+
+| N_Newton | -1 (exact) | 0 | 1 | 2 | 3 |
+|---|---|---|---|---|---|
+| max deviation | 7.6e-16 | 1.3e-5 | 1.9e-9 | 1.0e-15 | 7.6e-16 |
+
+The exact mode reaches round-off and three Newton steps match it, on the
+setting the earlier comparison never tried.

@@ -80,6 +80,18 @@ struct Problem {
     double density = 3.0;                  // g/cm^3
     double ye      = 0.5;
     int    knob    = 0;                    // the precision setting for this run
+    // Objection Earth-1 asks for the shell count to be swept and recorded, and
+    // a single `knob` could not carry it: NuFast-Earth spends that one on its
+    // eigenvalue precision, so the manifest promised a sweep the harness could
+    // not run.  `n_layers` is the second dial -- sub-shells per major PREM
+    // layer -- and `shells_total` is what the artifact must state, because
+    // "256 shells" and "1024 shells" are the same configuration described two
+    // ways and the objection was precisely about which.
+    int    n_layers = 256;
+    // Objection LBL-1 asks for a looped control beside the batched series, to
+    // show what batching buys for a code that offers both.  An adapter that
+    // batches honours this by calling its entry point once per point instead.
+    bool   force_loop = false;
     // The shared parameter set, from conversions.h, which is generated from
     // tests/bench/manifest.json.  Not typed here: every code must be handed
     // the same numbers, and a second copy is how that stops being true.
@@ -90,6 +102,10 @@ struct Problem {
     std::size_t points() const {
         return energies_gev.size() * (costhz.empty() ? 1 : costhz.size());
     }
+
+    // Four major PREM layers, each cut into `n_layers` sub-shells.  Stated
+    // rather than left for a reader to multiply.
+    int shells_total() const { return 4*n_layers; }
 };
 
 struct Stats {
@@ -210,7 +226,8 @@ int main(int argc, char **argv) {
     using namespace bench;
 
     std::string protocol = "amortized", grid = "CHORD/12x1", out;
-    int samples = 30, steps = 25, n_e = 0, n_z = 0, knob = 0;
+    int samples = 30, steps = 25, n_e = 0, n_z = 0, knob = 0, n_layers = 256;
+    bool force_loop = false;
     double min_block = 0.05;
 
     for (int i = 1; i < argc; ++i) {
@@ -218,6 +235,8 @@ int main(int argc, char **argv) {
         if      (eq("--protocol")  && i + 1 < argc) protocol  = argv[++i];
         else if (eq("--grid")      && i + 1 < argc) grid      = argv[++i];
         else if (eq("--knob")      && i + 1 < argc) knob      = std::atoi(argv[++i]);
+        else if (eq("--n-layers")  && i + 1 < argc) n_layers  = std::atoi(argv[++i]);
+        else if (eq("--loop"))                      force_loop = true;
         else if (eq("--samples")   && i + 1 < argc) samples   = std::atoi(argv[++i]);
         else if (eq("--steps")     && i + 1 < argc) steps     = std::atoi(argv[++i]);
         else if (eq("--n-energies")&& i + 1 < argc) n_e       = std::atoi(argv[++i]);
@@ -227,6 +246,8 @@ int main(int argc, char **argv) {
 
     Problem p;
     p.knob = knob;
+    p.n_layers = n_layers;
+    p.force_loop = force_loop;
     if (grid == "CHORD/12x1") {
         p.energies_gev = detail::logspace(3.0, 40.0, n_e ? n_e : 12);
         p.costhz       = {-0.9};
@@ -251,10 +272,17 @@ int main(int argc, char **argv) {
         driver::probabilities(probs);
         std::printf("{\n  \"code\": \"%s\",\n"
                     "  \"protocol\": {\"name\": \"accuracy\", \"grid\": \"%s\"},\n"
-                    "  \"knob\": {\"%s\": %d},\n  \"n_points\": %zu,\n"
+                    "  \"knob\": {\"%s\": %d},\n"
+                    "  \"n_layers\": %d,\n  \"shells_total\": %d,\n"
+                    "  \"conventions\": \"own-reference\",\n"
+                    "  \"profile_basis\": \"continuous\",\n"
+                    "  \"looped\": %s,\n"
+                    "  \"n_points\": %zu,\n"
                     "  \"probabilities\": [",
                     driver::name(), grid.c_str(),
                     cap.knob_name[0] ? cap.knob_name : "none", knob,
+                    p.n_layers, p.shells_total(),
+                    p.force_loop ? "true" : "false",
                     probs.size());
         for (std::size_t i = 0; i < probs.size(); ++i)
             std::printf("%s%.17g", i ? ", " : "", probs[i]);
@@ -267,16 +295,21 @@ int main(int argc, char **argv) {
                    ? detail::throughput(p, samples, min_block, &sink)
                    : detail::amortized(p, samples, steps, &sink);
 
-    char buf[2048];
+    char buf[4096];
     std::snprintf(buf, sizeof buf,
         "{\n  \"code\": \"%s\",\n  \"protocol\": {\"name\": \"%s\", \"grid\": \"%s\"},\n"
         "  \"knob\": {\"%s\": %d},\n  \"n_points\": %zu,\n"
         "  \"us_per_point\": {\"mean\": %.6g, \"sd\": %.6g, \"min\": %.6g, \"n\": %d},\n"
+        "  \"n_layers\": %d,\n  \"shells_total\": %d,\n"
+        "  \"conventions\": \"own-reference\",\n"
+        "  \"profile_basis\": \"continuous\",\n"
+        "  \"looped\": %s,\n"
         "  \"batched\": {\"energy\": %s, \"zenith\": %s, \"symbol\": \"%s\"},\n"
         "  \"checksum\": %.17g\n}\n",
         driver::name(), protocol.c_str(), grid.c_str(),
         cap.knob_name[0] ? cap.knob_name : "none", knob, p.points(),
         st.mean, st.sd, st.min, st.n,
+        p.n_layers, p.shells_total(), p.force_loop ? "true" : "false",
         cap.batches_energy ? "true" : "false",
         cap.batches_zenith ? "true" : "false", cap.batch_symbol, sink);
 

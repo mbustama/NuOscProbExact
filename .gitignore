@@ -41,3 +41,10 @@ resources/paper/bisect_probe.*
 
 # Python bytecode caches under the benchmark tree.
 tests/bench/**/__pycache__/
+
+# The accuracy sweep's reference cache.  Derived, rebuildable and large: it
+# holds one 50-digit reference per (code, chord, energy) so that a knob sweep
+# pays for each reference once rather than once per setting, and so that an
+# interrupted sweep resumes.  The artifacts it feeds ARE tracked; this is the
+# scratch that produces them.
+tests/bench/reference_cache.json

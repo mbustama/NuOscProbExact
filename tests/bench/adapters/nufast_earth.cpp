@@ -150,7 +150,7 @@ bench::Capabilities capabilities() {
 }
 
 void setup(const bench::Problem &p) {
-    const int n_per_layer = 256;
+    const int n_per_layer = p.n_layers;   // Earth-1: sweepable
     delete g_engine; delete g_prem;
     g_prem   = nullptr;
     g_engine = new NuFast::Probability_Engine();

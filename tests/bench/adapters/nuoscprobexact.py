@@ -64,8 +64,54 @@ class NuOscProbExact(object):
             'knob_domain': [1, 2, 4, 8, 16, 32, 64, 128, 256, -3, -4, -5],
         }
 
+    def environment(self):
+        r"""Returns what this library actually ran with, for the artifact.
+
+        ADVERSARIAL.md's sixth attack is that THIS code might be
+        under-represented, and its finding was that nothing asserted the fast
+        path at run time.  A missing numba, a flipped ``USE_NUMBA`` or a
+        moved batching threshold would have sent the work down the NumPy
+        path and published that as ours, with no error and no hint in the
+        artifact.  So the fast path is asserted here rather than assumed, and
+        what was actually entered is recorded.
+        """
+        import fastkernels
+        detail = {
+            'have_numba': bool(fastkernels.HAVE_NUMBA),
+            'use_numba': bool(getattr(fastkernels, 'USE_NUMBA', False)),
+            'available': bool(fastkernels.available()),
+            'kernel_entered': self._kernel,
+            'batched_energy_and_zenith': self._costhz is not None,
+        }
+        try:
+            import numba
+            detail['numba_threads'] = int(numba.get_num_threads())
+        except Exception:                                      # noqa: BLE001
+            detail['numba_threads'] = None
+        return detail
+
+    def _assert_fast_path(self):
+        r"""Refuses to measure this library on its slow path."""
+        import fastkernels
+        if not (fastkernels.HAVE_NUMBA and fastkernels.available()
+                and getattr(fastkernels, 'USE_NUMBA', False)):
+            raise SystemExit(
+                'NuOscProbExact: the compiled kernels are not live '
+                '(HAVE_NUMBA=%r, USE_NUMBA=%r, available=%r).  Measuring the '
+                'NumPy path and publishing it as this library would '
+                'under-represent it; install the fast extra and re-run.'
+                % (fastkernels.HAVE_NUMBA,
+                   getattr(fastkernels, 'USE_NUMBA', None),
+                   fastkernels.available()))
+
     def setup(self, problem):
         p = problem
+        self._assert_fast_path()
+        # Which compiled kernel this problem reaches: the chord path for an
+        # Earth crossing, the constant-density path otherwise.  Recorded in
+        # every artifact so a silent fallback is visible afterwards.
+        self._kernel = ('earth_chords_3nu_kernel' if p.costhz
+                        else 'probabilities_3nu_kernel')
         self._e_ev = np.asarray(p.energies_gev, dtype=float)*1.0e9
         self._costhz = (np.asarray(p.costhz, dtype=float)
                         if p.costhz else None)
@@ -112,6 +158,32 @@ class NuOscProbExact(object):
         ``trajectories_calculated`` --- all built in ``setup`` and all left
         standing by ``reset``.  Nothing oscillation-dependent survives a
         repetition here, which is the property ``reset`` exists to enforce."""
+
+    def probabilities(self):
+        r"""Untimed.  The scored channel over the whole grid, in grid order.
+
+        Grid order is zenith outer, energy inner, which is what the
+        broadcast in ``_probs`` already produces: indexing energies on the
+        last axis and angles on the one before it makes ``ravel`` walk
+        exactly that way.
+        """
+        return [float(v) for v in self._probs().reshape(-1)]
+
+    def _probs(self):
+        r"""The scored channel for the whole grid, as an array."""
+        if self._costhz is not None:
+            if self._costhz.size == 1:
+                energy, costhz = self._e_ev, float(self._costhz[0])
+            else:
+                energy, costhz = self._e_ev[None, :], self._costhz[:, None]
+            probs = earth.probabilities_3nu_earth(
+                self._h_vac, energy, costhz,
+                n_slabs_per_segment=self._n_slabs,
+                electron_fraction=self._ye, rtol=self._rtol)
+            return np.asarray(probs)[..., _PMM]
+        h = np.asarray(hamiltonians3nu.hamiltonian_3nu_matter(
+            self._h_vac, self._e_ev, self._vcc))
+        return np.asarray(oscprob3nu.probabilities_3nu(h, self._L_inv_ev))[..., _PMM]
 
     def evaluate(self):
         if self._costhz is not None:

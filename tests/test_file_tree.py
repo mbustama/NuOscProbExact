@@ -249,6 +249,8 @@ TREE = [
      "One 50-digit reference per code, in that code's own convention"),
     ('tests/bench/audit_reference.py',
      'Measures whether each reference matches the code it judges'),
+    ('tests/bench/sweep_accuracy.py',
+     'Every code against its own reference, over every precision knob'),
     ('tests/bench/reference_audit.json',
      'What that audit measured; the notebook renders it, never types it'),
     ('tests/test_bench_pipeline.py',

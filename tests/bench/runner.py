@@ -31,6 +31,7 @@ An adapter is a class exposed as the module attribute ``ADAPTER``, with::
     configure(dcp)           # timed, once per scan step
     evaluate() -> float      # timed; returns a checksum
     reset()                  # timed; makes the next evaluate cold
+    probabilities() -> list  # untimed; the scored channel, in grid order
 
 Oscillation parameters come from :mod:`conversions` (which reads the
 manifest) and the grids come from the manifest too, so the Python side
@@ -215,6 +216,11 @@ def load_adapter(code):
     if not hasattr(adapter, 'reset'):
         raise SystemExit('adapter %s defines no reset(); see runner.__doc__'
                          % module.__file__)
+    # The Python mirror of bench.hpp's link error: an adapter that cannot be
+    # checked for accuracy should not be usable for speed either.
+    if not hasattr(adapter, 'probabilities'):
+        raise SystemExit('adapter %s defines no probabilities(); see '
+                         'runner.__doc__' % module.__file__)
     return adapter
 
 
@@ -222,7 +228,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument('code', choices=sorted(CODES))
     ap.add_argument('--protocol', default='amortized',
-                    choices=['amortized', 'throughput'])
+                    choices=['amortized', 'throughput', 'accuracy'])
     ap.add_argument('--grid', default='CHORD/12x1')
     ap.add_argument('--knob', type=int, default=0)
     ap.add_argument('--samples', type=int, default=30)
@@ -238,6 +244,31 @@ def main(argv=None):
     driver.setup(problem)
     cap = driver.capabilities()
 
+    # ACCURACY is untimed by construction, exactly as in bench.hpp: configure
+    # once, ask for the probabilities, print them.  No clock is read on this
+    # path, so a number produced here can never be mistaken for a speed, and
+    # it can be produced on a machine that is not idle.
+    if args.protocol == 'accuracy':
+        driver.configure(problem.dcp)
+        probs = driver.probabilities()
+        record = {
+            'code': driver.name,
+            'protocol': {'name': 'accuracy', 'grid': args.grid},
+            'knob': {cap.get('knob_name') or 'none': args.knob},
+            'conventions': 'own-reference',
+            'profile_basis': 'continuous',
+            'environment': (driver.environment()
+                            if hasattr(driver, 'environment') else {}),
+            'n_points': problem.points(),
+            'probabilities': list(probs),
+        }
+        text = json.dumps(record, indent=2)
+        print(text)
+        if args.out:
+            with open(args.out, 'w') as handle:
+                handle.write(text + '\n')
+        return
+
     if args.protocol == 'throughput':
         stats, sink = throughput(driver, problem, args.samples, 0.05)
     else:
@@ -247,6 +278,10 @@ def main(argv=None):
         'code': driver.name,
         'protocol': {'name': args.protocol, 'grid': args.grid},
         'knob': {cap.get('knob_name') or 'none': args.knob},
+        'conventions': 'own-reference',
+        'profile_basis': 'continuous',
+        'environment': (driver.environment()
+                        if hasattr(driver, 'environment') else {}),
         'n_points': problem.points(),
         'us_per_point': stats,
         'batched': {'energy': bool(cap.get('batches_energy')),

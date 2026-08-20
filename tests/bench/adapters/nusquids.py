@@ -159,6 +159,20 @@ class NuSQuIDS(object):
         ``EvolveState`` for every track, so each repetition re-solves from
         scratch and is already cold."""
 
+    def probabilities(self):
+        r"""Untimed.  Zenith outer, energy inner --- ``evaluate``'s own walk."""
+        out = []
+        for track in self._tracks:
+            self._s.Set_Track(track)
+            self._s.Set_initial_state(self._state, nsq.Basis.flavor)
+            self._s.EvolveState()
+            if self._single:
+                out.append(float(self._s.EvalFlavor(1)))
+            else:
+                out.extend(float(self._s.EvalFlavorAtNode(1, i))
+                           for i in range(self._e.size))
+        return out
+
     def evaluate(self):
         sink = 0.0
         for track in self._tracks:

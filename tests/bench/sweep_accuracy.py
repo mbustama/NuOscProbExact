@@ -1,0 +1,245 @@
+# -*- coding: utf-8 -*-
+r"""Measures every code's accuracy against its own reference, over every knob.
+
+The accuracy axis, end to end.  Nothing here reads a clock --- the protocol it
+drives is untimed by construction --- so this can run on a machine that is
+busy, and its numbers are unaffected by what else is happening.  That matters:
+the speed axis needs an idle machine and this one does not, so the two need
+not compete for the same window.
+
+The expensive part is the references, and they are cached for a reason worth
+stating.  A reference depends on the code, the chord and the energy; it does
+not depend on the precision knob, because the knob changes what the *code*
+does and not what the right answer is.  So a nine-point knob sweep costs one
+reference, not nine.  Without that the sweep would be an order of magnitude
+more work and would tempt whoever ran it into shortening the grid.
+
+The cache is on disk and keyed by everything that can change an answer, so a
+run that dies half way resumes instead of restarting, and a run against
+changed conventions does not silently reuse stale numbers.
+
+Usage::
+
+    python tests/bench/sweep_accuracy.py [--grid CHORD/12x1] [--n-energies 12]
+        [--codes NuFast-LBL,Prob3++] [--out artifact.json]
+"""
+
+import argparse
+import hashlib
+import json
+import os
+import subprocess
+import sys
+import time
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(os.path.dirname(HERE))
+sys.path.insert(0, HERE)
+sys.path.insert(0, os.path.join(HERE, 'adapters'))
+sys.path.insert(0, os.path.join(ROOT, 'src'))
+
+import conversions                                             # noqa: E402
+import reference as ref                                        # noqa: E402
+
+CACHE = os.path.join(HERE, 'reference_cache.json')
+
+#: Which binary or adapter answers for each code, and the knob domain swept.
+COMPILED = {
+    'NuFast-LBL':   'bench_nufast_lbl_accuracy',
+    'NuFast-Earth': 'bench_nufast_earth_accuracy',
+    'Prob3++':      'bench_prob3_accuracy',
+    'GLoBES':       'bench_globes',
+}
+PYTHON = {
+    'nuSQuIDS':       'nusquids',
+    'nuCraft':        'nucraft',
+    'NuOscProbExact': 'nuoscprobexact',
+}
+KNOBS = {
+    'NuFast-LBL':     [-1, 0, 1, 2, 3],
+    'NuFast-Earth':   [-1, 0, 1, 2, 3],
+    'Prob3++':        [1, 2, 4, 8, 16, 32, 64, 128, 256],
+    'GLoBES':         [1, 2, 4, 8, 16, 32, 64, 128, 256],
+    'nuSQuIDS':       [3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    'nuCraft':        [2, 3, 4, 5, 6, 7, 8, 9, 10],
+    'NuOscProbExact': [1, 2, 4, 8, 16, 32, 64, 128, 256, -3, -4, -5],
+}
+
+#: Codes that cannot be posed one of the two problem kinds, and why.
+#:
+#: Getting this wrong is silent rather than loud, which is why it is a table
+#: rather than a comment.  Asked for a chord, NuFast-LBL's adapter ignores the
+#: zenith angle and propagates the constant-density baseline instead -- it
+#: returns numbers, they are simply answers to a different question, and
+#: differencing them against a chord reference produced a knob-independent
+#: 0.72 that looked like a catastrophically inaccurate code rather than a
+#: mis-posed problem.
+CONST_REFUSED = {'nuCraft': 'propagates through its Earth model only'}
+CHORD_REFUSED = {'NuFast-LBL': 'constant-density baselines only; it has no '
+                               'Earth model and no zenith axis'}
+
+
+def logspace(lo, hi, n):
+    return [lo if n == 1 else lo*(hi/lo)**(float(i)/(n - 1)) for i in range(n)]
+
+
+def grid_points(grid, n_e, n_z):
+    r"""Returns ``(energies_gev, costhz_list)`` for `grid`, as the harness does."""
+    manifest = json.load(open(os.path.join(HERE, 'manifest.json')))
+    entry = manifest['grids'][grid]
+    e = entry['energies_gev']
+    lo, hi = e['log']
+    n = n_e or (e['n'] if isinstance(e['n'], int) else 12)
+    energies = logspace(lo, hi, n)
+    z = entry.get('costhz')
+    if isinstance(z, list):
+        costhz = list(z)
+    elif isinstance(z, dict):
+        a, b = z['lin']
+        m = n_z or z['n']
+        costhz = [a if m == 1 else a + (b - a)*float(i)/(m - 1) for i in range(m)]
+    else:
+        costhz = []
+    return energies, costhz
+
+
+def _conventions_key(code):
+    r"""Everything about a code's conventions that can move its reference."""
+    return '%s|%.17g|%.17g|%s' % (
+        code, conversions.matter_constant(code),
+        conversions.km_to_inv_ev(code),
+        json.dumps(conversions.oscillation_parameters(), sort_keys=True))
+
+
+def load_cache():
+    if os.path.exists(CACHE):
+        with open(CACHE) as handle:
+            return json.load(handle)
+    return {}
+
+
+def reference_for(code, energy_gev, costhz, ye, cache, l_km=None,
+                  density=None):
+    r"""Returns the reference probability, computing it only if not cached.
+
+    The key carries the conventions, so a reference built before a constant
+    changed is never silently reused after it.
+    """
+    key = hashlib.sha256(('%s|%.17g|%s|%.17g|%s|%s'
+                          % (_conventions_key(code), energy_gev,
+                             'const' if costhz is None else '%.17g' % costhz,
+                             ye, l_km, density)).encode()).hexdigest()[:32]
+    if key in cache:
+        return cache[key]['value'], cache[key]['error'], True
+
+    params = conversions.for_code(code)
+    if costhz is None:
+        value = ref.constant_density(code, [energy_gev], l_km, density, ye,
+                                     params)[0]
+        error = float(ref.mp.mpf(10)**(-ref.DPS + 5))
+    else:
+        value, err = ref.earth_chord_reference(code, energy_gev, costhz, ye,
+                                               params)
+        error = float(err)
+    cache[key] = {'value': str(value), 'error': error, 'code': code,
+                  'energy_gev': energy_gev, 'costhz': costhz}
+    with open(CACHE, 'w') as handle:
+        json.dump(cache, handle, indent=1, sort_keys=True)
+    return str(value), error, False
+
+
+def probabilities(code, grid, knob, n_e, n_z):
+    r"""Runs the untimed accuracy protocol and returns the scored channel."""
+    if code in COMPILED:
+        cmd = [os.path.join(ROOT, '.bench-build', 'bin', COMPILED[code]),
+               '--protocol', 'accuracy', '--grid', grid, '--knob', str(knob)]
+    else:
+        cmd = [sys.executable, os.path.join(HERE, 'runner.py'), PYTHON[code],
+               '--protocol', 'accuracy', '--grid', grid, '--knob', str(knob)]
+    if n_e:
+        cmd += ['--n-energies', str(n_e)]
+    if n_z:
+        cmd += ['--n-zenith', str(n_z)]
+    out = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
+    if out.returncode != 0 or '"probabilities"' not in out.stdout:
+        return None
+    return json.loads(out.stdout)['probabilities']
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument('--grid', default='CHORD/12x1')
+    ap.add_argument('--n-energies', type=int, default=0)
+    ap.add_argument('--n-zenith', type=int, default=0)
+    ap.add_argument('--codes', default='')
+    ap.add_argument('--out', default=os.path.join(HERE, 'accuracy_sweep.json'))
+    args = ap.parse_args(argv)
+
+    codes = ([c.strip() for c in args.codes.split(',') if c.strip()]
+             or list(COMPILED) + list(PYTHON))
+    energies, costhz = grid_points(args.grid, args.n_energies, args.n_zenith)
+    constant = not costhz
+    ye = 0.5
+    l_km, density = (1300.0, 3.0) if constant else (None, None)
+
+    cache = load_cache()
+    record = {
+        'schema': 'bench-accuracy-sweep/1',
+        'generated_by': 'tests/bench/sweep_accuracy.py',
+        'generated_at': time.strftime('%Y-%m-%dT%H:%M:%S%z'),
+        'grid': args.grid,
+        'protocol': 'accuracy (untimed)',
+        'profile_basis': 'continuous',
+        'ye': ye,
+        'energies_gev': energies,
+        'costhz': costhz,
+        'series': {},
+    }
+
+    for code in codes:
+        refused = (CONST_REFUSED if constant else CHORD_REFUSED).get(code)
+        if refused:
+            record['series'][code] = {'skipped': refused}
+            print('%-16s skipped: %s' % (code, refused), flush=True)
+            continue
+
+        refs, ref_errs = [], []
+        for cz in (costhz or [None]):
+            for e in energies:
+                value, error, hit = reference_for(code, e, cz, ye, cache,
+                                                  l_km, density)
+                refs.append(value)
+                ref_errs.append(error)
+                if not hit:
+                    print('  %-16s reference E=%-8.3f cz=%-6s err %.0e'
+                          % (code, e, cz, error), flush=True)
+
+        entry = {'reference_error_max': max(ref_errs), 'by_knob': {}}
+        for knob in KNOBS[code]:
+            probs = probabilities(code, args.grid, knob, args.n_energies,
+                                  args.n_zenith)
+            if probs is None or len(probs) != len(refs):
+                entry['by_knob'][str(knob)] = {'failed': True}
+                print('%-16s knob %-5s FAILED' % (code, knob), flush=True)
+                continue
+            from decimal import Decimal, getcontext
+            getcontext().prec = 60
+            dev = [abs(Decimal(repr(p)) - Decimal(r)) for p, r in
+                   zip(probs, refs)]
+            entry['by_knob'][str(knob)] = {
+                'max_abs_deviation': float(max(dev)),
+                'median_abs_deviation': float(sorted(dev)[len(dev)//2]),
+            }
+            print('%-16s knob %-5s max %.3e  median %.3e'
+                  % (code, knob, float(max(dev)), float(sorted(dev)[len(dev)//2])),
+                  flush=True)
+        record['series'][code] = entry
+
+    with open(args.out, 'w') as handle:
+        json.dump(record, handle, indent=2, sort_keys=True)
+        handle.write('\n')
+    print('wrote %s' % os.path.relpath(args.out, ROOT))
+
+
+if __name__ == '__main__':
+    main()

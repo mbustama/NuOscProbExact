@@ -3,9 +3,10 @@
 Nine points were raised against the comparison by an author of NuFast, on
 2026-08-07. Each is recorded here with the protocol, grid and knob that
 answers it, the artifact field the answer lands in, and the test that fails if
-that field is missing. `test_bench_objections.py` reads this table, so an
-objection cannot be quietly dropped: removing a row is a code change, and
-leaving a row unanswered fails a test.
+that field is missing. `test_bench_pipeline.py::test_every_objection_names_a_test_that_exists_or_is_declared_pending`
+reads this table, so an objection cannot be quietly dropped: removing a row is
+a code change, and leaving a row unanswered fails a test.  (An earlier version
+of this file named a `test_bench_objections.py` that has never existed.)
 
 Verdicts were established by reading the pinned upstream sources and release
 notes, not by taking either side's word. Two of our own earlier conclusions
@@ -84,3 +85,80 @@ not exist while calling it),
 `test_the_shared_parameter_set_has_exactly_one_home` (one set of mixing
 parameters for every code),
 `test_conversion_factors_are_derived_from_the_pinned_sources`.
+
+
+## Our measured answers, moved here from outside the repository
+
+These are **our** measurements, made on 2026-08-19 on the i5-1334U following
+the author's own harness protocol.  They lived only in a private note until
+now, which meant the sharpest numbers in this dispute existed nowhere that
+could be re-checked and would have had to be measured again if that note were
+lost.  His letter stays out of this repository, because it is private
+correspondence; our own numbers are ours to publish and belong here.
+
+Every figure below predates the rebuilt pipeline and was taken under the old
+harness.  They are recorded as the answers that were given, to be replaced by
+the sweep the new pipeline produces --- not treated as final.
+
+### NuFast-LBL, driven fairly
+
+* Batched, per probability: **37.1 +- 0.4 ns** on the plateau above ten
+  energies, against our published 35 ns.  That endpoint stands.
+* Looped, one energy per call: flat at **~56 ns**.  Batching therefore buys a
+  clean **1.5x** by amortizing roughly 20 ns of per-call setup.  This is what
+  establishes that the fall from 72 to 35 ns in the throughput figure **is**
+  amortization --- which the paper explicitly says it has not established.
+  The `--loop` control series now in `bench.hpp` exists to reproduce this
+  under the new pipeline rather than cite it.
+* Newton sweep at a thousand energies: `-1` 68.5 ns, `0` 37.7, `1` 44.2,
+  `2` 50.3, `3` 56.0.  So its exact mode costs **1.82x** the cheapest setting,
+  and the author's "only about 25% slower" does not hold for NuFast-LBL.  It
+  does hold for NuFast-Earth, where the exact precision setting is +29%.
+
+### NuFast-Earth: where our published 403.6 us went
+
+Decomposed against the same driver run today:
+
+* x1.34 machine state alone (the same driver now gives 301 us);
+* **x2.7 our own harness** --- our density lookup scanned up to 1024
+  discontinuities on every call, from inside his engine's inner loop.  His own
+  O(1) model under the same protocol: 110.6 us;
+* x1.10 setup left inside the timed region.
+
+**The defensible one-call figure is about 110 us, not 403.6**, which weakens
+the paper's "130 us ours against 400 us his" to rough parity at that corner.
+Driven as designed, with the invariants hoisted and its caching working, it
+reaches **0.057 us per probability** --- some 2000x below our published number
+and independent of layer count.
+
+Grid shape matters as much: at 1024 layers a 100x100 grid is about **8x
+cheaper per probability** than the 12x1 we published, because trajectories and
+eigensolves are shared across zenith angles.  That is objection Earth-3, in
+numbers.
+
+### Independent support for his round-off claim
+
+At constant density, **GLoBES and NuFast-LBL at its exact setting agree to all
+seventeen digits** --- both returning checksum 307.08408653736365.  Two
+unrelated codes converging exactly is strong evidence that its exact mode
+reaches double precision, which is what he claimed and what our sweep,
+stopping at two Newton steps, could never have shown.
+
+### Six published claims with no stored evidence
+
+An audit of every external-code number in the paper against the stored data
+found that every number in the throughput figure and every accuracy column in
+the comparison table **is** supported.  These six are not, and each is a claim
+about somebody else's code:
+
+1. nuCraft's forced-ratio residual, published as "about 3e-7, which is what
+   its solver is worth" --- exists only as `2.8e-7` in two source comments.
+   This is the entire evidence for the sharpest claim we make against another
+   author's code.  It is also now known to be wrong in a second way: nuCraft
+   does not floor at 3e-3 either, and its error tracks its tolerance dial down
+   to 7.9e-11.
+2. nuCraft's constant-profile agreement, "about 3e-11" --- docstring only.
+3. nuSQuIDS grid alignment, "3e-6 improving to 9e-7" --- unstored, and the
+   drawn curve floors at 1.02e-6, which rounds to 1e-6.
+4. nuSQuIDS: "the same value survives five different steppers" --- no evidence
+   stored.

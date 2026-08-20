@@ -86,7 +86,7 @@ bench::Capabilities capabilities() {
 }
 
 void setup(const bench::Problem &p) {
-    const int n = p.knob >= 1 ? p.knob : 256;    // default: the dense grid
+    const int n = p.knob >= 1 ? p.knob : p.n_layers;  // Earth-1: sweepable
 
     g_e      = p.energies_gev;
     g_sphere = !p.costhz.empty();

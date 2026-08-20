@@ -115,7 +115,7 @@ void setup(const bench::Problem &p) {
     static bool inited = false;
     if (!inited) { glbInit(argv0); inited = true; }
 
-    const int n = p.knob >= 1 ? p.knob : 256;    // default: the dense grid
+    const int n = p.knob >= 1 ? p.knob : p.n_layers;  // Earth-1: sweepable
     // GLoBES multiplies by GLB_Ne_MANTLE itself, so the handed density
     // carries the mass defect and our Y_e over its electron fraction.
     // Only the Y_e ratio remains: GLoBES multiplies by its own
