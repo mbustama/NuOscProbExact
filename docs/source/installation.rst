@@ -321,7 +321,9 @@ File tree
        │   │   ├── nusquids.py          # nuSQuIDS through its multiple-energy constructor
        │   │   └── nucraft.py           # nuCraft, whose batching is interface-only
        │   ├── runner.py                # The Python harness; the only place Python timing happens
-       │   └── reference.py             # One 50-digit reference per code, in that code's own convention
+       │   ├── reference.py             # One 50-digit reference per code, in that code's own convention
+       │   ├── audit_reference.py       # Measures whether each reference matches the code it judges
+       │   └── reference_audit.json     # What that audit measured; the notebook renders it, never types it
        ├── test_bench_pipeline.py       # The benchmark pipeline's fairness invariants
        ├── test_bench_behaviour.py      # What an adapter does, not where its constants came from
        ├── gen_stiff_reference.py       # Regenerates the fifty-digit four-flavor oracle
