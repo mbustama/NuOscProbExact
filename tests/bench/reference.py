@@ -497,13 +497,28 @@ def earth_chord_reference(code, energy_gev, costhz, ye, params,
                           n_shells=256, ladder=(32, 64, 128, 256, 512, 1024)):
     r"""Returns ``(probability, error_estimate)`` for `code` on a chord.
 
-    Dispatches on the profile the code was handed.  A piecewise-constant
-    profile needs no extrapolation: the finite product of exponentials over
-    its uniform shells is the exact answer, so those references are limited
-    only by arithmetic.
+    Built on the continuous PREM in `code`'s own hbar c and matter
+    normalisation.  The Romberg ladder extrapolates the slab count to
+    infinity, so what is returned is the continuous-profile answer rather
+    than any code's discretisation of it.
     """
     mp.mp.dps = DPS
-    boundaries, density_fn, constant = profile_for(code, n_shells)
+
+    # CONTINUOUS for every code -- manifest reference_conventions.profile_basis.
+    # There is one physical Earth and each code is scored by how far its answer
+    # sits from it.  `profile_for` still builds the per-code as-handed profiles
+    # and the fidelity audit still uses them, but no production reference is
+    # built on one: scoring a code against its own approximation forgives the
+    # discretisation, which measured as a spurious six-order advantage for
+    # Prob3++ and GLoBES over this library on the same physics.
+    import globaldefs as gd
+    _coeffs, _bounds = _prem_coeffs_mp(), _prem_boundaries_mp()
+    _radius = _mpf(gd.EARTH_RADIUS)
+    boundaries, constant = _bounds, False
+
+    def density_fn(r):
+        return prem_density_mp(r, _coeffs, _bounds, _radius)
+
     m2 = mass_matrix(params['s12sq'], params['s13sq'], params['s23sq'],
                      params['dcp_rad'], params['dmsq21_ev2'],
                      params['dmsq31_ev2'])

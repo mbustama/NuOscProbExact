@@ -571,8 +571,7 @@
     ],
     "absorbed_into_the_reference": [
       "hbar c",
-      "the code's own matter normalisation",
-      "the profile it was handed"
+      "the code's own matter normalisation"
     ],
     "never_absorbed": {
       "nuCraft": "Its charged-current and sterile entries are 15.256e-5 and 7.6525e-5. nuCraft's own derivation (NuCraft.py:205-212) defines ONE prefactor for the vector (2Ye,0,0,1-Ye), so by its own formula the two must be exactly 2:1. 15.256e-5 is exactly twice that prefactor for m = 931.5 MeV, the amu; 7.6525e-5 would need m = 928.5 MeV, which is not the amu, the proton, the neutron, or the 0.939 its own comment states. The pair is therefore inconsistent with its own documented derivation rather than expressing a different convention, most likely a digit typo for 7.6325e-5 (half the modern 7.63247e-5) -- the same defect class as its rICore = 1121.5 for 1221.5. Its reference uses its constants for the units and the exact isoscalar ratio. NOTE this bites ONLY at 3+1: at three flavors the sterile entries do not exist, so no three-flavor figure is affected by this exception either way."
@@ -584,44 +583,45 @@
     },
     "profile_basis": {
       "note": [
-        "Every code is judged against a reference that treats PREM exactly as that",
-        "code treats it: same discretisation, same shells or spline or slabs. The",
-        "residual then measures how well the code solves the problem it poses to",
-        "itself, which is the same KIND of quantity for every code and is what lets",
-        "them share one panel.",
-        "DECIDED after measuring the alternative. Scoring the compiled Earth codes",
-        "against the continuous PREM instead inflates Prob3++ from 1.3e-13 to",
-        "4.1e-7 and GLoBES from 8.1e-13 to 4.1e-7 -- and both land on the SAME",
-        "4.06e-7, because that number is the 1024-shell discretisation they were",
-        "handed rather than anything about either code. Mixing the two bases on one",
-        "axes would have flattered whichever codes arrived pre-discretised, and",
-        "would have read as a nine-order algorithmic gap that does not exist.",
-        "The cost of this choice, stated because the figure must carry it: for a",
-        "code whose precision knob IS its discretisation dial -- n_shells for",
-        "Prob3++ and GLoBES, n_slabs_per_segment and rtol for this library -- the",
-        "reference moves with the knob, so the sweep is flat at round-off and shows",
-        "no convergence. That is honest but uninformative, and the caption must say",
-        "what discretisation each code was handed so a reader can see who solved",
-        "which Earth. A code does not get its behaviour changed to suit the axes."
+        "CONTINUOUS for every code. There is one physical Earth -- the continuous",
+        "PREM -- and every code is scored by how far its answer sits from it.",
+        "Codes approximate that Earth differently, and the approximation is part of",
+        "what is being measured rather than something a reference should forgive.",
+        "Prob3++ and GLoBES cannot express anything but constant layers: their",
+        "interfaces take (radius, rho) rows and (length, density) pairs. Their",
+        "discretisation is therefore intrinsic to using them, it is real error a",
+        "user pays, and it is swept via n_shells so the convergence is visible.",
+        "nuSQuIDS (Akima), nuCraft (linear spline) and this library (PREM",
+        "polynomial) all see a density that varies inside each interval.",
+        "NuFast-Earth is given a continuous profile too, on OUR PREM with the",
+        "shared Ye = 0.5, via constant_shells = false. NOT its own PREM_Full:",
+        "that polynomial is identical to ours, but PREM_Full_Ye returns 0.466",
+        "below 3480 km and 0.494 above, where every other code gets 0.5 -- it",
+        "would have handed one code a different matter potential.",
+        "MEASURED, and this is why the earlier as-handed basis was abandoned:",
+        "scoring the compiled codes against the shell stack we handed them put",
+        "Prob3++ and GLoBES at 1e-13 while this library sat at 4e-7. Against the",
+        "continuous PREM all three land at 4.06e-7 -- the same number, because it",
+        "is the discretisation and not the code. The as-handed basis was",
+        "symmetric but empty: every series flat at round-off, measuring solver",
+        "self-consistency rather than distance from the Earth."
       ],
       "values": [
-        "as-handed"
+        "continuous"
       ],
-      "rule": "Every accuracy artifact is built on the profile its code was handed. The caption must state the discretisation per code. No series is built on the continuous PREM, so no two series on one panel are scored against different Earths.",
+      "rule": "Every accuracy artifact is differenced against the continuous PREM in that code's own hbar c and matter normalisation. The discretisation each code uses is swept where the code exposes it, and stated per series in the caption.",
       "by_knob": {
-        "n_shells": "as-handed",
-        "eigenvalue_precision": "as-handed",
-        "N_Newton": "as-handed",
-        "log10_solver_tolerance": "as-handed",
-        "log10_numPrec": "as-handed",
-        "n_slabs_per_segment": "as-handed",
-        "rtol": "as-handed"
+        "n_shells": "continuous",
+        "eigenvalue_precision": "continuous",
+        "N_Newton": "continuous",
+        "log10_solver_tolerance": "continuous",
+        "log10_numPrec": "continuous",
+        "n_slabs_per_segment": "continuous",
+        "rtol": "continuous"
       },
-      "flat_by_construction": [
-        "Prob3++",
-        "GLoBES",
-        "NuOscProbExact"
-      ]
+      "two_configurations": {
+        "NuFast-Earth": "ACCURACY uses constant_shells = false, so the engine integrates the continuous profile. That defeats its eigenvalue caching -- eigens_varying, one decomposition per (energy, cosz, layer). SPEED must use the stepped configuration, which is where its zenith caching and the Earth-3 advantage live. The two configurations may never share an axes."
+      }
     }
   },
   "artifact_requirements": {

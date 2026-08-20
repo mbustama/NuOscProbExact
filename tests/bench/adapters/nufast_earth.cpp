@@ -40,7 +40,7 @@ const double kLayers[4] = {OUR_PREM_B[0], OUR_PREM_B[1], OUR_PREM_B[2],
 // density.  n is shells PER LAYER, so n = 256 is 1024 shells in total.
 class OurPREM : public NuFast::Earth_Density {
   public:
-    OurPREM(int n_per_layer, double ye) : n_(n_per_layer) {
+    OurPREM(int n_per_layer, double ye) : n_(n_per_layer), ye_(ye) {
         rho_.resize(4 * n_);
         // Earth_Density's contract: the engine reads these three fields
         // directly and validates none of them.  n_discontinuities and
@@ -48,25 +48,53 @@ class OurPREM : public NuFast::Earth_Density {
         // them unset is not "the default" -- it is indeterminate, and
         // Geometry.cpp then indexes an empty `discontinuities` under a
         // garbage bound.  Every upstream subclass sets all three.
+        // The discontinuity list IS the discretisation: Mean_Density makes
+        // ONE slab per interval between consecutive entries, whatever
+        // constant_shells says.  Declaring only the nine PREM boundaries
+        // therefore hands the engine ten slabs for the whole chord and its
+        // error against continuous PREM was 3e-2 -- five orders WORSE than
+        // the stepped configuration.  The fine sub-shell cut stays; the flag
+        // below only chooses what density each thin slab carries.
         discontinuities.resize(4 * n_);
         n_discontinuities = 4 * n_;
         // Each sub-shell is held at one density, which is what puts the
         // engine on its cached path: one eigendecomposition per (energy,
         // shell), reused across every zenith angle.  That reuse is the
         // advantage objection Earth-3 exists to measure.
-        constant_shells = true;
+        // FALSE: the density varies continuously inside each PREM shell and
+        // this engine can integrate it -- Mean_Density samples rhoYe(r) along
+        // the path when constant_shells is false.  Every code is judged
+        // against the continuous PREM, so handing this one a pre-stepped
+        // profile would score it against an Earth it never solved.
+        //
+        // NOT NuFast::PREM_Full, which would have been the obvious route: its
+        // polynomial is identical to ours coefficient for coefficient, but its
+        // PREM_Full_Ye returns 0.466 below 3480 km and 0.494 above, where
+        // every other code in this comparison is given 0.5.  Using it would
+        // hand this code a different matter potential from every other.  (It
+        // also carries the reserve-then-index defect: discontinuities.reserve
+        // followed by discontinuities[i] = , writing past size() == 0.)
+        //
+        // This costs the engine its eigenvalue caching -- constant_shells
+        // false takes the eigens_varying branch, one decomposition per
+        // (energy, cosz, layer) rather than per (energy, shell) reused across
+        // zenith.  That caching is what objection Earth-3 measures, so the
+        // SPEED axis must use the stepped configuration and the two must
+        // never share an axes.
+        constant_shells = false;
         for (int L = 0; L < 4; ++L) {
             const double lo = L ? kLayers[L - 1] : 0.0, hi = kLayers[L];
             for (int i = 0; i < n_; ++i) {
                 const double r = lo + (i + 0.5) * (hi - lo) / n_;
                 rho_[L * n_ + i] = our_prem_rho(r) * ye;
+                discontinuities[L * n_ + i] = lo + (i + 1) * (hi - lo) / n_;
                 // Shell k is the region BELOW discontinuities[k]: the
                 // convention Calculate_Eigens (which samples
                 // rhoYe(discontinuities[j] - 1e-8)) and
                 // Calculate_Internal_Amplitudes (which indexes with
                 // i_discontinuity + 1) already agree on.  Ascending, with
                 // the surface last, as Mean_Density's downward scan needs.
-                discontinuities[L * n_ + i] = lo + (i + 1) * (hi - lo) / n_;
+
             }
         }
     }
@@ -74,6 +102,13 @@ class OurPREM : public NuFast::Earth_Density {
     // O(1): the shell index is arithmetic, because the sub-shells are equal
     // width within each major layer.  No scan.
     double rhoYe(double r) override {
+        // Continuous: this library's PREM polynomial at r, times the shared
+        // electron fraction.  The engine samples this along the path.
+        if (r >= OUR_EARTH_RADIUS) return our_prem_rho(OUR_EARTH_RADIUS)*ye_;
+        return our_prem_rho(r)*ye_;
+    }
+
+    double rhoYe_stepped(double r) {
         if (r >= kLayers[3]) return rho_.back();
         int L = 0;
         while (L < 3 && r > kLayers[L]) ++L;
@@ -86,6 +121,7 @@ class OurPREM : public NuFast::Earth_Density {
 
   private:
     int                 n_;
+    double              ye_ = 0.5;
     std::vector<double> rho_;
 };
 
