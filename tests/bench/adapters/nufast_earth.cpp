@@ -40,7 +40,8 @@ const double kLayers[4] = {OUR_PREM_B[0], OUR_PREM_B[1], OUR_PREM_B[2],
 // density.  n is shells PER LAYER, so n = 256 is 1024 shells in total.
 class OurPREM : public NuFast::Earth_Density {
   public:
-    OurPREM(int n_per_layer, double ye) : n_(n_per_layer), ye_(ye) {
+    OurPREM(int n_per_layer, double ye, bool mean)
+        : n_(n_per_layer), ye_(ye), mean_(mean) {
         rho_.resize(4 * n_);
         // Earth_Density's contract: the engine reads these three fields
         // directly and validates none of them.  n_discontinuities and
@@ -81,7 +82,7 @@ class OurPREM : public NuFast::Earth_Density {
         // zenith.  That caching is what objection Earth-3 measures, so the
         // SPEED axis must use the stepped configuration and the two must
         // never share an axes.
-        constant_shells = false;
+        constant_shells = !mean_;
         for (int L = 0; L < 4; ++L) {
             const double lo = L ? kLayers[L - 1] : 0.0, hi = kLayers[L];
             for (int i = 0; i < n_; ++i) {
@@ -102,8 +103,11 @@ class OurPREM : public NuFast::Earth_Density {
     // O(1): the shell index is arithmetic, because the sub-shells are equal
     // width within each major layer.  No scan.
     double rhoYe(double r) override {
-        // Continuous: this library's PREM polynomial at r, times the shared
-        // electron fraction.  The engine samples this along the path.
+        // Midpoint: the engine reads the stepped shell value and caches one
+        // eigendecomposition per shell, reused across every zenith angle.
+        // Mean: it samples this along the path and averages per slab, which
+        // defeats that caching.  The same Earth either way.
+        if (!mean_) return rhoYe_stepped(r);
         if (r >= OUR_EARTH_RADIUS) return our_prem_rho(OUR_EARTH_RADIUS)*ye_;
         return our_prem_rho(r)*ye_;
     }
@@ -122,6 +126,7 @@ class OurPREM : public NuFast::Earth_Density {
   private:
     int                 n_;
     double              ye_ = 0.5;
+    bool                mean_ = false;
     std::vector<double> rho_;
 };
 
@@ -184,7 +189,7 @@ void setup(const bench::Problem &p) {
     } else {
         // Honest rhoYe: no mass-defect factor.  This code's YerhoE2a is
         // absorbed into its own reference instead of being applied here.
-        g_prem = new OurPREM(n_per_layer, p.ye);
+        g_prem = new OurPREM(n_per_layer, p.ye, p.mean_density);
         g_engine->Set_Earth(0.0, g_prem);
         g_engine->Set_Production_Height(0.0);
         g_z = p.costhz;

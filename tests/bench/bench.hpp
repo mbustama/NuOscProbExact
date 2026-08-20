@@ -92,6 +92,16 @@ struct Problem {
     // show what batching buys for a code that offers both.  An adapter that
     // batches honours this by calling its entry point once per point instead.
     bool   force_loop = false;
+    // NuFast-Earth alone has two legitimate configurations, and which one is
+    // in force changes what is measured.  Midpoint densities let its engine
+    // cache eigenvalues across zenith angles -- worth roughly eightfold per
+    // probability on an oscillogram, and the whole subject of one objection;
+    // mean densities defeat that caching but represent a varying profile
+    // differently.  This was a compile-time constant, which meant a speed run
+    // could silently measure the code with its main optimisation switched
+    // off.  It is a run-time choice now and every artifact records it, so the
+    // two can never be mixed on one axes unnoticed.
+    bool   mean_density = false;
     // The shared parameter set, from conversions.h, which is generated from
     // tests/bench/manifest.json.  Not typed here: every code must be handed
     // the same numbers, and a second copy is how that stops being true.
@@ -227,7 +237,7 @@ int main(int argc, char **argv) {
 
     std::string protocol = "amortized", grid = "CHORD/12x1", out;
     int samples = 30, steps = 25, n_e = 0, n_z = 0, knob = 0, n_layers = 256;
-    bool force_loop = false;
+    bool force_loop = false, mean_density = false;
     double min_block = 0.05;
 
     for (int i = 1; i < argc; ++i) {
@@ -237,6 +247,7 @@ int main(int argc, char **argv) {
         else if (eq("--knob")      && i + 1 < argc) knob      = std::atoi(argv[++i]);
         else if (eq("--n-layers")  && i + 1 < argc) n_layers  = std::atoi(argv[++i]);
         else if (eq("--loop"))                      force_loop = true;
+        else if (eq("--mean-density"))              mean_density = true;
         else if (eq("--samples")   && i + 1 < argc) samples   = std::atoi(argv[++i]);
         else if (eq("--steps")     && i + 1 < argc) steps     = std::atoi(argv[++i]);
         else if (eq("--n-energies")&& i + 1 < argc) n_e       = std::atoi(argv[++i]);
@@ -248,6 +259,7 @@ int main(int argc, char **argv) {
     p.knob = knob;
     p.n_layers = n_layers;
     p.force_loop = force_loop;
+    p.mean_density = mean_density;
     if (grid == "CHORD/12x1") {
         p.energies_gev = detail::logspace(3.0, 40.0, n_e ? n_e : 12);
         p.costhz       = {-0.9};
@@ -277,12 +289,15 @@ int main(int argc, char **argv) {
                     "  \"conventions\": \"own-reference\",\n"
                     "  \"profile_basis\": \"continuous\",\n"
                     "  \"looped\": %s,\n"
+                    "  \"shell_density\": \"%s\",\n"
+                    "  \"manifest_sha256\": \"%s\",\n"
                     "  \"n_points\": %zu,\n"
                     "  \"probabilities\": [",
                     driver::name(), grid.c_str(),
                     cap.knob_name[0] ? cap.knob_name : "none", knob,
                     p.n_layers, p.shells_total(),
                     p.force_loop ? "true" : "false",
+                    p.mean_density ? "mean" : "midpoint", MANIFEST_SHA256,
                     probs.size());
         for (std::size_t i = 0; i < probs.size(); ++i)
             std::printf("%s%.17g", i ? ", " : "", probs[i]);
@@ -304,12 +319,15 @@ int main(int argc, char **argv) {
         "  \"conventions\": \"own-reference\",\n"
         "  \"profile_basis\": \"continuous\",\n"
         "  \"looped\": %s,\n"
+        "  \"shell_density\": \"%s\",\n"
+        "  \"manifest_sha256\": \"%s\",\n"
         "  \"batched\": {\"energy\": %s, \"zenith\": %s, \"symbol\": \"%s\"},\n"
         "  \"checksum\": %.17g\n}\n",
         driver::name(), protocol.c_str(), grid.c_str(),
         cap.knob_name[0] ? cap.knob_name : "none", knob, p.points(),
         st.mean, st.sd, st.min, st.n,
         p.n_layers, p.shells_total(), p.force_loop ? "true" : "false",
+        p.mean_density ? "mean" : "midpoint", MANIFEST_SHA256,
         cap.batches_energy ? "true" : "false",
         cap.batches_zenith ? "true" : "false", cap.batch_symbol, sink);
 
