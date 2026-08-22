@@ -130,7 +130,25 @@
     "mode": "natural",
     "definition": "Each code runs with the parallelism it naturally uses; no code is forced to one thread. The effective thread count is captured per code per run and recorded in the artifact.",
     "why": "Forcing OMP_NUM_THREADS=1 would strip this library's prange kernels (16 of them) while leaving other codes' advantages intact -- not neutral, and it would silently move our own published figures.",
-    "requirement": "Any cross-code speed claim must quote the thread counts of both codes."
+    "requirement": "Any cross-code speed claim must quote the thread counts of both codes.",
+    "measured": {
+      "note": [
+        "Verified rather than assumed.  The four compiled codes link no",
+        "threading library at all -- checked with ldd: no libgomp, no",
+        "threaded BLAS, no pthread -- so they are single-threaded by",
+        "construction and could not be made otherwise without editing them.",
+        "This library spreads seventeen prange kernels over every core it is",
+        "given, twelve on this machine."
+      ],
+      "NuFast-LBL": 1,
+      "NuFast-Earth": 1,
+      "Prob3++": 1,
+      "GLoBES": 1,
+      "nuSQuIDS": "single per propagation; BLAS threads captured at run time",
+      "nuCraft": "numpy/BLAS, captured at run time",
+      "NuOscProbExact": "NUMBA_NUM_THREADS, 12 on this machine"
+    },
+    "both_ways": "This library is timed BOTH ways and both series are published: once with its natural parallelism, which is what a user of it actually gets, and once pinned to a single thread, which is the like-for-like algorithmic comparison against codes that have no choice. Forcing every code to one thread would have been the wrong fix -- it strips this library's parallelism while leaving the others untouched, and publishes a number nobody would ever experience. Quoting both thread counts and stopping there is also not enough: a reader given a twelvefold gap cannot tell how much is the algorithm and how much is the core count. Neither series is the honest number alone."
   },
   "codes": [
     {

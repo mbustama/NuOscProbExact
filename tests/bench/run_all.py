@@ -152,6 +152,30 @@ def cells(accuracy_only=False, speed_only=False):
                     out.append({'kind': 'amortized', 'code': code,
                                 'grid': grid, 'knob': knob, 'timed': True,
                                 'plane': True, 'shell_density': 'midpoint'})
+                    # This library, and only this library, is also run on ONE
+                    # thread.  The four compiled codes link no threading
+                    # library at all -- verified with ldd, no libgomp, no
+                    # threaded BLAS -- so they are single-threaded by
+                    # construction, while this one spreads seventeen prange
+                    # kernels over every core it is given.
+                    #
+                    # Forcing everyone to one thread would be the wrong fix:
+                    # it strips this library's parallelism while leaving the
+                    # others untouched, and it publishes a number no user of
+                    # this library would ever see.  Reporting both thread
+                    # counts and stopping there is also not enough, because a
+                    # reader given a twelvefold gap cannot tell how much of it
+                    # is the algorithm and how much is the core count.
+                    #
+                    # So both are measured.  The single-thread series is the
+                    # algorithmic comparison, like for like against codes that
+                    # have no choice; the parallel series is what a user
+                    # actually gets.  Neither is the honest number on its own.
+                    if code == 'NuOscProbExact':
+                        out.append({'kind': 'amortized', 'code': code,
+                                    'grid': grid, 'knob': knob, 'timed': True,
+                                    'plane': True, 'threads': 1,
+                                    'shell_density': 'midpoint'})
 
         # THROUGHPUT: what one request for N points costs, with every
         # repetition started afresh.  The N-sweep is the figure's x axis.
@@ -207,6 +231,8 @@ def artifact_name(cell):
         bits.append('L%d' % cell['n_layers'])
     if cell.get('loop'):
         bits.append('looped')
+    if cell.get('threads') == 1:
+        bits.append('1thread')
     return '_'.join(bits) + '.json'
 
 
@@ -278,11 +304,14 @@ def join_plane(outdir):
         grid, code, knob = cell['grid'], cell['code'], str(cell['knob'])
         acc = accuracy.get(grid, {}).get('series', {}).get(code, {})
         entry = acc.get('by_knob', {}).get(knob, {})
-        key = '%s|%s' % (code, grid)
+        key = '%s|%s%s' % (code, grid,
+                           '|1thread' if cell.get('threads') == 1 else '')
         series = plane['series'].setdefault(
             key, {'code': code, 'grid': grid,
                   'dial': DISCRETISATION_DIAL.get(code, 'precision knob'),
-                  'threads': timed.get('environment', {}).get('numba_threads', 1),
+                  'threads': cell.get('threads',
+                                       timed.get('environment', {})
+                                       .get('numba_threads', 1)),
                   'points': []})
         series['points'].append({
             'knob': cell['knob'],
@@ -358,8 +387,14 @@ def main(argv=None):
         path = os.path.join(args.outdir, artifact_name(cell))
         cmd = command(cell) + ['--json', path]
         started = time.time()
+        env = dict(os.environ)
+        if cell.get('threads') == 1:
+            # numba reads this at import, so it must be in the child's
+            # environment rather than set from inside the adapter.
+            env['NUMBA_NUM_THREADS'] = '1'
+            env['OMP_NUM_THREADS'] = '1'
         result = subprocess.run(cmd, capture_output=True, text=True,
-                                timeout=7200)
+                                timeout=7200, env=env)
         ok = result.returncode == 0
         print('%-44s %s  %.1fs' % (artifact_name(cell),
                                    'ok' if ok else 'FAILED', time.time() - started))
