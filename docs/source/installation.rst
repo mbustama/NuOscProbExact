@@ -326,6 +326,7 @@ File tree
        │   ├── sweep_accuracy.py        # Every code against its own reference, over every precision knob
        │   ├── run_all.py               # The run matrix: which code, which grid, which protocol, which knob
        │   ├── accuracy_const.json      # Accuracy of every code on the constant-density grid, per knob
+       │   ├── accuracy_chord.json      # Accuracy of every code on the Earth chord, per knob
        │   └── reference_audit.json     # What that audit measured; the notebook renders it, never types it
        ├── test_bench_pipeline.py       # The benchmark pipeline's fairness invariants
        ├── test_bench_behaviour.py      # What an adapter does, not where its constants came from

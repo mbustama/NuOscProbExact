@@ -305,6 +305,38 @@ int main(int argc, char **argv) {
         for (std::size_t i = 0; i < probs.size(); ++i)
             std::printf("%s%.17g", i ? ", " : "", probs[i]);
         std::printf("]\n}\n");
+
+        // --json writes the artifact.  The timed branch has always honoured
+        // it and this one never did: it printed to stdout and returned, so an
+        // orchestrator that asked for a file got a clean exit status and no
+        // file.  Found by running the orchestrator on three cells before
+        // running it on two hundred.
+        if (!out.empty()) {
+            if (FILE *f = std::fopen(out.c_str(), "w")) {
+                std::fprintf(f, "{\n  \"code\": \"%s\",\n"
+                    "  \"protocol\": {\"name\": \"accuracy\", \"grid\": \"%s\"},\n"
+                    "  \"knob\": {\"%s\": %d},\n"
+                    "  \"n_layers\": %d,\n  \"shells_total\": %d,\n"
+                    "  \"conventions\": \"own-reference\",\n"
+                    "  \"profile_basis\": \"continuous\",\n"
+                    "  \"looped\": %s,\n"
+                    "  \"shell_density\": \"%s\",\n"
+                    "  \"manifest_sha256\": \"%s\",\n"
+                    "  \"channels\": [\"numu->nue\", \"numu->numu\", "
+                    "\"numu->nutau\"],\n"
+                    "  \"n_points\": %zu,\n  \"probabilities\": [",
+                    driver::name(), grid.c_str(),
+                    cap.knob_name[0] ? cap.knob_name : "none", knob,
+                    p.n_layers, p.shells_total(),
+                    p.force_loop ? "true" : "false",
+                    p.mean_density ? "mean" : "midpoint", MANIFEST_SHA256,
+                    p.points());
+                for (std::size_t i = 0; i < probs.size(); ++i)
+                    std::fprintf(f, "%s%.17g", i ? ", " : "", probs[i]);
+                std::fprintf(f, "]\n}\n");
+                std::fclose(f);
+            }
+        }
         return 0;
     }
 

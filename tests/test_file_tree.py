@@ -255,6 +255,8 @@ TREE = [
      'The run matrix: which code, which grid, which protocol, which knob'),
     ('tests/bench/accuracy_const.json',
      'Accuracy of every code on the constant-density grid, per knob'),
+    ('tests/bench/accuracy_chord.json',
+     'Accuracy of every code on the Earth chord, per knob'),
     ('tests/bench/reference_audit.json',
      'What that audit measured; the notebook renders it, never types it'),
     ('tests/test_bench_pipeline.py',

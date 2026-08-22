@@ -151,14 +151,36 @@ class NuCraftAdapter(object):
         every call, so each repetition is already cold."""
 
     def probabilities(self):
-        r"""Untimed.  ``self._rows`` is already zenith outer, energy inner."""
+        r"""Untimed.  The nu_mu ROW, which this code does not hand over directly.
+
+        ``CalcWeights`` works "in the interaction basis": for a neutrino
+        DETECTED as ``mcType`` it returns ``[P_E, P_Mu, P_Tau]``, the
+        probabilities that it ORIGINATED as each flavour.  That is a column of
+        the oscillation matrix, not a row.  Its middle entry, P(numu->numu),
+        is the same either way -- which is exactly why reading the triple as a
+        row went unnoticed: the disappearance channel was right and both
+        appearance channels were somebody else's, wrong by 2.7e-2 against a
+        2.4e-6 discretisation floor.  Unitarity cannot catch it either, since
+        the columns of a unitary matrix sum to one just as the rows do.
+
+        So the row is assembled from three detections -- as nu_e, as nu_mu and
+        as nu_tau -- taking the nu_mu-origin entry of each.  Three calls
+        instead of one, which is why this is done here in the untimed path and
+        not in ``evaluate``: the timed measurement asks this code exactly one
+        question, the way a user would.
+        """
         kwargs = {'atmMode': 0, 'vacuum': _NUCRAFT_FALSE}
         if self._num_prec is not None:
             kwargs['numPrec'] = self._num_prec
-        # CalcWeights returns the survival/appearance triple per particle,
-        # which is the nu_mu row already: nue, numu, nutau.
-        weights = self._nc.CalcWeights(self._rows, **kwargs)
-        return [float(v) for w in weights for v in (w[0], w[1], w[2])]
+        columns = []
+        for mctype in (12, 14, 16):                # detected as e, mu, tau
+            rows = [(mctype, e, z) for _, e, z in self._rows]
+            columns.append(self._nc.CalcWeights(rows, **kwargs))
+        # columns[f][i][1] is P(numu -> f) at grid point i.
+        out = []
+        for i in range(len(self._rows)):
+            out.extend(float(columns[f][i][1]) for f in range(3))
+        return out
 
     def evaluate(self):
         kwargs = {'atmMode': 0, 'vacuum': _NUCRAFT_FALSE}
