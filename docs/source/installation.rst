@@ -328,6 +328,7 @@ File tree
        │   ├── run_all.py               # The run matrix: which code, which grid, which protocol, which knob
        │   ├── check_neutrality.py      # Checks that a harness change moved the spread and not the speed
        │   ├── emit_figures.py          # Turns the measured artifacts into the files the paper figures draw
+       │   ├── audit_objections.py      # Checks the measured output against each objection, one at a time
        │   ├── accuracy_const.json      # Accuracy of every code on the constant-density grid, per knob
        │   ├── accuracy_chord.json      # Accuracy of every code on the Earth chord, per knob
        │   ├── accuracy_discretisation.json  # Accuracy against the layer count, for the code whose precision knob is something else

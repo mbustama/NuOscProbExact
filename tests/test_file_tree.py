@@ -260,6 +260,8 @@ TREE = [
      'Checks that a harness change moved the spread and not the speed'),
     ('tests/bench/emit_figures.py',
      'Turns the measured artifacts into the files the paper figures draw'),
+    ('tests/bench/audit_objections.py',
+     'Checks the measured output against each objection, one at a time'),
     ('tests/bench/accuracy_const.json',
      'Accuracy of every code on the constant-density grid, per knob'),
     ('tests/bench/accuracy_chord.json',

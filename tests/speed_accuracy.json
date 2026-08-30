@@ -151,7 +151,7 @@
    "name": "NuFast-LBL",
    "points": [
     {
-     "best_at_this_accuracy": false,
+     "best_at_this_accuracy": true,
      "block_cv": 0.013017994261144732,
      "knob": -1,
      "label": "-1",

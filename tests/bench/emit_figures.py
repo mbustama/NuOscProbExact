@@ -74,7 +74,18 @@ def timed(outdir, name):
     return d if (d.get('us_per_point') or {}).get('mean') else None
 
 
-def mark_best(points):
+#: Settings that are drawn whether or not anything ties them on speed.
+#:
+#: The "fastest at this accuracy" rule is right for an inert dial and wrong
+#: for a sentinel.  NuFast-LBL reaches 7.607e-16 at both N_Newton = 3 and at
+#: the exact-eigenvalue mode, and 3 is the quicker of the two, so the rule
+#: dropped -1 from the figure -- the one setting objection LBL-3 is entirely
+#: about, removed from the figure meant to answer it.  A named mode is a
+#: claim about what the code can do, not a candidate for being outrun.
+ALWAYS_DRAWN = {'NuFast-LBL': (-1,), 'NuFast-Earth': (-1,)}
+
+
+def mark_best(points, code=None):
     r"""Flags, per distinct accuracy, the fastest point that reached it.
 
     On constant density four of the codes have an inert dial: every setting
@@ -88,9 +99,12 @@ def mark_best(points):
         key = None if q['max_abs_error'] is None else '%.6e' % q['max_abs_error']
         if key not in best or q['us_per_probability'] < best[key]['us_per_probability']:
             best[key] = q
+    keep = ALWAYS_DRAWN.get(code, ())
     for q in points:
-        q['best_at_this_accuracy'] = q is best.get(
-            None if q['max_abs_error'] is None else '%.6e' % q['max_abs_error'])
+        q['best_at_this_accuracy'] = (
+            q is best.get(None if q['max_abs_error'] is None
+                          else '%.6e' % q['max_abs_error'])
+            or q['knob'] in keep)
     return points
 
 
@@ -122,7 +136,7 @@ def const_plane(cells_fn, artifact_name, outdir, acc):
                 'max_abs_error': entry.get('max_abs_deviation')})
     for s in series.values():
         s['points'].sort(key=lambda q: q['knob'])
-        mark_best(s['points'])
+        mark_best(s['points'], s.get('code'))
     return {'generated_by': 'tests/bench/emit_figures.py',
             'note': 'Constant density, L = 1300 km, rho = 3 g/cm^3, three '
                     'flavors, nu_mu row. ' + STAMP,
@@ -188,7 +202,7 @@ def earth_plane(cells_fn, artifact_name, outdir, acc):
 
     for s in series.values():
         s['points'].sort(key=lambda q: q['knob'])
-        mark_best(s['points'])
+        mark_best(s['points'], s.get('code'))
     return {'generated_by': 'tests/bench/emit_figures.py',
             'note': 'PREM, cos(theta_z) = -0.9, E = 3-40 GeV, three flavors, '
                     'nu_mu row. ' + STAMP,
