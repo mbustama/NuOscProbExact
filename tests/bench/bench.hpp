@@ -88,6 +88,19 @@ struct Problem {
     // "256 shells" and "1024 shells" are the same configuration described two
     // ways and the objection was precisely about which.
     int    n_layers = 256;
+    // WHICH parameter the amortized scan turns.  Objection Earth-2 asked for
+    // a realistic loop and named two candidates, and they are not
+    // interchangeable: NuFast-Earth caches by parameter, so delta_CP -- the
+    // one this harness scanned -- invalidates the least of it and shows that
+    // code at its best.  Scanning Dmsq31 invalidates more.  Measuring only
+    // the favourable one and reporting it as "the" amortized cost would be
+    // the same error as timing a batched code in a loop.
+    std::string scan = "dcp";
+    double scan_base()  const { return scan == "dmsq31" ? dm31 : dcp; }
+    // Two per cent of Dmsq31 is far inside its measured uncertainty and far
+    // outside anything a cache could treat as unchanged; 0.2 rad of delta is
+    // what this scan has always used.
+    double scan_width() const { return scan == "dmsq31" ? 0.02*dm31 : 0.2; }
     // Objection LBL-1 asks for a looped control beside the batched series, to
     // show what batching buys for a code that offers both.  An adapter that
     // batches honours this by calling its entry point once per point instead.
@@ -179,7 +192,7 @@ inline int block_samples(double block, double min_block, int lo, int hi) {
 
 inline Stats amortized(const Problem &p, int samples_lo, int samples_hi,
                        int steps, double min_block, double *sink) {
-    const double d0 = p.dcp;
+    const double d0 = p.scan_base(), span = p.scan_width();
 
     // Autorange the scan until the timed region is long enough to measure.
     // Fixed steps handed the cheapest codes a block of 90 microseconds --- a
@@ -196,7 +209,7 @@ inline Stats amortized(const Problem &p, int samples_lo, int samples_hi,
     int total = steps > 0 ? steps : 1;
     double dt = 0.0;
     for (;;) {                                  // first pass is the warm-up
-        const double dd = 0.2 / total;
+        const double dd = span / total;
         auto t0 = clk::now();
         for (int k = 0; k < total; ++k) {
             driver::configure(d0 + k * dd);
@@ -222,7 +235,7 @@ inline Stats amortized(const Problem &p, int samples_lo, int samples_hi,
     // nuCraft on the oscillogram would have spent twelve hours in this
     // function -- and bought nothing, since a block that long is already
     // far past the point where the clock is the limitation.
-    const double dd = 0.2 / (double(total) * samples);
+    const double dd = span / (double(total) * samples);
     long long step = 0;
     std::vector<double> per_point;
     per_point.reserve(samples);
@@ -246,7 +259,7 @@ inline Stats amortized(const Problem &p, int samples_lo, int samples_hi,
 // its own language, and says so through capabilities().
 inline Stats throughput(const Problem &p, int samples_lo, int samples_hi,
                         double min_block, double *sink) {
-    driver::configure(p.dcp);
+    driver::configure(p.scan_base());
     driver::reset();
     *sink += driver::evaluate();                // untimed warm-up
     int reps = 1;                               // autorange to a stable block
@@ -299,7 +312,7 @@ inline std::vector<double> linspace(double lo, double hi, int n) {
 int main(int argc, char **argv) {
     using namespace bench;
 
-    std::string protocol = "amortized", grid = "CHORD/12x1", out;
+    std::string protocol = "amortized", grid = "CHORD/12x1", out, scan = "dcp";
     int samples = 30, max_samples = 100, steps = 1;
     int n_e = 0, n_z = 0, knob = 0, n_layers = 256;
     bool force_loop = false, mean_density = false;
@@ -317,12 +330,14 @@ int main(int argc, char **argv) {
         else if (eq("--steps")     && i + 1 < argc) steps     = std::atoi(argv[++i]);
         else if (eq("--min-block") && i + 1 < argc) min_block = std::atof(argv[++i]);
         else if (eq("--max-samples") && i + 1 < argc) max_samples = std::atoi(argv[++i]);
+        else if (eq("--scan")      && i + 1 < argc) scan      = argv[++i];
         else if (eq("--n-energies")&& i + 1 < argc) n_e       = std::atoi(argv[++i]);
         else if (eq("--n-zenith")  && i + 1 < argc) n_z       = std::atoi(argv[++i]);
         else if (eq("--json")      && i + 1 < argc) out       = argv[++i];
     }
 
     Problem p;
+    p.scan = scan;
     p.knob = knob;
     p.n_layers = n_layers;
     p.force_loop = force_loop;
@@ -346,7 +361,7 @@ int main(int argc, char **argv) {
     // probabilities, and prints them.  Nothing here reads a clock, so a
     // number from this protocol can never be mistaken for a speed.
     if (protocol == "accuracy") {
-        driver::configure(p.dcp);
+        driver::configure(p.scan_base());
         std::vector<double> probs;
         driver::probabilities(probs);
         std::printf("{\n  \"code\": \"%s\",\n"
@@ -424,6 +439,7 @@ int main(int argc, char **argv) {
         "  \"looped\": %s,\n"
         "  \"shell_density\": \"%s\",\n"
         "  \"manifest_sha256\": \"%s\",\n"
+        "  \"scan\": \"%s\",\n"
         "  \"timing\": {\"min_block_s\": %.6g, \"block_reps\": %d, "
         "\"block_seconds\": %.6g, \"samples\": %d},\n"
         "  \"batched\": {\"energy\": %s, \"zenith\": %s, \"symbol\": \"%s\"},\n"
@@ -433,7 +449,7 @@ int main(int argc, char **argv) {
         st.mean, st.sd, st.min, st.n,
         p.n_layers, p.shells_total(), p.force_loop ? "true" : "false",
         p.mean_density ? "mean" : "midpoint", MANIFEST_SHA256,
-        min_block, st.reps, st.block_s, st.n,
+        p.scan.c_str(), min_block, st.reps, st.block_s, st.n,
         cap.batches_energy ? "true" : "false",
         cap.batches_zenith ? "true" : "false", cap.batch_symbol, sink);
 

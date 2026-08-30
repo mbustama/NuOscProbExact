@@ -39,7 +39,7 @@ namespace {
 BargerPropagator   *g_prop = nullptr;
 std::vector<double> g_e, g_z;
 double g_s12sq, g_s13sq, g_s23sq, g_dm21;
-double g_L, g_rho, g_dcp;
+double g_L, g_rho, g_dcp, g_dm32;
 bool   g_sphere = false;    // chord through the Earth vs constant density
 
 // This library's PREM as a Prob3++ radial profile: the four major layers
@@ -69,6 +69,11 @@ std::string write_profile(int n, double yp) {
     return path;
 }
 
+// Which parameter the scan turns.  Objection Earth-2 named Dmsq31 as a
+// realistic thing for a fit to move, and it is not delta_CP's equal:
+// codes that cache do not invalidate the same things for both.
+bool g_scan_dmsq31 = false;
+
 }  // namespace
 
 namespace driver {
@@ -86,6 +91,7 @@ bench::Capabilities capabilities() {
 }
 
 void setup(const bench::Problem &p) {
+    g_scan_dmsq31 = (p.scan == "dmsq31");
     const int n = p.knob >= 1 ? p.knob : p.n_layers;  // Earth-1: sweepable
 
     g_e      = p.energies_gev;
@@ -93,6 +99,7 @@ void setup(const bench::Problem &p) {
     g_s12sq = p.s12sq; g_s13sq = p.s13sq; g_s23sq = p.s23sq;
     g_dm21  = p.dm21;
     g_dcp   = p.dcp;
+    g_dm32  = OSC_DMSQ32;
     g_L     = p.L_km;
     g_rho   = p.density;
 
@@ -124,7 +131,12 @@ void setup(const bench::Problem &p) {
 
 // The one thing a fit moves.  Prob3++ takes delta through SetMNS, which
 // also takes the energy, so the actual call sits in evaluate()'s loop.
-void configure(double dcp) { g_dcp = dcp; }
+void configure(double v) {
+    // SetMNS takes Dmsq32, so a Dmsq31 scan is converted here rather than
+    // handing this code a number in someone else's convention:
+    // Dmsq32 = Dmsq31 - Dmsq21, as conversions.py derives it.
+    if (g_scan_dmsq31) g_dm32 = v - g_dm21; else g_dcp = v;
+}
 
 double evaluate() {
     double sink = 0.0;
@@ -132,7 +144,7 @@ double evaluate() {
         for (std::size_t j = 0; j < g_z.size(); ++j) {
             if (g_z.size() > 1) g_prop->DefinePath(g_z[j], 0.0, false);
             for (double e : g_e) {
-                g_prop->SetMNS(g_s12sq, g_s13sq, g_s23sq, g_dm21, OSC_DMSQ32,
+                g_prop->SetMNS(g_s12sq, g_s13sq, g_s23sq, g_dm21, g_dm32,
                                g_dcp, e, true, 1);
                 g_prop->propagate(1);
                 sink += g_prop->GetProb(2, 2);      // 1 = e, 2 = mu, 3 = tau
@@ -141,7 +153,7 @@ double evaluate() {
         return sink;
     }
     for (double e : g_e) {
-        g_prop->SetMNS(g_s12sq, g_s13sq, g_s23sq, g_dm21, OSC_DMSQ32,
+        g_prop->SetMNS(g_s12sq, g_s13sq, g_s23sq, g_dm21, g_dm32,
                        g_dcp, e, true, 1);
         g_prop->propagateLinear(1, g_L, g_rho);
         sink += g_prop->GetProb(2, 2);
@@ -161,7 +173,7 @@ void probabilities(std::vector<double> &out) {
         for (std::size_t j = 0; j < g_z.size(); ++j) {
             if (g_z.size() > 1) g_prop->DefinePath(g_z[j], 0.0, false);
             for (double e : g_e) {
-                g_prop->SetMNS(g_s12sq, g_s13sq, g_s23sq, g_dm21, OSC_DMSQ32,
+                g_prop->SetMNS(g_s12sq, g_s13sq, g_s23sq, g_dm21, g_dm32,
                                g_dcp, e, true, 1);
                 g_prop->propagate(1);
                 for (int b = 1; b <= 3; ++b) out.push_back(g_prop->GetProb(2, b));   // numu -> numu
@@ -170,7 +182,7 @@ void probabilities(std::vector<double> &out) {
         return;
     }
     for (double e : g_e) {
-        g_prop->SetMNS(g_s12sq, g_s13sq, g_s23sq, g_dm21, OSC_DMSQ32,
+        g_prop->SetMNS(g_s12sq, g_s13sq, g_s23sq, g_dm21, g_dm32,
                        g_dcp, e, true, 1);
         g_prop->propagateLinear(1, g_L, g_rho);
         for (int b = 1; b <= 3; ++b) out.push_back(g_prop->GetProb(2, b));

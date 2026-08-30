@@ -94,6 +94,11 @@ Profile chord(double cz, int n, double rho_factor) {
     return prof;
 }
 
+// Which parameter the scan turns.  Objection Earth-2 named Dmsq31 as a
+// realistic thing for a fit to move, and it is not delta_CP's equal:
+// codes that cache do not invalidate the same things for both.
+bool g_scan_dmsq31 = false;
+
 }  // namespace
 
 namespace driver {
@@ -111,6 +116,7 @@ bench::Capabilities capabilities() {
 }
 
 void setup(const bench::Problem &p) {
+    g_scan_dmsq31 = (p.scan == "dmsq31");
     static char argv0[] = "bench_globes";
     static bool inited = false;
     if (!inited) { glbInit(argv0); inited = true; }
@@ -148,8 +154,8 @@ void setup(const bench::Problem &p) {
 
 // The one thing a fit moves; GLoBES recomputes its mixing matrix here,
 // which is the cost the AMORTIZED protocol is defined to include.
-void configure(double dcp) {
-    glbSetOscParams(g_params, dcp, GLB_DELTA_CP);
+void configure(double v) {
+    glbSetOscParams(g_params, v, g_scan_dmsq31 ? GLB_DM_31 : GLB_DELTA_CP);
     glbSetOscillationParameters(g_params);
 }
 

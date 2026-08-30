@@ -77,6 +77,11 @@ class NuSQuIDS(object):
         }
 
     def setup(self, problem):
+        # Which parameter the scan turns.  Objection Earth-2 named Dmsq31
+        # as a realistic thing for a fit to move; a code that caches does
+        # not invalidate the same work for it as for delta_CP.
+        self._scan_dmsq31 = getattr(problem, 'scan', 'dcp') == 'dmsq31'
+
         p = problem
         self._constant_density_mode = False
         units = nsq.Const()
@@ -151,8 +156,11 @@ class NuSQuIDS(object):
         s.Set_Body(body)
         self._s = s
 
-    def configure(self, dcp):
-        self._s.Set_CPPhase(0, 2, dcp)
+    def configure(self, v):
+        if self._scan_dmsq31:
+            self._s.Set_SquareMassDifference(2, v)
+        else:
+            self._s.Set_CPPhase(0, 2, v)
 
     def reset(self):
         r"""Nothing to reset: ``evaluate()`` calls ``Set_initial_state`` and

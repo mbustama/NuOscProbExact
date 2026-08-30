@@ -99,6 +99,20 @@ class Problem(object):
         self.dcp = conversions.for_code('generic')['dcp_rad']
         self.dm21 = params['dmsq21_ev2']
         self.dm31 = params['dmsq31_ev2']
+        # Which parameter the amortized scan turns; bench.hpp's Problem::scan.
+        self.scan = 'dcp'
+
+    def scan_base(self):
+        return self.dm31 if self.scan == 'dmsq31' else self.dcp
+
+    def scan_width(self):
+        r"""How far the scan travels.
+
+        Two per cent of Dmsq31 is far inside its measured uncertainty and far
+        outside anything a cache could call unchanged; 0.2 rad is what the
+        delta_CP scan has always used.
+        """
+        return 0.02*self.dm31 if self.scan == 'dmsq31' else 0.2
 
     def points(self):
         return len(self.energies_gev)*max(len(self.costhz), 1)
@@ -184,11 +198,11 @@ def amortized(driver, problem, samples, steps, min_block, max_samples):
     longer block is a finer scan and never a repeated one: no code is handed
     the same delta twice, so none can look fast for having cached it.
     """
-    d0 = problem.dcp
+    d0, span = problem.scan_base(), problem.scan_width()
     sink = 0.0
     total = steps if steps > 0 else 1
     while True:                       # first pass doubles as the warm-up
-        dd = 0.2/total
+        dd = span/total
         t0 = time.perf_counter()
         for k in range(total):
             driver.configure(d0 + k*dd)
@@ -203,7 +217,7 @@ def amortized(driver, problem, samples, steps, min_block, max_samples):
     # twice.  Where one pass already outlasts a block -- nuCraft on the
     # oscillogram -- a block holds one step, and restarting would time the
     # same delta over and over.  See bench.hpp for the same reasoning.
-    dd = 0.2/(total*n)
+    dd = span/(total*n)
     step = 0
     per_point = []
     for _ in range(n):
@@ -221,7 +235,7 @@ def amortized(driver, problem, samples, steps, min_block, max_samples):
 
 def throughput(driver, problem, samples, min_block, max_samples):
     r"""One request for the whole grid, repeated; bench.hpp's throughput."""
-    driver.configure(problem.dcp)
+    driver.configure(problem.scan_base())
     driver.reset()
     sink = driver.evaluate()          # untimed warm-up
     reps = 1                          # autorange to a stable block
@@ -303,6 +317,8 @@ def main(argv=None):
                     dest='min_block')
     ap.add_argument('--max-samples', type=int, default=100,
                     dest='max_samples')
+    ap.add_argument('--scan', default='dcp', choices=('dcp', 'dmsq31'),
+                    help='which parameter the amortized scan turns')
     ap.add_argument('--n-energies', type=int, default=0)
     ap.add_argument('--n-zenith', type=int, default=0)
     ap.add_argument('--json', dest='out', default='')
@@ -310,6 +326,7 @@ def main(argv=None):
 
     problem = build_problem(args.grid, args.knob, args.n_energies,
                             args.n_zenith)
+    problem.scan = args.scan
     driver = load_adapter(args.code)
     driver.setup(problem)
     cap = driver.capabilities()
@@ -319,7 +336,7 @@ def main(argv=None):
     # path, so a number produced here can never be mistaken for a speed, and
     # it can be produced on a machine that is not idle.
     if args.protocol == 'accuracy':
-        driver.configure(problem.dcp)
+        driver.configure(problem.scan_base())
         probs = driver.probabilities()
         record = {
             'code': driver.name,
@@ -327,6 +344,7 @@ def main(argv=None):
             'knob': {cap.get('knob_name') or 'none': args.knob},
             'conventions': 'own-reference',
             'manifest_sha256': manifest_sha(),
+            'scan': problem.scan,
             'profile_basis': 'continuous',
             'environment': (driver.environment()
                             if hasattr(driver, 'environment') else {}),
@@ -355,6 +373,7 @@ def main(argv=None):
         'knob': {cap.get('knob_name') or 'none': args.knob},
         'conventions': 'own-reference',
         'manifest_sha256': manifest_sha(),
+        'scan': problem.scan,
         'profile_basis': 'continuous',
         'environment': (driver.environment()
                         if hasattr(driver, 'environment') else {}),

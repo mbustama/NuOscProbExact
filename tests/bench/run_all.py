@@ -245,6 +245,35 @@ def cells(accuracy_only=False, speed_only=False):
                              'tier': 'oscillogram: full samples, long timeout'})
             out.append(cell)
 
+        # Objection Earth-2 asked for a realistic loop and named Dmsq31.
+        # Every amortized cell above scans delta_CP, which for a code that
+        # caches by parameter is the CHEAPEST thing a fit can move -- and
+        # measuring only that, then calling it the amortized cost, is the
+        # same error as timing a batched code in a loop.  Measured on a
+        # twelve-point chord at each code's best setting, delta_CP costs
+        # NuFast-Earth 0.060 us per probability and Dmsq31 costs it 109: a
+        # factor of eighteen hundred, and the feature its author said his
+        # code is built around.  No other code here moved by more than 4%.
+        #
+        # One knob per code, because the question is about caching and not
+        # about precision: the delta_CP cell at the same knob is the control
+        # and the two differ in nothing else.
+        for grid, codes in (('CHORD/12x1', EARTH_CODES),
+                            ('CONST/60E', CONST_CODES),
+                            ('OSC/100x100', EARTH_CODES)):
+            for code in codes:
+                knob = (THROUGHPUT_KNOB if grid == 'CONST/60E'
+                        else OSCILLOGRAM_KNOB).get(code)
+                if knob is None:
+                    continue
+                cell = {'kind': 'amortized', 'code': code, 'grid': grid,
+                        'knob': knob, 'timed': True, 'scan': 'dmsq31',
+                        'tier': 'Earth-2: the other parameter a fit moves',
+                        'shell_density': 'midpoint'}
+                if code == 'nuCraft' and grid == 'OSC/100x100':
+                    cell['timeout'] = 10800
+                out.append(cell)
+
         for grid, codes in (('CHORD/12x1', EARTH_CODES),
                             ('CONST/60E', CONST_CODES)):
             for code in codes:
@@ -333,6 +362,8 @@ def artifact_name(cell):
         bits.append('looped')
     if cell.get('threads') == 1:
         bits.append('1thread')
+    if cell.get('scan') and cell['scan'] != 'dcp':
+        bits.append('scan-%s' % cell['scan'])
     return '_'.join(bits) + '.json'
 
 
@@ -360,6 +391,8 @@ def command(cell):
         cmd += ['--loop']
     if cell.get('shell_density') == 'mean' and code == 'NuFast-Earth':
         cmd += ['--mean-density']
+    if cell.get('scan') and cell['scan'] != 'dcp':
+        cmd += ['--scan', cell['scan']]
     return cmd
 
 

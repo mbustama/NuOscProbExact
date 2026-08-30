@@ -138,6 +138,11 @@ double                       g_delta = 0.0;
 int                          g_knob  = 0;
 bool                         g_constant = false;   // single-trajectory mode
 
+// Which parameter the scan turns.  Objection Earth-2 named Dmsq31 as a
+// realistic thing for a fit to move, and it is not delta_CP's equal:
+// codes that cache do not invalidate the same things for both.
+bool g_scan_dmsq31 = false;
+
 }  // namespace
 
 namespace driver {
@@ -155,6 +160,7 @@ bench::Capabilities capabilities() {
 }
 
 void setup(const bench::Problem &p) {
+    g_scan_dmsq31 = (p.scan == "dmsq31");
     const int n_per_layer = p.n_layers;   // Earth-1: sweepable
     delete g_engine; delete g_prem;
     g_prem   = nullptr;
@@ -198,9 +204,13 @@ void setup(const bench::Problem &p) {
 }
 
 // The one thing a fit moves.  Everything else stays cached.
-void configure(double dcp) {
-    g_delta = dcp;
-    g_engine->Set_delta(dcp);
+void configure(double v) {
+    // Set_Dmsq31 is the setter the objection itself named.  Going through
+    // it rather than rebuilding the engine is the whole point: what is
+    // being measured is how much this code has to recompute.
+    if (g_scan_dmsq31) { g_engine->Set_Dmsq31(v); return; }
+    g_delta = v;
+    g_engine->Set_delta(v);
 }
 
 // The only adapter with anything to reset.  Set_Eigenvalue_Precision clears

@@ -179,11 +179,40 @@ def check_other2():
                   'fewest repetitions in any block %d' % (len(timed), reps))
 
 
+def check_earth2():
+    r"""Earth-2: the loop is realistic, and BOTH named parameters are scanned.
+
+    The objection asked for a loop a fit would actually run and named Dmsq31.
+    Scanning only delta_CP answers half of it: for a code that caches by
+    parameter, delta_CP is the cheapest thing a fit can move, so reporting
+    that alone as "the" amortized cost flatters exactly the code the
+    objection came from.  Both are measured now, at the same knob, differing
+    in nothing else.
+    """
+    pairs, notes = 0, []
+    for name, d in _artifacts(lambda n, d: n.endswith('_scan-dmsq31.json')
+                              and d.get('us_per_point', {}).get('mean')):
+        base = os.path.join(ART, name.replace('_scan-dmsq31', ''))
+        b = _load(base)
+        if not b or not (b.get('us_per_point') or {}).get('mean'):
+            return False, 'no delta_CP control for %s' % name
+        pairs += 1
+        r = d['us_per_point']['mean']/b['us_per_point']['mean']
+        if r > 1.5 or r < 0.67:
+            notes.append('%s %s %.0fx' % (d['code'], d['protocol']['grid'], r))
+    if not pairs:
+        return False, 'no Dmsq31 scan measured; only delta_CP, his fast path'
+    return True, ('%d paired scans; parameter-sensitive: %s'
+                  % (pairs, ', '.join(notes) if notes
+                     else 'none beyond 50 per cent'))
+
+
 CHECKS = [
     ('LBL-1  batches over energy', check_lbl1),
     ('LBL-2  Newton sweep, his conventions', check_lbl2),
     ('LBL-3  exact mode measured AND drawn', check_lbl3),
     ('Earth-1 shells: per region or total', check_earth1),
+    ('Earth-2 both parameters scanned', check_earth2),
     ('Earth-3 realistic 100x100 grid', check_earth3),
     ('Earth-4 constant-density mode used', check_earth4),
     ('Other-1 pinned versions', check_other1),
@@ -203,15 +232,10 @@ def main():
         bad += not ok
         print('%-40s %-4s %s' % (label, 'yes' if ok else 'NO', why))
     print()
-    # Earth-2 is a property of the protocol rather than of a number, so it is
-    # stated here rather than checked: the scan hoists every invariant into
-    # setup() before any clock starts, and only delta_CP moves inside the
-    # timed region.  It is worth saying that delta_CP is his FAST path, and
-    # that a slow parameter such as Dmsq31 is not swept here.
-    print('Earth-2 is not checkable from an artifact: it is a property of the '
-          'protocol.\n        The scan hoists every invariant before the '
-          'clock; only delta_CP moves.\n        Note delta_CP is his FAST '
-          'path -- no slow parameter (Dmsq31) is swept.')
+    print('One half of Earth-2 stays unmeasurable from an artifact: that the\n'
+          '        scan hoists every invariant into setup() before any clock\n'
+          '        starts.  That is a property of the protocol, not a number.\n'
+          '        Which parameter moves inside the loop IS measured, above.')
     print()
     print('%d of %d checkable objections answered' % (len(CHECKS)-bad,
                                                       len(CHECKS)))

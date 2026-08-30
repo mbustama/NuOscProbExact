@@ -110,6 +110,11 @@ class NuOscProbExact(object):
 
     def setup(self, problem):
         p = problem
+        # Which parameter the scan turns.  Objection Earth-2 named Dmsq31
+        # as a realistic thing for a fit to move; a code that caches does
+        # not invalidate the same work for it as for delta_CP.
+        self._scan_dmsq31 = getattr(problem, 'scan', 'dcp') == 'dmsq31'
+
         self._assert_fast_path()
         # Which compiled kernel this problem reaches: the chord path for an
         # Earth crossing, the constant-density path otherwise.  Recorded in
@@ -123,6 +128,7 @@ class NuOscProbExact(object):
         self._sines = (math.sqrt(p.s12sq), math.sqrt(p.s23sq),
                        math.sqrt(p.s13sq))
         self._dm21, self._dm31 = p.dm21, p.dm31
+        self._dcp = p.dcp
 
         knob = int(p.knob)
         if knob > 0:
@@ -139,11 +145,13 @@ class NuOscProbExact(object):
 
         self.configure(p.dcp)
 
-    def configure(self, dcp):
+    def configure(self, v):
         s12, s23, s13 = self._sines
+        dcp, dm31 = ((self._dcp, v) if self._scan_dmsq31
+                     else (v, self._dm31))
         self._h_vac = np.asarray(
             hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(
-                s12, s23, s13, dcp, self._dm21, self._dm31))
+                s12, s23, s13, dcp, self._dm21, dm31))
 
     def reset(self):
         r"""Nothing to reset, and the one cache that survives is on the right

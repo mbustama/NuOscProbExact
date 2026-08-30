@@ -78,6 +78,11 @@ class NuCraftAdapter(object):
         }
 
     def setup(self, problem):
+        # Which parameter the scan turns.  Objection Earth-2 named Dmsq31
+        # as a realistic thing for a fit to move; a code that caches does
+        # not invalidate the same work for it as for delta_CP.
+        self._scan_dmsq31 = getattr(problem, 'scan', 'dcp') == 'dmsq31'
+
         p = problem
         if not p.costhz:
             raise SystemExit('nuCraft has no constant-density mode; it '
@@ -109,6 +114,7 @@ class NuCraftAdapter(object):
         # nuCraft's masses list is [m1, Dm21, Dm31]; the absolute scale m1
         # does not enter oscillations.
         self._masses = [1.0, p.dm21, p.dm31]
+        self._dcp = p.dcp
 
         # atmMode 0 with atmHeight 0 is surface to surface; CalcWeights
         # takes the ZENITH ANGLE in radians, not its cosine.  One row per
@@ -139,11 +145,17 @@ class NuCraftAdapter(object):
         rho = earth.density_prem(np.clip(r, 0.0, gd.EARTH_RADIUS))
         return InterpolatedUnivariateSpline(r, rho, k=1)
 
-    def configure(self, dcp):
+    def configure(self, v):
+        # nuCraft takes its mass-squared splittings through the constructor,
+        # so a Dmsq31 scan moves that entry of the list it is handed rather
+        # than reaching past its interface.
+        dcp = self._dcp if self._scan_dmsq31 else v
+        masses = (self._masses[:2] + [v] if self._scan_dmsq31
+                  else self._masses)
         angles = [(1, 2, self._deg['12']),
                   (1, 3, self._deg['13'], math.degrees(dcp)),
                   (2, 3, self._deg['23'])]
-        self._nc = NuCraft(self._masses, angles, earthModel=self._em,
+        self._nc = NuCraft(masses, angles, earthModel=self._em,
                            detectorDepth=0.0, atmHeight=0.0)
 
     def reset(self):

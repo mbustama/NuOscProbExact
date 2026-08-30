@@ -37,6 +37,11 @@ double g_L, g_rhoYe, g_delta;
 int    g_newton;
 bool   g_loop = false;
 
+// Which parameter the scan turns.  Objection Earth-2 named Dmsq31 as a
+// realistic thing for a fit to move, and it is not delta_CP's equal:
+// codes that cache do not invalidate the same things for both.
+bool g_scan_dmsq31 = false;
+
 }  // namespace
 
 namespace driver {
@@ -56,6 +61,7 @@ bench::Capabilities capabilities() {
 }
 
 void setup(const bench::Problem &p) {
+    g_scan_dmsq31 = (p.scan == "dmsq31");
     g_e = p.energies_gev;
     g_probs.assign(g_e.size(), {});     // "the vector should be allocated first"
 
@@ -74,7 +80,9 @@ void setup(const bench::Problem &p) {
 // No engine survives between calls, so this honestly stores delta and
 // nothing else; the per-call setup cost lives inside evaluate(), where the
 // code itself pays it.
-void configure(double dcp) { g_delta = dcp; }
+void configure(double v) {
+    if (g_scan_dmsq31) g_dm31 = v; else g_delta = v;
+}
 
 double evaluate() {
     if (g_loop) {
