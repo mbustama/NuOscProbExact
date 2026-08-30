@@ -165,11 +165,29 @@ def cells(accuracy_only=False, speed_only=False):
         # statistics are still recorded and machine.admissible still judges
         # them, so a cell whose spread is too wide is still refused.
         for code in EARTH_CODES:
-            out.append({'kind': 'amortized', 'code': code,
-                        'grid': 'OSC/100x100', 'knob': THROUGHPUT_KNOB[code],
-                        'timed': True, 'samples': 10, 'steps': 5,
-                        'tier': 'oscillogram: one knob, Earth-3',
-                        'shell_density': 'midpoint'})
+            cell = {'kind': 'amortized', 'code': code,
+                    'grid': 'OSC/100x100', 'knob': THROUGHPUT_KNOB[code],
+                    'timed': True, 'samples': 10, 'steps': 5,
+                    'tier': 'oscillogram: one knob, Earth-3',
+                    'shell_density': 'midpoint'}
+            # nuCraft needs its own tier on this grid, and the reason is a
+            # measurement rather than a guess: the first attempt at this
+            # matrix recorded NuFast-Earth at 0.2 s, GLoBES at 144, Prob3++
+            # at 164, nuSQuIDS at 392 -- and nuCraft exceeded two hours for
+            # the same cell and had to be killed.  Its cost per point is not
+            # grid-independent, which the calibration on a twelve-point chord
+            # had assumed; on ten thousand points it is some four times worse
+            # than that extrapolation.
+            #
+            # Three samples of one step still gives the admissibility rule
+            # something to judge and still answers what the grid is for.  It
+            # is not dropped: a code being slow IS the measurement, and
+            # excluding it because it is slow would be the plainest unfairness
+            # in this whole comparison.
+            if code == 'nuCraft':
+                cell.update({'samples': 3, 'steps': 1, 'timeout': 5400,
+                             'tier': 'oscillogram: reduced, >2h at full samples'})
+            out.append(cell)
 
         for grid, codes in (('CHORD/12x1', EARTH_CODES),
                             ('CONST/60E', CONST_CODES)):
@@ -371,6 +389,8 @@ def main(argv=None):
     # canary bracketing and every command line can be proven end to end for
     # the price of a minute.
     ap.add_argument('--limit', type=int, default=0)
+    ap.add_argument('--force', action='store_true',
+                    help='recompute cells whose artifact already exists')
     ap.add_argument('--join', action='store_true',
                     help='join existing artifacts into the speed-accuracy '
                          'plane and exit, measuring nothing')
@@ -424,8 +444,19 @@ def main(argv=None):
 
     os.makedirs(args.outdir, exist_ok=True)
     written = 0
+    skipped = 0
+    failures = []
     for cell in matrix:
         path = os.path.join(args.outdir, artifact_name(cell))
+
+        # Resume.  A run that died at cell 109 of 328 should not repeat the
+        # 108 that succeeded -- the first attempt lost two hours to a single
+        # cell and had nothing to show for the rest.
+        if os.path.exists(path) and not args.force:
+            skipped += 1
+            written += 1
+            continue
+
         cmd = command(cell) + ['--json', path]
         started = time.time()
         env = dict(os.environ)
@@ -434,11 +465,35 @@ def main(argv=None):
             # environment rather than set from inside the adapter.
             env['NUMBA_NUM_THREADS'] = '1'
             env['OMP_NUM_THREADS'] = '1'
-        result = subprocess.run(cmd, capture_output=True, text=True,
-                                timeout=7200, env=env)
-        ok = result.returncode == 0
-        print('%-44s %s  %.1fs' % (artifact_name(cell),
-                                   'ok' if ok else 'FAILED', time.time() - started))
+
+        # One cell may not kill the run.  It did: nuCraft on the oscillogram
+        # exceeded the two-hour cell timeout, TimeoutExpired propagated out of
+        # main(), and every remaining cell was lost along with the run record
+        # for the hundred and eight that had already succeeded.  A cell that
+        # cannot finish is a fact about that cell, recorded and stepped over.
+        limit = cell.get('timeout', 7200)
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True,
+                                    timeout=limit, env=env)
+            ok = result.returncode == 0
+            note = '' if ok else (result.stderr or '').strip().splitlines()[-1:] and \
+                   (result.stderr or '').strip().splitlines()[-1][:60] or ''
+        except subprocess.TimeoutExpired:
+            ok, note = False, 'exceeded %ds' % limit
+            failures.append({'cell': artifact_name(cell),
+                             'reason': 'timeout after %ds' % limit})
+        except Exception as exc:                               # noqa: BLE001
+            ok, note = False, type(exc).__name__
+            failures.append({'cell': artifact_name(cell),
+                             'reason': '%s: %s' % (type(exc).__name__, exc)})
+        else:
+            if not ok:
+                failures.append({'cell': artifact_name(cell),
+                                 'reason': note or 'exit %d' % result.returncode})
+
+        print('%-46s %-7s %7.1fs %s'
+              % (artifact_name(cell), 'ok' if ok else 'FAILED',
+                 time.time() - started, note), flush=True)
         if ok:
             written += 1
 
@@ -452,6 +507,7 @@ def main(argv=None):
               'generated_at': time.strftime('%Y-%m-%dT%H:%M:%S%z'),
               'manifest_sha256': manifest_sha(),
               'cells': len(matrix), 'artifacts_written': written,
+              'artifacts_reused': skipped, 'failures': failures,
               'timed_cells': len(timed)}
     if timed:
         import machine
@@ -472,8 +528,11 @@ def main(argv=None):
         json.dump(record, handle, indent=2, sort_keys=True)
         handle.write('\n')
 
-    print('%d artifacts in %s, manifest %s'
-          % (written, os.path.relpath(args.outdir, ROOT), manifest_sha()[:12]))
+    print('%d artifacts in %s (%d reused), %d failed, manifest %s'
+          % (written, os.path.relpath(args.outdir, ROOT), skipped,
+             len(failures), manifest_sha()[:12]))
+    for f in failures:
+        print('  FAILED %-46s %s' % (f['cell'], f['reason']))
 
 
 if __name__ == '__main__':
