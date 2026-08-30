@@ -1,0 +1,268 @@
+# -*- coding: utf-8 -*-
+r"""Turns the measured artifacts into the files the paper figures draw from.
+
+The pipeline measures; the notebook plots; this is the join between them, and
+it exists because that join was previously a set of hand-maintained files
+with no generator.  Two of them --- ``tests/speed_accuracy.json`` and
+``tests/timing_other_codes.json`` --- carried timings of other people's codes
+with no recorded run behind them, and both embodied the errors NuFast's
+author wrote in about: no exact-eigenvalue point anywhere, GLoBES and Prob3++
+recorded as exposing no precision dial when each exposes nine settings, and a
+NuFast-LBL N_Newton=2 error of 8.3e-12 that was our unit conversion rather
+than his algorithm.  Regenerating them from artifacts is what stops that
+happening again: every number now has a run, a manifest hash and a date.
+
+The shapes here are the ones the notebook already plots.  That is deliberate:
+the plotting code is tuned --- axis limits, annotation offsets, a colour per
+code held across three figures --- and rewriting it to a new shape would risk
+the figures for no gain.  So the data moves and the drawing does not.
+
+Written by ``run_all.py --join``; also runnable alone for a dry rehearsal::
+
+    python tests/bench/emit_figures.py
+"""
+
+import json
+import os
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(os.path.dirname(HERE))
+sys.path.insert(0, HERE)
+
+STAMP = ('Regenerated from measured artifacts by tests/bench/emit_figures.py. '
+         'Every point pairs a timed measurement with the accuracy the SAME '
+         'setting reached against that code\'s own 50-digit reference, in '
+         'that code\'s own conventions, on the continuous PREM.')
+
+
+def _tol(knob):
+    r"""A tolerance dial's label, in the form the annotations use."""
+    return '%.0e' % (10.0**-abs(knob))
+
+
+#: How each code's knob reads on the figure, per grid.  A count is printed as
+#: a count and a tolerance as a tolerance, because the annotation lookups key
+#: on these strings and a reader has to recognise them.
+def label_for(code, knob):
+    if code == 'nuSQuIDS' or code == 'nuCraft':
+        return _tol(knob)
+    if code == 'NuOscProbExact' and knob < 0:
+        return _tol(knob)
+    return str(knob)
+
+
+def load_accuracy():
+    out = {}
+    for grid, name in (('CONST/60E', 'accuracy_const.json'),
+                       ('CHORD/12x1', 'accuracy_chord.json'),
+                       ('CHORD/12x1|layers', 'accuracy_discretisation.json')):
+        path = os.path.join(HERE, name)
+        if os.path.exists(path):
+            out[grid] = json.load(open(path))
+    return out
+
+
+def timed(outdir, name):
+    path = os.path.join(outdir, name)
+    if not os.path.exists(path):
+        return None
+    try:
+        d = json.load(open(path))
+    except (ValueError, OSError):
+        return None
+    return d if (d.get('us_per_point') or {}).get('mean') else None
+
+
+def mark_best(points):
+    r"""Flags, per distinct accuracy, the fastest point that reached it.
+
+    On constant density four of the codes have an inert dial: every setting
+    lands on the same accuracy because there is no profile to subdivide, so
+    the sweep is a stack of points at one height.  Drawing all of them says
+    nothing and drawing the slowest would misreport the code; the fastest at
+    a given accuracy is the one a user would have.
+    """
+    best = {}
+    for q in points:
+        key = None if q['max_abs_error'] is None else '%.6e' % q['max_abs_error']
+        if key not in best or q['us_per_probability'] < best[key]['us_per_probability']:
+            best[key] = q
+    for q in points:
+        q['best_at_this_accuracy'] = q is best.get(
+            None if q['max_abs_error'] is None else '%.6e' % q['max_abs_error'])
+    return points
+
+
+def const_plane(cells_fn, artifact_name, outdir, acc):
+    r"""Fig. 10: speed against accuracy at constant density."""
+    series = {}
+    for cell in cells_fn():
+        if not (cell.get('plane') and cell['grid'] == 'CONST/60E'):
+            continue
+        d = timed(outdir, artifact_name(cell))
+        if d is None:
+            continue
+        code, knob = cell['code'], cell['knob']
+        name = code + (' (1 thread)' if cell.get('threads') == 1 else '')
+        entry = (acc.get('CONST/60E', {}).get('series', {}).get(code, {})
+                 .get('by_knob', {}).get(str(knob), {}))
+        series.setdefault(name, {
+            'name': name, 'code': code,
+            'dial': 'N_Newton' if code.startswith('NuFast') else
+                    ('solver tolerance' if code == 'nuSQuIDS' else
+                     'n_shells' if code in ('Prob3++', 'GLoBES') else
+                     'n_slabs_per_segment | rtol'),
+            'threads': cell.get('threads'), 'points': []})['points'].append({
+                'label': label_for(code, knob), 'knob': knob,
+                'us_per_probability': d['us_per_point']['mean'],
+                'us_sd': d['us_per_point']['sd'],
+                'block_cv': (d['us_per_point']['sd']/d['us_per_point']['mean']
+                             if d['us_per_point']['mean'] else None),
+                'max_abs_error': entry.get('max_abs_deviation')})
+    for s in series.values():
+        s['points'].sort(key=lambda q: q['knob'])
+        mark_best(s['points'])
+    return {'generated_by': 'tests/bench/emit_figures.py',
+            'note': 'Constant density, L = 1300 km, rho = 3 g/cm^3, three '
+                    'flavors, nu_mu row. ' + STAMP,
+            'series': [series[k] for k in sorted(series)]}
+
+
+#: Fig. 11 draws each code against how finely it cuts the PREM profile.  For
+#: three of them the shell or slab count IS the precision knob; NuFast-Earth
+#: dials eigenvalue precision instead and takes its layer count separately,
+#: so its curve comes from the discretisation cells and the layer sweep.
+EARTH_FROM_LAYERS = {'NuFast-Earth': -1}
+
+
+def earth_plane(cells_fn, artifact_name, outdir, acc):
+    r"""Fig. 11, three flavors: speed against accuracy through the Earth."""
+    series = {}
+
+    def add(name, code, dial, label, knob, d, err):
+        series.setdefault(name, {'name': name, 'code': code, 'dial': dial,
+                                 'points': []})['points'].append({
+            'label': label, 'knob': knob,
+            'us_per_probability': d['us_per_point']['mean'],
+            'us_sd': d['us_per_point']['sd'],
+            'max_abs_error': err})
+
+    for cell in cells_fn():
+        if cell['grid'] != 'CHORD/12x1' or not cell.get('timed'):
+            continue
+        if cell.get('threads') == 1:
+            continue
+        code = cell['code']
+        d = timed(outdir, artifact_name(cell))
+        if d is None:
+            continue
+
+        if cell.get('sweep') == 'discretisation' and code in EARTH_FROM_LAYERS:
+            layers = cell.get('n_layers')
+            err = (acc.get('CHORD/12x1|layers', {}).get('series', {})
+                   .get(code, {}).get('by_knob', {})
+                   .get(str(layers), {}).get('max_abs_deviation'))
+            add(code, code, 'n_layers', str(layers), layers, d, err)
+            continue
+        if not cell.get('plane') or code in EARTH_FROM_LAYERS:
+            continue
+
+        knob = cell['knob']
+        err = (acc.get('CHORD/12x1', {}).get('series', {}).get(code, {})
+               .get('by_knob', {}).get(str(knob), {}).get('max_abs_deviation'))
+        # This library turns two different dials, and the figure has always
+        # drawn them as two curves: the slab count is the code told what to
+        # do, the tolerance is the same code asked to find out.
+        if code == 'NuOscProbExact' and knob < 0:
+            add('NuOscProbExact (tolerance)', code, 'rtol',
+                label_for(code, knob), knob, d, err)
+        else:
+            add(code, code,
+                'solver tolerance' if code == 'nuSQuIDS' else
+                'numPrec' if code == 'nuCraft' else
+                'eigenvalue precision' if code.startswith('NuFast') else
+                'n_shells' if code in ('Prob3++', 'GLoBES') else
+                'n_slabs_per_segment',
+                label_for(code, knob), knob, d, err)
+
+    for s in series.values():
+        s['points'].sort(key=lambda q: q['knob'])
+        mark_best(s['points'])
+    return {'generated_by': 'tests/bench/emit_figures.py',
+            'note': 'PREM, cos(theta_z) = -0.9, E = 3-40 GeV, three flavors, '
+                    'nu_mu row. ' + STAMP,
+            'series': [series[k] for k in sorted(series)]}
+
+
+def throughput(cells_fn, artifact_name, outdir):
+    r"""Fig. 8: cost per probability against how many are asked for at once.
+
+    The old file behind this figure recorded NuFast-LBL unbatched, and the
+    figure's own text said that neither it, GLoBES nor Prob3++ batches at
+    all.  That was true of GLoBES and Prob3++ and false of NuFast-LBL, which
+    has taken a vector of energies since v2.0.0 --- objection LBL-1.  Here it
+    is driven through that entry point, and the looped control is measured
+    beside it rather than assumed, so what batching is worth is a number in
+    the figure instead of a claim about it.
+    """
+    series = {}
+    for cell in cells_fn():
+        if cell.get('kind') != 'throughput':
+            continue
+        d = timed(outdir, artifact_name(cell))
+        if d is None:
+            continue
+        name = cell['code'] + (' (looped)' if cell.get('loop') else '')
+        n = cell.get('n_energies') or d['n_points']
+        entry = series.setdefault(name, {
+            'code': cell['code'], 'knob': cell['knob'],
+            # From the code's OWN reported capability, not from how this
+            # cell was driven.  Deriving it from the --loop flag marked
+            # GLoBES and Prob3++ as batching, which they do not: the
+            # harness loops over energies for them because neither exposes
+            # an entry point that takes more than one.
+            'batched': bool((d.get('batched') or {}).get('energy'))
+                       and not cell.get('loop'),
+            'batch_symbol': (d.get('batched') or {}).get('symbol', ''),
+            'sizes': [], 'seconds': [], 'us_per_probability': []})
+        entry['sizes'].append(n)
+        entry['seconds'].append(d['us_per_point']['mean']*1e-6*n)
+        entry['us_per_probability'].append(d['us_per_point']['mean'])
+    for s in series.values():
+        order = sorted(range(len(s['sizes'])), key=lambda i: s['sizes'][i])
+        for k in ('sizes', 'seconds', 'us_per_probability'):
+            s[k] = [s[k][i] for i in order]
+    return {'generated_by': 'tests/bench/emit_figures.py',
+            'note': 'One request for N energies at constant density, every '
+                    'repetition cold. ' + STAMP,
+            'series': series}
+
+
+def main(outdir=None):
+    import run_all
+    outdir = outdir or os.path.join(HERE, 'artifacts')
+    acc = load_accuracy()
+    written = []
+    for path, payload in (
+            (os.path.join(ROOT, 'tests', 'speed_accuracy.json'),
+             const_plane(run_all.cells, run_all.artifact_name, outdir, acc)),
+            (os.path.join(HERE, 'earth_plane.json'),
+             earth_plane(run_all.cells, run_all.artifact_name, outdir, acc)),
+            (os.path.join(ROOT, 'tests', 'timing_other_codes.json'),
+             throughput(run_all.cells, run_all.artifact_name, outdir))):
+        payload['manifest_sha256'] = run_all.manifest_sha()
+        with open(path, 'w') as handle:
+            json.dump(payload, handle, indent=1, sort_keys=True)
+            handle.write('\n')
+        n = (len(payload.get('series', []))
+             if isinstance(payload.get('series'), list)
+             else len(payload.get('series', {})))
+        written.append((os.path.relpath(path, ROOT), n))
+    for rel, n in written:
+        print('  %-44s %2d series' % (rel, n))
+    return written
+
+
+if __name__ == '__main__':
+    main()

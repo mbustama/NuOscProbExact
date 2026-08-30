@@ -1,0 +1,26 @@
+{
+  "code": "nuSQuIDS",
+  "protocol": {
+    "name": "throughput",
+    "grid": "CONST/N-sweep"
+  },
+  "knob": {
+    "log10_solver_tolerance": 12
+  },
+  "conventions": "own-reference",
+  "profile_basis": "continuous",
+  "environment": {},
+  "n_points": 1,
+  "us_per_point": {
+    "mean": 24.741486954564003,
+    "sd": 1.1828257312352832,
+    "min": 23.175787303149022,
+    "n": 30
+  },
+  "batched": {
+    "energy": true,
+    "zenith": false,
+    "symbol": "nuSQUIDS(E vector, ...) multiple-energy constructor + EvolveState"
+  },
+  "checksum": 39607.11235583388
+}

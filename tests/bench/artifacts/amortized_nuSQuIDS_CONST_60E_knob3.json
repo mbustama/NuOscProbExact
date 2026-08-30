@@ -1,0 +1,26 @@
+{
+  "code": "nuSQuIDS",
+  "protocol": {
+    "name": "amortized",
+    "grid": "CONST/60E"
+  },
+  "knob": {
+    "log10_solver_tolerance": 3
+  },
+  "conventions": "own-reference",
+  "profile_basis": "continuous",
+  "environment": {},
+  "n_points": 60,
+  "us_per_point": {
+    "mean": 18.453815638915533,
+    "sd": 1.095787374294167,
+    "min": 17.059308709576726,
+    "n": 30
+  },
+  "batched": {
+    "energy": true,
+    "zenith": false,
+    "symbol": "nuSQUIDS(E vector, ...) multiple-energy constructor + EvolveState"
+  },
+  "checksum": 26442.51086902988
+}

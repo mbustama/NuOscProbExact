@@ -1,0 +1,26 @@
+{
+  "code": "nuCraft",
+  "protocol": {
+    "name": "amortized",
+    "grid": "CHORD/12x1"
+  },
+  "knob": {
+    "log10_numPrec": 10
+  },
+  "conventions": "own-reference",
+  "profile_basis": "continuous",
+  "environment": {},
+  "n_points": 12,
+  "us_per_point": {
+    "mean": 88641.09341823496,
+    "sd": 2328.7806774402006,
+    "min": 86973.36437335859,
+    "n": 30
+  },
+  "batched": {
+    "energy": false,
+    "zenith": false,
+    "symbol": "interface-only -- CalcWeights takes a particle list but loops over it internally"
+  },
+  "checksum": 3721.7335082001923
+}

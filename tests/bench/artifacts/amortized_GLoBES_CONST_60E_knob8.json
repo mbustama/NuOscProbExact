@@ -1,0 +1,16 @@
+{
+  "code": "GLoBES",
+  "protocol": {"name": "amortized", "grid": "CONST/60E"},
+  "knob": {"n_shells": 8},
+  "n_points": 60,
+  "us_per_point": {"mean": 0.37302, "sd": 0.0128258, "min": 0.345768, "n": 30},
+  "n_layers": 256,
+  "shells_total": 1024,
+  "conventions": "own-reference",
+  "profile_basis": "continuous",
+  "looped": false,
+  "shell_density": "midpoint",
+  "manifest_sha256": "9f6cd0bb1f90017eaed0ba9818d47438b31fb575ede4a8bbec1ceabb9ab93db8",
+  "batched": {"energy": false, "zenith": false, "symbol": "none"},
+  "checksum": 26442.512573496286
+}

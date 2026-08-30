@@ -1,0 +1,16 @@
+{
+  "code": "NuFast-LBL",
+  "protocol": {"name": "throughput", "grid": "CONST/N-sweep"},
+  "knob": {"N_Newton": -1},
+  "n_points": 1,
+  "us_per_point": {"mean": 0.103057, "sd": 0.0026697, "min": 0.0985762, "n": 30},
+  "n_layers": 256,
+  "shells_total": 1024,
+  "conventions": "own-reference",
+  "profile_basis": "continuous",
+  "looped": false,
+  "shell_density": "midpoint",
+  "manifest_sha256": "9f6cd0bb1f90017eaed0ba9818d47438b31fb575ede4a8bbec1ceabb9ab93db8",
+  "batched": {"energy": true, "zenith": false, "symbol": "NuFast::Probability_Matter_LBL(double,double,double,double,double,double,double,const std::vector<double>&,double,int,std::vector<std::array<std::array<double,3>,3>>&)"},
+  "checksum": 11411978.726292009
+}

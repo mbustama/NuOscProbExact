@@ -3084,32 +3084,53 @@ with open(os.path.join('..', 'tests', 'speed_accuracy.json')) as handle:
 # batched-plus-kernel point: the other two routes are what the performance
 # figure is for, and here they would be three labels on one horizontal line.
 STYLE = {"NuOscProbExact": ("-o", "C3", 4.0),
+         "NuOscProbExact (1 thread)": ("--o", "C3", 3.2),
          "nuSQuIDS": ("-v", "C2", 3.6),
          "NuFast-LBL": ("-D", "C4", 3.2),
+         "NuFast-Earth": ("-X", "C7", 3.8),
          "GLoBES": ("-*", "C6", 6.0),
-         "Prob3++": ("-P", "C5", 4.4),
-         "Second-order expansion": ("-s", "C1", 3.6)}
-DRAWN = {"NuOscProbExact": ("Array + kernel",)}
+         "Prob3++": ("-P", "C5", 4.4)}
 
+# Only the fastest point at each accuracy is drawn.  Four of these codes
+# have an INERT dial here: at constant density there is no profile to
+# subdivide, so every shell or slab setting returns the same answer and the
+# sweep is a stack of points at one height.  Drawing all of them would say
+# nothing; drawing the slowest would report the code as slower than anyone
+# would ever run it.  NuFast-LBL and NuFast-Earth keep their curves, since
+# their dial is the eigenvalue solve and does move the accuracy.
 fig, ax = plt.subplots(figsize=FIGSIZE_SQUARE)
+anchor = {}
 for series in sa["series"]:
+    if series["name"] not in STYLE:
+        continue
     marker, colour, size = STYLE[series["name"]]
-    keep = DRAWN.get(series["name"])
     points = [q for q in series["points"]
-              if keep is None or q["label"] in keep]
+              if q.get("best_at_this_accuracy", True)
+              and q["max_abs_error"] is not None]
+    if not points:
+        continue
     t = [q["us_per_probability"] for q in points]
     e = [q["max_abs_error"] for q in points]
     kw = dict(ms=size, color=colour, label=series["name"], zorder=4)
-    if series["name"] == "NuOscProbExact":
+    if series["name"].startswith("NuOscProbExact"):
         kw.update(mfc="white", mew=1.0, zorder=5)
     ax.loglog(t, e, marker, **kw)
+    for q in points:
+        anchor[(series["name"], q["label"])] = (
+            q["us_per_probability"], q["max_abs_error"], colour)
 
 # What is varied along each curve, at both ends where there are two.
-for lab, x, y, dx, dy, c, ha in (
-        (r"tol $10^{-4}$", 51.61, 1.83e-04, 0, 7, "C2", "center"),
-        (r"$10^{-12}$", 189.37, 1.89e-08, 7, -1, "C2", "left"),
-        (r"$N_{\rm Newton} = 0$", 0.044, 1.53e-05, 7, -2, "C4", "left"),
-        (r"$3$", 0.066, 8.30e-12, 7, -2, "C4", "left")):
+# Anchored to the measured points rather than to typed coordinates: the
+# previous version of this figure carried four pairs of numbers copied from
+# a run nobody could reproduce, and one of them -- NuFast-LBL at
+# N_Newton = 3 -- said 8.3e-12 where the measurement says 7.6e-16.
+for (name, label), lab, dx, dy, ha in (
+        (("NuFast-LBL", "0"), r"$N_{\rm Newton} = 0$", 7, -2, "left"),
+        (("NuFast-LBL", "-1"), "exact", 7, -2, "left"),
+        (("NuFast-Earth", "-1"), "exact", -6, 5, "right")):
+    if (name, label) not in anchor:
+        continue
+    x, y, c = anchor[(name, label)]
     ax.annotate(lab, xy=(x, y), xytext=(dx, dy), textcoords="offset points",
                 fontsize=5.2, color=c, ha=ha)
 
@@ -3207,8 +3228,15 @@ The external numbers are frozen in `tests/prem_speed_accuracy.json`.'''),
 #   figure that no installation of nuCraft returns.
 # ---------------------------------------------------------------------------
 
+# The 3+1 panel only: four flavors are measured by tests/prem_scan.py and
+# by nothing else.  The three-flavor panel below comes from the benchmark
+# pipeline instead, and the two are kept in separate files on purpose --
+# they are different measurement sets, against different references, and a
+# single file holding both invites them being read as one.
 with open(os.path.join('..', 'tests', 'prem_speed_accuracy.json')) as handle:
     prem = json.load(handle)
+with open(os.path.join('..', 'tests', 'bench', 'earth_plane.json')) as handle:
+    earth_plane_data = json.load(handle)
 
 # The colours and markers of the constant-density plane, so that a code
 # keeps its identity between the two figures.
@@ -3293,15 +3321,15 @@ def prem_plane(panel, annotations, subtitle, xlim, ylim, outfile,
 
 
 prem_plane(
-    prem["three_flavor"],
-    [(("NuOscProbExact, rtol", "3e+00"), r"rtol $=3$", 7, -2, "left"),
+    earth_plane_data,
+    [(("NuOscProbExact, rtol", "1e-03"), r"rtol $=10^{-3}$", 7, -2, "left"),
      (("NuOscProbExact, rtol", "1e-05"), r"$10^{-5}$", 5, -6, "left"),
      ((r"NuOscProbExact, $N_{\rm slabs}$", "1"), r"$N_{\rm slabs}=1$",
       2, 7, "left"),
      ((r"NuOscProbExact, $N_{\rm slabs}$", "256"), "256", -5, -4, "right"),
      (("nuSQuIDS", "1e-03"), r"tol $10^{-3}$", 6, -1, "left"),
      (("nuSQuIDS", "1e-12"), r"$10^{-12}$", 7, -1, "left"),
-     (("NuFast-Earth", "1"), r"$N_{\rm shells}=1$", 2, 3, "left"),
+     (("NuFast-Earth", "1"), r"$N_{\rm layers}=1$", 2, 3, "left"),
      (("NuFast-Earth", "256"), "256", 4, 4, "left")],
     "PREM, three flavors:  " + r"$\cos\theta_z = -0.9$," + "\n"
     r"$E = 3$--$40$ GeV,  $L = 11468$ km",
@@ -3415,23 +3443,31 @@ for col, style, size, lab in (
     axt.loglog(rows[:, 0], rows[:, col]*1e3, style, label=lab, **kw)
     ax.loglog(rows[:, 0], rows[:, col]/rows[:, 0]*1e6, style, **kw)
 
-# The external codes.  None of them batches: GLoBES, Prob3++ and NuFast-LBL
-# take one energy per call, so their cost per probability is flat in N, and
-# that flatness is the point of the lower panel.  nuSQuIDS has a
-# multiple-energy mode and still does not fall, because what it amortises is
-# the solver setup and not the integration.
+# The external codes.  GLoBES and Prob3++ take one energy per call, so
+# their cost per probability is flat in N, and that flatness is what the
+# lower panel is for.  NuFast-LBL is NOT among them: it has taken a vector
+# of energies since v2.0.0, and the earlier version of this figure timed it
+# one energy at a time and then said in this comment that it could not do
+# otherwise.  Both curves are drawn now -- the batched entry point and the
+# same code called in a loop -- so what batching is worth to it is measured
+# here rather than asserted.  nuSQuIDS has a multiple-energy mode and still
+# does not fall, because what it amortises is the solver setup and not the
+# integration.
 for key, style, col, size, lab in (
-        ("nusquids", "-v", "C2", 2.6, "nuSQuIDS"),
-        ("nufast_lbl", "-D", "C4", 2.4,
-         r"NuFast-LBL, $N_{\rm Newton} = 0$"),
-        ("nufast_lbl_n2", "--D", "C4", 2.4,
-         r"NuFast-LBL, $N_{\rm Newton} = 2$"),
-        ("globes", "-*", "C6", 4.4, "GLoBES"),
-        ("prob3pp", "-P", "C5", 3.2, "Prob3++")):
-    n = np.array(other[key]["sizes"], dtype=float)
-    t = np.array(other[key]["seconds"])
+        ("nuSQuIDS", "-v", "C2", 2.6, "nuSQuIDS"),
+        ("NuFast-LBL", "-D", "C4", 2.4,
+         r"NuFast-LBL, exact, batched"),
+        ("NuFast-LBL (looped)", "--D", "C4", 2.4,
+         r"NuFast-LBL, exact, one energy per call"),
+        ("NuFast-Earth", "-X", "C7", 3.0, "NuFast-Earth, exact"),
+        ("GLoBES", "-*", "C6", 4.4, "GLoBES"),
+        ("Prob3++", "-P", "C5", 3.2, "Prob3++")):
+    if key not in other["series"]:
+        continue
+    n = np.array(other["series"][key]["sizes"], dtype=float)
+    t = np.array(other["series"][key]["seconds"])
     kw = dict(ms=size, color=col)
-    if key == "nufast_lbl_n2":
+    if key.endswith("(looped)"):
         kw.update(mfc="white", mew=0.8)
     axt.loglog(n, t*1e3, style, label=lab, **kw)
     ax.loglog(n, t/n*1e6, style, **kw)

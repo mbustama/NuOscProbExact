@@ -464,6 +464,12 @@ def main(argv=None):
         n = sum(len(v['points']) for v in plane['series'].values())
         print('%d series, %d points -> %s'
               % (len(plane['series']), n, os.path.relpath(path, ROOT)))
+        # And the three files the paper's figures actually draw from.  The
+        # plane above is the whole measurement; these are its projections in
+        # the shapes the notebook plots, regenerated here so that no figure
+        # is fed by a file with no run behind it.
+        import emit_figures
+        emit_figures.main(args.outdir)
         return
 
     matrix = cells(args.accuracy_only, args.speed_only)

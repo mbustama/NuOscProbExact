@@ -1,0 +1,33 @@
+{
+  "code": "NuOscProbExact",
+  "protocol": {
+    "name": "amortized",
+    "grid": "CHORD/12x1"
+  },
+  "knob": {
+    "n_slabs_per_segment(knob>0) | rtol=10^knob(knob<0)": 16
+  },
+  "conventions": "own-reference",
+  "profile_basis": "continuous",
+  "environment": {
+    "have_numba": true,
+    "use_numba": true,
+    "available": true,
+    "kernel_entered": "earth_chords_3nu_kernel",
+    "batched_energy_and_zenith": true,
+    "numba_threads": 1
+  },
+  "n_points": 12,
+  "us_per_point": {
+    "mean": 24.267703010183244,
+    "sd": 0.7813686054410723,
+    "min": 21.667143252367772,
+    "n": 30
+  },
+  "batched": {
+    "energy": true,
+    "zenith": true,
+    "symbol": "earth.probabilities_3nu_earth(E array, costhz array) / oscprob3nu.probabilities_3nu(H stack)"
+  },
+  "checksum": 3731.7632091203136
+}

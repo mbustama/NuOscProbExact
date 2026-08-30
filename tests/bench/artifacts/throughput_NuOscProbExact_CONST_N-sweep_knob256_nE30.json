@@ -1,0 +1,33 @@
+{
+  "code": "NuOscProbExact",
+  "protocol": {
+    "name": "throughput",
+    "grid": "CONST/N-sweep"
+  },
+  "knob": {
+    "n_slabs_per_segment(knob>0) | rtol=10^knob(knob<0)": 256
+  },
+  "conventions": "own-reference",
+  "profile_basis": "continuous",
+  "environment": {
+    "have_numba": true,
+    "use_numba": true,
+    "available": true,
+    "kernel_entered": "probabilities_3nu_kernel",
+    "batched_energy_and_zenith": false,
+    "numba_threads": 12
+  },
+  "n_points": 30,
+  "us_per_point": {
+    "mean": 1.855061254501624,
+    "sd": 0.012856387335340988,
+    "min": 1.830093387000087,
+    "n": 30
+  },
+  "batched": {
+    "energy": true,
+    "zenith": true,
+    "symbol": "earth.probabilities_3nu_earth(E array, costhz array) / oscprob3nu.probabilities_3nu(H stack)"
+  },
+  "checksum": 603960.8811104064
+}

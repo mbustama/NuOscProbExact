@@ -207,6 +207,9 @@ TREE = [
     ('tests/', 'Regression suite, run with pytest'),
     ('tests/conftest.py', 'Shared fixtures and path setup'),
     ('tests/bench/', 'Fair-comparison benchmark pipeline'),
+    ('tests/bench/artifacts/',
+     'One JSON per measured cell, written by the run and replaced by '
+     'the next one'),
     ('tests/bench/manifest.json',
      'Pinned versions, build profiles, thread policy, capabilities'),
     ('tests/bench/README.md',
@@ -253,10 +256,21 @@ TREE = [
      'Every code against its own reference, over every precision knob'),
     ('tests/bench/run_all.py',
      'The run matrix: which code, which grid, which protocol, which knob'),
+    ('tests/bench/check_neutrality.py',
+     'Checks that a harness change moved the spread and not the speed'),
+    ('tests/bench/emit_figures.py',
+     'Turns the measured artifacts into the files the paper figures draw'),
     ('tests/bench/accuracy_const.json',
      'Accuracy of every code on the constant-density grid, per knob'),
     ('tests/bench/accuracy_chord.json',
      'Accuracy of every code on the Earth chord, per knob'),
+    ('tests/bench/accuracy_discretisation.json',
+     'Accuracy against the layer count, for the code whose precision knob '
+     'is something else'),
+    ('tests/bench/earth_plane.json',
+     'The Earth speed-accuracy plane, three flavors, for the figure'),
+    ('tests/bench/speed_accuracy_plane.json',
+     'Every timed point paired with the accuracy its own setting reached'),
     ('tests/bench/reference_audit.json',
      'What that audit measured; the notebook renders it, never types it'),
     ('tests/test_bench_pipeline.py',
@@ -453,10 +467,20 @@ def write_trees():
     return changed
 
 
+#: Directories whose contents are generated rather than authored, and are
+#: therefore covered by the directory entry instead of file by file.  The
+#: benchmark writes one artifact per measured cell -- two hundred and some,
+#: changing with every run and with every knob added to the matrix -- and
+#: listing them individually would mean editing this table after each run
+#: to describe files nobody reads one at a time.
+BULK = ('tests/bench/artifacts/',)
+
+
 def test_tree_matches_git():
     r"""The file entries in `TREE` are exactly the tracked files."""
-    tracked = set(subprocess.check_output(
-        ['git', 'ls-files'], cwd=ROOT).decode().split())
+    tracked = {path for path in subprocess.check_output(
+        ['git', 'ls-files'], cwd=ROOT).decode().split()
+        if not path.startswith(BULK)}
     listed = {path for path, _ in TREE if not path.endswith('/')}
 
     missing = sorted(tracked - listed)

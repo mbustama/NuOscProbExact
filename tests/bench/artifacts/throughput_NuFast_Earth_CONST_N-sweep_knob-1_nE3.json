@@ -1,0 +1,16 @@
+{
+  "code": "NuFast-Earth",
+  "protocol": {"name": "throughput", "grid": "CONST/N-sweep"},
+  "knob": {"eigenvalue_precision": -1},
+  "n_points": 3,
+  "us_per_point": {"mean": 0.19651, "sd": 0.000665083, "min": 0.195195, "n": 30},
+  "n_layers": 256,
+  "shells_total": 1024,
+  "conventions": "own-reference",
+  "profile_basis": "continuous",
+  "looped": false,
+  "shell_density": "midpoint",
+  "manifest_sha256": "9f6cd0bb1f90017eaed0ba9818d47438b31fb575ede4a8bbec1ceabb9ab93db8",
+  "batched": {"energy": true, "zenith": true, "symbol": "Probability_Engine::Set_Spectra + Get_Probabilities"},
+  "checksum": 6681201.1761994865
+}

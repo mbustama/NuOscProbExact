@@ -1,0 +1,16 @@
+{
+  "code": "GLoBES",
+  "protocol": {"name": "throughput", "grid": "CONST/N-sweep"},
+  "knob": {"n_shells": 256},
+  "n_points": 30,
+  "us_per_point": {"mean": 0.394702, "sd": 0.00416316, "min": 0.38744, "n": 30},
+  "n_layers": 256,
+  "shells_total": 1024,
+  "conventions": "own-reference",
+  "profile_basis": "continuous",
+  "looped": false,
+  "shell_density": "midpoint",
+  "manifest_sha256": "9f6cd0bb1f90017eaed0ba9818d47438b31fb575ede4a8bbec1ceabb9ab93db8",
+  "batched": {"energy": false, "zenith": false, "symbol": "none"},
+  "checksum": 3017480.7182346932
+}

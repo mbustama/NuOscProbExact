@@ -310,6 +310,7 @@ NuOscProbExact/
 └── tests/                           # Regression suite, run with pytest
     ├── conftest.py                  # Shared fixtures and path setup
     ├── bench/                       # Fair-comparison benchmark pipeline
+    │   ├── artifacts/               # One JSON per measured cell, written by the run and replaced by the next one
     │   ├── manifest.json            # Pinned versions, build profiles, thread policy, capabilities
     │   ├── README.md                # Entry point: state of play and where each decision is recorded
     │   ├── ADVERSARIAL.md           # What the adversarial check must try to break
@@ -334,8 +335,13 @@ NuOscProbExact/
     │   ├── audit_reference.py       # Measures whether each reference matches the code it judges
     │   ├── sweep_accuracy.py        # Every code against its own reference, over every precision knob
     │   ├── run_all.py               # The run matrix: which code, which grid, which protocol, which knob
+    │   ├── check_neutrality.py      # Checks that a harness change moved the spread and not the speed
+    │   ├── emit_figures.py          # Turns the measured artifacts into the files the paper figures draw
     │   ├── accuracy_const.json      # Accuracy of every code on the constant-density grid, per knob
     │   ├── accuracy_chord.json      # Accuracy of every code on the Earth chord, per knob
+    │   ├── accuracy_discretisation.json  # Accuracy against the layer count, for the code whose precision knob is something else
+    │   ├── earth_plane.json         # The Earth speed-accuracy plane, three flavors, for the figure
+    │   ├── speed_accuracy_plane.json  # Every timed point paired with the accuracy its own setting reached
     │   └── reference_audit.json     # What that audit measured; the notebook renders it, never types it
     ├── test_bench_pipeline.py       # The benchmark pipeline's fairness invariants
     ├── test_bench_behaviour.py      # What an adapter does, not where its constants came from

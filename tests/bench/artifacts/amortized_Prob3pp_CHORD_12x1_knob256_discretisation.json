@@ -1,0 +1,16 @@
+{
+  "code": "Prob3++",
+  "protocol": {"name": "amortized", "grid": "CHORD/12x1"},
+  "knob": {"n_shells": 256},
+  "n_points": 12,
+  "us_per_point": {"mean": 556.056, "sd": 2.01928, "min": 552.528, "n": 30},
+  "n_layers": 256,
+  "shells_total": 1024,
+  "conventions": "own-reference",
+  "profile_basis": "continuous",
+  "looped": false,
+  "shell_density": "midpoint",
+  "manifest_sha256": "9f6cd0bb1f90017eaed0ba9818d47438b31fb575ede4a8bbec1ceabb9ab93db8",
+  "batched": {"energy": false, "zenith": false, "symbol": "none"},
+  "checksum": 3721.337401887899
+}

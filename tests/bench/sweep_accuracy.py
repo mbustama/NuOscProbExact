@@ -156,7 +156,7 @@ def reference_for(code, energy_gev, costhz, ye, cache, l_km=None,
     return row, error, False
 
 
-def probabilities(code, grid, knob, n_e, n_z):
+def probabilities(code, grid, knob, n_e, n_z, n_layers=0):
     r"""Runs the untimed accuracy protocol and returns the scored channel."""
     if code in COMPILED:
         cmd = [os.path.join(ROOT, '.bench-build', 'bin', COMPILED[code]),
@@ -164,6 +164,8 @@ def probabilities(code, grid, knob, n_e, n_z):
     else:
         cmd = [sys.executable, os.path.join(HERE, 'runner.py'), PYTHON[code],
                '--protocol', 'accuracy', '--grid', grid, '--knob', str(knob)]
+    if n_layers:
+        cmd += ['--n-layers', str(n_layers)]
     if n_e:
         cmd += ['--n-energies', str(n_e)]
     if n_z:
@@ -174,6 +176,21 @@ def probabilities(code, grid, knob, n_e, n_z):
     return json.loads(out.stdout)['probabilities']
 
 
+#: Codes whose PROFILE dial is separate from their precision dial.
+#:
+#: The Earth figure plots each code against how finely it cuts the PREM
+#: profile, because on a chord that is what dominates the error.  For
+#: Prob3++, GLoBES and this library the shell or slab count IS the
+#: precision knob, so :data:`KNOBS` already measured it.  NuFast-Earth is
+#: the exception: its knob is the eigenvalue precision, and its layer
+#: count is a separate argument, so without this its discretisation cells
+#: are timed against an accuracy that was never measured -- five points on
+#: a speed axis with nothing to plot them against.
+LAYER_SWEEP = {
+    'NuFast-Earth': {'knob': -1, 'layers': [1, 4, 16, 64, 256]},
+}
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument('--grid', default='CHORD/12x1')
@@ -181,6 +198,9 @@ def main(argv=None):
     ap.add_argument('--n-zenith', type=int, default=0)
     ap.add_argument('--codes', default='')
     ap.add_argument('--out', default=os.path.join(HERE, 'accuracy_sweep.json'))
+    ap.add_argument('--layers', action='store_true',
+                    help='sweep the PROFILE dial (n_layers) instead of the '
+                         'precision knob, for the codes in LAYER_SWEEP')
     args = ap.parse_args(argv)
 
     codes = ([c.strip() for c in args.codes.split(',') if c.strip()]
@@ -197,6 +217,7 @@ def main(argv=None):
         'generated_at': time.strftime('%Y-%m-%dT%H:%M:%S%z'),
         'grid': args.grid,
         'protocol': 'accuracy (untimed)',
+        'dial': 'n_layers' if args.layers else 'precision knob',
         'profile_basis': 'continuous',
         'ye': ye,
         'energies_gev': energies,
@@ -226,12 +247,26 @@ def main(argv=None):
                  'channels': ['numu->nue', 'numu->numu', 'numu->nutau'],
                  'reference': [[str(v) for v in row] for row in refs],
                  'by_knob': {}}
-        for knob in KNOBS[code]:
+        if args.layers:
+            spec = LAYER_SWEEP.get(code)
+            if not spec:
+                record['series'][code] = {
+                    'skipped': 'its profile dial IS its precision knob; the '
+                               'main sweep already measured it'}
+                print('%-16s skipped: profile dial is its precision knob'
+                      % code, flush=True)
+                continue
+            dials = [(spec['knob'], n) for n in spec['layers']]
+        else:
+            dials = [(k, 0) for k in KNOBS[code]]
+
+        for knob, n_layers in dials:
             probs = probabilities(code, args.grid, knob, args.n_energies,
-                                  args.n_zenith)
+                                  args.n_zenith, n_layers)
+            dial = str(n_layers) if args.layers else str(knob)
             if probs is None or len(probs) != 3*len(refs):
-                entry['by_knob'][str(knob)] = {'failed': True}
-                print('%-16s knob %-5s FAILED' % (code, knob), flush=True)
+                entry['by_knob'][dial] = {'failed': True}
+                print('%-16s dial %-5s FAILED' % (code, dial), flush=True)
                 continue
             from decimal import Decimal, getcontext
             getcontext().prec = 60
@@ -249,15 +284,15 @@ def main(argv=None):
                 name: [float(d) for d in dev[c::3]]
                 for c, name in enumerate(('numu->nue', 'numu->numu',
                                           'numu->nutau'))}
-            entry['by_knob'][str(knob)] = {
+            entry['by_knob'][dial] = {
                 'max_abs_deviation': float(max(dev)),
                 'median_abs_deviation': float(sorted(dev)[len(dev)//2]),
                 'max_by_channel': {k: max(v) for k, v in per_channel.items()},
                 'probabilities': probs,
             }
-            print('%-16s knob %-5s max %.3e  median %.3e'
-                  % (code, knob, float(max(dev)), float(sorted(dev)[len(dev)//2])),
-                  flush=True)
+            print('%-16s dial %-5s max %.3e  median %.3e'
+                  % (code, dial, float(max(dev)),
+                     float(sorted(dev)[len(dev)//2])), flush=True)
         record['series'][code] = entry
 
     with open(args.out, 'w') as handle:
