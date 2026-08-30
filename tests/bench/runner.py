@@ -10,12 +10,14 @@ convention.
 
 Same protocols, same statistics, same JSON shape as bench.hpp:
 
-* ``AMORTIZED`` -- the timed region is a delta_CP scan of ``--steps`` steps,
-  each step = configure(dcp) + evaluate(whole grid), preceded by one untimed
-  warm-up pass.  Everything invariant under the scan ran in ``setup()``,
-  before any clock.
+* ``AMORTIZED`` -- the timed region is a delta_CP scan, each step =
+  configure(dcp) + evaluate(whole grid).  The step count autoranges up from
+  ``--steps`` until the block lasts ``--min-block``, so the scan is finer on
+  a cheap code rather than shorter; the first pass is the untimed warm-up.
+  Everything invariant under the scan ran in ``setup()``, before any clock.
 * ``THROUGHPUT`` -- one request for the whole grid, autoranged to a block of
-  at least 0.05 s, repeated ``--samples`` times after one untimed warm-up.
+  at least ``--min-block``, repeated ``--samples`` times after one untimed
+  warm-up.
   ``reset()`` is called before every ``evaluate()``, because the repetition
   is measurement scaffold rather than a workload -- nobody asks the same
   question five thousand times against unchanged state -- and the mean is
@@ -157,25 +159,66 @@ def reduce_stats(values):
     return {'mean': mean, 'sd': sd, 'min': min(values), 'n': n}
 
 
-def amortized(driver, problem, samples, steps):
-    r"""The scan is the timed region; the mirror of bench.hpp's amortized."""
-    d0, dd = problem.dcp, 0.2/steps
+def block_samples(block, min_block, lo, hi):
+    r"""Same wall-clock budget for every cell; the mirror of bench.hpp's.
+
+    A cell cheap enough to have been autoranged gets `hi` blocks; one whose
+    single pass already outlasts the budget gets `lo`.  The rule reads the
+    clock and nothing else -- no code is named in it, so none can be
+    favoured by it.
+    """
+    if block <= 0.0:
+        return hi
+    return max(lo, min(hi, int(hi*min_block/block)))
+
+
+def amortized(driver, problem, samples, steps, min_block, max_samples):
+    r"""The scan is the timed region; the mirror of bench.hpp's amortized.
+
+    The step count autoranges until the timed region reaches `min_block`.  A
+    fixed count gave the cheapest cells a block of well under a millisecond,
+    and what came back was the clock's spread rather than the code's.
+
+    The scan covers the same delta_CP interval whatever the step count, so a
+    longer block is a finer scan and never a repeated one: no code is handed
+    the same delta twice, so none can look fast for having cached it.
+    """
+    d0 = problem.dcp
     sink = 0.0
-    for k in range(steps):            # untimed warm-up pass
-        driver.configure(d0 + k*dd)
-        sink += driver.evaluate()
-    per_point = []
-    for _ in range(samples):
+    total = steps if steps > 0 else 1
+    while True:                       # first pass doubles as the warm-up
+        dd = 0.2/total
         t0 = time.perf_counter()
-        for k in range(steps):
+        for k in range(total):
             driver.configure(d0 + k*dd)
             sink += driver.evaluate()
+        dt = time.perf_counter() - t0
+        if dt >= min_block or total > (1 << 24):
+            break
+        total = int(total*(min_block/dt)*1.25) + 1 if dt > 0.0 else total*8
+    n = block_samples(dt, min_block, samples, max_samples)
+    # The scan continues across blocks rather than restarting in each one, so
+    # the cell sweeps the interval exactly once and no delta_CP is evaluated
+    # twice.  Where one pass already outlasts a block -- nuCraft on the
+    # oscillogram -- a block holds one step, and restarting would time the
+    # same delta over and over.  See bench.hpp for the same reasoning.
+    dd = 0.2/(total*n)
+    step = 0
+    per_point = []
+    for _ in range(n):
+        t0 = time.perf_counter()
+        for _k in range(total):
+            driver.configure(d0 + step*dd)
+            sink += driver.evaluate()
+            step += 1
         t1 = time.perf_counter()
-        per_point.append((t1 - t0)/(steps*problem.points())*1.0e6)
-    return reduce_stats(per_point), sink
+        per_point.append((t1 - t0)/(total*problem.points())*1.0e6)
+    stats = reduce_stats(per_point)
+    stats['reps'] = total
+    return stats, sink
 
 
-def throughput(driver, problem, samples, min_block):
+def throughput(driver, problem, samples, min_block, max_samples):
     r"""One request for the whole grid, repeated; bench.hpp's throughput."""
     driver.configure(problem.dcp)
     driver.reset()
@@ -190,15 +233,18 @@ def throughput(driver, problem, samples, min_block):
         if dt >= min_block or reps > (1 << 24):
             break
         reps = int(reps*(min_block/dt)*1.25) + 1 if dt > 0.0 else reps*8
+    n = block_samples(dt, min_block, samples, max_samples)
     per_point = []
-    for _ in range(samples):
+    for _ in range(n):
         t0 = time.perf_counter()
         for _ in range(reps):
             driver.reset()
             sink += driver.evaluate()
         t1 = time.perf_counter()
         per_point.append((t1 - t0)/(float(reps)*problem.points())*1.0e6)
-    return reduce_stats(per_point), sink
+    stats = reduce_stats(per_point)
+    stats['reps'] = reps
+    return stats, sink
 
 
 def load_adapter(code):
@@ -233,7 +279,11 @@ def main(argv=None):
     ap.add_argument('--grid', default='CHORD/12x1')
     ap.add_argument('--knob', type=int, default=0)
     ap.add_argument('--samples', type=int, default=30)
-    ap.add_argument('--steps', type=int, default=25)
+    ap.add_argument('--steps', type=int, default=1)
+    ap.add_argument('--min-block', type=float, default=0.25,
+                    dest='min_block')
+    ap.add_argument('--max-samples', type=int, default=100,
+                    dest='max_samples')
     ap.add_argument('--n-energies', type=int, default=0)
     ap.add_argument('--n-zenith', type=int, default=0)
     ap.add_argument('--json', dest='out', default='')
@@ -272,9 +322,12 @@ def main(argv=None):
         return
 
     if args.protocol == 'throughput':
-        stats, sink = throughput(driver, problem, args.samples, 0.05)
+        stats, sink = throughput(driver, problem, args.samples,
+                                 args.min_block, args.max_samples)
     else:
-        stats, sink = amortized(driver, problem, args.samples, args.steps)
+        stats, sink = amortized(driver, problem, args.samples, args.steps,
+                                args.min_block, args.max_samples)
+    reps = stats.pop('reps', 0)
 
     record = {
         'code': driver.name,
@@ -286,6 +339,9 @@ def main(argv=None):
                         if hasattr(driver, 'environment') else {}),
         'n_points': problem.points(),
         'us_per_point': stats,
+        'timing': {'min_block_s': args.min_block, 'block_reps': reps,
+                   'block_seconds': stats['mean']*1e-6*reps*problem.points(),
+                   'samples': stats['n']},
         'batched': {'energy': bool(cap.get('batches_energy')),
                     'zenith': bool(cap.get('batches_zenith')),
                     'symbol': cap.get('batch_symbol', '')},

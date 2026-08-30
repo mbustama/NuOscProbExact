@@ -121,6 +121,11 @@ struct Problem {
 struct Stats {
     double mean = 0.0, sd = 0.0, min = 0.0;
     int    n    = 0;
+    // What the autorange settled on.  Reported because a timing whose block
+    // was too short to measure is not a slow code, and the only way a reader
+    // can tell those apart is to be told how long the timed region was.
+    int    reps        = 0;      // scan steps (amortized) or grid calls (throughput)
+    double block_s     = 0.0;    // seconds in one timed block
 };
 
 }  // namespace bench
@@ -162,43 +167,100 @@ inline double seconds(clk::time_point a, clk::time_point b) {
 // scan was hoisted into setup(), which ran before the clock started.  Adopted
 // from the NuFast-Earth author's own Atmospheric_Speed, so the definition of
 // "fair" here is his rather than ours.
-inline Stats amortized(const Problem &p, int samples, int steps, double *sink) {
-    const double d0 = p.dcp, dd = 0.2 / steps;
-    for (int k = 0; k < steps; ++k) {           // untimed warm-up pass
-        driver::configure(d0 + k * dd);
-        *sink += driver::evaluate();
+inline int block_samples(double block, double min_block, int lo, int hi) {
+    // Same wall-clock budget for every cell: hi blocks at the floor length.
+    // A cell cheap enough to be autoranged gets hi; one whose single pass
+    // already outlasts the budget gets lo.  The rule reads the clock and
+    // nothing else -- no code is named in it, so none can be favoured by it.
+    if (block <= 0.0) return hi;
+    int n = static_cast<int>(double(hi) * min_block / block);
+    return n < lo ? lo : (n > hi ? hi : n);
+}
+
+inline Stats amortized(const Problem &p, int samples_lo, int samples_hi,
+                       int steps, double min_block, double *sink) {
+    const double d0 = p.dcp;
+
+    // Autorange the scan until the timed region is long enough to measure.
+    // Fixed steps handed the cheapest codes a block of 90 microseconds --- a
+    // duration in which the clock's own resolution and one scheduler tick are
+    // not small corrections --- and those cells came back with a 35% spread
+    // that was the harness, not the code.
+    //
+    // The scan spans the same delta_CP interval however many steps it takes,
+    // so a longer block is a FINER scan and never a repeated one.  That is the
+    // point: no code is ever handed the same delta twice, so none can be made
+    // to look fast by caching a value it has already seen.  It also means the
+    // measured quantity is unchanged, since microseconds-per-point divides by
+    // the steps actually run.
+    int total = steps > 0 ? steps : 1;
+    double dt = 0.0;
+    for (;;) {                                  // first pass is the warm-up
+        const double dd = 0.2 / total;
+        auto t0 = clk::now();
+        for (int k = 0; k < total; ++k) {
+            driver::configure(d0 + k * dd);
+            *sink += driver::evaluate();
+        }
+        dt = seconds(t0, clk::now());
+        if (dt >= min_block || total > (1 << 24)) break;
+        total = dt > 0.0 ? static_cast<int>(total * (min_block / dt) * 1.25) + 1
+                         : total * 8;
     }
+
+    const int samples = block_samples(dt, min_block, samples_lo, samples_hi);
+
+    // The scan CONTINUES across blocks rather than restarting in each one.
+    // That matters where one pass over the grid already outlasts the block,
+    // so a block holds a single step: restarting would hand the code the
+    // same delta_CP in every block, and a code that cached on it would be
+    // timed doing nothing.  Advancing instead means the whole cell sweeps
+    // the interval exactly once and no delta is ever evaluated twice.
+    //
+    // It is also what lets the step floor be one.  A floor of twenty-five
+    // forced a 25-pass block on codes whose single pass takes a minute --
+    // nuCraft on the oscillogram would have spent twelve hours in this
+    // function -- and bought nothing, since a block that long is already
+    // far past the point where the clock is the limitation.
+    const double dd = 0.2 / (double(total) * samples);
+    long long step = 0;
     std::vector<double> per_point;
     per_point.reserve(samples);
     for (int s = 0; s < samples; ++s) {
         auto t0 = clk::now();
-        for (int k = 0; k < steps; ++k) {
-            driver::configure(d0 + k * dd);
+        for (int k = 0; k < total; ++k, ++step) {
+            driver::configure(d0 + step * dd);
             *sink += driver::evaluate();
         }
         auto t1 = clk::now();
-        per_point.push_back(seconds(t0, t1) / (steps * p.points()) * 1e6);
+        per_point.push_back(seconds(t0, t1) / (double(total) * p.points()) * 1e6);
     }
-    return reduce(per_point);
+    Stats st = reduce(per_point);
+    st.reps = total;
+    st.block_s = st.mean * 1e-6 * double(total) * p.points();
+    return st;
 }
 
 // THROUGHPUT: one request for the whole grid, repeated.  Batched codes make
 // one call; a code without a batched entry point loops inside evaluate(), in
 // its own language, and says so through capabilities().
-inline Stats throughput(const Problem &p, int samples, double min_block,
-                        double *sink) {
+inline Stats throughput(const Problem &p, int samples_lo, int samples_hi,
+                        double min_block, double *sink) {
     driver::configure(p.dcp);
     driver::reset();
     *sink += driver::evaluate();                // untimed warm-up
     int reps = 1;                               // autorange to a stable block
+    double block = 0.0;
     for (;;) {
         auto t0 = clk::now();
         for (int r = 0; r < reps; ++r) { driver::reset(); *sink += driver::evaluate(); }
         double dt = seconds(t0, clk::now());
+        block = dt;
         if (dt >= min_block || reps > (1 << 24)) break;
         reps = dt > 0.0 ? static_cast<int>(reps * (min_block / dt) * 1.25) + 1
                         : reps * 8;
     }
+    const int samples = block_samples(block, min_block, samples_lo, samples_hi);
     std::vector<double> per_point;
     per_point.reserve(samples);
     for (int s = 0; s < samples; ++s) {
@@ -208,6 +270,8 @@ inline Stats throughput(const Problem &p, int samples, double min_block,
         per_point.push_back(seconds(t0, t1) / (double(reps) * p.points()) * 1e6);
     }
     Stats st = reduce(per_point);
+    st.reps = reps;
+    st.block_s = st.mean * 1e-6 * double(reps) * p.points();
     return st;
 }
 
@@ -236,9 +300,10 @@ int main(int argc, char **argv) {
     using namespace bench;
 
     std::string protocol = "amortized", grid = "CHORD/12x1", out;
-    int samples = 30, steps = 25, n_e = 0, n_z = 0, knob = 0, n_layers = 256;
+    int samples = 30, max_samples = 100, steps = 1;
+    int n_e = 0, n_z = 0, knob = 0, n_layers = 256;
     bool force_loop = false, mean_density = false;
-    double min_block = 0.05;
+    double min_block = 0.25;
 
     for (int i = 1; i < argc; ++i) {
         auto eq = [&](const char *f) { return std::strcmp(argv[i], f) == 0; };
@@ -250,6 +315,8 @@ int main(int argc, char **argv) {
         else if (eq("--mean-density"))              mean_density = true;
         else if (eq("--samples")   && i + 1 < argc) samples   = std::atoi(argv[++i]);
         else if (eq("--steps")     && i + 1 < argc) steps     = std::atoi(argv[++i]);
+        else if (eq("--min-block") && i + 1 < argc) min_block = std::atof(argv[++i]);
+        else if (eq("--max-samples") && i + 1 < argc) max_samples = std::atoi(argv[++i]);
         else if (eq("--n-energies")&& i + 1 < argc) n_e       = std::atoi(argv[++i]);
         else if (eq("--n-zenith")  && i + 1 < argc) n_z       = std::atoi(argv[++i]);
         else if (eq("--json")      && i + 1 < argc) out       = argv[++i];
@@ -342,8 +409,9 @@ int main(int argc, char **argv) {
 
     double sink = 0.0;
     Stats st = (protocol == "throughput")
-                   ? detail::throughput(p, samples, min_block, &sink)
-                   : detail::amortized(p, samples, steps, &sink);
+                   ? detail::throughput(p, samples, max_samples, min_block, &sink)
+                   : detail::amortized(p, samples, max_samples, steps,
+                                       min_block, &sink);
 
     char buf[4096];
     std::snprintf(buf, sizeof buf,
@@ -356,6 +424,8 @@ int main(int argc, char **argv) {
         "  \"looped\": %s,\n"
         "  \"shell_density\": \"%s\",\n"
         "  \"manifest_sha256\": \"%s\",\n"
+        "  \"timing\": {\"min_block_s\": %.6g, \"block_reps\": %d, "
+        "\"block_seconds\": %.6g, \"samples\": %d},\n"
         "  \"batched\": {\"energy\": %s, \"zenith\": %s, \"symbol\": \"%s\"},\n"
         "  \"checksum\": %.17g\n}\n",
         driver::name(), protocol.c_str(), grid.c_str(),
@@ -363,6 +433,7 @@ int main(int argc, char **argv) {
         st.mean, st.sd, st.min, st.n,
         p.n_layers, p.shells_total(), p.force_loop ? "true" : "false",
         p.mean_density ? "mean" : "midpoint", MANIFEST_SHA256,
+        min_block, st.reps, st.block_s, st.n,
         cap.batches_energy ? "true" : "false",
         cap.batches_zenith ? "true" : "false", cap.batch_symbol, sink);
 

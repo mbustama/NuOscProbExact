@@ -92,12 +92,63 @@ KNOBS = {
     'NuOscProbExact': [1, 2, 4, 8, 16, 32, 64, 128, 256, -3, -4, -5],
 }
 
-#: The knob a THROUGHPUT cell holds fixed.  That figure's axis is the stack
-#: size, not precision, so one setting per code is right there -- but it is
-#: each code's best available precision, stated, rather than a convenient one.
+#: The knob a THROUGHPUT or oscillogram cell holds fixed.  Explicit, with the
+#: measurement that justifies each entry, because deriving it went wrong three
+#: times: pooling both grids picked settings that are meaningless on one of
+#: them, and breaking ties on speed fitted the 35 per cent block noise of the
+#: cheapest cells.
+#:
+#: The rule is: each code's best WORKING setup -- the setting that reaches its
+#: best measured accuracy on that grid.  Accuracy is untimed and reliable, so
+#: nothing here depends on a timing.  Where several settings tie, the most
+#: exact is kept: a difference at the round-off floor is not an accuracy
+#: difference, and pretending otherwise is how a code ends up timed at a
+#: setting its author did not ask for.
+#:
+#: NuFast-LBL and NuFast-Earth keep -1 for exactly that reason.  On constant
+#: density -1, 2 and 3 all sit at 1e-16; on the chord -1, 1, 2 and 3 all tie
+#: at the discretisation floor.  -1 is never measurably worse, and it is the
+#: exact-eigenvalue mode whose absence was the strongest objection raised
+#: against the earlier comparison.  It stays.
 THROUGHPUT_KNOB = {
-    'NuFast-LBL': -1, 'NuFast-Earth': -1, 'Prob3++': 256, 'GLoBES': 256,
-    'nuSQuIDS': 12, 'nuCraft': 10, 'NuOscProbExact': 256,
+    'NuFast-LBL':     -1,   # exact; ties with 3 at 7.6e-16, i.e. round-off
+    'NuFast-Earth':   -1,   # exact; ties with 2 and 3 at 1e-16
+    'Prob3++':        256,  # dial inert on constant density: one accuracy
+    'GLoBES':         256,  # dial inert on constant density
+    'nuSQuIDS':       12,   # dial inert on constant density
+    'nuCraft':        10,   # no constant-density cells; it refuses that grid
+    'NuOscProbExact': 256,  # dial inert on constant density
+}
+
+#: The oscillogram runs on the chord, where the dial is NOT inert, so two of
+#: these differ from the constant-density choice -- and both differ by margins
+#: far above round-off.
+OSCILLOGRAM_KNOB = {
+    'NuFast-Earth':   -1,   # ties with 1, 2, 3 at the 3.25e-6 floor; exact kept
+    'Prob3++':        256,  # 3.25e-6, its best and reached only here
+    'GLoBES':         256,  # 3.25e-6, likewise
+    'nuSQuIDS':       12,   # 6.45e-9, its best
+    'nuCraft':        6,    # 1.39e-6 against knob 10's 1.73e-6, AND 10x faster
+    # 256 fixed slabs, and the tolerance dial deliberately NOT used here.
+    #
+    # On the twelve-point chord the tolerance dial wins: rtol=1e-5 converges
+    # at 1024 slabs per segment and reaches 5.47e-8, against 8.75e-7 for the
+    # fixed 256.  On this grid it does not run at all.  Measured, not
+    # assumed: rtol=1e-5 and rtol=1e-4 both raise ValueError, unable to meet
+    # a RELATIVE tolerance within the library's 1024-slab ceiling at the
+    # grid points where the probability is near zero; and rtol=1e-3, which
+    # does run, costs 429 us/point against the fixed 256's 106 -- four times
+    # slower for sixteen times worse accuracy, because the adaptive search
+    # pays for every trial subdivision below the one the worst point of ten
+    # thousand demands.
+    #
+    # So the fixed dial IS this library's best working setup on the
+    # oscillogram, and its 8.75e-7 is better than four of the five codes it
+    # is timed against here.  Raising n_max to force rtol=1e-5 through would
+    # need some 7000 slabs per segment for a precision no other code on this
+    # grid is delivering, which would measure a self-imposed handicap rather
+    # than the library.
+    'NuOscProbExact': 256,
 }
 
 #: AMORTIZED sweeps the SAME knob domain the accuracy axis sweeps, so that
@@ -159,15 +210,19 @@ def cells(accuracy_only=False, speed_only=False):
         # cent of the run, for points that cannot enter the plane.  One knob
         # per code, at each code's best precision, stated.
         #
-        # The sample count is cut too, and honestly rather than quietly: ten
-        # thousand grid points already average away the per-point noise that
-        # thirty samples of twelve points exists to control.  The block
-        # statistics are still recorded and machine.admissible still judges
-        # them, so a cell whose spread is too wide is still refused.
+        # The sample count is NOT cut.  It was -- ten blocks here and three
+        # for nuCraft -- on the reasoning that ten thousand grid points
+        # already average away the per-point noise.  That reasoning confused
+        # two different averages: many points per block makes the block's
+        # MEAN precise, and says nothing about the spread BETWEEN blocks,
+        # which is what the standard deviation reports and what three blocks
+        # cannot estimate.  The harness now sets the count itself from the
+        # measured block length, so a cell that can afford many blocks takes
+        # many and one that cannot takes the floor of thirty.
         for code in EARTH_CODES:
             cell = {'kind': 'amortized', 'code': code,
-                    'grid': 'OSC/100x100', 'knob': THROUGHPUT_KNOB[code],
-                    'timed': True, 'samples': 10, 'steps': 5,
+                    'grid': 'OSC/100x100', 'knob': OSCILLOGRAM_KNOB[code],
+                    'timed': True,
                     'tier': 'oscillogram: one knob, Earth-3',
                     'shell_density': 'midpoint'}
             # nuCraft needs its own tier on this grid, and the reason is a
@@ -179,14 +234,15 @@ def cells(accuracy_only=False, speed_only=False):
             # had assumed; on ten thousand points it is some four times worse
             # than that extrapolation.
             #
-            # Three samples of one step still gives the admissibility rule
-            # something to judge and still answers what the grid is for.  It
-            # is not dropped: a code being slow IS the measurement, and
-            # excluding it because it is slow would be the plainest unfairness
-            # in this whole comparison.
+            # It is not dropped: a code being slow IS the measurement, and
+            # excluding it because it is slow would be the plainest
+            # unfairness in this whole comparison.  It gets the same thirty
+            # blocks as everything else -- roughly half an hour of wall clock
+            # at this knob -- so its standard deviation means what every
+            # other code's means, and only its timeout is raised.
             if code == 'nuCraft':
-                cell.update({'samples': 3, 'steps': 1, 'timeout': 5400,
-                             'tier': 'oscillogram: reduced, >2h at full samples'})
+                cell.update({'timeout': 10800,
+                             'tier': 'oscillogram: full samples, long timeout'})
             out.append(cell)
 
         for grid, codes in (('CHORD/12x1', EARTH_CODES),
@@ -389,6 +445,9 @@ def main(argv=None):
     # canary bracketing and every command line can be proven end to end for
     # the price of a minute.
     ap.add_argument('--limit', type=int, default=0)
+    ap.add_argument('--only', default='',
+                    help='comma-separated substrings; keep only cells whose '
+                         'artifact name contains one of them')
     ap.add_argument('--force', action='store_true',
                     help='recompute cells whose artifact already exists')
     ap.add_argument('--join', action='store_true',
@@ -408,6 +467,14 @@ def main(argv=None):
         return
 
     matrix = cells(args.accuracy_only, args.speed_only)
+    if args.only:
+        # Substring match on the artifact name, so a single cell can be
+        # re-measured without re-running its neighbours.  --limit takes the
+        # first N of the matrix, which is matrix order and not cost order:
+        # the first six happen to be the six most expensive cells there are.
+        wanted = [w.strip() for w in args.only.split(',') if w.strip()]
+        matrix = [c for c in matrix
+                  if any(w in artifact_name(c) for w in wanted)]
     if args.limit:
         matrix = matrix[:args.limit]
     timed = [c for c in matrix if c['timed']]
@@ -513,6 +580,31 @@ def main(argv=None):
         if ok:
             written += 1
             measured_here.append(artifact_name(cell))
+            # Judge the cell by its own spread and record the verdict beside
+            # the number.  The canary brackets the session; it cannot speak
+            # for an individual cell, least of all one pinned to a single
+            # thread while the canary itself ran on twelve.
+            if cell.get('timed'):
+                try:
+                    import machine as _m
+                    with open(path) as handle:
+                        art = json.load(handle)
+                    u = art.get('us_per_point') or {}
+                    good, why = _m.admissible_stats(u.get('mean'), u.get('sd'),
+                                                    u.get('min'), u.get('n'))
+                    art['admissible'] = {
+                        'ok': bool(good), 'why': why,
+                        'block_cv': (u['sd']/u['mean']
+                                     if u.get('mean') else None)}
+                    with open(path, 'w') as handle:
+                        json.dump(art, handle, indent=2, sort_keys=True)
+                        handle.write('\n')
+                    if not good:
+                        print('%-46s %-7s %s'
+                              % (artifact_name(cell), 'SPREAD', why),
+                              flush=True)
+                except (ValueError, OSError, KeyError):
+                    pass
 
     # The run record.  The per-cell artifacts are written by the binaries,
     # which know nothing about the canary, so the verdict on whether this

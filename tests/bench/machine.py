@@ -120,6 +120,36 @@ def admissible(blocks):
     return True, 'ok'
 
 
+def admissible_stats(mean, sd, minimum, n):
+    r"""Returns ``(ok, why)`` for one cell, from the summary it stored.
+
+    The same judgement as :func:`admissible`, made from ``us_per_point``
+    rather than from the raw blocks, so it can be applied to an artifact
+    after the fact.  ``mean/min`` stands in for ``median/min``; both ask
+    whether the typical block sits close to the best one, and the mean is
+    the more conservative of the two because an outlier moves it further.
+
+    This is what should decide whether a timing is believable.  The canary
+    cannot: it runs this library on every thread the machine has, so it
+    reports the state of a twelve-thread workload and then passes verdict
+    on cells that were pinned to one thread, or that were compiled code
+    linking no threading library at all.  A cell knows its own spread.
+    """
+    if not n or n < 2:
+        return False, 'fewer than two blocks'
+    if not mean or mean <= 0.0:
+        return False, 'non-positive mean'
+    cv = sd/mean
+    if cv > MAX_BLOCK_CV:
+        return False, 'block CV %.3f exceeds %.2f' % (cv, MAX_BLOCK_CV)
+    if minimum and minimum > 0.0:
+        ratio = mean/minimum
+        if ratio > MAX_MEDIAN_OVER_MIN:
+            return False, ('mean/min %.3f exceeds %.2f'
+                           % (ratio, MAX_MEDIAN_OVER_MIN))
+    return True, 'ok'
+
+
 def canary_drift(start, mid, end):
     r"""Returns ``(ok, why)`` for a session's three canary readings."""
     lo, hi = min(start, mid, end), max(start, mid, end)
