@@ -446,16 +446,32 @@ def main(argv=None):
     written = 0
     skipped = 0
     failures = []
+    measured_here = []
     for cell in matrix:
         path = os.path.join(args.outdir, artifact_name(cell))
 
         # Resume.  A run that died at cell 109 of 328 should not repeat the
         # 108 that succeeded -- the first attempt lost two hours to a single
         # cell and had nothing to show for the rest.
+        #
+        # But existence is not enough.  The artifacts are written with a plain
+        # fopen, so a run killed mid-write leaves a truncated file, and a
+        # resume that trusted os.path.exists would skip it forever and carry a
+        # corrupt cell into the figures.  Parse it before believing it.
         if os.path.exists(path) and not args.force:
-            skipped += 1
-            written += 1
-            continue
+            try:
+                with open(path) as handle:
+                    got = json.load(handle)
+                intact = 'code' in got and ('probabilities' in got
+                                            or 'us_per_point' in got)
+            except (ValueError, OSError):
+                intact = False
+            if intact:
+                skipped += 1
+                written += 1
+                continue
+            print('%-46s %-7s  truncated or unparseable; recomputing'
+                  % (artifact_name(cell), 'REDO'), flush=True)
 
         cmd = command(cell) + ['--json', path]
         started = time.time()
@@ -496,6 +512,7 @@ def main(argv=None):
                  time.time() - started, note), flush=True)
         if ok:
             written += 1
+            measured_here.append(artifact_name(cell))
 
     # The run record.  The per-cell artifacts are written by the binaries,
     # which know nothing about the canary, so the verdict on whether this
@@ -524,9 +541,23 @@ def main(argv=None):
             print('  the timed artifacts in this directory record a machine '
                   'that moved under them; they are kept, and marked.')
 
-    with open(os.path.join(args.outdir, 'run_record.json'), 'w') as handle:
-        json.dump(record, handle, indent=2, sort_keys=True)
-        handle.write('\n')
+    # Records accumulate rather than overwrite.  A paused-and-resumed matrix
+    # is several runs, each with its own canary bracket and its own machine,
+    # and keeping only the last one would throw away the evidence for every
+    # cell measured before the pause.  run_record.json is the latest; the
+    # stamped copies are the history.
+    record['cells_measured_this_run'] = measured_here
+    stamp = time.strftime('%Y%m%dT%H%M%S')
+    for name in ('run_record.json', 'run_record_%s.json' % stamp):
+        with open(os.path.join(args.outdir, name), 'w') as handle:
+            json.dump(record, handle, indent=2, sort_keys=True)
+            handle.write('\n')
+    if skipped:
+        print('NOTE: %d cells were reused from earlier runs.  Timed cells from '
+              'different runs were measured on different machine states; each '
+              'run_record_*.json carries its own canary bracket, and a '
+              'cross-code speed claim should not mix them without checking.'
+              % skipped)
 
     print('%d artifacts in %s (%d reused), %d failed, manifest %s'
           % (written, os.path.relpath(args.outdir, ROOT), skipped,
