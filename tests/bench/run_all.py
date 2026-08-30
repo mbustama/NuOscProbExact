@@ -144,8 +144,34 @@ def cells(accuracy_only=False, speed_only=False):
         # OSC/100x100 is here because a 12x1 grid hides NuFast-Earth's zenith
         # caching entirely -- that is objection Earth-3, and the grid exists
         # to expose it.
+        # OSC/100x100 is tiered, and the reason is not only cost.
+        #
+        # That grid exists for one objection: a 12x1 chord hides NuFast-Earth's
+        # caching across zenith angles, worth roughly eightfold per
+        # probability, so the oscillogram is where that advantage is visible.
+        # It is ONE comparison at one precision setting, not a sweep -- and it
+        # could not be a sweep even if the time were free, because the
+        # accuracy axis was only measured on CONST/60E and CHORD/12x1, so
+        # every knob variant here would join to a null error and produce a
+        # speed-accuracy point with no accuracy in it.
+        #
+        # Sweeping it anyway costs 114 hours of the 115-hour total, 99 per
+        # cent of the run, for points that cannot enter the plane.  One knob
+        # per code, at each code's best precision, stated.
+        #
+        # The sample count is cut too, and honestly rather than quietly: ten
+        # thousand grid points already average away the per-point noise that
+        # thirty samples of twelve points exists to control.  The block
+        # statistics are still recorded and machine.admissible still judges
+        # them, so a cell whose spread is too wide is still refused.
+        for code in EARTH_CODES:
+            out.append({'kind': 'amortized', 'code': code,
+                        'grid': 'OSC/100x100', 'knob': THROUGHPUT_KNOB[code],
+                        'timed': True, 'samples': 10, 'steps': 5,
+                        'tier': 'oscillogram: one knob, Earth-3',
+                        'shell_density': 'midpoint'})
+
         for grid, codes in (('CHORD/12x1', EARTH_CODES),
-                            ('OSC/100x100', EARTH_CODES),
                             ('CONST/60E', CONST_CODES)):
             for code in codes:
                 for knob in KNOBS[code]:
@@ -248,6 +274,10 @@ def command(cell):
         cmd = [sys.executable, os.path.join(HERE, 'runner.py'), ADAPTER[code]]
     cmd += ['--protocol', cell['kind'], '--grid', cell['grid'],
             '--knob', str(cell['knob'])]
+    if cell.get('samples'):
+        cmd += ['--samples', str(cell['samples'])]
+    if cell.get('steps'):
+        cmd += ['--steps', str(cell['steps'])]
     if cell.get('n_energies'):
         cmd += ['--n-energies', str(cell['n_energies'])]
     if cell.get('n_layers') and code in BINARY:
