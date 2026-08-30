@@ -408,8 +408,19 @@ def main(argv=None):
             print('WARNING: governor is %r, not performance.  Timed cells will '
                   'be recorded with the canary and may be rejected.'
                   % env['governor'])
+        # Discard one reading first.  The canary's own warm-up -- numba
+        # compiling, and the CPU climbing out of idle -- makes the FIRST call
+        # in a fresh process run about twelve per cent slow, while every
+        # reading after it agrees to under two.  Comparing that cold reading
+        # against a warm one at the end is a guaranteed drift far above the
+        # five per cent threshold, so every run would have been marked
+        # unbelievable for a reason that has nothing to do with the machine.
+        # Measured on an idle box at governor=performance: 0.0446, then
+        # 0.0392, 0.0399, 0.0398, 0.0398, 0.0400.
+        machine.canary()
         before = machine.canary()
-        print('canary before: %.4f us/probability' % before)
+        print('canary before: %.4f us/probability (after one discarded '
+              'warm-up reading)' % before)
 
     os.makedirs(args.outdir, exist_ok=True)
     written = 0
