@@ -109,7 +109,7 @@
     "accuracy_NuOscProbExact_CHORD_12x1_knob-5.json"
   ],
   "failures": [],
-  "generated_at": "2026-08-30T18:25:03+0200",
+  "generated_at": "2026-08-30T18:23:16+0200",
   "generated_by": "tests/bench/run_all.py",
   "manifest_sha256": "1d6d4978d3dff95e9802a10ddbdc2cbb3c6d3e8dd572e27abe8ec56cab9fd8a4",
   "schema": "bench-run/1",

@@ -1,6 +1,6 @@
 {
   "generated_by": "tests/bench/run_all.py --join",
-  "manifest_sha256": "eeafd394213687ce52d8b453a250f51637dc7411cac4497ac223c126ec3672b4",
+  "manifest_sha256": "1d6d4978d3dff95e9802a10ddbdc2cbb3c6d3e8dd572e27abe8ec56cab9fd8a4",
   "note": "Speed against accuracy, per code, over that code's own precision dial.  Every point pairs a timed measurement with the accuracy the SAME setting reached against that code's own 50-digit reference on the continuous PREM. Comparing two codes means comparing at equal accuracy, not at a knob somebody chose for them.",
   "schema": "bench-speed-accuracy/1",
   "series": {

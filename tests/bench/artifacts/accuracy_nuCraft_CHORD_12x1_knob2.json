@@ -8,6 +8,7 @@
     "log10_numPrec": 2
   },
   "conventions": "own-reference",
+  "manifest_sha256": "1d6d4978d3dff95e9802a10ddbdc2cbb3c6d3e8dd572e27abe8ec56cab9fd8a4",
   "profile_basis": "continuous",
   "environment": {},
   "channels": [

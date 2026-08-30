@@ -49,6 +49,7 @@ Usage::
 
 import argparse
 import importlib
+import hashlib
 import json
 import math
 import os
@@ -247,6 +248,24 @@ def throughput(driver, problem, samples, min_block, max_samples):
     return stats, sink
 
 
+def manifest_sha():
+    r"""The hash of the manifest these numbers were measured under.
+
+    The compiled harness stamps this into every artifact it writes; the
+    Python adapters did not, so a hundred and fifty-seven artifacts --- all
+    three Python codes, both protocols --- could not be tied to the
+    manifest that pins their versions.  That manifest is the answer to the
+    objection about taking whatever is on GitHub today, and half the
+    artifacts were not pointing at it.
+    """
+    path = os.path.join(HERE, 'manifest.json')
+    try:
+        with open(path, 'rb') as handle:
+            return hashlib.sha256(handle.read()).hexdigest()
+    except OSError:
+        return ''
+
+
 def load_adapter(code):
     r"""Imports the adapter and checks that its source names no clock."""
     module = importlib.import_module(CODES[code])
@@ -307,6 +326,7 @@ def main(argv=None):
             'protocol': {'name': 'accuracy', 'grid': args.grid},
             'knob': {cap.get('knob_name') or 'none': args.knob},
             'conventions': 'own-reference',
+            'manifest_sha256': manifest_sha(),
             'profile_basis': 'continuous',
             'environment': (driver.environment()
                             if hasattr(driver, 'environment') else {}),
@@ -334,6 +354,7 @@ def main(argv=None):
         'protocol': {'name': args.protocol, 'grid': args.grid},
         'knob': {cap.get('knob_name') or 'none': args.knob},
         'conventions': 'own-reference',
+        'manifest_sha256': manifest_sha(),
         'profile_basis': 'continuous',
         'environment': (driver.environment()
                         if hasattr(driver, 'environment') else {}),
