@@ -3126,8 +3126,12 @@ for series in sa["series"]:
 # N_Newton = 3 -- said 8.3e-12 where the measurement says 7.6e-16.
 for (name, label), lab, dx, dy, ha in (
         (("NuFast-LBL", "0"), r"$N_{\rm Newton} = 0$", 7, -2, "left"),
-        (("NuFast-LBL", "-1"), "exact", 7, -2, "left"),
-        (("NuFast-Earth", "-1"), "exact", -6, 5, "right")):
+        # Both exact points land within a hair of each other -- 0.0689 and
+        # 0.0639 us, 7.61e-16 and 7.09e-16 -- so the two labels are pushed
+        # apart vertically rather than written on top of one another and on
+        # top of the double-precision line.
+        (("NuFast-LBL", "-1"), "LBL exact", 9, 5, "left"),
+        (("NuFast-Earth", "-1"), "Earth exact", 9, -7, "left")):
     if (name, label) not in anchor:
         continue
     x, y, c = anchor[(name, label)]
@@ -3135,24 +3139,31 @@ for (name, label), lab, dx, dy, ha in (
                 fontsize=5.2, color=c, ha=ha)
 
 ax.axhline(2.2e-16, color="0.5", ls=":", lw=0.7, zorder=1)
-ax.text(2.6e-2, 3.2e-16, "Double precision", fontsize=5.4, color="0.4")
+ax.text(3.4e-2, 1.15e-16, "Double precision", fontsize=5.4, color="0.4")
 # This panel's data does not leave the same corners free as the Earth ones:
-# the single NuOscProbExact point sits at the bottom left and nuSQuIDS runs
-# along the top right, so the subtitle goes just above the former and the
-# legend into the empty bottom right.
-ax.text(0.03, 0.17, "Constant density:  $L = 1300$ km,\n"
+# Placed against where the points actually are, which the measurement
+# decides and not this cell: five codes cluster along the double-precision
+# floor at the bottom left, NuFast-LBL climbs the left edge as its Newton
+# steps are removed, and nuSQuIDS sits alone in the middle right.  That
+# leaves the top right empty for the legend.  The previous version of this
+# block placed both from a layout the old data had, and also carried an
+# "Array + kernel" label pinned to a point -- 0.230 us, 9.71e-16 -- that no
+# longer exists in any measurement.
+# Upper right, because that corner is genuinely empty and the lower right
+# is not: nuSQuIDS is a single point out at 18 us, and an opaque legend
+# placed there covered it completely -- the code appeared in the legend and
+# nowhere on the axes.
+ax.text(0.975, 0.965, "Constant density:  $L = 1300$ km,\n"
         r"$E = 0.6$--$20$ GeV,  $\rho = 3$ g cm$^{-3}$",
-        transform=ax.transAxes, ha="left", va="bottom", fontsize=6.0,
+        transform=ax.transAxes, ha="right", va="top", fontsize=6.0,
         color="0.2", linespacing=1.4)
-ax.annotate("Array + kernel", xy=(0.230, 9.71e-16), xytext=(8, -1),
-            textcoords="offset points", fontsize=5.2, color="C3", ha="left")
 ax.set_xlabel(r"Time per probability [$\mu$s]")
 ax.set_ylabel(r"Error vs.\ a 50-digit reference,  "
               r"max $|\Delta P_{\nu_\mu \to \nu_e}|$")
-ax.set_xlim(2.0e-2, 1.0e3)
-ax.set_ylim(1.0e-16, 1.0e-2)
+ax.set_xlim(3.0e-2, 2.0e2)
+ax.set_ylim(1.0e-16, 3.0e-4)
 leg = ax.legend(loc="lower right", bbox_to_anchor=(0.995, 0.02),
-                fontsize=6.0)
+                fontsize=5.6)
 leg.get_frame().set_linewidth(0.7)
 fig.tight_layout(pad=0.3)
 fig.savefig(os.path.join(FIGDIR, "speed_accuracy.pdf"))
