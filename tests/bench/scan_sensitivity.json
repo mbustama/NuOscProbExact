@@ -4,12 +4,57 @@
   "CHORD/12x1": [
    {
     "code": "NuFast-Earth",
-    "dcp_sd": 0.000775459,
-    "dcp_us": 0.0588912,
-    "dmsq31_sd": 2.83856,
-    "dmsq31_us": 107.081,
+    "dcp_sd": 0.000863752,
+    "dcp_us": 0.0579125,
+    "dmsq31_sd": 2.6177,
+    "dmsq31_us": 108.041,
     "knob": -1,
-    "ratio": 1818.2852446545496
+    "ratio": 1865.5903302395855
+   },
+   {
+    "code": "NuFast-Earth",
+    "dcp_sd": 0.00051588,
+    "dcp_us": 0.0586491,
+    "dmsq31_sd": 1.27206,
+    "dmsq31_us": 107.264,
+    "knob": -1,
+    "ratio": 1828.9112705906823
+   },
+   {
+    "code": "NuFast-Earth",
+    "dcp_sd": 0.000996228,
+    "dcp_us": 0.0585762,
+    "dmsq31_sd": 0.286082,
+    "dmsq31_us": 25.3469,
+    "knob": -1,
+    "ratio": 432.7167006395089
+   },
+   {
+    "code": "NuFast-Earth",
+    "dcp_sd": 0.000862542,
+    "dcp_us": 0.0574462,
+    "dmsq31_sd": 0.0482931,
+    "dmsq31_us": 5.53621,
+    "knob": -1,
+    "ratio": 96.37208379318388
+   },
+   {
+    "code": "NuFast-Earth",
+    "dcp_sd": 0.000278551,
+    "dcp_us": 0.0581268,
+    "dmsq31_sd": 0.0251981,
+    "dmsq31_us": 1.64833,
+    "knob": -1,
+    "ratio": 28.357487424045363
+   },
+   {
+    "code": "NuFast-Earth",
+    "dcp_sd": 0.000926662,
+    "dcp_us": 0.0630051,
+    "dmsq31_sd": 0.0070937,
+    "dmsq31_us": 0.560642,
+    "knob": -1,
+    "ratio": 8.898359021729988
    },
    {
     "code": "nuSQuIDS",
@@ -21,15 +66,6 @@
     "ratio": 1.0157825575408057
    },
    {
-    "code": "Prob3++",
-    "dcp_sd": 1.45795,
-    "dcp_us": 542.733,
-    "dmsq31_sd": 6.99449,
-    "dmsq31_us": 548.631,
-    "knob": 256,
-    "ratio": 1.0108672220041899
-   },
-   {
     "code": "nuCraft",
     "dcp_sd": 264.8072985756383,
     "dcp_us": 8173.898931701655,
@@ -39,13 +75,22 @@
     "ratio": 1.0099265782129254
    },
    {
-    "code": "GLoBES",
-    "dcp_sd": 3.48392,
-    "dcp_us": 483.252,
-    "dmsq31_sd": 4.03606,
-    "dmsq31_us": 484.467,
+    "code": "Prob3++",
+    "dcp_sd": 4.97853,
+    "dcp_us": 553.848,
+    "dmsq31_sd": 2.6023,
+    "dmsq31_us": 550.857,
     "knob": 256,
-    "ratio": 1.0025142161853442
+    "ratio": 0.9945996013346623
+   },
+   {
+    "code": "GLoBES",
+    "dcp_sd": 21.4901,
+    "dcp_us": 1949.92,
+    "dmsq31_sd": 28.1617,
+    "dmsq31_us": 1927.22,
+    "knob": 256,
+    "ratio": 0.9883584967588414
    },
    {
     "code": "NuOscProbExact",
@@ -105,23 +150,23 @@
    },
    {
     "code": "nuSQuIDS",
-    "dcp_sd": 0.3089387887852801,
-    "dcp_us": 18.59489271666119,
-    "dmsq31_sd": 0.29553267974709396,
-    "dmsq31_us": 18.00604874085823,
+    "dcp_sd": 0.35328093650510256,
+    "dcp_us": 98.21160259401151,
+    "dmsq31_sd": 2.3489920697997038,
+    "dmsq31_us": 96.79931635568335,
     "knob": 12,
-    "ratio": 0.9683330264511099
+    "ratio": 0.9856199654518796
    }
   ],
   "OSC/100x100": [
    {
     "code": "NuFast-Earth",
-    "dcp_sd": 0.00122698,
-    "dcp_us": 0.0563845,
-    "dmsq31_sd": 0.057612,
-    "dmsq31_us": 17.4776,
+    "dcp_sd": 0.00369068,
+    "dcp_us": 0.0565448,
+    "dmsq31_sd": 0.0559886,
+    "dmsq31_us": 17.6939,
     "knob": -1,
-    "ratio": 309.9717120839947
+    "ratio": 312.91825242993167
    },
    {
     "code": "nuSQuIDS",
@@ -142,22 +187,22 @@
     "ratio": 1.006656107772704
    },
    {
-    "code": "GLoBES",
-    "dcp_sd": 1.98743,
-    "dcp_us": 259.66,
-    "dmsq31_sd": 1.58703,
-    "dmsq31_us": 259.766,
+    "code": "Prob3++",
+    "dcp_sd": 2.39929,
+    "dcp_us": 294.764,
+    "dmsq31_sd": 1.80977,
+    "dmsq31_us": 296.233,
     "knob": 256,
-    "ratio": 1.0004082261418779
+    "ratio": 1.0049836479352974
    },
    {
-    "code": "Prob3++",
-    "dcp_sd": 3.05404,
-    "dcp_us": 295.115,
-    "dmsq31_sd": 1.12967,
-    "dmsq31_us": 292.832,
+    "code": "GLoBES",
+    "dcp_sd": 9.06654,
+    "dcp_us": 1499.59,
+    "dmsq31_sd": 9.76343,
+    "dmsq31_us": 1502.9,
     "knob": 256,
-    "ratio": 0.9922640326652321
+    "ratio": 1.0022072699871298
    },
    {
     "code": "NuOscProbExact",
@@ -170,6 +215,6 @@
    }
   ]
  },
- "manifest_sha256": "1d6d4978d3dff95e9802a10ddbdc2cbb3c6d3e8dd572e27abe8ec56cab9fd8a4",
+ "manifest_sha256": "d758e1935f45312b4ce1e66dd1a89cff9dab7678629b66fe70a6a48e9cbee6fa",
  "note": "Cost per probability when a fit moves delta_CP against when it moves Dmsq31, at the same knob, differing in nothing else. Regenerated from measured artifacts by tests/bench/emit_figures.py. Every point pairs a timed measurement with the accuracy the SAME setting reached against that code's own 50-digit reference, in that code's own conventions, on the continuous PREM."
 }

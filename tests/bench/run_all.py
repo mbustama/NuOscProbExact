@@ -345,6 +345,34 @@ def cells(accuracy_only=False, speed_only=False):
                             'grid': 'CHORD/12x1', 'knob': n, 'timed': True,
                             'sweep': 'discretisation',
                             'shell_density': 'midpoint'})
+
+            # The same sweep for NuFast-Earth with Dmsq31 moving instead.
+            #
+            # Its delta_CP curve sits at 0.057 us per probability whatever
+            # the layer count, because a delta_CP scan invalidates none of
+            # the layer work -- so on the Earth plane it lands three decades
+            # left of every other code and reads as a speed nothing else
+            # approaches.  What it actually shows is one cache.  Move
+            # Dmsq31 instead and the same code costs 107 us, within six per
+            # cent of this library's 114 on the identical grid and knob.
+            #
+            # So the figure gets both, and the delta_CP one is labelled as
+            # what it is.  No other code needs the pair: measured on this
+            # grid, the Dmsq31-to-delta_CP ratio is 1.02 for nuSQuIDS, 1.01
+            # for Prob3++ and nuCraft, 1.00 for GLoBES and 0.95 here.  Only
+            # NuFast-Earth caches by parameter, so only NuFast-Earth needs
+            # two lines to be described honestly.
+            #
+            # The accuracy axis is shared, not re-measured: the untimed
+            # protocol evaluates at the central value of whichever
+            # parameter is scanned, so both lines are the same physics and
+            # return bit-identical probabilities.
+            out.append({'kind': 'amortized', 'code': 'NuFast-Earth',
+                        'grid': 'CHORD/12x1',
+                        'knob': THROUGHPUT_KNOB['NuFast-Earth'],
+                        'n_layers': n, 'timed': True,
+                        'sweep': 'discretisation', 'scan': 'dmsq31',
+                        'shell_density': 'midpoint'})
     return out
 
 

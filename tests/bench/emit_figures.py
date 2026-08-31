@@ -174,10 +174,21 @@ def earth_plane(cells_fn, artifact_name, outdir, acc):
 
         if cell.get('sweep') == 'discretisation' and code in EARTH_FROM_LAYERS:
             layers = cell.get('n_layers')
+            # Accuracy is shared between the two scans: the untimed protocol
+            # evaluates at the central value of whichever parameter moves, so
+            # both lines are the same physics measured at the same settings.
             err = (acc.get('CHORD/12x1|layers', {}).get('series', {})
                    .get(code, {}).get('by_knob', {})
                    .get(str(layers), {}).get('max_abs_deviation'))
-            add(code, code, 'n_layers', str(layers), layers, d, err)
+            # Two lines, because one number cannot describe this code here.
+            # Scanning delta_CP invalidates none of its layer work, so that
+            # curve is flat at 0.057 us whatever the layer count; scanning
+            # Dmsq31 costs it 107.  The unqualified name goes to the second,
+            # since that is the cost when a fit moves a parameter the cache
+            # does not cover.
+            name = (code if cell.get('scan') == 'dmsq31'
+                    else code + ' (dCP only)')
+            add(name, code, 'n_layers', str(layers), layers, d, err)
             continue
         if not cell.get('plane') or code in EARTH_FROM_LAYERS:
             continue

@@ -47,15 +47,20 @@ bool   g_sphere = false;    // chord through the Earth vs constant density
 // at their midpoint density.  Rows are "outer_radius rho Y_p"; Y_p carries
 // the electron fraction times the mass defect.
 std::string write_profile(int n, double yp) {
+    // Four major layers, as the paper's appendix states.  Cutting at all
+    // nine PREM boundaries was tried and reverted: it bought 1.1x accuracy
+    // for 2.5x the shells, which on a speed-accuracy plane is strictly
+    // worse, and it did not touch the non-monotonicity it was meant to fix.
     const double layers[4] = {OUR_PREM_B[0], OUR_PREM_B[1], OUR_PREM_B[2],
                               OUR_EARTH_RADIUS};
+    const int kNLayer = 4;
     const char *tmp = std::getenv("TMPDIR");
     char path[512];
     std::snprintf(path, sizeof path, "%s/bench_prob3_prem_%d.dat",
                   tmp && tmp[0] ? tmp : "/tmp", n);
     FILE *f = std::fopen(path, "w");
     double lo = 0.0;
-    for (int L = 0; L < 4; ++L) {
+    for (int L = 0; L < kNLayer; ++L) {
         const double hi = layers[L];
         for (int i = 0; i < n; ++i) {
             const double outer = lo + (i + 1) * (hi - lo) / n;

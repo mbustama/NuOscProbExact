@@ -3083,11 +3083,17 @@ with open(os.path.join('..', 'tests', 'speed_accuracy.json')) as handle:
 # code keeps its identity across all three.  This library shows only the
 # batched-plus-kernel point: the other two routes are what the performance
 # figure is for, and here they would be three labels on one horizontal line.
+# This library first, then the rest.  dict order is legend order.
+#
+# NuFast-Earth is measured at constant density -- it does have that mode,
+# and the artifact is kept -- but it is not drawn here: this figure is the
+# constant-density comparison and an Earth propagator does not belong on
+# it.  The one thread variant is not drawn either, for a plainer reason:
+# at constant density it lands at 1.1704 us against 1.1703, so it was a
+# second legend entry sitting exactly underneath the first marker.
 STYLE = {"NuOscProbExact": ("-o", "C3", 4.0),
-         "NuOscProbExact (1 thread)": ("--o", "C3", 3.2),
          "nuSQuIDS": ("-v", "C2", 3.6),
          "NuFast-LBL": ("-D", "C4", 3.2),
-         "NuFast-Earth": ("-X", "C7", 3.8),
          "GLoBES": ("-*", "C6", 6.0),
          "Prob3++": ("-P", "C5", 4.4)}
 
@@ -3100,23 +3106,29 @@ STYLE = {"NuOscProbExact": ("-o", "C3", 4.0),
 # their dial is the eigenvalue solve and does move the accuracy.
 fig, ax = plt.subplots(figsize=FIGSIZE_SQUARE)
 anchor = {}
-for series in sa["series"]:
-    if series["name"] not in STYLE:
+for name in STYLE:
+    series = next((x for x in sa["series"] if x["name"] == name), None)
+    if series is None:
         continue
-    marker, colour, size = STYLE[series["name"]]
+    marker, colour, size = STYLE[name]
     points = [q for q in series["points"]
               if q.get("best_at_this_accuracy", True)
               and q["max_abs_error"] is not None]
     if not points:
         continue
+    # Ordered along the curve by error, not by knob value.  Sorting by knob
+    # put N_Newton = -1 -- the exact mode, at the accurate end -- before 0,
+    # the least accurate, so the polyline ran bottom, top, bottom and drew a
+    # closed loop that read as two separate NuFast-LBL curves.
+    points.sort(key=lambda q: (-q["max_abs_error"], q["us_per_probability"]))
     t = [q["us_per_probability"] for q in points]
     e = [q["max_abs_error"] for q in points]
-    kw = dict(ms=size, color=colour, label=series["name"], zorder=4)
-    if series["name"].startswith("NuOscProbExact"):
+    kw = dict(ms=size, color=colour, label=name, zorder=4)
+    if name.startswith("NuOscProbExact"):
         kw.update(mfc="white", mew=1.0, zorder=5)
     ax.loglog(t, e, marker, **kw)
     for q in points:
-        anchor[(series["name"], q["label"])] = (
+        anchor[(name, q["label"])] = (
             q["us_per_probability"], q["max_abs_error"], colour)
 
 # What is varied along each curve, at both ends where there are two.
@@ -3125,13 +3137,14 @@ for series in sa["series"]:
 # a run nobody could reproduce, and one of them -- NuFast-LBL at
 # N_Newton = 3 -- said 8.3e-12 where the measurement says 7.6e-16.
 for (name, label), lab, dx, dy, ha in (
+        # The dial's own values, as the paper labels them.  "LBL exact" and
+        # "Earth exact" were wording invented here, and the second existed
+        # only because NuFast-Earth had been added to this figure.
         (("NuFast-LBL", "0"), r"$N_{\rm Newton} = 0$", 7, -2, "left"),
-        # Both exact points land within a hair of each other -- 0.0689 and
-        # 0.0639 us, 7.61e-16 and 7.09e-16 -- so the two labels are pushed
-        # apart vertically rather than written on top of one another and on
-        # top of the double-precision line.
-        (("NuFast-LBL", "-1"), "LBL exact", 9, 5, "left"),
-        (("NuFast-Earth", "-1"), "Earth exact", 9, -7, "left")):
+        (("NuFast-LBL", "1"), "1", 7, -2, "left"),
+        (("NuFast-LBL", "2"), "2", 7, -2, "left"),
+        (("NuFast-LBL", "-1"), r"$-1$", 9, 4, "left"),
+        (("NuFast-LBL", "3"), "3", 7, -7, "left")):
     if (name, label) not in anchor:
         continue
     x, y, c = anchor[(name, label)]
@@ -3263,7 +3276,14 @@ PREM_STYLE = {"NuOscProbExact (tolerance)": ("-o", "C3", 4.0),
               "NuOscProbExact (double-double)": ("--s", "C3", 3.2),
               "NuOscProbExact (eigensolver)": (":^", "C1", 3.8),
               "nuSQuIDS": ("-v", "C2", 3.6),
+              # Two lines for one code, because one number cannot describe
+              # it here.  The solid one is the cost when a fit moves a
+              # parameter its cache does not cover; the broken one is a
+              # delta_CP scan, which invalidates none of the layer work and
+              # so is flat at 0.057 us however finely the Earth is cut.
+              # Same colour and marker: it is the same code either way.
               "NuFast-Earth": ("-D", "C4", 3.2),
+              "NuFast-Earth (dCP only)": ("--D", "C4", 2.6),
               "GLoBES": ("-*", "C6", 6.0),
               "Prob3++": ("-P", "C5", 4.4),
               "nuCraft": ("-s", "C0", 3.4)}
@@ -3341,10 +3361,15 @@ prem_plane(
      (("nuSQuIDS", "1e-03"), r"tol $10^{-3}$", 6, -1, "left"),
      (("nuSQuIDS", "1e-12"), r"$10^{-12}$", 7, -1, "left"),
      (("NuFast-Earth", "1"), r"$N_{\rm layers}=1$", 2, 3, "left"),
-     (("NuFast-Earth", "256"), "256", 4, 4, "left")],
+     (("NuFast-Earth", "256"), "256", 4, 4, "left"),
+     (("NuFast-Earth (dCP only)", "256"), r"$\delta_{\rm CP}$ only",
+      6, 0, "left")],
     "PREM, three flavors:  " + r"$\cos\theta_z = -0.9$," + "\n"
     r"$E = 3$--$40$ GeV,  $L = 11468$ km",
-    (1.0e0, 1.0e5), (2.0e-8, 2.0e-1),
+    # Down to 3e-2 because NuFast-Earth belongs there.  At 1e0 its whole
+    # series -- five points between 0.057 and 0.066 us -- fell off the left
+    # edge, so the code appeared in the legend and nowhere on the plot.
+    (3.0e-2, 1.0e5), (2.0e-8, 2.0e-1),
     "prem_speed_accuracy.pdf", None,
     legend_loc="upper right", legend_anchor=(0.995, 0.995),
     relabel={"NuOscProbExact": r"NuOscProbExact, $N_{\rm slabs}$",

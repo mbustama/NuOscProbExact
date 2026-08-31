@@ -201,7 +201,14 @@ def amortized(driver, problem, samples, steps, min_block, max_samples):
     d0, span = problem.scan_base(), problem.scan_width()
     sink = 0.0
     total = steps if steps > 0 else 1
-    while True:                       # first pass doubles as the warm-up
+    # Warm-up on its own and discarded; see bench.hpp.  Folding it into the
+    # autorange made a code with an expensive first call calibrate on that
+    # call and then time a block far below min_block.
+    dd0 = 0.2/total
+    for k in range(total):
+        driver.configure(d0 + k*dd0)
+        sink += driver.evaluate()
+    while True:
         dd = span/total
         t0 = time.perf_counter()
         for k in range(total):

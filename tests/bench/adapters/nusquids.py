@@ -117,7 +117,18 @@ class NuSQuIDS(object):
             # the ODE's own tolerance; it is this mode's defect, not the
             # ODE's.  Any figure quoting nuSQuIDS on constant density has to
             # say which mode produced it.
-            self._constant_density_mode = True
+            #
+            # So it is NOT used.  The figure's y axis is the WORST deviation
+            # over the grid, and on that axis this mode is a flat 2.26e-7 at
+            # every tolerance -- its bump, not its solver -- while the ODE
+            # runs 1.83e-4, 1.74e-6, 3.07e-8, 3.90e-10, 4.10e-12 as the
+            # tolerance tightens.  Driven algebraically, nuSQuIDS has no
+            # dial at all here and lands five orders short of what it can
+            # do; a speed-accuracy plane drawn from that reports a defect of
+            # one mode as the limit of the code.  The ODE path costs
+            # 51-189 us against 18, and that trade is the plane's subject
+            # rather than something to decide on the code's behalf.
+            self._constant_density_mode = False
 
         self._single = e.size == 1
         if self._single:

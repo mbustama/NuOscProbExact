@@ -1,6 +1,6 @@
 {
   "admissible": {
-    "block_cv": 0.003660290663534938,
+    "block_cv": 0.011716043165467626,
     "ok": true,
     "why": "ok"
   },
@@ -9,7 +9,7 @@
     "symbol": "none",
     "zenith": false
   },
-  "checksum": 73649.6381316544,
+  "checksum": 73519.98939665807,
   "code": "Prob3++",
   "conventions": "own-reference",
   "knob": {
@@ -28,15 +28,15 @@
   "shell_density": "midpoint",
   "shells_total": 1024,
   "timing": {
-    "block_reps": 216,
-    "block_seconds": 0.353133,
+    "block_reps": 190,
+    "block_seconds": 0.316921,
     "min_block_s": 0.25,
-    "samples": 70
+    "samples": 79
   },
   "us_per_point": {
-    "mean": 136.24,
-    "min": 135.609,
-    "n": 70,
-    "sd": 0.498678
+    "mean": 139,
+    "min": 135.372,
+    "n": 79,
+    "sd": 1.62853
   }
 }

@@ -32,8 +32,12 @@ namespace {
 // The four major PREM layers, from our_prem.h rather than typed: prob3.cpp
 // and globes.cpp cut the same boundaries, and a second copy is how "the same
 // Earth for every code" stops being true.
-const double kLayers[4] = {OUR_PREM_B[0], OUR_PREM_B[1], OUR_PREM_B[2],
-                           OUR_EARTH_RADIUS};
+// Four major layers, as the paper's appendix states; see prob3.cpp for why
+// the ten-boundary cut was tried and reverted.
+const int kNLayer = 4;
+static double kLayer(int i) {
+    return i < 3 ? OUR_PREM_B[i] : OUR_EARTH_RADIUS;
+}
 
 // This library's PREM at Y_e = 0.5, cut the way the paper's appendix says:
 // four major layers, each into n equal sub-shells held at their midpoint
@@ -42,7 +46,7 @@ class OurPREM : public NuFast::Earth_Density {
   public:
     OurPREM(int n_per_layer, double ye, bool mean)
         : n_(n_per_layer), ye_(ye), mean_(mean) {
-        rho_.resize(4 * n_);
+        rho_.resize(kNLayer * n_);
         // Earth_Density's contract: the engine reads these three fields
         // directly and validates none of them.  n_discontinuities and
         // constant_shells have no default member initialiser, so leaving
@@ -56,8 +60,8 @@ class OurPREM : public NuFast::Earth_Density {
         // error against continuous PREM was 3e-2 -- five orders WORSE than
         // the stepped configuration.  The fine sub-shell cut stays; the flag
         // below only chooses what density each thin slab carries.
-        discontinuities.resize(4 * n_);
-        n_discontinuities = 4 * n_;
+        discontinuities.resize(kNLayer * n_);
+        n_discontinuities = kNLayer * n_;
         // Each sub-shell is held at one density, which is what puts the
         // engine on its cached path: one eigendecomposition per (energy,
         // shell), reused across every zenith angle.  That reuse is the
@@ -83,8 +87,8 @@ class OurPREM : public NuFast::Earth_Density {
         // SPEED axis must use the stepped configuration and the two must
         // never share an axes.
         constant_shells = !mean_;
-        for (int L = 0; L < 4; ++L) {
-            const double lo = L ? kLayers[L - 1] : 0.0, hi = kLayers[L];
+        for (int L = 0; L < kNLayer; ++L) {
+            const double lo = L ? kLayer(L - 1) : 0.0, hi = kLayer(L);
             for (int i = 0; i < n_; ++i) {
                 const double r = lo + (i + 0.5) * (hi - lo) / n_;
                 rho_[L * n_ + i] = our_prem_rho(r) * ye;
@@ -113,11 +117,11 @@ class OurPREM : public NuFast::Earth_Density {
     }
 
     double rhoYe_stepped(double r) {
-        if (r >= kLayers[3]) return rho_.back();
+        if (r >= kLayer(kNLayer - 1)) return rho_.back();
         int L = 0;
-        while (L < 3 && r > kLayers[L]) ++L;
-        const double lo = L ? kLayers[L - 1] : 0.0;
-        int i = static_cast<int>((r - lo) * n_ / (kLayers[L] - lo));
+        while (L < kNLayer - 1 && r > kLayer(L)) ++L;
+        const double lo = L ? kLayer(L - 1) : 0.0;
+        int i = static_cast<int>((r - lo) * n_ / (kLayer(L) - lo));
         if (i < 0) i = 0;
         if (i >= n_) i = n_ - 1;
         return rho_[L * n_ + i];

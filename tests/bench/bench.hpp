@@ -208,7 +208,23 @@ inline Stats amortized(const Problem &p, int samples_lo, int samples_hi,
     // the steps actually run.
     int total = steps > 0 ? steps : 1;
     double dt = 0.0;
-    for (;;) {                                  // first pass is the warm-up
+    // A warm-up pass of its own, thrown away before anything is measured.
+    //
+    // This used to be the autorange's first iteration, which quietly broke
+    // any code whose FIRST call is dear: NuFast-Earth builds its cache
+    // then, so that pass ran past min_block, the loop concluded one step
+    // was enough and stopped, and the thirty blocks that followed were a
+    // warm cache timed over half a millisecond -- the very defect this
+    // autorange exists to prevent, reintroduced by measuring the pass that
+    // was supposed to be discarded.
+    {
+        const double dd0 = 0.2 / total;
+        for (int k = 0; k < total; ++k) {
+            driver::configure(d0 + k * dd0);
+            *sink += driver::evaluate();
+        }
+    }
+    for (;;) {
         const double dd = span / total;
         auto t0 = clk::now();
         for (int k = 0; k < total; ++k) {

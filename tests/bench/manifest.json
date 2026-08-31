@@ -289,21 +289,35 @@
      "1e-9": 2.3e-10,
      "5e-4 (default)": 7.2e-06
     },
+    "error_by_numprec_10gev_measured": {
+     "1e-10": 4.029e-07,
+     "1e-2": 0.0005344,
+     "1e-4": 8.02e-06,
+     "1e-6": 9.312e-07,
+     "1e-8": 3.669e-07
+    },
     "flavors": 3,
-    "generated_by": "tests/bench/audit_reference.py and the numPrec sweep recorded in FINDINGS.md",
+    "generated_by": "probe driving the adapter in process; see FINDINGS.md",
     "note": [
-     "Measured, at last.  The manifest previously asserted this code",
-     "floors at 3e-3 'because of its constants'.  That was an inherited",
-     "claim about an intrinsic defect that nobody had tested, and it is",
-     "wrong by seven orders.  Swept at three flavors, E=10 GeV,",
-     "cosz=-0.9, against nuCraft's own 50-digit reference, the error",
-     "tracks numPrec the whole way down and is still falling by 3x at",
-     "the edge of the declared domain: there is no floor above 7.9e-11.",
-     "That is exactly what zvode at atol=rtol=numPrec*2e-3 predicts and",
-     "nothing else.  Asserting a floor for a dial we never turned is the",
-     "failure this pipeline exists to prevent, and it was aimed at",
-     "another author's code."
-    ]
+     "CORRECTED.  This entry twice asserted something it had not measured.",
+     "It first claimed nuCraft floors at 3e-3 because of its constants --",
+     "an inherited claim nobody had tested.  The correction that replaced",
+     "it claimed the error tracks numPrec the whole way down with no floor",
+     "above 7.9e-11.  That is also wrong.  Driven in process at cos = -0.9",
+     "against a reference good to 2.4e-18, the error falls 5.3e-4, 8.0e-6,",
+     "9.3e-7, 3.7e-7 and then STOPS: 4.0e-7 at numPrec 1e-10, no better",
+     "than at 1e-8.  The same shape at 9.74 GeV (4.1e-7) and at 4.80 GeV",
+     "(1.7e-6).  So there IS a floor, near 4e-7, four orders above the",
+     "figure this entry used to give and four orders below its first one.",
+     "The solver is not the limit: nuCraft closes unitarity to 5e-11 and",
+     "the reference sits eleven orders below the floor, so what remains is",
+     "a systematic difference between the problem nuCraft solves and the",
+     "problem the reference solves.  That difference is NOT yet identified.",
+     "It is not the profile (fidelity 0.0, they share one spline), not the",
+     "matter constant, and not the Earth radius (6371.0 both).  Recorded as",
+     "unexplained rather than attributed."
+    ],
+    "reference_error": 2.402e-18
    },
    "name": "nuCraft",
    "pin": {

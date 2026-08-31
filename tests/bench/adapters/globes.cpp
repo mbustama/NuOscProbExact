@@ -53,43 +53,70 @@ std::vector<Profile> g_profiles;   // one per zenith; one constant slab else
 
 // Chord decomposition of the radial shells for one zenith cosine, unscaled:
 // r(s)^2 = R^2 + s^2 - 2 s R |cos|.
+// Every PREM boundary, not four of them.
+//
+// The four-layer cut {1221.5, 3480, 5701, R} leaves SIX PREM
+// discontinuities -- 5771, 5971, 6151, 6346.6, 6356, 6368 -- inside
+// its outermost layer, so every sub-shell spanning one of them
+// averages across a density jump.  How much that costs depends on
+// where the shell edges happen to fall relative to the jump, which
+// is why the error did not fall monotonically: 9.6e-5 at 128 shells,
+// 3.2e-6 at 256, then WORSE at 1.1e-5 at 512.  This library cuts at
+// all sixteen crossings the chord makes, so it converged cleanly to
+// 5.5e-8 while three external codes sat at 2e-6 agreeing with each
+// other to four figures -- which was the tell: they were not meeting
+// their own limits, they were both reproducing our profile.
+//
+// The paper's appendix describes the four-layer cut.  It has to be
+// corrected with this.
+static const int kNLayer = OUR_PREM_NB + 1;
+static double layer_edge(int i) {
+    return i < OUR_PREM_NB ? OUR_PREM_B[i] : OUR_EARTH_RADIUS;
+}
+
 Profile chord(double cz, int n, double rho_factor) {
-    const double layers[4] = {OUR_PREM_B[0], OUR_PREM_B[1], OUR_PREM_B[2],
-                              OUR_EARTH_RADIUS};
+    // Subdivided along the PATH, not in radius.
+    //
+    // GLoBES takes a chord profile -- a list of lengths and densities -- so
+    // nothing here requires a radial shell stack.  Building one anyway was
+    // this adapter's choice and it cost GLoBES dearly: near the turning
+    // point the chord runs tangent to the shells, so a thin radial shell
+    // spans a long stretch of path whose density its radial midpoint does
+    // not represent.  The resulting error does not converge, it OSCILLATES
+    // with where the shell edges fall relative to r_min -- measured at
+    // n = 100..180, worst at 1.2e-4 and best at 9.2e-6 with no monotone
+    // trend between them, and 512 shells worse than 256.
+    //
+    // Cutting the chord at every PREM crossing and then subdividing each
+    // piece uniformly in path length is what this library does for itself,
+    // and it is what a careful user of GLoBES would hand it.
     const double R = OUR_EARTH_RADIUS, acz = std::fabs(cz);
     const double rmin = R * std::sqrt(1.0 - cz * cz), total = 2.0 * R * acz;
 
-    std::vector<double> edge, rho;
-    double lo = 0.0;
-    for (int L = 0; L < 4; ++L) {
-        const double hi = layers[L];
-        for (int i = 0; i < n; ++i) {
-            edge.push_back(lo + (i + 1) * (hi - lo) / n);
-            rho.push_back(our_prem_rho(lo + (i + 0.5) * (hi - lo) / n)
-                          * rho_factor);
-        }
-        lo = hi;
-    }
-
-    std::vector<double> cross = {0.0, total};
-    for (double r : edge) {
+    // Every PREM boundary the chord crosses, as positions along the path,
+    // plus the two ends and the turning point itself.
+    std::vector<double> cut = {0.0, acz * R, total};
+    for (int i = 0; i < OUR_PREM_NB; ++i) {
+        const double r = OUR_PREM_B[i];
         if (r <= rmin || r >= R) continue;
         const double d = std::sqrt(r * r - rmin * rmin);
-        cross.push_back(acz * R - d);
-        cross.push_back(acz * R + d);
+        cut.push_back(acz * R - d);
+        cut.push_back(acz * R + d);
     }
-    std::sort(cross.begin(), cross.end());
+    std::sort(cut.begin(), cut.end());
 
     Profile prof;
-    for (std::size_t i = 0; i + 1 < cross.size(); ++i) {
-        const double a = cross[i], b = cross[i + 1];
-        if (b - a <= 1.0e-12) continue;              // degenerate crossing
-        const double s = 0.5 * (a + b);
-        const double r = std::sqrt(R * R + s * s - 2.0 * s * R * acz);
-        std::size_t j = 0;
-        while (j + 1 < edge.size() && r > edge[j]) ++j;
-        prof.length.push_back(b - a);
-        prof.density.push_back(rho[j]);
+    for (std::size_t k = 0; k + 1 < cut.size(); ++k) {
+        const double a = cut[k], b = cut[k + 1];
+        if (b - a <= 1.0e-12) continue;
+        for (int i = 0; i < n; ++i) {
+            const double s0 = a + i * (b - a) / n;
+            const double s1 = a + (i + 1) * (b - a) / n;
+            const double s = 0.5 * (s0 + s1);
+            const double r = std::sqrt(R * R + s * s - 2.0 * s * R * acz);
+            prof.length.push_back(s1 - s0);
+            prof.density.push_back(our_prem_rho(r) * rho_factor);
+        }
     }
     return prof;
 }

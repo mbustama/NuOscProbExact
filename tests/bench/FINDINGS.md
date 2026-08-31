@@ -567,6 +567,14 @@ reference:
 |---|---|---|---|---|---|
 | error | 1.6e-4 | 7.2e-6 | 1.3e-6 | 3.6e-8 | **7.9e-11** |
 
+**This row is wrong and is superseded.** Re-measured by driving the
+adapter in process at cos(thz) = -0.9 against a reference good to
+2.4e-18, nuCraft's error falls 5.3e-4, 8.0e-6, 9.3e-7, 3.7e-7 and then
+stops -- 4.0e-7 at numPrec 1e-10, no better than at 1e-8.  There is a
+floor near 4e-7.  The correction above replaced one untested claim
+(3e-3) with another (no floor above 7.9e-11); both were wrong, in
+opposite directions, and both were about someone else's code.
+
 Still falling threefold at the edge of the declared domain. That is zvode at
 `atol = rtol = numPrec * 2e-3` and nothing else. The claim was wrong by seven
 orders and it was aimed at another author's code.

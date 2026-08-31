@@ -1,6 +1,6 @@
 {
   "admissible": {
-    "block_cv": 0.002394568369063241,
+    "block_cv": 0.007961728560714764,
     "ok": true,
     "why": "ok"
   },
@@ -9,7 +9,7 @@
     "symbol": "nuSQUIDS(E vector, ...) multiple-energy constructor + EvolveState",
     "zenith": false
   },
-  "checksum": 802594.3780715349,
+  "checksum": 516331.38093310845,
   "code": "nuSQuIDS",
   "conventions": "own-reference",
   "environment": {},
@@ -25,15 +25,15 @@
   },
   "scan": "dcp",
   "timing": {
-    "block_reps": 242,
-    "block_seconds": 0.2608176490660602,
+    "block_reps": 194,
+    "block_seconds": 0.31724907261736734,
     "min_block_s": 0.25,
-    "samples": 96
+    "samples": 77
   },
   "us_per_point": {
-    "mean": 17.96264800730442,
-    "min": 17.876148762017202,
-    "n": 96,
-    "sd": 0.04301278874290802
+    "mean": 27.255074967127783,
+    "min": 26.5380983617752,
+    "n": 77,
+    "sd": 0.2169975087902033
   }
 }
