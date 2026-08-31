@@ -326,6 +326,13 @@ def main(argv=None):
                     dest='max_samples')
     ap.add_argument('--scan', default='dcp', choices=('dcp', 'dmsq31'),
                     help='which parameter the amortized scan turns')
+    # The knob is an integer and the tolerance dial was encoded as
+    # rtol = 10**knob, which can express 1e-3 and 1e-4 and nothing between
+    # them.  The paper's curve runs 3, 1, 0.3, 0.03, 0.01, 1e-3, 1e-4,
+    # 3e-5, 1e-5 -- five of those nine are not powers of ten, so six of its
+    # points were unreachable and the curve lost its whole loose end.
+    ap.add_argument('--rtol', type=float, default=0.0,
+                    help='explicit tolerance, overriding the knob encoding')
     ap.add_argument('--n-energies', type=int, default=0)
     ap.add_argument('--n-zenith', type=int, default=0)
     ap.add_argument('--json', dest='out', default='')
@@ -334,6 +341,8 @@ def main(argv=None):
     problem = build_problem(args.grid, args.knob, args.n_energies,
                             args.n_zenith)
     problem.scan = args.scan
+    if args.rtol:
+        problem.rtol_override = args.rtol
     driver = load_adapter(args.code)
     driver.setup(problem)
     cap = driver.capabilities()

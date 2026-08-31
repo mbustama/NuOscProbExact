@@ -58,11 +58,14 @@ PYTHON = {
 KNOBS = {
     'NuFast-LBL':     [-1, 0, 1, 2, 3],
     'NuFast-Earth':   [-1, 0, 1, 2, 3],
-    'Prob3++':        [1, 2, 4, 8, 16, 32, 64, 128, 256],
-    'GLoBES':         [1, 2, 4, 8, 16, 32, 64, 128, 256],
+    # To 1024: the curves were stopping at 256 because this list did, not
+    # because any code did.  All three accept more.
+    'Prob3++':        [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024],
+    'GLoBES':         [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024],
     'nuSQuIDS':       [3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
     'nuCraft':        [2, 3, 4, 5, 6, 7, 8, 9, 10],
-    'NuOscProbExact': [1, 2, 4, 8, 16, 32, 64, 128, 256, -3, -4, -5],
+    'NuOscProbExact': [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024,
+                       -3, -4, -5],
 }
 
 #: Codes that cannot be posed one of the two problem kinds, and why.
@@ -156,7 +159,13 @@ def reference_for(code, energy_gev, costhz, ye, cache, l_km=None,
     return row, error, False
 
 
-def probabilities(code, grid, knob, n_e, n_z, n_layers=0):
+#: The tolerance dial's loose end, which the integer knob cannot reach.
+#: rtol = 10**knob expresses 1e-3 and 1e-4 and nothing between them, so six
+#: of the paper's nine points -- 3, 1, 0.3, 0.03, 0.01, 3e-5 -- had no knob.
+RTOL_SWEEP = [3.0, 1.0, 0.3, 0.03, 0.01, 3.0e-5]
+
+
+def probabilities(code, grid, knob, n_e, n_z, n_layers=0, rtol=0.0):
     r"""Runs the untimed accuracy protocol and returns the scored channel."""
     if code in COMPILED:
         cmd = [os.path.join(ROOT, '.bench-build', 'bin', COMPILED[code]),
@@ -166,6 +175,8 @@ def probabilities(code, grid, knob, n_e, n_z, n_layers=0):
                '--protocol', 'accuracy', '--grid', grid, '--knob', str(knob)]
     if n_layers:
         cmd += ['--n-layers', str(n_layers)]
+    if rtol:
+        cmd += ['--rtol', repr(rtol)]
     if n_e:
         cmd += ['--n-energies', str(n_e)]
     if n_z:
@@ -198,6 +209,8 @@ def main(argv=None):
     ap.add_argument('--n-zenith', type=int, default=0)
     ap.add_argument('--codes', default='')
     ap.add_argument('--out', default=os.path.join(HERE, 'accuracy_sweep.json'))
+    ap.add_argument('--rtol-sweep', action='store_true', dest='rtol_sweep',
+                    help='sweep RTOL_SWEEP instead of the integer knob')
     ap.add_argument('--layers', action='store_true',
                     help='sweep the PROFILE dial (n_layers) instead of the '
                          'precision knob, for the codes in LAYER_SWEEP')
@@ -217,7 +230,8 @@ def main(argv=None):
         'generated_at': time.strftime('%Y-%m-%dT%H:%M:%S%z'),
         'grid': args.grid,
         'protocol': 'accuracy (untimed)',
-        'dial': 'n_layers' if args.layers else 'precision knob',
+        'dial': ('rtol' if args.rtol_sweep
+                 else 'n_layers' if args.layers else 'precision knob'),
         'profile_basis': 'continuous',
         'ye': ye,
         'energies_gev': energies,
@@ -247,7 +261,12 @@ def main(argv=None):
                  'channels': ['numu->nue', 'numu->numu', 'numu->nutau'],
                  'reference': [[str(v) for v in row] for row in refs],
                  'by_knob': {}}
-        if args.layers:
+        if args.rtol_sweep:
+            if code != 'NuOscProbExact':
+                record['series'][code] = {'skipped': 'no tolerance dial'}
+                continue
+            dials = [(0, 0, r) for r in RTOL_SWEEP]
+        elif args.layers:
             spec = LAYER_SWEEP.get(code)
             if not spec:
                 record['series'][code] = {
@@ -256,14 +275,15 @@ def main(argv=None):
                 print('%-16s skipped: profile dial is its precision knob'
                       % code, flush=True)
                 continue
-            dials = [(spec['knob'], n) for n in spec['layers']]
+            dials = [(spec['knob'], n, 0.0) for n in spec['layers']]
         else:
-            dials = [(k, 0) for k in KNOBS[code]]
+            dials = [(k, 0, 0.0) for k in KNOBS[code]]
 
-        for knob, n_layers in dials:
+        for knob, n_layers, rtol in dials:
             probs = probabilities(code, args.grid, knob, args.n_energies,
-                                  args.n_zenith, n_layers)
-            dial = str(n_layers) if args.layers else str(knob)
+                                  args.n_zenith, n_layers, rtol)
+            dial = ('%g' % rtol if args.rtol_sweep
+                    else str(n_layers) if args.layers else str(knob))
             if probs is None or len(probs) != 3*len(refs):
                 entry['by_knob'][dial] = {'failed': True}
                 print('%-16s dial %-5s FAILED' % (code, dial), flush=True)

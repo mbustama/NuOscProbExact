@@ -194,6 +194,16 @@ def earth_plane(cells_fn, artifact_name, outdir, acc):
             continue
 
         knob = cell['knob']
+        # An explicit tolerance is its own dial, keyed separately: the knob
+        # is an integer and cannot carry 3, 0.3 or 3e-5, which is why six of
+        # the paper's nine tolerance points had gone missing.
+        if cell.get('rtol'):
+            err = (acc.get('CHORD/12x1', {}).get('series', {}).get(code, {})
+                   .get('by_rtol', {}).get('%g' % cell['rtol'], {})
+                   .get('max_abs_deviation'))
+            add('NuOscProbExact (tolerance)', code, 'rtol',
+                '%.0e' % cell['rtol'], -cell['rtol'], d, err)
+            continue
         err = (acc.get('CHORD/12x1', {}).get('series', {}).get(code, {})
                .get('by_knob', {}).get(str(knob), {}).get('max_abs_deviation'))
         # This library turns two different dials, and the figure has always
@@ -212,7 +222,8 @@ def earth_plane(cells_fn, artifact_name, outdir, acc):
                 label_for(code, knob), knob, d, err)
 
     for s in series.values():
-        s['points'].sort(key=lambda q: q['knob'])
+        s['points'].sort(key=lambda q: (-(q['max_abs_error'] or 0),
+                                        q['us_per_probability']))
         mark_best(s['points'], s.get('code'))
     return {'generated_by': 'tests/bench/emit_figures.py',
             'note': 'PREM, cos(theta_z) = -0.9, E = 3-40 GeV, three flavors, '

@@ -71,6 +71,20 @@
           "max_abs_error": 3.186537836985386e-07,
           "us_per_probability": 1949.92,
           "us_sd": 21.4901
+        },
+        {
+          "accuracy_measured": true,
+          "knob": 512,
+          "max_abs_error": 7.967091669853861e-08,
+          "us_per_probability": 4023.69,
+          "us_sd": 165.084
+        },
+        {
+          "accuracy_measured": true,
+          "knob": 1024,
+          "max_abs_error": 1.993326009853861e-08,
+          "us_per_probability": 8307.33,
+          "us_sd": 287.3
         }
       ],
       "threads": 1
@@ -142,6 +156,20 @@
           "max_abs_error": 5.844298591234631e-15,
           "us_per_probability": 0.379069,
           "us_sd": 0.00417394
+        },
+        {
+          "accuracy_measured": false,
+          "knob": 512,
+          "max_abs_error": null,
+          "us_per_probability": 0.401153,
+          "us_sd": 0.0100913
+        },
+        {
+          "accuracy_measured": false,
+          "knob": 1024,
+          "max_abs_error": null,
+          "us_per_probability": 0.441066,
+          "us_sd": 0.0764506
         }
       ],
       "threads": 1
@@ -302,6 +330,48 @@
           "us_sd": 13.40820973320807
         },
         {
+          "accuracy_measured": false,
+          "knob": 0,
+          "max_abs_error": null,
+          "us_per_probability": 13.191352130766267,
+          "us_sd": 2.2771639188069077
+        },
+        {
+          "accuracy_measured": false,
+          "knob": 0,
+          "max_abs_error": null,
+          "us_per_probability": 14.832640721055965,
+          "us_sd": 3.1898655968928393
+        },
+        {
+          "accuracy_measured": false,
+          "knob": 0,
+          "max_abs_error": null,
+          "us_per_probability": 30.168189299532322,
+          "us_sd": 1.745230129390015
+        },
+        {
+          "accuracy_measured": false,
+          "knob": 0,
+          "max_abs_error": null,
+          "us_per_probability": 46.89915316858975,
+          "us_sd": 5.115802500509712
+        },
+        {
+          "accuracy_measured": false,
+          "knob": 0,
+          "max_abs_error": null,
+          "us_per_probability": 70.6091541162777,
+          "us_sd": 3.9550192700268822
+        },
+        {
+          "accuracy_measured": false,
+          "knob": 0,
+          "max_abs_error": null,
+          "us_per_probability": 658.9726227534834,
+          "us_sd": 119.19465838669939
+        },
+        {
           "accuracy_measured": true,
           "knob": 1,
           "max_abs_error": 0.05692422238982188,
@@ -363,6 +433,20 @@
           "max_abs_error": 8.750261186174821e-07,
           "us_per_probability": 119.72424572409858,
           "us_sd": 18.30178855978275
+        },
+        {
+          "accuracy_measured": true,
+          "knob": 512,
+          "max_abs_error": 2.187547515174821e-07,
+          "us_per_probability": 269.89581705562523,
+          "us_sd": 25.578417213033852
+        },
+        {
+          "accuracy_measured": true,
+          "knob": 1024,
+          "max_abs_error": 5.46812220174821e-08,
+          "us_per_probability": 693.228575769557,
+          "us_sd": 100.36641370533886
         }
       ],
       "threads": 12
@@ -392,6 +476,48 @@
           "max_abs_error": 1.3998210329717482e-05,
           "us_per_probability": 191.22533526004625,
           "us_sd": 2.218731429977576
+        },
+        {
+          "accuracy_measured": false,
+          "knob": 0,
+          "max_abs_error": null,
+          "us_per_probability": 9.934494375658579,
+          "us_sd": 0.3687693097734189
+        },
+        {
+          "accuracy_measured": false,
+          "knob": 0,
+          "max_abs_error": null,
+          "us_per_probability": 11.342645641740427,
+          "us_sd": 2.663269227224146
+        },
+        {
+          "accuracy_measured": false,
+          "knob": 0,
+          "max_abs_error": null,
+          "us_per_probability": 34.13713195203157,
+          "us_sd": 2.4263393502794206
+        },
+        {
+          "accuracy_measured": false,
+          "knob": 0,
+          "max_abs_error": null,
+          "us_per_probability": 61.31969625784917,
+          "us_sd": 2.2663886007820104
+        },
+        {
+          "accuracy_measured": false,
+          "knob": 0,
+          "max_abs_error": null,
+          "us_per_probability": 111.56976289611605,
+          "us_sd": 8.811942339872237
+        },
+        {
+          "accuracy_measured": false,
+          "knob": 0,
+          "max_abs_error": null,
+          "us_per_probability": 1516.7378745577682,
+          "us_sd": 38.990633974634235
         },
         {
           "accuracy_measured": true,
@@ -455,6 +581,20 @@
           "max_abs_error": 8.750261186174821e-07,
           "us_per_probability": 361.95363201772926,
           "us_sd": 3.0088965725468055
+        },
+        {
+          "accuracy_measured": true,
+          "knob": 512,
+          "max_abs_error": 2.187547515174821e-07,
+          "us_per_probability": 738.8268301703513,
+          "us_sd": 32.19818314573848
+        },
+        {
+          "accuracy_measured": true,
+          "knob": 1024,
+          "max_abs_error": 5.46812220174821e-08,
+          "us_per_probability": 1564.5602676890974,
+          "us_sd": 156.1367939510442
         }
       ],
       "threads": 1
@@ -547,6 +687,20 @@
           "max_abs_error": 3.07197830910609e-15,
           "us_per_probability": 1.1796159767297871,
           "us_sd": 0.004025759411679588
+        },
+        {
+          "accuracy_measured": false,
+          "knob": 512,
+          "max_abs_error": null,
+          "us_per_probability": 1.3801135431055764,
+          "us_sd": 0.1274642028328835
+        },
+        {
+          "accuracy_measured": false,
+          "knob": 1024,
+          "max_abs_error": null,
+          "us_per_probability": 1.3216859475886982,
+          "us_sd": 0.04209667318834841
         }
       ],
       "threads": 12
@@ -639,6 +793,20 @@
           "max_abs_error": 3.07197830910609e-15,
           "us_per_probability": 1.1971252640444812,
           "us_sd": 0.032987168149263016
+        },
+        {
+          "accuracy_measured": false,
+          "knob": 512,
+          "max_abs_error": null,
+          "us_per_probability": 1.2613161874039875,
+          "us_sd": 0.03378440077833979
+        },
+        {
+          "accuracy_measured": false,
+          "knob": 1024,
+          "max_abs_error": null,
+          "us_per_probability": 1.4217355382296275,
+          "us_sd": 0.06737686173534273
         }
       ],
       "threads": 1
@@ -651,65 +819,79 @@
         {
           "accuracy_measured": true,
           "knob": 1,
-          "max_abs_error": 0.17681967921337607,
+          "max_abs_error": 0.17611106296545376,
           "us_per_probability": 2.91458,
           "us_sd": 0.00592977
         },
         {
           "accuracy_measured": true,
           "knob": 2,
-          "max_abs_error": 0.024565864315759266,
+          "max_abs_error": 0.024519592665169065,
           "us_per_probability": 4.87488,
           "us_sd": 0.0531188
         },
         {
           "accuracy_measured": true,
           "knob": 4,
-          "max_abs_error": 0.019066271563794736,
+          "max_abs_error": 0.019122720669060435,
           "us_per_probability": 9.68459,
           "us_sd": 0.114223
         },
         {
           "accuracy_measured": true,
           "knob": 8,
-          "max_abs_error": 0.005004406175767725,
+          "max_abs_error": 0.004978423622130335,
           "us_per_probability": 18.1006,
           "us_sd": 0.0413485
         },
         {
           "accuracy_measured": true,
           "knob": 16,
-          "max_abs_error": 0.004267911889026935,
+          "max_abs_error": 0.004285906545731835,
           "us_per_probability": 34.9671,
           "us_sd": 0.23504
         },
         {
           "accuracy_measured": true,
           "knob": 32,
-          "max_abs_error": 0.0014091635699815344,
+          "max_abs_error": 0.0014089013534480345,
           "us_per_probability": 70.1239,
           "us_sd": 0.796643
         },
         {
           "accuracy_measured": true,
           "knob": 64,
-          "max_abs_error": 0.0004228895920842345,
+          "max_abs_error": 0.00042056218553503447,
           "us_per_probability": 139,
           "us_sd": 1.62853
         },
         {
           "accuracy_measured": true,
           "knob": 128,
-          "max_abs_error": 9.783785045433447e-05,
+          "max_abs_error": 9.609433172449446e-05,
           "us_per_probability": 275.525,
           "us_sd": 1.91191
         },
         {
           "accuracy_measured": true,
           "knob": 256,
-          "max_abs_error": 2.9348906577344643e-06,
+          "max_abs_error": 3.2493004115844645e-06,
           "us_per_probability": 553.848,
           "us_sd": 4.97853
+        },
+        {
+          "accuracy_measured": true,
+          "knob": 512,
+          "max_abs_error": 1.1305824763865535e-05,
+          "us_per_probability": 1085.29,
+          "us_sd": 30.2746
+        },
+        {
+          "accuracy_measured": true,
+          "knob": 1024,
+          "max_abs_error": 2.0941875204836578e-06,
+          "us_per_probability": 2235.4,
+          "us_sd": 68.5531
         }
       ],
       "threads": 1
@@ -781,6 +963,20 @@
           "max_abs_error": 1.4178641882148511e-15,
           "us_per_probability": 0.52357,
           "us_sd": 0.00496344
+        },
+        {
+          "accuracy_measured": false,
+          "knob": 512,
+          "max_abs_error": null,
+          "us_per_probability": 0.543135,
+          "us_sd": 0.00894164
+        },
+        {
+          "accuracy_measured": false,
+          "knob": 1024,
+          "max_abs_error": null,
+          "us_per_probability": 0.604871,
+          "us_sd": 0.0698586
         }
       ],
       "threads": 1

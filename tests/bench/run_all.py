@@ -85,11 +85,11 @@ DISCRETISATION_DIAL = {
 KNOBS = {
     'NuFast-LBL':     [-1, 0, 1, 2, 3],
     'NuFast-Earth':   [-1, 0, 1, 2, 3],
-    'Prob3++':        [1, 2, 4, 8, 16, 32, 64, 128, 256],
-    'GLoBES':         [1, 2, 4, 8, 16, 32, 64, 128, 256],
+    'Prob3++':        [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024],
+    'GLoBES':         [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024],
     'nuSQuIDS':       [3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
     'nuCraft':        [2, 3, 4, 5, 6, 7, 8, 9, 10],
-    'NuOscProbExact': [1, 2, 4, 8, 16, 32, 64, 128, 256, -3, -4, -5],
+    'NuOscProbExact': [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, -3, -4, -5],
 }
 
 #: The knob a THROUGHPUT or oscillogram cell holds fixed.  Explicit, with the
@@ -306,6 +306,24 @@ def cells(accuracy_only=False, speed_only=False):
                                     'plane': True, 'threads': 1,
                                     'shell_density': 'midpoint'})
 
+                # The tolerance dial's loose end, AFTER the knob loop and at
+                # its own indentation -- inserting it inside cost the single
+                # thread series its own loop and silently orphaned twenty
+                # three artifacts.  rtol = 10**knob with an integer knob
+                # reaches 1e-3, 1e-4 and 1e-5 and nothing else, so six of the
+                # paper's nine tolerance points had no knob at all and the
+                # curve began where the published one ended.
+                if code == 'NuOscProbExact' and grid == 'CHORD/12x1':
+                    for r in (3.0, 1.0, 0.3, 0.03, 0.01, 3.0e-5):
+                        for th in (None, 1):
+                            cell = {'kind': 'amortized', 'code': code,
+                                    'grid': grid, 'knob': 0, 'timed': True,
+                                    'plane': True, 'rtol': r,
+                                    'shell_density': 'midpoint'}
+                            if th:
+                                cell['threads'] = 1
+                            out.append(cell)
+
         # THROUGHPUT: what one request for N points costs, with every
         # repetition started afresh.  The N-sweep is the figure's x axis.
         for n in (1, 3, 10, 30, 100, 300, 1000, 3000, 10000, 30000):
@@ -392,6 +410,8 @@ def artifact_name(cell):
         bits.append('1thread')
     if cell.get('scan') and cell['scan'] != 'dcp':
         bits.append('scan-%s' % cell['scan'])
+    if cell.get('rtol'):
+        bits.append('rtol%g' % cell['rtol'])
     return '_'.join(bits) + '.json'
 
 
@@ -421,6 +441,8 @@ def command(cell):
         cmd += ['--mean-density']
     if cell.get('scan') and cell['scan'] != 'dcp':
         cmd += ['--scan', cell['scan']]
+    if cell.get('rtol'):
+        cmd += ['--rtol', repr(cell['rtol'])]
     return cmd
 
 

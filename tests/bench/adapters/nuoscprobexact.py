@@ -131,7 +131,13 @@ class NuOscProbExact(object):
         self._dcp = p.dcp
 
         knob = int(p.knob)
-        if knob > 0:
+        override = getattr(p, 'rtol_override', 0.0)
+        if override:
+            # An explicit tolerance, so the dial is not confined to powers
+            # of ten.  n_slabs stays at the library default and the search
+            # starts from it, exactly as for a knob-derived rtol.
+            self._n_slabs, self._rtol = 1, float(override)
+        elif knob > 0:
             self._n_slabs, self._rtol = knob, None
         elif knob < 0:
             self._n_slabs, self._rtol = 1, 10.0**knob

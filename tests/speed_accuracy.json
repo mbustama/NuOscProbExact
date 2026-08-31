@@ -88,6 +88,24 @@
      "max_abs_error": 5.844298591234631e-15,
      "us_per_probability": 0.379069,
      "us_sd": 0.00417394
+    },
+    {
+     "best_at_this_accuracy": true,
+     "block_cv": 0.025155738583532965,
+     "knob": 512,
+     "label": "512",
+     "max_abs_error": null,
+     "us_per_probability": 0.401153,
+     "us_sd": 0.0100913
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.1733314288564523,
+     "knob": 1024,
+     "label": "1024",
+     "max_abs_error": null,
+     "us_per_probability": 0.441066,
+     "us_sd": 0.0764506
     }
    ],
    "threads": null
@@ -310,6 +328,24 @@
      "max_abs_error": 3.07197830910609e-15,
      "us_per_probability": 1.1796159767297871,
      "us_sd": 0.004025759411679588
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.09235776539520033,
+     "knob": 512,
+     "label": "512",
+     "max_abs_error": null,
+     "us_per_probability": 1.3801135431055764,
+     "us_sd": 0.1274642028328835
+    },
+    {
+     "best_at_this_accuracy": true,
+     "block_cv": 0.031850738267400175,
+     "knob": 1024,
+     "label": "1024",
+     "max_abs_error": null,
+     "us_per_probability": 1.3216859475886982,
+     "us_sd": 0.04209667318834841
     }
    ],
    "threads": null
@@ -426,6 +462,24 @@
      "max_abs_error": 3.07197830910609e-15,
      "us_per_probability": 1.1971252640444812,
      "us_sd": 0.032987168149263016
+    },
+    {
+     "best_at_this_accuracy": true,
+     "block_cv": 0.026785037023804536,
+     "knob": 512,
+     "label": "512",
+     "max_abs_error": null,
+     "us_per_probability": 1.2613161874039875,
+     "us_sd": 0.03378440077833979
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.047390572946668895,
+     "knob": 1024,
+     "label": "1024",
+     "max_abs_error": null,
+     "us_per_probability": 1.4217355382296275,
+     "us_sd": 0.06737686173534273
     }
    ],
    "threads": 1
@@ -515,6 +569,24 @@
      "max_abs_error": 1.4178641882148511e-15,
      "us_per_probability": 0.52357,
      "us_sd": 0.00496344
+    },
+    {
+     "best_at_this_accuracy": true,
+     "block_cv": 0.016463015640678653,
+     "knob": 512,
+     "label": "512",
+     "max_abs_error": null,
+     "us_per_probability": 0.543135,
+     "us_sd": 0.00894164
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.1154933861930891,
+     "knob": 1024,
+     "label": "1024",
+     "max_abs_error": null,
+     "us_per_probability": 0.604871,
+     "us_sd": 0.0698586
     }
    ],
    "threads": null
