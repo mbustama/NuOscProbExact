@@ -253,6 +253,41 @@ def throughput(cells_fn, artifact_name, outdir):
             'series': series}
 
 
+def scan_sensitivity(cells_fn, artifact_name, outdir):
+    r"""How much each code's cost depends on WHICH parameter the fit moves.
+
+    Objection Earth-2 named Dmsq31 and said different parameters cost
+    different amounts of recomputation.  Each Dmsq31 cell here is paired with
+    the delta_CP cell at the same code, grid and knob -- the two differ in
+    nothing else -- so the ratio is the answer to that, per code, measured.
+    """
+    out = {}
+    for cell in cells_fn():
+        if cell.get('scan') != 'dmsq31':
+            continue
+        slow = timed(outdir, artifact_name(cell))
+        control = dict(cell)
+        control.pop('scan', None)
+        fast = timed(outdir, artifact_name(control))
+        if not slow or not fast:
+            continue
+        grid = cell['grid']
+        out.setdefault(grid, []).append({
+            'code': cell['code'], 'knob': cell['knob'],
+            'dcp_us': fast['us_per_point']['mean'],
+            'dcp_sd': fast['us_per_point']['sd'],
+            'dmsq31_us': slow['us_per_point']['mean'],
+            'dmsq31_sd': slow['us_per_point']['sd'],
+            'ratio': slow['us_per_point']['mean']/fast['us_per_point']['mean']})
+    for grid in out:
+        out[grid].sort(key=lambda q: -q['ratio'])
+    return {'generated_by': 'tests/bench/emit_figures.py',
+            'note': 'Cost per probability when a fit moves delta_CP against '
+                    'when it moves Dmsq31, at the same knob, differing in '
+                    'nothing else. ' + STAMP,
+            'grids': out}
+
+
 def main(outdir=None):
     import run_all
     outdir = outdir or os.path.join(HERE, 'artifacts')
@@ -264,14 +299,15 @@ def main(outdir=None):
             (os.path.join(HERE, 'earth_plane.json'),
              earth_plane(run_all.cells, run_all.artifact_name, outdir, acc)),
             (os.path.join(ROOT, 'tests', 'timing_other_codes.json'),
-             throughput(run_all.cells, run_all.artifact_name, outdir))):
+             throughput(run_all.cells, run_all.artifact_name, outdir)),
+            (os.path.join(HERE, 'scan_sensitivity.json'),
+             scan_sensitivity(run_all.cells, run_all.artifact_name, outdir))):
         payload['manifest_sha256'] = run_all.manifest_sha()
         with open(path, 'w') as handle:
             json.dump(payload, handle, indent=1, sort_keys=True)
             handle.write('\n')
-        n = (len(payload.get('series', []))
-             if isinstance(payload.get('series'), list)
-             else len(payload.get('series', {})))
+        body = payload.get('series', payload.get('grids', []))
+        n = len(body) if isinstance(body, (list, dict)) else 0
         written.append((os.path.relpath(path, ROOT), n))
     for rel, n in written:
         print('  %-44s %2d series' % (rel, n))

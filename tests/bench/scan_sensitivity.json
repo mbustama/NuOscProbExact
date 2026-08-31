@@ -1,0 +1,63 @@
+{
+ "generated_by": "tests/bench/emit_figures.py",
+ "grids": {
+  "CHORD/12x1": [
+   {
+    "code": "NuFast-Earth",
+    "dcp_sd": 0.000554883,
+    "dcp_us": 0.0633951,
+    "dmsq31_sd": 3.48795,
+    "dmsq31_us": 108.517,
+    "knob": -1,
+    "ratio": 1711.7569023473422
+   },
+   {
+    "code": "NuOscProbExact",
+    "dcp_sd": 8.755103291226764,
+    "dcp_us": 84.58137358280105,
+    "dmsq31_sd": 17.89766079580561,
+    "dmsq31_us": 119.06952665626581,
+    "knob": 256,
+    "ratio": 1.407751158589338
+   },
+   {
+    "code": "nuCraft",
+    "dcp_sd": 240.28377634420914,
+    "dcp_us": 8448.9569384346,
+    "dmsq31_sd": 237.732303493176,
+    "dmsq31_us": 8966.789540127942,
+    "knob": 6,
+    "ratio": 1.061289530230377
+   },
+   {
+    "code": "Prob3++",
+    "dcp_sd": 9.60804,
+    "dcp_us": 564.513,
+    "dmsq31_sd": 55.241,
+    "dmsq31_us": 580.615,
+    "knob": 256,
+    "ratio": 1.0285237009599424
+   },
+   {
+    "code": "nuSQuIDS",
+    "dcp_sd": 12.834537061179992,
+    "dcp_us": 1152.7597174151904,
+    "dmsq31_sd": 32.29958552890534,
+    "dmsq31_us": 1179.3348901615673,
+    "knob": 12,
+    "ratio": 1.0230535230758808
+   },
+   {
+    "code": "GLoBES",
+    "dcp_sd": 5.46491,
+    "dcp_us": 490.133,
+    "dmsq31_sd": 10.4709,
+    "dmsq31_us": 493.615,
+    "knob": 256,
+    "ratio": 1.0071041941677055
+   }
+  ]
+ },
+ "manifest_sha256": "1d6d4978d3dff95e9802a10ddbdc2cbb3c6d3e8dd572e27abe8ec56cab9fd8a4",
+ "note": "Cost per probability when a fit moves delta_CP against when it moves Dmsq31, at the same knob, differing in nothing else. Regenerated from measured artifacts by tests/bench/emit_figures.py. Every point pairs a timed measurement with the accuracy the SAME setting reached against that code's own 50-digit reference, in that code's own conventions, on the continuous PREM."
+}

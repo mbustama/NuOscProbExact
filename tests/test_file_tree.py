@@ -271,6 +271,8 @@ TREE = [
      'is something else'),
     ('tests/bench/earth_plane.json',
      'The Earth speed-accuracy plane, three flavors, for the figure'),
+    ('tests/bench/scan_sensitivity.json',
+     'What each code costs when a fit moves Dmsq31 rather than delta_CP'),
     ('tests/bench/speed_accuracy_plane.json',
      'Every timed point paired with the accuracy its own setting reached'),
     ('tests/bench/reference_audit.json',

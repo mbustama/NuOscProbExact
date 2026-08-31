@@ -342,6 +342,7 @@ NuOscProbExact/
     │   ├── accuracy_chord.json      # Accuracy of every code on the Earth chord, per knob
     │   ├── accuracy_discretisation.json  # Accuracy against the layer count, for the code whose precision knob is something else
     │   ├── earth_plane.json         # The Earth speed-accuracy plane, three flavors, for the figure
+    │   ├── scan_sensitivity.json    # What each code costs when a fit moves Dmsq31 rather than delta_CP
     │   ├── speed_accuracy_plane.json  # Every timed point paired with the accuracy its own setting reached
     │   └── reference_audit.json     # What that audit measured; the notebook renders it, never types it
     ├── test_bench_pipeline.py       # The benchmark pipeline's fairness invariants

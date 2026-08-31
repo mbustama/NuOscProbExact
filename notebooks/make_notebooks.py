@@ -3361,6 +3361,83 @@ prem_plane(
     relabel={"NuOscProbExact (double-double)":
              r"NuOscProbExact, $N_{\rm slabs}$",
              "NuOscProbExact (tolerance)": "NuOscProbExact, rtol"})'''),
+    md(r'''## What it costs to move a different parameter
+
+A speed-accuracy plane assumes one number describes a code's cost. For most
+of these codes it does. For one it does not, and the difference is nearly
+four orders of magnitude.
+
+Each of these codes is timed over a scan, with everything invariant hoisted
+out before the clock starts, so what remains inside the timed region is the
+one parameter a fit is moving. Which parameter that is turns out to matter.
+A code that caches work keyed on the oscillation parameters does not have to
+redo the same work for every one of them: `delta_CP` enters only through the
+mixing matrix, while `Dmsq31` enters the eigenvalues of every layer.
+
+So a scan over `delta_CP` alone is the most favourable measurement such a
+code can be given, and reporting it as *the* amortized cost would flatter it
+in the same way that timing a batched code one point at a time would
+penalise it. Both are measured here, at the same precision setting, differing
+in nothing else.'''),
+    code(r'''# Paired at the same code, grid and knob: the two cells differ only in
+# which parameter moves inside the timed region.
+with open(os.path.join('..', 'tests', 'bench',
+                       'scan_sensitivity.json')) as handle:
+    sens = json.load(handle)
+
+GRID_TITLE = {"CHORD/12x1": r"PREM chord, $\cos\theta_z=-0.9$, 12 energies",
+              "OSC/100x100": r"Oscillogram, $100\times100$",
+              "CONST/60E": r"Constant density, 60 energies"}
+ORDER = ["CHORD/12x1", "OSC/100x100", "CONST/60E"]
+grids = [g for g in ORDER if sens["grids"].get(g)]
+
+fig, axes = plt.subplots(len(grids), 1, figsize=(COLW, 0.95*COLW*len(grids)),
+                         squeeze=False)
+for ax, grid in zip(axes[:, 0], grids):
+    rows = sens["grids"][grid]
+    y = np.arange(len(rows))
+    # Sorted by ratio, so the code the effect belongs to is the top row and
+    # the reader does not have to hunt for it.
+    ax.barh(y + 0.19, [r["dcp_us"] for r in rows], height=0.36,
+            color="C0", label=r"scanning $\delta_{\rm CP}$")
+    ax.barh(y - 0.19, [r["dmsq31_us"] for r in rows], height=0.36,
+            color="C3", label=r"scanning $\Delta m^2_{31}$")
+    for i, r in enumerate(rows):
+        # The ratio is the whole point, so it is written on the figure
+        # rather than left to be read off a log axis.
+        ax.text(max(r["dcp_us"], r["dmsq31_us"])*1.6, i,
+                (r"$%.0f\times$" % r["ratio"]) if r["ratio"] >= 10
+                else (r"$%.2f\times$" % r["ratio"]),
+                va="center", fontsize=5.0,
+                color="C3" if r["ratio"] > 2 else "0.35")
+    ax.set_yticks(y)
+    ax.set_yticklabels([r["code"] for r in rows], fontsize=5.4)
+    # Sorted by ratio, and inverted so that the largest is the TOP row:
+    # barh puts index zero at the bottom, which buried the one code the
+    # figure exists to show under the five that show nothing.
+    ax.invert_yaxis()
+    ax.set_xscale("log")
+    ax.set_xlim(min(r["dcp_us"] for r in rows)*0.30,
+                max(r["dmsq31_us"] for r in rows)*12)
+    ax.tick_params(axis="x", labelsize=5.4)
+    # As a title rather than inside the axes, where it landed on top of the
+    # ratio of whichever code sat in the corner.
+    ax.set_title(GRID_TITLE.get(grid, grid), fontsize=5.4, color="0.2",
+                 pad=2.0)
+    ax.grid(axis="x", lw=0.4, alpha=0.35)
+    ax.set_axisbelow(True)
+
+axes[-1, 0].set_xlabel(r"Time per probability [$\mu$s]", fontsize=6.0)
+leg = axes[0, 0].legend(loc="lower right", fontsize=5.4, framealpha=0.95)
+leg.get_frame().set_linewidth(0.7)
+fig.tight_layout(pad=0.3)
+fig.savefig(os.path.join(FIGDIR, "scan_sensitivity.pdf"))
+plt.show()
+
+worst = max((r for g in sens["grids"].values() for r in g),
+            key=lambda r: r["ratio"])
+print("largest parameter sensitivity: %s, %.0fx" % (worst["code"],
+                                                    worst["ratio"]))'''),
     md(r'''## Performance
 
 Three ways of evaluating the same scan: one point at a time, the whole stack
