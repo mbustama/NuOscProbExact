@@ -303,6 +303,7 @@ NuOscProbExact/
 │           ├── performance.pdf
 │           ├── exact_vs_approximations.pdf
 │           ├── speed_accuracy.pdf
+│           ├── scan_sensitivity.pdf
 │           ├── prem_speed_accuracy.pdf
 │           ├── prem_speed_accuracy_3plus1.pdf
 │           ├── lri_earth.pdf

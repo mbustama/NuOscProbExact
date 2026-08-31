@@ -1,26 +1,39 @@
 {
-  "code": "nuSQuIDS",
-  "protocol": {
-    "name": "amortized",
-    "grid": "CHORD/12x1"
-  },
-  "knob": {
-    "log10_solver_tolerance": 4
-  },
-  "conventions": "own-reference",
-  "profile_basis": "continuous",
-  "environment": {},
-  "n_points": 12,
-  "us_per_point": {
-    "mean": 54.64156975762712,
-    "sd": 0.3209670812986997,
-    "min": 54.097173269838095,
-    "n": 30
+  "admissible": {
+    "block_cv": 0.03978308390447479,
+    "ok": true,
+    "why": "ok"
   },
   "batched": {
     "energy": true,
-    "zenith": false,
-    "symbol": "nuSQUIDS(E vector, ...) multiple-energy constructor + EvolveState"
+    "symbol": "nuSQUIDS(E vector, ...) multiple-energy constructor + EvolveState",
+    "zenith": false
   },
-  "checksum": 3721.233900767939
+  "checksum": 188302.11680904927,
+  "code": "nuSQuIDS",
+  "conventions": "own-reference",
+  "environment": {},
+  "knob": {
+    "log10_solver_tolerance": 4
+  },
+  "manifest_sha256": "1d6d4978d3dff95e9802a10ddbdc2cbb3c6d3e8dd572e27abe8ec56cab9fd8a4",
+  "n_points": 12,
+  "profile_basis": "continuous",
+  "protocol": {
+    "grid": "CHORD/12x1",
+    "name": "amortized"
+  },
+  "scan": "dcp",
+  "timing": {
+    "block_reps": 456,
+    "block_seconds": 0.2928113367298947,
+    "min_block_s": 0.25,
+    "samples": 85
+  },
+  "us_per_point": {
+    "mean": 53.51084370063865,
+    "min": 50.20484430303563,
+    "n": 85,
+    "sd": 2.128826384741744
+  }
 }

@@ -1,6 +1,6 @@
 {
   "admissible": {
-    "block_cv": 0.021212686000222847,
+    "block_cv": 0.008330928628781733,
     "ok": true,
     "why": "ok"
   },
@@ -9,7 +9,7 @@
     "symbol": "none",
     "zenith": false
   },
-  "checksum": 20759.91902567665,
+  "checksum": 20927.105831699697,
   "code": "GLoBES",
   "conventions": "own-reference",
   "knob": {
@@ -28,15 +28,15 @@
   "shell_density": "midpoint",
   "shells_total": 1024,
   "timing": {
-    "block_reps": 55,
-    "block_seconds": 0.325786,
+    "block_reps": 60,
+    "block_seconds": 0.348816,
     "min_block_s": 0.25,
-    "samples": 78
+    "samples": 72
   },
   "us_per_point": {
-    "mean": 493.615,
-    "min": 485.864,
-    "n": 78,
-    "sd": 10.4709
+    "mean": 484.467,
+    "min": 476.846,
+    "n": 72,
+    "sd": 4.03606
   }
 }

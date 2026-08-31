@@ -1,16 +1,42 @@
 {
+  "admissible": {
+    "block_cv": 0.013852647578359282,
+    "ok": true,
+    "why": "ok"
+  },
+  "batched": {
+    "energy": true,
+    "symbol": "Probability_Engine::Set_Spectra + Get_Probabilities",
+    "zenith": true
+  },
+  "checksum": 85038649.24323376,
   "code": "NuFast-Earth",
-  "protocol": {"name": "throughput", "grid": "CONST/N-sweep"},
-  "knob": {"eigenvalue_precision": -1},
-  "n_points": 3,
-  "us_per_point": {"mean": 0.19651, "sd": 0.000665083, "min": 0.195195, "n": 30},
-  "n_layers": 256,
-  "shells_total": 1024,
   "conventions": "own-reference",
-  "profile_basis": "continuous",
+  "knob": {
+    "eigenvalue_precision": -1
+  },
   "looped": false,
+  "manifest_sha256": "1d6d4978d3dff95e9802a10ddbdc2cbb3c6d3e8dd572e27abe8ec56cab9fd8a4",
+  "n_layers": 256,
+  "n_points": 3,
+  "profile_basis": "continuous",
+  "protocol": {
+    "grid": "CONST/N-sweep",
+    "name": "throughput"
+  },
+  "scan": "dcp",
   "shell_density": "midpoint",
-  "manifest_sha256": "9f6cd0bb1f90017eaed0ba9818d47438b31fb575ede4a8bbec1ceabb9ab93db8",
-  "batched": {"energy": true, "zenith": true, "symbol": "Probability_Engine::Set_Spectra + Get_Probabilities"},
-  "checksum": 6681201.1761994865
+  "shells_total": 1024,
+  "timing": {
+    "block_reps": 520428,
+    "block_seconds": 0.304051,
+    "min_block_s": 0.25,
+    "samples": 81
+  },
+  "us_per_point": {
+    "mean": 0.194744,
+    "min": 0.190137,
+    "n": 81,
+    "sd": 0.00269772
+  }
 }

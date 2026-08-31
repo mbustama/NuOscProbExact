@@ -1,26 +1,39 @@
 {
-  "code": "nuCraft",
-  "protocol": {
-    "name": "amortized",
-    "grid": "CHORD/12x1"
-  },
-  "knob": {
-    "log10_numPrec": 8
-  },
-  "conventions": "own-reference",
-  "profile_basis": "continuous",
-  "environment": {},
-  "n_points": 12,
-  "us_per_point": {
-    "mean": 28469.03736181816,
-    "sd": 828.6674337286269,
-    "min": 27297.098950172465,
-    "n": 30
+  "admissible": {
+    "block_cv": 0.034342213243915384,
+    "ok": true,
+    "why": "ok"
   },
   "batched": {
     "energy": false,
-    "zenith": false,
-    "symbol": "interface-only -- CalcWeights takes a particle list but loops over it internally"
+    "symbol": "interface-only -- CalcWeights takes a particle list but loops over it internally",
+    "zenith": false
   },
-  "checksum": 3721.7335129566204
+  "checksum": 350.55959244917386,
+  "code": "nuCraft",
+  "conventions": "own-reference",
+  "environment": {},
+  "knob": {
+    "log10_numPrec": 8
+  },
+  "manifest_sha256": "1d6d4978d3dff95e9802a10ddbdc2cbb3c6d3e8dd572e27abe8ec56cab9fd8a4",
+  "n_points": 12,
+  "profile_basis": "continuous",
+  "protocol": {
+    "grid": "CHORD/12x1",
+    "name": "amortized"
+  },
+  "scan": "dcp",
+  "timing": {
+    "block_reps": 1,
+    "block_seconds": 0.3238543610787019,
+    "min_block_s": 0.25,
+    "samples": 72
+  },
+  "us_per_point": {
+    "mean": 26987.86342322516,
+    "min": 25748.82850361367,
+    "n": 72,
+    "sd": 926.8229606780626
+  }
 }

@@ -200,6 +200,7 @@ TREE = [
     ('resources/paper/figs/performance.pdf', None),
     ('resources/paper/figs/exact_vs_approximations.pdf', None),
     ('resources/paper/figs/speed_accuracy.pdf', None),
+    ('resources/paper/figs/scan_sensitivity.pdf', None),
     ('resources/paper/figs/prem_speed_accuracy.pdf', None),
     ('resources/paper/figs/prem_speed_accuracy_3plus1.pdf', None),
     ('resources/paper/figs/lri_earth.pdf', None),
