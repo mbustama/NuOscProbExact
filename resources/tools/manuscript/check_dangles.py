@@ -95,16 +95,58 @@ def measure_of(lines):
     return lens[int(0.9 * (len(lens) - 1))]
 
 
+BIB = re.compile(r"^\s*\[\d+\]|\bdoi:|\barXiv:|\bPhys\.\s|\bRev\.\s")
+
+
+def is_bibliography(lines):
+    """A column of reference entries, not of prose.
+
+    The reference list and the appendices interleave: on the pages where
+    the bibliography ends, it holds the left column while Appendix A has
+    already started in the right.  A flag that latches at the ``References``
+    heading and runs to the end of the document would swallow the
+    appendices with it, so each column is judged on its own contents.
+    """
+    body = [x for x in lines if len(x.strip()) > 12]
+    if len(body) < 6:
+        return False
+    return sum(1 for x in body if BIB.search(x)) >= 0.30 * len(body)
+
+
+APPX = re.compile(r"^\s*Appendix\b")
+
+
+def strip_leading_bibliography(lines):
+    """Blank the reference entries a column may open with.
+
+    On the pages where the appendices begin, the bibliography ends part
+    way down a column and prose follows it, so the whole-column ratio
+    test above does not fire.  Walk from the top instead, and stop at the
+    first appendix heading.
+    """
+    body = [x for x in lines if x.strip()]
+    if not body or not any(BIB.search(x) for x in body[:5]):
+        return lines
+    out, in_bib = [], True
+    for ln in lines:
+        if in_bib and APPX.match(ln):
+            in_bib = False
+        out.append("" if in_bib else ln)
+    return out
+
+
 def load_pdf(path):
     """``[(page, line), ...]`` read column by column, references dropped."""
-    rows, in_refs = [], False
+    rows = []
     for n, _side, lines in columns_of(path):
-        if any(re.match(r"^\s*References\s*$", x) for x in lines):
-            in_refs = True
-        if in_refs:
+        if is_bibliography(lines):
             continue
+        lines = strip_leading_bibliography(lines)
         rows.append((n, None))          # column boundary, so tails do not span
         for ln in lines:
+            # front-matter fields are not prose and cannot dangle
+            if re.match(r"^\s*(Keywords?|PACS|MSC|Program summary)\s*:", ln):
+                ln = ""
             rows.append((n, ln))
     return rows
 
