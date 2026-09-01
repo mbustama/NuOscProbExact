@@ -283,32 +283,46 @@ NuOscProbExact/
 ├── tools/                           # Scripts that are not part of the package
 │   └── make_demo_video.py           # Joins and shrinks the clips notebook 19 renders
 ├── resources/                       # Things the repository carries but does not install
-│   └── paper/                       # Source of the paper that documents this library
-│       ├── README.md                # How to build it, and what each file is
-│       ├── main.tex                 # The paper; BibTeX, no inlined bibliography
-│       ├── make_versions.py         # Derives the clean and the diffed versions
-│       ├── baseline_cpc_v1.tex      # The published version, for the diff
-│       ├── refs.bib                 # The bibliography, read by BibTeX at build
-│       ├── elsarticle.cls
-│       ├── elsarticle-num.bst
-│       └── figs/                    # Every figure, fourteen of them from notebook 10
-│           ├── validation.pdf
-│           ├── prob_2nu_vs_energy_compare.pdf
-│           ├── prob_3nu_vs_energy_compare.pdf
-│           ├── slabs_composition.pdf
-│           ├── earth_oscillogram.pdf
-│           ├── density_arrangement.pdf
-│           ├── sterile_earth_oscillogram.pdf
-│           ├── architecture.pdf
-│           ├── performance.pdf
-│           ├── exact_vs_approximations.pdf
-│           ├── speed_accuracy.pdf
-│           ├── scan_sensitivity.pdf
-│           ├── prem_speed_accuracy.pdf
-│           ├── prem_speed_accuracy_3plus1.pdf
-│           ├── speed_accuracy_combined.pdf
-│           ├── lri_earth.pdf
-│           └── Notes_on_SU_n__probability_relations.pdf
+│   ├── paper/                       # Source of the paper that documents this library
+│   │   ├── README.md                # How to build it, and what each file is
+│   │   ├── main.tex                 # The paper; BibTeX, no inlined bibliography
+│   │   ├── make_versions.py         # Derives the clean and the diffed versions
+│   │   ├── baseline_cpc_v1.tex      # The published version, for the diff
+│   │   ├── refs.bib                 # The bibliography, read by BibTeX at build
+│   │   ├── elsarticle.cls
+│   │   ├── elsarticle-num.bst
+│   │   └── figs/                    # Every figure, fourteen of them from notebook 10
+│   │       ├── validation.pdf
+│   │       ├── prob_2nu_vs_energy_compare.pdf
+│   │       ├── prob_3nu_vs_energy_compare.pdf
+│   │       ├── slabs_composition.pdf
+│   │       ├── earth_oscillogram.pdf
+│   │       ├── density_arrangement.pdf
+│   │       ├── sterile_earth_oscillogram.pdf
+│   │       ├── architecture.pdf
+│   │       ├── performance.pdf
+│   │       ├── exact_vs_approximations.pdf
+│   │       ├── speed_accuracy.pdf
+│   │       ├── scan_sensitivity.pdf
+│   │       ├── prem_speed_accuracy.pdf
+│   │       ├── prem_speed_accuracy_3plus1.pdf
+│   │       ├── speed_accuracy_combined.pdf
+│   │       ├── lri_earth.pdf
+│   │       └── Notes_on_SU_n__probability_relations.pdf
+│   └── tools/                       # Tooling for the paper, not for the library
+│       └── manuscript/              # Checks the prose of main.tex against the criteria beside them
+│           ├── CHECKLIST.md         # The audit criteria the paper is held to
+│           ├── audit_section.py     # The mechanical criteria, one section at a time
+│           ├── check_apparatus_prose.py  # Prose about the manuscript rather than about neutrinos
+│           ├── check_dangles.py     # Dangling last lines, over the typeset page
+│           ├── check_informality.py # Colloquial register in a technical text
+│           ├── check_llm_tells.py   # Vocabulary and rhythms that read as machine-written
+│           ├── check_numerals.py    # Every quoted number, ranked by how badly it could be wrong
+│           ├── check_oxford.py      # Three-item lists missing the serial comma
+│           ├── check_paragraphs.py  # Paragraph length and sentence count, from the source
+│           ├── check_scale_words.py # Adjectives of scale standing where a number should
+│           ├── check_voice.py       # Passive rate and first-person density, by section
+│           └── check_weak_prose.py  # Hedges, nominalizations, filler and vague reference
 └── tests/                           # Regression suite, run with pytest
     ├── conftest.py                  # Shared fixtures and path setup
     ├── bench/                       # Fair-comparison benchmark pipeline
