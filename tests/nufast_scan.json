@@ -1,6 +1,6 @@
 {
  "generated_by": "NuFast-LBL, github.com/PeterDenton/NuFast-LBL, arXiv:2405.02400",
- "driver": "tests/nufast_scan.md documents how this was produced",
+ "driver": "NOT IN THE REPOSITORY.  The scan was produced by a NuFast-LBL driver that was never committed, and tests/nufast_scan.md, which this field used to name, does not exist.  The numbers below are therefore not regenerable from this repository; treat them as frozen inputs until a driver is added beside tests/external_drivers/.",
  "channel": "P(nu_mu -> nu_e)",
  "baseline_km": 1300.0,
  "density_g_cm3": 3.0,

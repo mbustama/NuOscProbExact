@@ -4054,7 +4054,7 @@ for _side, _target in (((0.0, 0.5), _first_marker("NuFast-Earth (dCP only)")),
 axes[2].set_xlabel(r"Time per probability [$\mu$s]")
 # One label for all three.  x is set by hand because the default sits on
 # the tick labels of a figure this wide.
-fig.supylabel(r"Error vs.\ a 50-digit converged solution,  "
+fig.supylabel(r"Error vs.\ the reference of each panel,  "
               r"$\max_\alpha |\Delta P_{\nu_\mu \to \nu_\alpha}|$",
               fontsize=9, x=0.030)
 fig.subplots_adjust(hspace=0.06, left=0.10, right=0.995, top=0.995,
