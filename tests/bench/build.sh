@@ -183,6 +183,9 @@ import json, platform, subprocess, os
 def sh(c):
     try: return subprocess.run(c, shell=True, capture_output=True, text=True).stdout.strip().splitlines()[0]
     except Exception: return "unknown"
+def sh_all(c):
+    try: return subprocess.run(c, shell=True, capture_output=True, text=True).stdout.splitlines()
+    except Exception: return []
 rec = {
   "schema": "bench-build/1",
   "built_on": sh("date -Is"),
@@ -196,6 +199,19 @@ rec = {
   "profiles": {"speed": "each project's own upstream flags",
                "accuracy": "-O3 -std=c++17, no fast-math"},
   "exceptions": {"nuSQuIDS": "measured as distributed (upstream wheel); its flags are the wheel's, so the two-profile rule cannot apply to it -- recorded rather than hidden"},
+  # Whether a built object can use more than one thread, asked of the object
+  # rather than assumed.  The bench notes have long said the four compiled
+  # codes link no threading library; this records the evidence next to the
+  # build instead of asserting it in prose, and it says nothing about the
+  # codes driven from Python, whose parallelism is NumPy's BLAS and is
+  # captured per run by runner.thread_environment() instead.
+  "threading_libraries": {
+      obj: [ln.split()[0] for ln in sh_all("ldd '%s' 2>/dev/null" % obj)
+            if any(t in ln for t in ("libgomp", "libomp", "pthread", "libopenblas", "libmkl"))]
+      for obj in sorted(__import__("glob").glob("$BUILD/*.o")
+                        + __import__("glob").glob("$BUILD/*.so")
+                        + __import__("glob").glob("$BUILD/bench_*"))
+  },
 }
 json.dump(rec, open("$BUILD/build_record.json", "w"), indent=2)
 print(json.dumps(rec, indent=2))

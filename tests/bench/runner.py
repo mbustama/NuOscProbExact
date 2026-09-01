@@ -270,6 +270,35 @@ def throughput(driver, problem, samples, min_block, max_samples):
     return stats, sink
 
 
+def thread_environment():
+    r"""The threading environment of this process, for every code alike.
+
+    ``environment()`` is optional on an adapter, so for five of the six
+    external codes the artifact recorded ``{}`` and a cross-code speed claim
+    had nothing to stand on but prose.  The bench documentation says the
+    effective count is recorded per run; this is what makes that true.  It
+    is gathered here rather than in the adapter for the same reason the
+    clock is: a code cannot be trusted to report its own advantage.
+
+    ``blas_threads`` matters for the codes driven from Python, whose real
+    parallelism is whatever NumPy's BLAS decides and not anything the
+    adapter sets.
+    """
+    env = {'cpu_count': os.cpu_count()}
+    for var in ('OMP_NUM_THREADS', 'OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS',
+                'NUMEXPR_NUM_THREADS', 'NUMBA_NUM_THREADS'):
+        env[var.lower()] = os.environ.get(var)
+    try:
+        import threadpoolctl
+        env['blas_threads'] = [
+            {'library': p.get('user_api') or p.get('internal_api'),
+             'threads': p.get('num_threads')}
+            for p in threadpoolctl.threadpool_info()]
+    except Exception:                                        # noqa: BLE001
+        env['blas_threads'] = 'threadpoolctl not installed'
+    return env
+
+
 def manifest_sha():
     r"""The hash of the manifest these numbers were measured under.
 
@@ -363,8 +392,9 @@ def main(argv=None):
             'manifest_sha256': manifest_sha(),
             'scan': problem.scan,
             'profile_basis': 'continuous',
-            'environment': (driver.environment()
-                            if hasattr(driver, 'environment') else {}),
+            'environment': dict(thread_environment(),
+                                **(driver.environment()
+                                   if hasattr(driver, 'environment') else {})),
             # From the adapter, not assumed: a code may answer for fewer
             # channels than the row holds, and claiming three when it
             # computed one would be the figure lying about its own data.
@@ -396,8 +426,9 @@ def main(argv=None):
         'manifest_sha256': manifest_sha(),
         'scan': problem.scan,
         'profile_basis': 'continuous',
-        'environment': (driver.environment()
-                        if hasattr(driver, 'environment') else {}),
+        'environment': dict(thread_environment(),
+                            **(driver.environment()
+                               if hasattr(driver, 'environment') else {})),
         'n_points': problem.points(),
         'us_per_point': stats,
         'timing': {'min_block_s': args.min_block, 'block_reps': reps,
