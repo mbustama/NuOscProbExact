@@ -391,7 +391,7 @@ books['03_matter_nsi_liv.ipynb'] = notebook(
              'ax.legend()\n'
              'plt.show()'),
         md('## Lorentz-invariance violation\n\n'
-           'A CPT-odd Lorentz-invariance-violating (LIV) background couples '
+           'A CPT-even Lorentz-invariance-violating (LIV) background couples '
            'to neutrinos through a term that is *added* to the Hamiltonian '
            'with its own mixing structure. The physically important point is '
            'the energy dependence: the vacuum term falls as $1/E$ and this '
@@ -2467,7 +2467,7 @@ plt.show()'''),
         md('''## Three flavors, four scenarios
 
 Vacuum, constant-density matter, matter with non-standard interactions, and a
-CPT-odd Lorentz invariance-violating background, at $L = 1300$ km. All four use
+CPT-even Lorentz invariance-violating background, at $L = 1300$ km. All four use
 the default parameters in `globaldefs`, so the figure is reproducible from the
 repository alone.'''),
         code(r'''L = 1300.0*KM
@@ -2483,7 +2483,7 @@ p = {
     "NSI": oscprob3nu.probabilities_3nu(
         hamiltonians3nu.hamiltonian_3nu_nsi(
             H_VAC_3NU, E, gd.VCC_EARTH_CRUST, gd.EPS_3), L),
-    "CPT-odd LIV": oscprob3nu.probabilities_3nu(
+    "CPT-even LIV": oscprob3nu.probabilities_3nu(
         hamiltonians3nu.hamiltonian_3nu_liv(
             H_VAC_3NU, E, gd.SXI12, gd.SXI23, gd.SXI13,
             gd.DXICP, gd.B1, gd.B2, gd.B3, gd.LAMBDA), L),
@@ -3695,8 +3695,8 @@ fig, (axt, ax) = plt.subplots(
 # left out to keep the legend readable.  Marker and colour match the two
 # Earth planes, so a reader tracks one code across three figures.
 for col, style, size, lab in (
-        (3, "-o", 3.4, "NuOscProbExact, array + kernel"),
-        (1, "-^", 3.6, "NuOscProbExact, one at a time")):
+        (3, "-o", 3.4, "NuOscProbExact, kernel"),
+        (1, "-^", 3.6, r"NuOscProbExact, 1 $E$ / call")):
     # Keyed off the frozen run, not this machine: the curve belongs to
     # the measurement, not to whoever is redrawing it.
     if col == 3 and not scaling["environment"]["have_numba"]:
@@ -3718,10 +3718,10 @@ for col, style, size, lab in (
 for key, style, col, size, lab in (
         ("nuSQuIDS", "-v", "C2", 2.6, "nuSQuIDS"),
         ("NuFast-LBL", "-D", "C4", 2.4,
-         r"NuFast-LBL, exact, batched"),
+         r"NuFast-LBL, batched"),
         ("NuFast-LBL (looped)", "--D", "C4", 2.4,
-         r"NuFast-LBL, exact, one energy per call"),
-        ("NuFast-Earth", "-X", "C7", 3.0, "NuFast-Earth, exact"),
+         r"NuFast-LBL, 1 $E$ / call"),
+        ("NuFast-Earth", "-X", "C7", 3.0, "NuFast-Earth"),
         ("GLoBES", "-*", "C6", 4.4, "GLoBES"),
         ("Prob3++", "-P", "C5", 3.2, "Prob3++")):
     if key not in other["series"]:
@@ -3858,7 +3858,7 @@ p2 = {
     "NSI": oscprob2nu.probabilities_2nu(
         hamiltonians2nu.hamiltonian_2nu_nsi(
             H2_VAC, E, gd.VCC_EARTH_CRUST, gd.EPS_2), L),
-    "CPT-odd LIV": oscprob2nu.probabilities_2nu(
+    "CPT-even LIV": oscprob2nu.probabilities_2nu(
         hamiltonians2nu.hamiltonian_2nu_liv(
             H2_VAC, E, gd.SXI12, gd.B1, gd.B3, gd.LAMBDA), L),
 }
