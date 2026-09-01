@@ -314,6 +314,25 @@ def scan_sensitivity(cells_fn, artifact_name, outdir):
             'grids': out}
 
 
+def input_manifest_hashes(outdir):
+    r"""Every distinct ``manifest_sha256`` carried by the artifacts in `outdir`.
+
+    Returned sorted, so the emitted files are byte-stable across runs.
+    """
+    seen = set()
+    for name in os.listdir(outdir):
+        if not name.endswith('.json'):
+            continue
+        try:
+            with open(os.path.join(outdir, name)) as handle:
+                sha = json.load(handle).get('manifest_sha256')
+        except (ValueError, OSError):
+            continue
+        if sha:
+            seen.add(sha)
+    return sorted(seen)
+
+
 def main(outdir=None):
     import run_all
     outdir = outdir or os.path.join(HERE, 'artifacts')
@@ -329,6 +348,17 @@ def main(outdir=None):
             (os.path.join(HERE, 'scan_sensitivity.json'),
              scan_sensitivity(run_all.cells, run_all.artifact_name, outdir))):
         payload['manifest_sha256'] = run_all.manifest_sha()
+        # That stamp is the manifest as it stands now, which is not the same
+        # thing as the manifest each input was measured under: a sweep resumed
+        # after the manifest changed leaves artifacts carrying an older hash.
+        # Recording the hashes actually present stops a file from claiming a
+        # provenance its inputs do not share.
+        seen = input_manifest_hashes(outdir)
+        payload['manifest_sha256_inputs'] = seen
+        if len(seen) > 1:
+            payload['manifest_note'] = (
+                'Inputs were measured under more than one manifest; the hashes '
+                'are listed in manifest_sha256_inputs.')
         with open(path, 'w') as handle:
             json.dump(payload, handle, indent=1, sort_keys=True)
             handle.write('\n')

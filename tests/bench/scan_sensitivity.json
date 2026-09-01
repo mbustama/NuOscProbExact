@@ -278,6 +278,12 @@
    }
   ]
  },
+ "manifest_note": "Inputs were measured under more than one manifest; the hashes are listed in manifest_sha256_inputs.",
  "manifest_sha256": "d758e1935f45312b4ce1e66dd1a89cff9dab7678629b66fe70a6a48e9cbee6fa",
+ "manifest_sha256_inputs": [
+  "1d6d4978d3dff95e9802a10ddbdc2cbb3c6d3e8dd572e27abe8ec56cab9fd8a4",
+  "d758e1935f45312b4ce1e66dd1a89cff9dab7678629b66fe70a6a48e9cbee6fa",
+  "eeafd394213687ce52d8b453a250f51637dc7411cac4497ac223c126ec3672b4"
+ ],
  "note": "Cost per probability when a fit moves delta_CP against when it moves Dmsq31, at the same knob, differing in nothing else. Regenerated from measured artifacts by tests/bench/emit_figures.py. Every point pairs a timed measurement with the accuracy the SAME setting reached against that code's own 50-digit reference, in that code's own conventions, on the continuous PREM."
 }

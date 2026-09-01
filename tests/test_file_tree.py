@@ -376,6 +376,8 @@ TREE = [
      'The exact reference for the comparison figure'),
     ('tests/external_drivers/',
      'Drivers for the codes that cannot be called from Python'),
+    ('tests/external_drivers/nufast_scan.cpp',
+     'Regenerates the NuFast-LBL curve of the comparison figure'),
     ('tests/external_drivers/README.md',
      'Every convention each one had to be told, and why'),
     ('tests/external_drivers/gen_prem_header.py',

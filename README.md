@@ -402,6 +402,7 @@ NuOscProbExact/
     ├── prem_speed_accuracy.json     # Those planes, at three flavors and at 3+1
     ├── const_density_scan.json      # The exact reference for the comparison figure
     ├── external_drivers/            # Drivers for the codes that cannot be called from Python
+    │   ├── nufast_scan.cpp          # Regenerates the NuFast-LBL curve of the comparison figure
     │   ├── README.md                # Every convention each one had to be told, and why
     │   ├── gen_prem_header.py       # Emits this library's PREM as a C header
     │   ├── nufast_drv.cpp           # NuFast-Earth on the PREM chord

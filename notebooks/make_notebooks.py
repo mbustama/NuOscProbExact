@@ -3695,7 +3695,7 @@ fig, (axt, ax) = plt.subplots(
 # left out to keep the legend readable.  Marker and colour match the two
 # Earth planes, so a reader tracks one code across three figures.
 for col, style, size, lab in (
-        (3, "-o", 3.4, "NuOscProbExact, kernel"),
+        (3, "-o", 3.4, "NuOscProbExact, batched"),
         (1, "-^", 3.6, r"NuOscProbExact, 1 $E$ / call")):
     # Keyed off the frozen run, not this machine: the curve belongs to
     # the measurement, not to whoever is redrawing it.
