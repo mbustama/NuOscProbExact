@@ -48,3 +48,8 @@ tests/bench/**/__pycache__/
 # interrupted sweep resumes.  The artifacts it feeds ARE tracked; this is the
 # scratch that produces them.
 tests/bench/reference_cache.json
+
+# pdftotext scratch for the criterion-13 checker, and stray figure exports
+resources/paper/main.txt
+resources/tools/manuscript/main.txt
+resources/paper/figs/*.png
