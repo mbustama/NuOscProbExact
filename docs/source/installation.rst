@@ -297,6 +297,7 @@ File tree
    │           ├── scan_sensitivity.pdf
    │           ├── prem_speed_accuracy.pdf
    │           ├── prem_speed_accuracy_3plus1.pdf
+   │           ├── speed_accuracy_combined.pdf
    │           ├── lri_earth.pdf
    │           └── Notes_on_SU_n__probability_relations.pdf
    └── tests/                           # Regression suite, run with pytest
@@ -320,6 +321,7 @@ File tree
        │   │   ├── prob3.cpp            # Prob3++, looped in C++ because that is its interface
        │   │   ├── globes.cpp           # GLoBES, looped, chord decomposition hoisted
        │   │   ├── nuoscprobexact.py    # This library, batched
+       │   │   ├── second_order.py      # The second-order expansion in alpha and s13, as a measured point
        │   │   ├── nusquids.py          # nuSQuIDS through its multiple-energy constructor
        │   │   └── nucraft.py           # nuCraft, whose batching is interface-only
        │   ├── runner.py                # The Python harness; the only place Python timing happens
@@ -371,6 +373,8 @@ File tree
        ├── nufast_scan.json             # NuFast-LBL at two Newton settings
        ├── speed_accuracy.json          # The six-code constant-density speed-accuracy plane
        ├── timing_other_codes.json      # Timings behind the performance figure
+       ├── measure_performance_scaling.py  # Freezes the three call routes against stack size, on a quiet machine
+       ├── performance_scaling.json     # That measurement, which the performance figure reads
        ├── prem_scan.py                 # Regenerates the two Earth speed-accuracy planes
        ├── prem_speed_accuracy.json     # Those planes, at three flavors and at 3+1
        ├── const_density_scan.json      # The exact reference for the comparison figure
