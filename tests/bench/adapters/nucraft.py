@@ -126,7 +126,24 @@ class NuCraftAdapter(object):
         self.configure(p.dcp)
 
     @staticmethod
-    def _profile_spline(ye, n_per_shell=200):
+    # 12800, not 200.
+    #
+    # The reference scores every code against the CONTINUOUS PREM.  This
+    # profile is piecewise LINEAR, and a straight line between points on a
+    # concave density always sits below it, so the deficit never averages
+    # out: at 200 nodes the chord carries 3.61e-7 too little column density,
+    # which is a uniform matter-potential deficit and showed up as a floor
+    # no numPrec could reach past.  Measured at 9.74 GeV, numPrec 1e-10:
+    # 4.08e-7 at 200 nodes, 1.53e-9 at 3200, 9.73e-11 at 12800 -- the last
+    # being this code's own solver limit (its unitarity closes to 5e-11).
+    # The error falls as h^2 throughout, which is what a linear interpolant
+    # must do and the confirmation that this is the mechanism.
+    #
+    # The plateau was OURS.  It was published as nuCraft's.
+    #
+    # It costs about 60 per cent in evaluate(), from the deeper bisection
+    # in the spline lookup, and buys four thousand times the accuracy.
+    def _profile_spline(ye, n_per_shell=12800):
         r"""This library's PREM as the spline type nuCraft builds for itself."""
         from scipy.interpolate import InterpolatedUnivariateSpline
         edges = np.concatenate(([0.0], np.asarray(earth.PREM_BOUNDARIES,

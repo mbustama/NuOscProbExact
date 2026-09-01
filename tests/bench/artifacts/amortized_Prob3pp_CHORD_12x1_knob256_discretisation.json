@@ -1,6 +1,6 @@
 {
   "admissible": {
-    "block_cv": 0.009201204633484818,
+    "block_cv": 0.00293812664404712,
     "ok": true,
     "why": "ok"
   },
@@ -9,14 +9,14 @@
     "symbol": "none",
     "zenith": false
   },
-  "checksum": 18289.197254900908,
+  "checksum": 18375.62552382004,
   "code": "Prob3++",
   "conventions": "own-reference",
   "knob": {
     "n_shells": 256
   },
   "looped": false,
-  "manifest_sha256": "1d6d4978d3dff95e9802a10ddbdc2cbb3c6d3e8dd572e27abe8ec56cab9fd8a4",
+  "manifest_sha256": "d758e1935f45312b4ce1e66dd1a89cff9dab7678629b66fe70a6a48e9cbee6fa",
   "n_layers": 256,
   "n_points": 12,
   "profile_basis": "continuous",
@@ -28,15 +28,15 @@
   "shell_density": "midpoint",
   "shells_total": 1024,
   "timing": {
-    "block_reps": 47,
-    "block_seconds": 0.31088,
+    "block_reps": 51,
+    "block_seconds": 0.337121,
     "min_block_s": 0.25,
-    "samples": 80
+    "samples": 74
   },
   "us_per_point": {
-    "mean": 551.205,
-    "min": 534.255,
-    "n": 80,
-    "sd": 5.07175
+    "mean": 550.851,
+    "min": 547.708,
+    "n": 74,
+    "sd": 1.61847
   }
 }

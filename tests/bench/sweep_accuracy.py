@@ -51,21 +51,41 @@ COMPILED = {
     'GLoBES':       'bench_globes',
 }
 PYTHON = {
+    'Second-order expansion': 'second_order',
     'nuSQuIDS':       'nusquids',
     'nuCraft':        'nucraft',
     'NuOscProbExact': 'nuoscprobexact',
 }
 KNOBS = {
+    # No dial: the series is truncated at second order and that is that.
+    'Second-order expansion': [0],
     'NuFast-LBL':     [-1, 0, 1, 2, 3],
     'NuFast-Earth':   [-1, 0, 1, 2, 3],
     # To 1024: the curves were stopping at 256 because this list did, not
     # because any code did.  All three accept more.
-    'Prob3++':        [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024],
-    'GLoBES':         [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024],
+    'Prob3++':        [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096,
+                      # Not a floor, though it was reported as one: 8192
+                      # and 16384 read 8.0e-08 and 7.8e-08, but 12288
+                      # between them is 4.3e-08 and 65536 reaches 2.4e-09.
+                      # The error oscillates with the shell holding the
+                      # turning point, so these rungs are deliberately not
+                      # powers of four -- a sparse ladder misreads it.
+                      8192, 12288, 24576, 32768, 49152, 65536],
+    'GLoBES':         [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096,
+                      # Not a floor, though it was reported as one: 8192
+                      # and 16384 read 8.0e-08 and 7.8e-08, but 12288
+                      # between them is 4.3e-08 and 65536 reaches 2.4e-09.
+                      # The error oscillates with the shell holding the
+                      # turning point, so these rungs are deliberately not
+                      # powers of four -- a sparse ladder misreads it.
+                      8192, 12288, 24576, 32768, 49152, 65536],
     'nuSQuIDS':       [3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
     'nuCraft':        [2, 3, 4, 5, 6, 7, 8, 9, 10],
-    'NuOscProbExact': [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024,
-                       -3, -4, -5],
+    'NuOscProbExact': [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048,
+                       4096, 8192, 12288, 24576, 32768, 49152, 65536,
+                       # Reaching past -5 needs `n_max` raised above the
+                       # shipped 1024; the adapter passes it.
+                       -3, -4, -5, -6, -7, -8],
 }
 
 #: Codes that cannot be posed one of the two problem kinds, and why.
@@ -162,6 +182,12 @@ def reference_for(code, energy_gev, costhz, ye, cache, l_km=None,
 #: The tolerance dial's loose end, which the integer knob cannot reach.
 #: rtol = 10**knob expresses 1e-3 and 1e-4 and nothing between them, so six
 #: of the paper's nine points -- 3, 1, 0.3, 0.03, 0.01, 3e-5 -- had no knob.
+# 3e-6 is NOT reachable.  It succeeds at the central delta_CP, which is
+# all an accuracy probe evaluates, and fails inside the amortized scan:
+# somewhere in the 0.2 rad sweep the tolerance needs more than the
+# 1024-slab ceiling and the call raises.  It would buy nothing anyway --
+# measured, it reaches 5.468e-08, the same as 1e-5, because both are
+# already pinned at that ceiling.  The dial stops at 1e-5.
 RTOL_SWEEP = [3.0, 1.0, 0.3, 0.03, 0.01, 3.0e-5]
 
 
@@ -198,7 +224,9 @@ def probabilities(code, grid, knob, n_e, n_z, n_layers=0, rtol=0.0):
 #: are timed against an accuracy that was never measured -- five points on
 #: a speed axis with nothing to plot them against.
 LAYER_SWEEP = {
-    'NuFast-Earth': {'knob': -1, 'layers': [1, 4, 16, 64, 256]},
+    'NuFast-Earth': {'knob': -1,
+                     'layers': [1, 4, 16, 64, 256, 1024, 4096, 8192,
+                                12288, 24576, 32768, 49152, 65536]},
 }
 
 
@@ -284,7 +312,12 @@ def main(argv=None):
                                   args.n_zenith, n_layers, rtol)
             dial = ('%g' % rtol if args.rtol_sweep
                     else str(n_layers) if args.layers else str(knob))
-            if probs is None or len(probs) != 3*len(refs):
+            # A code may answer for fewer channels than the row holds: the
+            # second-order expansion is an APPEARANCE formula and gives
+            # P(numu->nue) only.  Scoring it against three would mean
+            # inventing two it never computed.
+            n_ch = len(probs)//len(refs) if probs else 0
+            if probs is None or n_ch not in (1, 3):
                 entry['by_knob'][dial] = {'failed': True}
                 print('%-16s dial %-5s FAILED' % (code, dial), flush=True)
                 continue
@@ -297,13 +330,14 @@ def main(argv=None):
             # channel cannot be drawn from a disappearance summary and would
             # otherwise need its own data path -- which is how the previous
             # figures drifted from the pipeline that fed them.
-            flat_refs = [r for row in refs for r in row]
+            flat_refs = ([r[0] for r in refs] if n_ch == 1
+                         else [r for row in refs for r in row])
             dev = [abs(Decimal(repr(p)) - Decimal(r)) for p, r in
                    zip(probs, flat_refs)]
-            per_channel = {
-                name: [float(d) for d in dev[c::3]]
-                for c, name in enumerate(('numu->nue', 'numu->numu',
-                                          'numu->nutau'))}
+            names = (('numu->nue',) if n_ch == 1
+                     else ('numu->nue', 'numu->numu', 'numu->nutau'))
+            per_channel = {name: [float(d) for d in dev[c::n_ch]]
+                           for c, name in enumerate(names)}
             entry['by_knob'][dial] = {
                 'max_abs_deviation': float(max(dev)),
                 'median_abs_deviation': float(sorted(dev)[len(dev)//2]),

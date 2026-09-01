@@ -151,7 +151,17 @@ def admissible_stats(mean, sd, minimum, n):
 
 
 def canary_drift(start, mid, end):
-    r"""Returns ``(ok, why)`` for a session's three canary readings."""
+    r"""Returns ``(ok, why)`` for a session's three canary readings.
+
+    NO LONGER ENFORCED.  `run_all` records the canary readings but does not
+    gate on this verdict: `MAX_CANARY_DRIFT` is 5 per cent while the canary's
+    own repeatability on the development machine is 10.7 per cent across four
+    consecutive best-of-five readings on an idle machine, so a before/after
+    pair clears the threshold by chance most of the time.  It rejected eleven
+    of twelve runs. Kept because it is still the right shape for the test;
+    it needs a canary whose spread is narrower than the drift being tested
+    for, which means a median of several readings rather than one.
+    """
     lo, hi = min(start, mid, end), max(start, mid, end)
     drift = (hi - lo)/lo if lo > 0 else float('inf')
     if drift > MAX_CANARY_DRIFT:

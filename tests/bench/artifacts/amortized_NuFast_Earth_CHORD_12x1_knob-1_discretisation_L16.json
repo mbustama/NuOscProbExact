@@ -1,6 +1,6 @@
 {
   "admissible": {
-    "block_cv": 0.015014779045437295,
+    "block_cv": 0.006485129278629053,
     "ok": true,
     "why": "ok"
   },
@@ -9,14 +9,14 @@
     "symbol": "Probability_Engine::Set_Spectra + Get_Probabilities",
     "zenith": true
   },
-  "checksum": 175379849.05510277,
+  "checksum": 167577318.44850427,
   "code": "NuFast-Earth",
   "conventions": "own-reference",
   "knob": {
     "eigenvalue_precision": -1
   },
   "looped": false,
-  "manifest_sha256": "1d6d4978d3dff95e9802a10ddbdc2cbb3c6d3e8dd572e27abe8ec56cab9fd8a4",
+  "manifest_sha256": "d758e1935f45312b4ce1e66dd1a89cff9dab7678629b66fe70a6a48e9cbee6fa",
   "n_layers": 16,
   "n_points": 12,
   "profile_basis": "continuous",
@@ -28,15 +28,15 @@
   "shell_density": "midpoint",
   "shells_total": 64,
   "timing": {
-    "block_reps": 454059,
-    "block_seconds": 0.313008,
+    "block_reps": 439115,
+    "block_seconds": 0.318681,
     "min_block_s": 0.25,
-    "samples": 79
+    "samples": 78
   },
   "us_per_point": {
-    "mean": 0.0574462,
-    "min": 0.0563442,
-    "n": 79,
-    "sd": 0.000862542
+    "mean": 0.0604779,
+    "min": 0.0595731,
+    "n": 78,
+    "sd": 0.000392207
   }
 }

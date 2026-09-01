@@ -42,6 +42,12 @@ import oscprob3nu                                              # noqa: E402
 #: numu->numu, numu->nutau.  A row rather than one channel because the
 #: constant-density figure plots appearance while the accuracy sweep scores
 #: disappearance, and an artifact holding one cannot serve the other.
+#: Ceiling handed to the tolerance search, overriding `slabs.N_SLABS_MAX`.
+#: The shipped default of 1024 is a guardrail against a mis-stated tolerance,
+#: not a limit of the discretisation; raising it here leaves every other
+#: caller of the library on the shipped default.
+_N_MAX_TOLERANCE = 65536
+
 _NUMU_ROW = (3, 4, 5)
 _PMM = 4
 
@@ -57,15 +63,16 @@ class NuOscProbExact(object):
             'batch_symbol': ('earth.probabilities_3nu_earth(E array, costhz '
                              'array) / oscprob3nu.probabilities_3nu(H stack)'),
             'knob_name': 'n_slabs_per_segment(knob>0) | rtol=10^knob(knob<0)',
-            # The slab dial runs the full 1..256.  The tolerance dial stops
-            # at 1e-5, which is where it actually stops: on CHORD/12x1 the
-            # slab product's error estimate bottoms out near 7e-8 at the
-            # 1024-slab ceiling, so rtol=1e-6 and tighter raise rather than
-            # return.  The manifest used to advertise 1e-3..1e-15; ten of
-            # those thirteen settings crash, and declaring a domain a sweep
-            # cannot survive is the mirror of the knob LBL-3 was about.
-            # Reach the small residuals through the slab dial instead.
-            'knob_domain': [1, 2, 4, 8, 16, 32, 64, 128, 256, -3, -4, -5],
+            # The tolerance dial used to stop at 1e-5 because rtol=1e-6 and
+            # tighter RAISED -- but that was the 1024-slab ceiling, which is
+            # only the DEFAULT of `n_max`, not a limit of the method.  The
+            # constant's own docstring says to pass `n_max` to move it, and
+            # `_N_MAX_TOLERANCE` below does.  The two dials then trace one
+            # curve: measured on CHORD/12x1, rtol 3e-5 and 512 slabs both
+            # return 2.1875e-07, rtol 1e-5 and 1024 both 5.4681e-08, and
+            # rtol 1e-7 reaches 7.8942e-10 where it used to raise.
+            'knob_domain': [1, 2, 4, 8, 16, 32, 64, 128, 256,
+                            -3, -4, -5, -6, -7, -8],
         }
 
     def environment(self):
@@ -197,7 +204,8 @@ class NuOscProbExact(object):
             probs = earth.probabilities_3nu_earth(
                 self._h_vac, energy, costhz,
                 n_slabs_per_segment=self._n_slabs,
-                electron_fraction=self._ye, rtol=self._rtol)
+                electron_fraction=self._ye, rtol=self._rtol,
+                n_max=_N_MAX_TOLERANCE)
             return np.asarray(probs)[..., _NUMU_ROW]
         h = np.asarray(hamiltonians3nu.hamiltonian_3nu_matter(
             self._h_vac, self._e_ev, self._vcc))
@@ -216,7 +224,8 @@ class NuOscProbExact(object):
             probs = earth.probabilities_3nu_earth(
                 self._h_vac, energy, costhz,
                 n_slabs_per_segment=self._n_slabs,
-                electron_fraction=self._ye, rtol=self._rtol)
+                electron_fraction=self._ye, rtol=self._rtol,
+                n_max=_N_MAX_TOLERANCE)
             return float(np.sum(np.asarray(probs)[..., _PMM]))
         h = np.asarray(hamiltonians3nu.hamiltonian_3nu_matter(
             self._h_vac, self._e_ev, self._vcc))

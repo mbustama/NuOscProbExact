@@ -1,15 +1,15 @@
 {
   "admissible": {
-    "block_cv": 0.15744129722189276,
+    "block_cv": 0.1535681355843406,
     "ok": false,
-    "why": "block CV 0.157 exceeds 0.10"
+    "why": "block CV 0.154 exceeds 0.10"
   },
   "batched": {
     "energy": true,
     "symbol": "earth.probabilities_3nu_earth(E array, costhz array) / oscprob3nu.probabilities_3nu(H stack)",
     "zenith": true
   },
-  "checksum": 437973.252821861,
+  "checksum": 343815.0743252988,
   "code": "NuOscProbExact",
   "conventions": "own-reference",
   "environment": {
@@ -23,7 +23,7 @@
   "knob": {
     "n_slabs_per_segment(knob>0) | rtol=10^knob(knob<0)": 64
   },
-  "manifest_sha256": "1d6d4978d3dff95e9802a10ddbdc2cbb3c6d3e8dd572e27abe8ec56cab9fd8a4",
+  "manifest_sha256": "d758e1935f45312b4ce1e66dd1a89cff9dab7678629b66fe70a6a48e9cbee6fa",
   "n_points": 12,
   "profile_basis": "continuous",
   "protocol": {
@@ -32,15 +32,15 @@
   },
   "scan": "dcp",
   "timing": {
-    "block_reps": 1086,
-    "block_seconds": 0.43758165729430887,
+    "block_reps": 944,
+    "block_seconds": 0.4200300550201555,
     "min_block_s": 0.25,
-    "samples": 82
+    "samples": 74
   },
   "us_per_point": {
-    "mean": 33.577475237439295,
-    "min": 22.707880754624092,
-    "n": 82,
-    "sd": 5.286481258818424
+    "mean": 37.07892434853068,
+    "min": 27.03277922114081,
+    "n": 74,
+    "sd": 5.694141281676667
   }
 }

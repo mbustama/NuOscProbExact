@@ -67,6 +67,7 @@ CODES = {
     'nuoscprobexact': 'nuoscprobexact',
     'nusquids':       'nusquids',
     'nucraft':        'nucraft',
+    'second_order':   'second_order',
 }
 
 #: Substrings no adapter source may contain: the harness times, the adapter
@@ -364,7 +365,11 @@ def main(argv=None):
             'profile_basis': 'continuous',
             'environment': (driver.environment()
                             if hasattr(driver, 'environment') else {}),
-            'channels': ['numu->nue', 'numu->numu', 'numu->nutau'],
+            # From the adapter, not assumed: a code may answer for fewer
+            # channels than the row holds, and claiming three when it
+            # computed one would be the figure lying about its own data.
+            'channels': cap.get('channels',
+                                ['numu->nue', 'numu->numu', 'numu->nutau']),
             'n_points': problem.points(),
             'probabilities': list(probs),
         }

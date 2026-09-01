@@ -92,7 +92,14 @@ class NuSQuIDS(object):
         # so what it is handed here is the honest physical problem.
 
         if p.costhz:
-            r = _aligned_radii(200)
+            # 12800 for the same reason as nuCraft's adapter: the nodes
+            # were limiting the code rather than the code limiting itself.
+            # EarthAtm fits an Akima spline through these, which hugs PREM
+            # far better than a linear one -- but not well enough at 200.
+            # Measured at 9.74 GeV, tolerance 1e-12: 2.39e-9 at 200 nodes,
+            # 2.80e-10 at 3200, 2.38e-11 at 12800.  A hundredfold, for
+            # about 21 per cent in evaluate().
+            r = _aligned_radii(12800)
             rho = earth.density_prem(np.clip(r, 0.0, gd.EARTH_RADIUS))
             body = nsq.EarthAtm((r/gd.EARTH_RADIUS).tolist(),
                                 rho.tolist(),

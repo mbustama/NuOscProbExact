@@ -632,3 +632,42 @@ density, which answers objection LBL-3 outright:
 
 The exact mode reaches round-off and three Newton steps match it, on the
 setting the earlier comparison never tried.
+
+## Deferred: BOTH nuCraft oscillogram cells
+
+`amortized_nuCraft_OSC_100x100_knob6_scan-dmsq31.json` is deliberately not
+measured.  Every other code carries a Dmsq31 cell on every grid it runs;
+this is the one gap.
+
+At 12800 profile nodes it costs about seventy-five minutes on its own, more
+than the twenty-two other cells of its batch put together, and the machine
+was wanted.  It feeds no figure -- nuCraft draws a single line, and the
+oscillogram cells answer the hundred-by-hundred grid objection rather than
+the parameter one -- and its chord pair WAS measured, giving the ratio of
+about 1.01 that the table needs.
+
+It is recorded here because the sensitivity table now covers six codes on
+the chord and five on the oscillogram.  Publishing that without saying so
+would read as nuCraft having been dropped for being slow, which is the exact
+appearance this comparison exists to avoid.  Run the cell, or say in the
+caption that the grid is not covered for it.
+
+    python tests/bench/run_all.py --speed-only \
+      --only "nuCraft_OSC_100x100_knob6_scan-dmsq31"
+
+**Added later, and more serious than the above.** The delta_CP oscillogram
+cell, `amortized_nuCraft_OSC_100x100_knob6.json`, is ALSO unmeasured at
+12800 nodes.  A six-minute deadline killed it at 5515 s, roughly a minute
+short, and it is recorded FAILED -- so the artifact on disk is the old
+200-node one dated 08-31 05:46.
+
+That one is not safe to defer quietly.  It feeds a figure (nuCraft's point
+in the 100x100 comparison), and it leaves this code with its chord numbers
+on the corrected profile and its oscillogram number on the profile whose
+interpolation error was the plateau.  One code, two measurement sets.
+
+Either re-run it, or drop nuCraft from the oscillogram comparison and say
+so.  Do not publish it as it stands.
+
+    python tests/bench/run_all.py --speed-only --force \
+      --only "nuCraft_OSC_100x100"

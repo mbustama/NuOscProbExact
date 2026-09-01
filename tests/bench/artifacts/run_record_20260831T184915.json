@@ -1,0 +1,56 @@
+{
+  "artifacts_reused": 0,
+  "artifacts_written": 22,
+  "believable": false,
+  "canary": {
+    "after": 0.04948710557073355,
+    "baseline_us_per_probability": 0.0508,
+    "before": 0.0702576944604516
+  },
+  "cells": 22,
+  "cells_measured_this_run": [
+    "amortized_nuSQuIDS_CHORD_12x1_knob12_scan-dmsq31.json",
+    "amortized_nuCraft_CHORD_12x1_knob6_scan-dmsq31.json",
+    "amortized_nuSQuIDS_OSC_100x100_knob12_scan-dmsq31.json",
+    "amortized_nuSQuIDS_CHORD_12x1_knob3.json",
+    "amortized_nuSQuIDS_CHORD_12x1_knob4.json",
+    "amortized_nuSQuIDS_CHORD_12x1_knob5.json",
+    "amortized_nuSQuIDS_CHORD_12x1_knob6.json",
+    "amortized_nuSQuIDS_CHORD_12x1_knob7.json",
+    "amortized_nuSQuIDS_CHORD_12x1_knob8.json",
+    "amortized_nuSQuIDS_CHORD_12x1_knob9.json",
+    "amortized_nuSQuIDS_CHORD_12x1_knob10.json",
+    "amortized_nuSQuIDS_CHORD_12x1_knob11.json",
+    "amortized_nuSQuIDS_CHORD_12x1_knob12.json",
+    "amortized_nuCraft_CHORD_12x1_knob2.json",
+    "amortized_nuCraft_CHORD_12x1_knob3.json",
+    "amortized_nuCraft_CHORD_12x1_knob4.json",
+    "amortized_nuCraft_CHORD_12x1_knob5.json",
+    "amortized_nuCraft_CHORD_12x1_knob6.json",
+    "amortized_nuCraft_CHORD_12x1_knob7.json",
+    "amortized_nuCraft_CHORD_12x1_knob8.json",
+    "amortized_nuCraft_CHORD_12x1_knob9.json",
+    "amortized_nuCraft_CHORD_12x1_knob10.json"
+  ],
+  "environment": {
+    "captured_at": "2026-08-31T18:49:15+0200",
+    "cores": 12,
+    "cpu": "13th Gen Intel(R) Core(TM) i5-1334U",
+    "cxx": "g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+    "governor": "performance",
+    "load_average": {
+      "15min": 1.955078125,
+      "1min": 1.69677734375,
+      "5min": 1.833984375
+    },
+    "python": "3.12.7",
+    "thread_policy": "natural per code; counts recorded per series"
+  },
+  "failures": [],
+  "generated_at": "2026-08-31T18:49:15+0200",
+  "generated_by": "tests/bench/run_all.py",
+  "manifest_sha256": "d758e1935f45312b4ce1e66dd1a89cff9dab7678629b66fe70a6a48e9cbee6fa",
+  "schema": "bench-run/1",
+  "timed_cells": 22,
+  "why": "canary drifted 42.0% across the session"
+}

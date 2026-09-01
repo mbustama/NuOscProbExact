@@ -222,8 +222,12 @@ def earth_plane(cells_fn, artifact_name, outdir, acc):
                 label_for(code, knob), knob, d, err)
 
     for s in series.values():
-        s['points'].sort(key=lambda q: (-(q['max_abs_error'] or 0),
-                                        q['us_per_probability']))
+        # By cost.  Sorting by error made a non-monotone code -- Prob3++ is
+        # worse at 512 shells than at 256, which is its radial shell stack
+        # and not noise -- draw as a line doubling back on itself.  Ordered
+        # by cost the curve runs left to right and the rise is visible as a
+        # rise, which is what it is.
+        s['points'].sort(key=lambda q: q['us_per_probability'])
         mark_best(s['points'], s.get('code'))
     return {'generated_by': 'tests/bench/emit_figures.py',
             'note': 'PREM, cos(theta_z) = -0.9, E = 3-40 GeV, three flavors, '

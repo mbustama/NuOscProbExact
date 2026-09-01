@@ -1,0 +1,66 @@
+{
+  "artifacts_reused": 0,
+  "artifacts_written": 23,
+  "believable": false,
+  "canary": {
+    "after": 0.04653390496969223,
+    "baseline_us_per_probability": 0.0508,
+    "before": 0.04122310783714056
+  },
+  "cells": 25,
+  "cells_measured_this_run": [
+    "amortized_Prob3pp_CHORD_12x1_knob2048.json",
+    "amortized_Prob3pp_CHORD_12x1_knob4096.json",
+    "amortized_GLoBES_CHORD_12x1_knob2048.json",
+    "amortized_GLoBES_CHORD_12x1_knob4096.json",
+    "amortized_NuOscProbExact_CHORD_12x1_knob2048.json",
+    "amortized_NuOscProbExact_CHORD_12x1_knob2048_1thread.json",
+    "amortized_Prob3pp_CONST_60E_knob2048.json",
+    "amortized_Prob3pp_CONST_60E_knob4096.json",
+    "amortized_GLoBES_CONST_60E_knob2048.json",
+    "amortized_GLoBES_CONST_60E_knob4096.json",
+    "amortized_NuOscProbExact_CONST_60E_knob2048.json",
+    "amortized_NuOscProbExact_CONST_60E_knob2048_1thread.json",
+    "amortized_Second_order_expansion_CONST_60E_knob0.json",
+    "amortized_NuFast_Earth_CHORD_12x1_knob-1_discretisation_L1024.json",
+    "amortized_Prob3pp_CHORD_12x1_knob1024_discretisation.json",
+    "amortized_GLoBES_CHORD_12x1_knob1024_discretisation.json",
+    "amortized_NuOscProbExact_CHORD_12x1_knob1024_discretisation.json",
+    "amortized_NuFast_Earth_CHORD_12x1_knob-1_discretisation_L1024_scan-dmsq31.json",
+    "amortized_NuFast_Earth_CHORD_12x1_knob-1_discretisation_L4096.json",
+    "amortized_Prob3pp_CHORD_12x1_knob4096_discretisation.json",
+    "amortized_GLoBES_CHORD_12x1_knob4096_discretisation.json",
+    "amortized_NuOscProbExact_CHORD_12x1_knob4096_discretisation.json",
+    "amortized_NuFast_Earth_CHORD_12x1_knob-1_discretisation_L4096_scan-dmsq31.json"
+  ],
+  "environment": {
+    "captured_at": "2026-08-31T19:38:30+0200",
+    "cores": 12,
+    "cpu": "13th Gen Intel(R) Core(TM) i5-1334U",
+    "cxx": "g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+    "governor": "performance",
+    "load_average": {
+      "15min": 2.07177734375,
+      "1min": 3.3662109375,
+      "5min": 2.583984375
+    },
+    "python": "3.12.7",
+    "thread_policy": "natural per code; counts recorded per series"
+  },
+  "failures": [
+    {
+      "cell": "amortized_NuOscProbExact_CHORD_12x1_knob0_rtol3e-06.json",
+      "reason": "ValueError: probabilities_3nu_earth: could not meet rtol=3e-"
+    },
+    {
+      "cell": "amortized_NuOscProbExact_CHORD_12x1_knob0_1thread_rtol3e-06.json",
+      "reason": "ValueError: probabilities_3nu_earth: could not meet rtol=3e-"
+    }
+  ],
+  "generated_at": "2026-08-31T19:38:30+0200",
+  "generated_by": "tests/bench/run_all.py",
+  "manifest_sha256": "d758e1935f45312b4ce1e66dd1a89cff9dab7678629b66fe70a6a48e9cbee6fa",
+  "schema": "bench-run/1",
+  "timed_cells": 25,
+  "why": "canary drifted 12.9% across the session"
+}

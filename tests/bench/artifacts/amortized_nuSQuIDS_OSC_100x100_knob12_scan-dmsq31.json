@@ -1,6 +1,6 @@
 {
   "admissible": {
-    "block_cv": 0.0063456246385813694,
+    "block_cv": 0.0644206713962082,
     "ok": true,
     "why": "ok"
   },
@@ -9,14 +9,14 @@
     "symbol": "nuSQUIDS(E vector, ...) multiple-energy constructor + EvolveState",
     "zenith": false
   },
-  "checksum": 162634.91324005404,
+  "checksum": 167890.51931700457,
   "code": "nuSQuIDS",
   "conventions": "own-reference",
   "environment": {},
   "knob": {
     "log10_solver_tolerance": 12
   },
-  "manifest_sha256": "1d6d4978d3dff95e9802a10ddbdc2cbb3c6d3e8dd572e27abe8ec56cab9fd8a4",
+  "manifest_sha256": "d758e1935f45312b4ce1e66dd1a89cff9dab7678629b66fe70a6a48e9cbee6fa",
   "n_points": 10000,
   "profile_basis": "continuous",
   "protocol": {
@@ -26,14 +26,14 @@
   "scan": "dmsq31",
   "timing": {
     "block_reps": 1,
-    "block_seconds": 7.101361835235729,
+    "block_seconds": 7.968163214127221,
     "min_block_s": 0.25,
     "samples": 30
   },
   "us_per_point": {
-    "mean": 710.136183523573,
-    "min": 703.1431826995686,
+    "mean": 796.8163214127222,
+    "min": 745.5969698028639,
     "n": 30,
-    "sd": 4.506257662915326
+    "sd": 51.3314424048644
   }
 }

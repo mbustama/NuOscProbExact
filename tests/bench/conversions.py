@@ -75,6 +75,18 @@ OURS = {
 #: nuCraft's constant is the CC entry of EarthModel's potential vector,
 #: ``A = array([15.256e-5*self.y[0], ...])`` -- same YerhoE2a convention as
 #: the NuFast codes, with Y_e carried separately by ``y[0]``.
+#: Not a code: an analytic expression evaluated inside this harness.  It has
+#: no source to read a constant out of, so it takes THIS library's -- which
+#: is also what makes its point fair, since it is our own series judged
+#: against our own reference in our own units.
+ALIAS = {'Second-order expansion': 'NuOscProbExact'}
+
+
+def _resolve(code):
+    r"""Maps an alias to the code whose conventions it borrows."""
+    return ALIAS.get(code, code)
+
+
 SITES = {
     'NuFast-LBL':   ('nufast-lbl/NuFast_LBL.cpp',      r'YerhoE2a\s*=\s*([0-9.eE+-]+)'),
     'NuFast-Earth': ('nufast-earth/src/Oscillation.cpp', r'YerhoE2a\s*=\s*([0-9.eE+-]+)'),
@@ -143,6 +155,7 @@ def hbar_c(code):
     code's own units, and a code that rounds hbar c to four figures is
     solving a measurably different problem from one that does not.
     """
+    code = _resolve(code)
     rel, form, pattern = HBAR_C_SITES[code]
     value, _ = _read(rel, pattern, code + ' hbar c')
     if form == 'ev_m':
@@ -156,6 +169,7 @@ def hbar_c(code):
 
 def km_to_inv_ev(code):
     r"""Returns a kilometre in eV^-1 in `code`'s own convention."""
+    code = _resolve(code)
     if code == 'nuSQuIDS':
         import nuSQuIDS as nsq                      # its constants are its own
         units = nsq.Const()
@@ -209,6 +223,7 @@ def matter_constant(code):
     Without this the reference builder had nothing to construct nuSQuIDS'
     potential from --- ``mass_defect('nuSQuIDS')`` raised ``KeyError``.
     """
+    code = _resolve(code)
     if code == 'nuSQuIDS':
         import math
         import nuSQuIDS as nsq
@@ -312,6 +327,7 @@ def for_code(code):
     rather than typed a second time, because a hand-typed 2.4511e-3 beside a
     2.525e-3 is indistinguishable from a physics difference.
     """
+    code = _resolve(code)
     import math
 
     p = oscillation_parameters()
