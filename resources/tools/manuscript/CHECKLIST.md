@@ -227,8 +227,13 @@ whether the passage is wrong.
 
 Two invocation traps, both paid for:
 
-- `check_dangles.py` takes the **extracted text**, not the PDF. Run
-  `pdftotext -layout resources/paper/main.pdf <scratchpad>/main.txt` first.
+- `check_dangles.py` takes the **PDF**, not extracted text. A two-column page
+  flattened by `pdftotext -layout` puts both columns on one line, so a short
+  line in the left column is padded by whatever sits beside it and the tail
+  disappears. Handed a `.txt` of this manuscript it found five tails, four of
+  them bibliography artifacts, while twenty-one stood on the page — one of
+  them a single character. It now finds the gutter itself and reads each
+  column separately, and scales its cut to that column's own measure.
 - `audit_section.py` hardcodes the review repo's path. Run it with
   `NUOSC_TEX=resources/paper/main.tex` set.
 
