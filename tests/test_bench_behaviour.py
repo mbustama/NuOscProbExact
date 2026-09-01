@@ -22,7 +22,6 @@ so every check here is a correctness probe on a deliberately tiny grid.
 """
 
 import importlib
-import os
 import pathlib
 import sys
 
@@ -49,6 +48,15 @@ def _adapter(code):
     nuSQuIDS and nuCraft come from ``build.sh``; a checkout without it must
     skip rather than fail, but must never pass silently.
     """
+    if code == 'nuoscprobexact':
+        import fastkernels
+        if not (fastkernels.HAVE_NUMBA and fastkernels.available()
+                and getattr(fastkernels, 'USE_NUMBA', False)):
+            pytest.skip(
+                'the compiled kernels are not live, and the adapter refuses to '
+                'run on the NumPy path so that no measurement of it can be '
+                'published as this library; these probes read no clock, but '
+                'they reach that guard through setup()')
     runner = _runner()
     try:
         return runner.load_adapter(code)

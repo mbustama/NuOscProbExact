@@ -154,7 +154,6 @@ def main():
 
         if code == 'NuFast-LBL':
             # Constant density: one matrix exponential, no discretisation.
-            lo, hi = ref.DPS, None
             value = ref.constant_density(code, [ENERGY_GEV], 1300.0, 3.0, YE,
                                          params)[0]
             entry['reference_kind'] = 'exact matrix exponential'

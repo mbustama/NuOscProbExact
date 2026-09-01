@@ -46,7 +46,6 @@ The second limit is the inputs, and here the two profile bases differ:
 `self_test` checks the achieved precision rather than asserting it.
 """
 
-import math
 import os
 import sys
 

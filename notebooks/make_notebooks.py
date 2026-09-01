@@ -24,6 +24,7 @@ first.
 import pathlib
 import time
 
+import os
 import nbformat as nbf
 
 OUT = pathlib.Path('notebooks')
@@ -2259,7 +2260,7 @@ books['10_paper_figures.ipynb'] = notebook(
 
 The plotting style is the group's standard `matplotlibrc`, inlined into the setup cell below rather than shipped as a separate file, with its sizes set for figures included at the paper's `\columnwidth`.
 
-Running this notebook writes all fourteen PDFs. Set `NUOSC_PAPER_FIGDIR` to write them straight into the paper's directory.''',
+Running this notebook writes all fifteen PDFs. Set `NUOSC_PAPER_FIGDIR` to write them straight into the paper's directory.''',
     [
         md(external_code_provenance()),
         md(convention_matching()),
@@ -2315,7 +2316,6 @@ print('accuracy artifacts loaded; basis =', ACC_CONST['profile_basis'],
         code(r'''import earth
 import slabs
 from scipy.linalg import expm
-import json
 import shutil
 from matplotlib.patches import (Rectangle, FancyArrowPatch,
                                 Wedge, Polygon, Circle)
@@ -3076,8 +3076,62 @@ disputed without guessing what was run.'''),
 
 import json
 
+# ---------------------------------------------------------------------------
+# HOW THE REFERENCES IN THESE THREE FIGURES ARE BUILT
+#
+# Every point below is an error against a 50-digit reference.  One procedure
+# builds all of them, and it is applied separately to each code, in that
+# code's OWN constants -- its hbar c, and the normalization it builds V_CC
+# from.  No code is handed rescaled inputs chosen to imitate another code's
+# reference: that matches V_CC but misses the three powers of hbar c that
+# enter through cm^-3, and distorts the chord, which together leave a floor
+# near 1e-6 belonging to neither the code nor its solver.
+#
+# The code is quoted rather than run here: rebuilding these at 50 digits
+# takes minutes per point, and the figures read the frozen JSON instead.
+# Uncomment to regenerate.
+#
+# Constant density (the top panel).  Nothing is approximated -- one matrix
+# exponential in arbitrary precision -- so the reference is exact and the
+# only error a code can show is its own arithmetic:
+#
+#     import sys; sys.path.insert(0, os.path.join('..', 'tests', 'bench'))
+#     import reference, conversions
+#     params = conversions.for_code('nuSQuIDS')      # that code's constants
+#     exact = reference.constant_density(
+#         'nuSQuIDS', energies_gev, l_km=1300.0, density_g_cm3=3.0,
+#         ye=0.5, params=params)
+#
+# Through the Earth (the middle panel).  No exact answer exists, because
+# every code must first approximate the profile.  The reference is a
+# CONVERGED one: the slab product is composed at a ladder of slab counts and
+# Romberg-extrapolated, the error falling as 1/N^2 so that consecutive pairs
+# combine as [4 P(2N) - P(N)]/3:
+#
+#     value, err, table = reference.earth_chord_romberg(
+#         'nuSQuIDS', energy_gev, costhz=-0.9, ye=0.5, params=params,
+#         ladder=(32, 64, 128, 256, 512))
+#
+# The 3+1 panel is built by tests/prem_scan.py, which carries a second,
+# independent referee: an adaptive integration of dnu/dx = -i H(x) nu along
+# the continuous profile, restarted at every density jump so that no step
+# straddles one.  It shares no machinery with the slab product, so agreement
+# between the two is a check on both:
+#
+#     import prem_scan
+#     a = prem_scan.reference(energy_ev, n_flavors)        # Richardson
+#     b = prem_scan.ode_reference(energy_ev, n_flavors)    # independent ODE
+#     assert abs(a - b) < 1.0e-10
+# ---------------------------------------------------------------------------
+
 with open(os.path.join('..', 'tests', 'speed_accuracy.json')) as handle:
     sa = json.load(handle)
+
+# The second-order expansion is measured here now, like everything else in
+# this figure: tests/bench/adapters/second_order.py evaluates the alpha-s13
+# series the paper cites, in this library's conventions, against this
+# library's reference.  It used to be a hand-carried point with no
+# generator, no version and no formula recorded.
 
 # The same colours, markers and layout as the two Earth planes, so that a
 # code keeps its identity across all three.  This library shows only the
@@ -3095,7 +3149,8 @@ STYLE = {"NuOscProbExact": ("-o", "C3", 4.0),
          "nuSQuIDS": ("-v", "C2", 3.6),
          "NuFast-LBL": ("-D", "C4", 3.2),
          "GLoBES": ("-*", "C6", 6.0),
-         "Prob3++": ("-P", "C5", 4.4)}
+         "Prob3++": ("-P", "C5", 4.4),
+         "Second-order expansion": ("-s", "C1", 3.6)}
 
 # Only the fastest point at each accuracy is drawn.  Four of these codes
 # have an INERT dial here: at constant density there is no profile to
@@ -3104,23 +3159,36 @@ STYLE = {"NuOscProbExact": ("-o", "C3", 4.0),
 # nothing; drawing the slowest would report the code as slower than anyone
 # would ever run it.  NuFast-LBL and NuFast-Earth keep their curves, since
 # their dial is the eigenvalue solve and does move the accuracy.
-fig, ax = plt.subplots(figsize=FIGSIZE_SQUARE)
-anchor = {}
-for name in STYLE:
+def const_points(name):
+    r"""The points drawn for `name` on the constant-density plane.
+
+    Which points are shown, and in what order, lives here rather than in
+    the plotting loop because two figures draw this panel -- this one and
+    the stacked three-panel figure -- and they must agree about the data.
+    The drawing differs between them; the selection must not.
+
+    Ordered along the curve by error, not by knob value.  Sorting by knob
+    put N_Newton = -1 -- the exact mode, at the accurate end -- before 0,
+    the least accurate, so the polyline ran bottom, top, bottom and drew a
+    closed loop that read as two separate NuFast-LBL curves.
+    """
     series = next((x for x in sa["series"] if x["name"] == name), None)
     if series is None:
-        continue
-    marker, colour, size = STYLE[name]
+        return []
     points = [q for q in series["points"]
               if q.get("best_at_this_accuracy", True)
               and q["max_abs_error"] is not None]
+    points.sort(key=lambda q: (-q["max_abs_error"], q["us_per_probability"]))
+    return points
+
+
+fig, ax = plt.subplots(figsize=FIGSIZE_SQUARE)
+anchor = {}
+for name in STYLE:
+    points = const_points(name)
     if not points:
         continue
-    # Ordered along the curve by error, not by knob value.  Sorting by knob
-    # put N_Newton = -1 -- the exact mode, at the accurate end -- before 0,
-    # the least accurate, so the polyline ran bottom, top, bottom and drew a
-    # closed loop that read as two separate NuFast-LBL curves.
-    points.sort(key=lambda q: (-q["max_abs_error"], q["us_per_probability"]))
+    marker, colour, size = STYLE[name]
     t = [q["us_per_probability"] for q in points]
     e = [q["max_abs_error"] for q in points]
     kw = dict(ms=size, color=colour, label=name, zorder=4)
@@ -3140,11 +3208,17 @@ for (name, label), lab, dx, dy, ha in (
         # The dial's own values, as the paper labels them.  "LBL exact" and
         # "Earth exact" were wording invented here, and the second existed
         # only because NuFast-Earth had been added to this figure.
+        # 2 and 3 to the left of their markers, -1 to the right: the three
+        # sit within a hair of each other and overlap if placed the same way.
         (("NuFast-LBL", "0"), r"$N_{\rm Newton} = 0$", 7, -2, "left"),
         (("NuFast-LBL", "1"), "1", 7, -2, "left"),
-        (("NuFast-LBL", "2"), "2", 7, -2, "left"),
-        (("NuFast-LBL", "-1"), r"$-1$", 9, 4, "left"),
-        (("NuFast-LBL", "3"), "3", 7, -7, "left")):
+        (("NuFast-LBL", "2"), "2", -7, 3, "right"),
+        (("NuFast-LBL", "3"), "3", -7, -7, "right"),
+        (("NuFast-LBL", "-1"), r"$-1$", 7, -2, "left"),
+        (("nuSQuIDS", "1e-03"), r"tol $10^{-3}$", 6, 2, "left"),
+        # Left of its marker: at the tight end of the curve this label ran
+        # off the right edge of the axes.
+        (("nuSQuIDS", "1e-12"), r"$10^{-12}$", -7, -1, "right")):
     if (name, label) not in anchor:
         continue
     x, y, c = anchor[(name, label)]
@@ -3152,7 +3226,7 @@ for (name, label), lab, dx, dy, ha in (
                 fontsize=5.2, color=c, ha=ha)
 
 ax.axhline(2.2e-16, color="0.5", ls=":", lw=0.7, zorder=1)
-ax.text(3.4e-2, 1.15e-16, "Double precision", fontsize=5.4, color="0.4")
+ax.text(2.0e-1, 3.0e-16, "Double precision", fontsize=5.4, color="0.4")
 # This panel's data does not leave the same corners free as the Earth ones:
 # Placed against where the points actually are, which the measurement
 # decides and not this cell: five codes cluster along the double-precision
@@ -3162,21 +3236,36 @@ ax.text(3.4e-2, 1.15e-16, "Double precision", fontsize=5.4, color="0.4")
 # block placed both from a layout the old data had, and also carried an
 # "Array + kernel" label pinned to a point -- 0.230 us, 9.71e-16 -- that no
 # longer exists in any measurement.
-# Upper right, because that corner is genuinely empty and the lower right
-# is not: nuSQuIDS is a single point out at 18 us, and an opaque legend
-# placed there covered it completely -- the code appeared in the legend and
-# nowhere on the axes.
-ax.text(0.975, 0.965, "Constant density:  $L = 1300$ km,\n"
+# Middle left.  The upper right was chosen when nuSQuIDS was a single
+# point; restoring its tolerance dial turned it into a curve that climbs
+# straight through that corner, and the caption sat on it.  This band --
+# right of NuFast-LBL, above the three codes whose dial is inert here, left
+# of where nuSQuIDS descends -- is the one region nothing occupies.
+ax.text(0.15, 0.94, "Constant density:  $L = 1300$ km,\n"
         r"$E = 0.6$--$20$ GeV,  $\rho = 3$ g cm$^{-3}$",
-        transform=ax.transAxes, ha="right", va="top", fontsize=6.0,
-        color="0.2", linespacing=1.4)
+        transform=ax.transAxes, ha="left", va="top", fontsize=6.0,
+        color="0.2", linespacing=1.4,
+        bbox=dict(boxstyle="round,pad=0.35", facecolor="white",
+                  edgecolor="black", linewidth=0.6))
+ax.set_yticks([10.0**k for k in range(-16, -1, 2)])
 ax.set_xlabel(r"Time per probability [$\mu$s]")
+# The axis named ONE channel and the code plotted the largest of
+# three.  Measured, the two are not close: the appearance channel is
+# the largest for none of GLoBES's nine settings, none of this
+# library's twelve and none of Prob3++'s nine -- GLoBES plots
+# 5.84e-15 where its appearance error is 1.76e-16, a factor of
+# thirty-three.  The label is corrected rather than the data,
+# because the largest of the three is the stricter test and the one
+# every number in these figures was measured against.
 ax.set_ylabel(r"Error vs.\ a 50-digit reference,  "
-              r"max $|\Delta P_{\nu_\mu \to \nu_e}|$")
+              r"$\max_\alpha |\Delta P_{\nu_\mu \to \nu_\alpha}|$")
 ax.set_xlim(3.0e-2, 2.0e2)
-ax.set_ylim(1.0e-16, 3.0e-4)
+# To 2e-2, not 3e-4.  The second-order expansion sits at 6.5e-3 and
+# nuSQuIDS's loosest tolerance at 9.3e-4 -- BOTH were above the old top,
+# so nuSQuIDS's first point was being clipped off the figure entirely.
+ax.set_ylim(1.0e-16, 1.0e-2)
 leg = ax.legend(loc="lower right", bbox_to_anchor=(0.995, 0.02),
-                fontsize=5.6)
+                fontsize=5.6, framealpha=0.85)
 leg.get_frame().set_linewidth(0.7)
 fig.tight_layout(pad=0.3)
 fig.savefig(os.path.join(FIGDIR, "speed_accuracy.pdf"))
@@ -3283,16 +3372,52 @@ PREM_STYLE = {"NuOscProbExact (tolerance)": ("-o", "C3", 4.0),
               # so is flat at 0.057 us however finely the Earth is cut.
               # Same colour and marker: it is the same code either way.
               "NuFast-Earth": ("-D", "C4", 3.2),
-              "NuFast-Earth (dCP only)": ("--D", "C4", 2.6),
+              # A hexagon, not a diamond: sharing NuFast-Earth's colour
+              # AND its marker made the two curves hard to tell apart.
+              "NuFast-Earth (dCP only)": ("--h", "C4", 3.4),
               "GLoBES": ("-*", "C6", 6.0),
               "Prob3++": ("-P", "C5", 4.4),
               "nuCraft": ("-s", "C0", 3.4)}
 
 
-def prem_plane(panel, annotations, subtitle, xlim, ylim, outfile,
-               dial_at=None, legend_loc="lower left",
-               legend_anchor=None, only=None, relabel=None):
-    """One speed-accuracy plane: time across, error against the referee up.
+def by_dial(points):
+    r"""Returns `points` in the order the DIAL sets, not the order of cost.
+
+    The stored order is by cost, which is right whenever the cost actually
+    moves: it puts a curve's cheap end on the left and keeps it there.  It
+    is wrong for a series whose cost does not move.  NuFast-Earth's
+    delta_CP curve spans 1.1x in cost -- 0.05745 to 0.06301 us -- against
+    15x to 7880x for every other series here, and consecutive points are
+    separated by less than their own standard deviations.  Sorting that by
+    cost sorts it by measurement noise: it scrambled the layer counts into
+    16, 4, 64, 256, 8192, 4096, 1024, 1, so the line ran down to 8.0e-8 and
+    back up to 1.8e-1 -- a U that reads as two curves and is entirely an
+    artifact of the ordering.  By the dial it is what it should be, a
+    vertical line: the cost pinned while the error falls six orders.
+
+    A tolerance runs loose to tight and so sorts descending; a shell or
+    slab count sorts ascending.  Labels that are not numbers keep the order
+    they came in.
+    """
+    try:
+        values = [float(q["label"]) for q in points]
+    except (ValueError, KeyError):
+        return list(points)
+    return sorted(points, key=lambda q: float(q["label"]),
+                  reverse=min(values) < 1.0)
+
+
+def prem_axes(ax, panel, annotations, subtitle, ylim, dial_at=None,
+              legend_loc="lower left", legend_anchor=None, only=None,
+              relabel=None, label_at=(0.03, 0.03, "left", "bottom"),
+              legend_ncol=1, legend_fontsize=6.0, annot_fontsize=5.2):
+    r"""Draws one speed-accuracy plane onto `ax`, and sets only its y range.
+
+    Split out of `prem_plane` so the stacked three-panel figure and the
+    single-panel figures draw through ONE routine.  They are the same
+    measurements shown twice, and two copies of this code would eventually
+    disagree about which.  The caller owns the x range, because the stacked
+    figure shares one across all three panels.
 
     `only` restricts which series are drawn, and `relabel` renames them in
     the legend.  Both exist for the four-flavor panel, where the two root
@@ -3300,7 +3425,6 @@ def prem_plane(panel, annotations, subtitle, xlim, ylim, outfile,
     curves coincide to the last bit, so plotting both put two labels on one
     line.
     """
-    fig, ax = plt.subplots(figsize=FIGSIZE_SQUARE)
     wanted = {}
     relabel = relabel or {}
     order = list(PREM_STYLE)
@@ -3309,23 +3433,31 @@ def prem_plane(panel, annotations, subtitle, xlim, ylim, outfile,
         if only is not None and series["name"] not in only:
             continue
         marker, colour, size = PREM_STYLE[series["name"]]
-        t = [q["us_per_probability"] for q in series["points"]]
-        e = [q["max_abs_error"] for q in series["points"]]
+        pts = by_dial(series["points"])
+        t = [q["us_per_probability"] for q in pts]
+        e = [q["max_abs_error"] for q in pts]
         kw = dict(ms=size, color=colour,
                   label=relabel.get(series["name"], series["name"]), zorder=4)
         if series["name"].startswith("NuOscProbExact"):
             kw.update(mfc="white", mew=1.0, zorder=5)
         ax.loglog(t, e, marker, **kw)
-        for q in series["points"]:
+        for q in pts:
             key = relabel.get(series["name"], series["name"])
             wanted[(key, q["label"])] = (
                 q["us_per_probability"], q["max_abs_error"], colour)
 
-    for (name, label), text, dx, dy, ha in annotations:
+    for item in annotations:
+        (name, label), text, dx, dy, ha = item[:5]
         x, y, colour = wanted[(name, label)]
+        extra = {}
+        # A sixth element asks for a thin leader line, for a label that has
+        # to sit well away from its marker to stay off the curves.
+        if len(item) > 5 and item[5]:
+            extra["arrowprops"] = dict(arrowstyle="-", linewidth=0.5,
+                                       color=colour, shrinkA=1.0, shrinkB=2.5)
         ax.annotate(text, xy=(x, y), xytext=(dx, dy),
-                    textcoords="offset points", fontsize=5.2, color=colour,
-                    ha=ha)
+                    textcoords="offset points", fontsize=annot_fontsize,
+                    color=colour, ha=ha, **extra)
 
     # What the numbers along this library's curve are, said once -- but only
     # where they are unambiguous.  In the three-flavor panel three other
@@ -3336,16 +3468,30 @@ def prem_plane(panel, annotations, subtitle, xlim, ylim, outfile,
     # Bottom left is the one corner no curve reaches in either panel, and
     # the legend needs the top right: with four to seven entries it was
     # otherwise sitting on top of nuCraft.
-    ax.text(0.03, 0.03, subtitle, transform=ax.transAxes, ha="left",
-            va="bottom", fontsize=6.0, color="0.2", linespacing=1.4)
-    ax.set_xlabel(r"Time per probability [$\mu$s]")
-    ax.set_ylabel(r"Error vs.\ converged solution,  "
-                  r"max $|\Delta P_{\nu_\mu \to \nu_\mu}|$")
-    ax.set_xlim(*xlim)
+    lx, ly, lha, lva = label_at
+    ax.text(lx, ly, subtitle, transform=ax.transAxes, ha=lha,
+            va=lva, fontsize=6.0, color="0.2", linespacing=1.4,
+            bbox=dict(boxstyle="round,pad=0.35", facecolor="white",
+                      edgecolor="black", linewidth=0.6))
     ax.set_ylim(*ylim)
     leg = ax.legend(loc=legend_loc, bbox_to_anchor=legend_anchor,
-                    fontsize=6.0)
+                    fontsize=legend_fontsize, framealpha=0.85,
+                    ncol=legend_ncol)
     leg.get_frame().set_linewidth(0.7)
+
+
+def prem_plane(panel, annotations, subtitle, xlim, ylim, outfile,
+               dial_at=None, legend_loc="lower left",
+               legend_anchor=None, only=None, relabel=None):
+    r"""One speed-accuracy plane on its own axes, written to `outfile`."""
+    fig, ax = plt.subplots(figsize=FIGSIZE_SQUARE)
+    prem_axes(ax, panel, annotations, subtitle, ylim, dial_at=dial_at,
+              legend_loc=legend_loc, legend_anchor=legend_anchor,
+              only=only, relabel=relabel)
+    ax.set_xlabel(r"Time per probability [$\mu$s]")
+    ax.set_ylabel(r"Error vs.\ converged solution,  "
+                  r"$\max_\alpha |\Delta P_{\nu_\mu \to \nu_\alpha}|$")
+    ax.set_xlim(*xlim)
     fig.tight_layout(pad=0.3)
     fig.savefig(os.path.join(FIGDIR, outfile))
     plt.show()
@@ -3358,22 +3504,37 @@ prem_plane(
      ((r"NuOscProbExact, $N_{\rm slabs}$", "1"), r"$N_{\rm slabs}=1$",
       2, 7, "left"),
      ((r"NuOscProbExact, $N_{\rm slabs}$", "256"), "256", -5, -4, "right"),
-     (("nuSQuIDS", "1e-03"), r"tol $10^{-3}$", 6, -1, "left"),
-     (("nuSQuIDS", "1e-12"), r"$10^{-12}$", 7, -1, "left"),
+     # Only the tight end is labelled: nuSQuIDS's loosest points all fall
+     # inside the legend's footprint, so no offset rescues a label there
+     # while the legend stays on the axes.  The dial's name travels with
+     # the surviving label instead.
+     (("nuSQuIDS", "1e-12"), r"tol $10^{-12}$", 7, -1, "left"),
      (("NuFast-Earth", "1"), r"$N_{\rm layers}=1$", 2, 3, "left"),
      (("NuFast-Earth", "256"), "256", 4, 4, "left"),
-     (("NuFast-Earth (dCP only)", "256"), r"$\delta_{\rm CP}$ only",
-      6, 0, "left")],
+     # Keyed by the RELABELLED name: prem_plane builds its annotation table
+     # after relabel is applied, so asking for the raw series name raises.
+     ((r"NuFast-Earth ($\delta_{\rm CP}$ only)", "256"),
+      r"$\delta_{\rm CP}$ only", 6, 0, "left")],
     "PREM, three flavors:  " + r"$\cos\theta_z = -0.9$," + "\n"
     r"$E = 3$--$40$ GeV,  $L = 11468$ km",
     # Down to 3e-2 because NuFast-Earth belongs there.  At 1e0 its whole
     # series -- five points between 0.057 and 0.066 us -- fell off the left
     # edge, so the code appeared in the legend and nowhere on the plot.
-    (3.0e-2, 1.0e5), (2.0e-8, 2.0e-1),
+    # Bottom at 8e-11.  The ladder now runs past 8192, and two of the
+    # curves turn around there: NuOscProbExact is best at 1.6e-10 (24576
+    # slabs) and GLoBES at 3.5e-10 (12288), and both then bend back up
+    # AND to the right -- more slabs, more time, worse answer.  Once the
+    # discretisation error falls below the round-off accumulated over N
+    # slab products, refining costs and measures worse.  The reference is
+    # 3.3e-17, seven orders below either turn, so that bend is the codes'
+    # own double arithmetic and not the yardstick.
+    (3.0e-2, 1.0e5), (8.0e-11, 2.0e-1),
     "prem_speed_accuracy.pdf", None,
     legend_loc="upper right", legend_anchor=(0.995, 0.995),
     relabel={"NuOscProbExact": r"NuOscProbExact, $N_{\rm slabs}$",
-             "NuOscProbExact (tolerance)": "NuOscProbExact, rtol"})
+             "NuOscProbExact (tolerance)": "NuOscProbExact, rtol",
+             "NuFast-Earth (dCP only)":
+                 r"NuFast-Earth ($\delta_{\rm CP}$ only)"})
 
 prem_plane(
     prem["sterile_3plus1"],
@@ -3386,7 +3547,11 @@ prem_plane(
      (("nuSQuIDS", "1e-12"), r"$10^{-12}$", 7, -1, "left")],
     r"PREM, $3+1$:  $\cos\theta_z = -0.9$," + "\n"
     r"$E = 0.3$--$30$ TeV,  $\Delta m_{41}^2 = 1$ eV$^2$",
-    (1.0e1, 1.0e5), (2.0e-8, 2.0e-1),
+    # Bottom at 2e-11.  Scoring each code against a referee in its own
+    # constants, and building the sterile referee from 512 slabs rather than
+    # 128, moved this panel's floor from 1e-9 to 4e-11: at 2e-8 the lower
+    # half of every curve fell off the axis.
+    (1.0e1, 1.0e5), (2.0e-11, 2.0e-1),
     "prem_speed_accuracy_3plus1.pdf", None,
     legend_loc="upper right", legend_anchor=(0.995, 0.995),
     # Both root strategies are frozen in the data; only the default is
@@ -3491,41 +3656,23 @@ point is what a parameter scan actually pays.'''),
 # of two different on a workstation.  The ratios between routes, which is
 # what these cells are actually about, are far more stable than the
 # absolute numbers and are what the text quotes.
-import time
-import fastkernels
+# Read, not measured.  These curves used to be timed as the notebook ran,
+# which meant the figure moved every time it was redrawn: over one evening's
+# rebuilds the same measurement gave array gains of 29, 33 and 35 times and
+# kernel gains between 8.0 and 9.6, while the text quoted fixed numbers.  A
+# figure that changes when nothing changed cannot be shipped, and no prose
+# can be kept true against it.  So the measurement is made deliberately, by
+# tests/measure_performance_scaling.py on a machine chosen to be quiet, and
+# frozen beside the other datasets the figures read.  Re-running that script
+# is how these numbers change; redrawing the figure is not.
+with open(os.path.join('..', 'tests', 'performance_scaling.json')) as handle:
+    scaling = json.load(handle)
 
-
-def best_of(func, repeat=5):
-    # The minimum, not the mean: timing noise is one-sided, so the fastest
-    # run is the one least polluted by whatever else the machine was doing.
-    best = float("inf")
-    for _ in range(repeat):
-        t0 = time.perf_counter()
-        func()
-        best = min(best, time.perf_counter()-t0)
-    return best
-
-
-L = 1300.0*KM
-sizes = [1, 3, 10, 30, 100, 300, 1000, 3000, 10000, 30000]
-rows = []
-for n in sizes:
-    Hs = hamiltonians3nu.hamiltonian_3nu_matter(
-        H_VAC_3NU, np.logspace(-1.0, 1.5, n)*GEV, gd.VCC_EARTH_CRUST)
-    fastkernels.USE_NUMBA = False
-    t_loop = best_of(lambda: [oscprob3nu.probabilities_3nu(h, L)
-                              for h in Hs], repeat=3)
-    t_array = best_of(lambda: oscprob3nu.probabilities_3nu(Hs, L))
-    if fastkernels.HAVE_NUMBA:
-        fastkernels.USE_NUMBA = True
-        oscprob3nu.probabilities_3nu(Hs, L)          # warm the compiler
-        t_numba = best_of(lambda: oscprob3nu.probabilities_3nu(Hs, L))
-        fastkernels.USE_NUMBA = False
-    else:
-        t_numba = np.nan
-    rows.append((n, t_loop, t_array, t_numba))
-rows = np.array(rows)
-fastkernels.USE_NUMBA = fastkernels.HAVE_NUMBA
+rows = np.array([[n,
+                  scaling["seconds"]["loop"][i],
+                  scaling["seconds"]["array"][i],
+                  scaling["seconds"]["numba"][i]]
+                 for i, n in enumerate(scaling["sizes"])], dtype=float)
 
 print("%8s %12s %12s %12s" % ("N", "loop [us/pt]", "array [us/pt]",
                               "numba [us/pt]"))
@@ -3550,7 +3697,9 @@ fig, (axt, ax) = plt.subplots(
 for col, style, size, lab in (
         (3, "-o", 3.4, "NuOscProbExact, array + kernel"),
         (1, "-^", 3.6, "NuOscProbExact, one at a time")):
-    if col == 3 and not fastkernels.HAVE_NUMBA:
+    # Keyed off the frozen run, not this machine: the curve belongs to
+    # the measurement, not to whoever is redrawing it.
+    if col == 3 and not scaling["environment"]["have_numba"]:
         continue
     kw = dict(ms=size, color="C3", mfc="white", mew=0.9, zorder=5)
     axt.loglog(rows[:, 0], rows[:, col]*1e3, style, label=lab, **kw)
@@ -3729,6 +3878,188 @@ framed(axes[0], loc="lower right")
 axes[-1].set_xlabel("Neutrino energy [GeV]")
 fig.tight_layout(pad=0.3)
 fig.savefig(os.path.join(FIGDIR, "prob_2nu_vs_energy_compare.pdf"))
+plt.show()'''),
+    md(r'''## The three speed-accuracy planes together
+
+The same three measurements as above, stacked on one common time axis so
+that a cost can be read across the three setups rather than within one.
+Nothing is re-measured: the panels draw from the same files and, for the
+selection and the ordering, through the same routines.'''),
+    code(r'''# The paper's \textwidth for elsarticle 5p twocolumn, so this is a
+# figure* spanning both columns.  COLW above is \columnwidth.
+FIGW_WIDE = 469.75/72.27
+
+# One x range for all three, the union of what the panels reach.  It costs
+# the outer two panels some width -- constant density fills 47% of it and
+# the 3+1 panel 61%, against 95% for the PREM panel -- and buys the thing
+# the separate figures cannot show: 0.06 us for a cached NuFast-Earth and
+# 6e4 us for nuCraft are the same distance apart in every panel.
+#
+# It runs to 6e5 and not 1e5 because 1e5 silently dropped six MEASURED
+# points off the right edge: Prob3++ at 49152 and 65536 (1.1e5 and 1.5e5
+# us), GLoBES at 32768, 49152 and 65536 (2.5e5 to 5.0e5), and the sterile
+# panel's rtol 1e-8 (3.2e5).  Three of those are GLoBES's most accurate
+# settings, so the cut was not cosmetic.
+XLIM_ALL = (3.0e-2, 6.0e5)
+LABEL_TR = (0.985, 0.95, "right", "top")
+
+fig, axes = plt.subplots(3, 1, sharex=True, figsize=(FIGW_WIDE, 6.46))
+
+anchor = {}
+for name in STYLE:
+    points = const_points(name)
+    if not points:
+        continue
+    marker, colour, size = STYLE[name]
+    kw = dict(ms=size, color=colour, label=name, zorder=4)
+    if name.startswith("NuOscProbExact"):
+        kw.update(mfc="white", mew=1.0, zorder=5)
+    axes[0].loglog([q["us_per_probability"] for q in points],
+                   [q["max_abs_error"] for q in points], marker, **kw)
+    for q in points:
+        anchor[(name, q["label"])] = (
+            q["us_per_probability"], q["max_abs_error"], colour)
+for (name, label), lab, dx, dy, ha in (
+        (("NuFast-LBL", "0"), r"$N_{\rm Newton} = 0$", 6.0, -1.5, "left"),
+        (("NuFast-LBL", "1"), "1", 7, -2, "left"),
+        (("NuFast-LBL", "2"), "2", -4, 2, "right"),
+        (("NuFast-LBL", "3"), "3", 4.2, 4.1, "right"),
+        (("NuFast-LBL", "-1"), r"$-1$", 5.6, -2.0, "left"),
+        (("nuSQuIDS", "1e-03"), r"tol $= 10^{-3}$", 6.0, -1.8, "left"),
+        (("nuSQuIDS", "1e-12"), r"$10^{-12}$", 21.3, -2.9, "right")):
+    if (name, label) not in anchor:
+        continue
+    x, y, c = anchor[(name, label)]
+    axes[0].annotate(lab, xy=(x, y), xytext=(dx, dy),
+                     textcoords="offset points", fontsize=6.6, color=c, ha=ha)
+axes[0].axhline(2.2e-16, color="0.5", ls=":", lw=0.7, zorder=1)
+axes[0].text(5.0e1, 3.2e-16, "Double precision", fontsize=6.0, color="0.4")
+axes[0].set_yticks([10.0**k for k in range(-16, -1)])
+axes[0].set_ylim(1.0e-16, 1.0e-2)
+axes[0].tick_params(axis="y", labelsize=6.2)
+axes[0].text(LABEL_TR[0], LABEL_TR[1],
+             "Constant density:  $L = 1300$ km,\n"
+             r"$E = 0.6$--$20$ GeV,  $\rho = 3$ g cm$^{-3}$",
+             transform=axes[0].transAxes, ha="right", va="top", fontsize=6.0,
+             color="0.2", linespacing=1.4,
+             bbox=dict(boxstyle="round,pad=0.35", facecolor="white",
+                       edgecolor="black", linewidth=0.6))
+leg = axes[0].legend(loc="lower right", bbox_to_anchor=(0.995, 0.03),
+                     fontsize=5.6, framealpha=0.85, ncol=2)
+leg.get_frame().set_linewidth(0.7)
+
+prem_axes(
+    axes[1], earth_plane_data,
+    # rtol is labelled on the FIRST rung of its curve, 3, rather than on
+    # 1e-3 partway along it.  N_slabs is pulled clear of the Prob3++ and
+    # GLoBES markers it was sitting on and given a leader line back.  Both
+    # NuFast-Earth curves are dialed by N_layers, so both say so, and the
+    # "delta_CP only" tag is gone: the legend already carries it.
+    [(("NuOscProbExact, rtol", "3e+00"), r"rtol $= 3$", 5.1, -2.0, "left"),
+     (("NuOscProbExact, rtol", "1e-05"), r"$10^{-5}$", 3.1, 0.7, "left"),
+     ((r"NuOscProbExact, $N_{\rm slabs}$", "1"), r"$N_{\rm slabs} = 1$",
+      -5.8, -29.0, "right", True),
+     ((r"NuOscProbExact, $N_{\rm slabs}$", "256"), "256", -5, -4, "right"),
+     (("nuSQuIDS", "1e-12"), r"tol $= 10^{-12}$", -42.5, 2.8, "left"),
+     ((r"NuFast-Earth ($\delta_{\rm CP}$ only)", "1"),
+      r"$N_{\rm layers} = 1$", 18.0, -14.3, "left"),
+     # Both ends of every other curve, so no dial is left unnamed.
+     (("Prob3++", "1"), r"$N_{\rm shells} = 1$", -59.3, -29.6, "left", True),
+     (("Prob3++", "65536"), "65536", 6, -2, "left"),
+     (("GLoBES", "1"), r"$N_{\rm shells} = 1$", -31.0, -36.3, "left", True),
+     (("GLoBES", "65536"), "65536", -14.6, 17.8, "left", True),
+     (("nuCraft", "1e-02"), r"numPrec $= 10^{-2}$", -7.0, -1.8, "right"),
+     (("nuCraft", "1e-10"), r"$10^{-10}$", 0.2, 3.7, "left"),
+     (("nuSQuIDS", "1e-03"), r"tol $= 10^{-3}$", 5.0, 2.5, "left"),
+     (("NuFast-Earth", "65536"), "65536", 1.7, 32.1, "left", True),
+     ((r"NuFast-Earth ($\delta_{\rm CP}$ only)", "65536"), "65536",
+      7.4, -9.8, "right"),
+     ((r"NuOscProbExact, $N_{\rm slabs}$", "65536"), "65536",
+      -19.0, 3.3, "left"),
+     (("NuOscProbExact, rtol", "1e+00"), "1", 6, -2, "left"),
+     (("NuOscProbExact, rtol", "1e-08"), r"$10^{-8}$", 3.1, -0.9, "left")],
+    "PREM, three flavors:  " + r"$\cos\theta_z = -0.9$," + "\n"
+    r"$E = 3$--$40$ GeV,  $L = 11468$ km", (1.0e-10, 2.0e-1),
+    legend_loc="lower left", legend_anchor=(0.0716, 0.03), legend_ncol=2,
+    legend_fontsize=5.6, annot_fontsize=6.6, label_at=LABEL_TR,
+    relabel={"NuOscProbExact": r"NuOscProbExact, $N_{\rm slabs}$",
+             "NuOscProbExact (tolerance)": "NuOscProbExact, rtol",
+             "NuFast-Earth (dCP only)":
+                 r"NuFast-Earth ($\delta_{\rm CP}$ only)"})
+
+prem_axes(
+    axes[2], prem["sterile_3plus1"],
+    [(("NuOscProbExact, rtol", "3e+00"), r"rtol $=3$", 7.5, -2.5, "left"),
+     (("NuOscProbExact, rtol", "1e-05"), r"$10^{-5}$", -0.8, 3.1, "left"),
+     ((r"NuOscProbExact, $N_{\rm slabs}$", "1"), r"$N_{\rm slabs}=1$",
+      -37.8, -1.2, "left"),
+     ((r"NuOscProbExact, $N_{\rm slabs}$", "256"), "256", 8.4, -9.8, "right"),
+     (("nuSQuIDS", "1e-03"), r"tol $= 10^{-3}$", 20.4, 1.9, "left", True),
+     (("nuSQuIDS", "1e-12"), r"$10^{-12}$", 5.1, -2.9, "left"),
+     (("nuCraft", "1e-02"), r"numPrec $= 10^{-2}$", 3.6, 4.0, "right"),
+     (("nuCraft", "1e-10"), r"$10^{-10}$", 2.1, 4.2, "left"),
+     ((r"NuOscProbExact, $N_{\rm slabs}$", "8192"), "8192",
+      -16.6, -7.3, "left"),
+     (("NuOscProbExact, rtol", "1e+00"), "1", -7.4, -5.8, "left"),
+     (("NuOscProbExact, rtol", "1e-08"), r"$10^{-8}$", -2.6, 5.4, "left")],
+    r"PREM, $3+1$:  $\cos\theta_z = -0.9$," + "\n"
+    r"$E = 0.3$--$30$ TeV,  $\Delta m_{41}^2 = 1$ eV$^2$", (2.0e-11, 1.0e-1),
+    legend_loc="lower left", legend_anchor=(0.012, 0.03), legend_ncol=1,
+    legend_fontsize=5.6, annot_fontsize=6.6, label_at=LABEL_TR,
+    only={"NuOscProbExact (double-double)", "NuOscProbExact (tolerance)",
+          "nuSQuIDS", "nuCraft"},
+    relabel={"NuOscProbExact (double-double)":
+             r"NuOscProbExact, $N_{\rm slabs}$",
+             "NuOscProbExact (tolerance)": "NuOscProbExact, rtol"})
+
+axes[1].set_yticks([10.0**k for k in range(-10, 0)])
+axes[2].set_yticks([10.0**k for k in range(-11, 0)])
+for ax in axes:
+    ax.tick_params(axis="y", labelsize=6.2)
+for ax in axes:
+    ax.set_xlim(*XLIM_ALL)
+    # A vertical rule per decade of time, so a cost can be carried by eye
+    # from one panel to the next -- which is the whole point of the shared
+    # axis.  Behind the data, and light enough not to compete with it.
+    ax.set_axisbelow(True)
+    ax.grid(True, axis="both", which="major", color="0.78", lw=1.0,
+            zorder=0)
+# One "N_layers = 1" now serves both NuFast-Earth curves, so it gets a
+# leader to each: out of its left edge to the delta_CP-only curve's first
+# marker, out of its right edge to the full curve's.  Drawn only after the
+# limits are set, since the label's box is only known once it is rendered.
+def _first_marker(series_name):
+    series = next(x for x in earth_plane_data["series"]
+                  if x["name"] == series_name)
+    point = by_dial(series["points"])[0]
+    return point["us_per_probability"], point["max_abs_error"]
+
+
+_label = next(t for t in axes[1].texts
+              if hasattr(t, "xyann")
+              and t.get_text() == r"$N_{\rm layers} = 1$")
+# Each leader leaves the vertical middle of one edge of the label's own box.
+# Anchoring them to the LABEL (textcoords=_label puts (0, 0.5) at the middle
+# of its left edge and (1, 0.5) at its right) rather than converting a
+# rendered box to data coordinates: savefig re-lays the figure out with a
+# tight bounding box, which moves the axes under any data-space endpoint and
+# leaves the line detached from the text it is supposed to touch.
+for _side, _target in (((0.0, 0.5), _first_marker("NuFast-Earth (dCP only)")),
+                       ((1.0, 0.5), _first_marker("NuFast-Earth"))):
+    axes[1].annotate("", xy=_target, xycoords="data",
+                     xytext=_side, textcoords=_label, zorder=6,
+                     arrowprops=dict(arrowstyle="-", linewidth=0.5,
+                                     color="C4", shrinkA=2.0, shrinkB=2.5))
+
+axes[2].set_xlabel(r"Time per probability [$\mu$s]")
+# One label for all three.  x is set by hand because the default sits on
+# the tick labels of a figure this wide.
+fig.supylabel(r"Error vs.\ a 50-digit converged solution,  "
+              r"$\max_\alpha |\Delta P_{\nu_\mu \to \nu_\alpha}|$",
+              fontsize=9, x=0.030)
+fig.subplots_adjust(hspace=0.06, left=0.10, right=0.995, top=0.995,
+                    bottom=0.055)
+fig.savefig(os.path.join(FIGDIR, "speed_accuracy_combined.pdf"))
 plt.show()'''),
     ])
 
@@ -7023,8 +7354,22 @@ def build():
     for name, nb in books.items():
         nbf.write(nb, OUT / name)
 
+    # Iterating on a single figure does not need all twenty notebooks
+    # executed.  NUOSC_ONLY restricts execution to the notebooks whose name
+    # contains it, which turns a seventy-second cycle into a fifteen-second
+    # one.  It leaves every other notebook written BARE, which CI rejects,
+    # so it is a development shortcut and never the state you commit: the
+    # partial build says so and skips the checks that would pass vacuously.
+    only = os.environ.get('NUOSC_ONLY', '')
+    if only:
+        print('  NUOSC_ONLY=%r -- PARTIAL BUILD.  Every other notebook is '
+              'written without outputs and will fail CI.  Re-run with no '
+              'NUOSC_ONLY before committing.' % only)
+
     failed = []
     for path in sorted(OUT.glob('*.ipynb')):
+        if only and only not in path.name:
+            continue
         nb = nbf.read(path, as_version=4)
         started = time.perf_counter()
         try:
@@ -7041,6 +7386,11 @@ def build():
     if failed:
         raise SystemExit('notebooks failed to execute: %s'
                          % ', '.join(failed))
+
+    if only:
+        print('  partial build finished; bare-notebook check and gallery '
+              'skipped, since the unexecuted notebooks would fail both.')
+        return
 
     # The same check CI applies, run here so a stripped notebook is caught
     # before it is committed rather than after it is pushed.

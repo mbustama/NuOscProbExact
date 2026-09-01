@@ -17,7 +17,6 @@ its name on it.
 
 import ast
 import json
-import os
 import pathlib
 import re
 
