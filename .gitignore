@@ -25,6 +25,7 @@ resources/paper/*.out
 resources/paper/*.spl
 resources/paper/*.bbl
 resources/paper/*.blg
+resources/paper/*.synctex.gz
 resources/paper/*.pdf
 resources/paper/main_diff.tex
 resources/paper/bisect_probe.*
