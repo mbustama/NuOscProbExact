@@ -285,6 +285,7 @@ NuOscProbExact/
 ├── resources/                       # Things the repository carries but does not install
 │   ├── paper/                       # Source of the paper that documents this library
 │   │   ├── README.md                # How to build it, and what each file is
+│   │   ├── HANDOVER-magnus-fig11.md # What another paper needs to redraw Figure 11 with its own code on it
 │   │   ├── main.tex                 # The paper; BibTeX, no inlined bibliography
 │   │   ├── make_versions.py         # Derives the clean and the diffed versions
 │   │   ├── baseline_cpc_v1.tex      # The published version, for the diff
@@ -314,6 +315,7 @@ NuOscProbExact/
 │           ├── CHECKLIST.md         # The audit criteria the paper is held to
 │           ├── audit_section.py     # The mechanical criteria, one section at a time
 │           ├── check_apparatus_prose.py  # Prose about the manuscript rather than about neutrinos
+│           ├── check_convolution.py # Sentence shapes a reader has to unpick: abstract predicates and echoed heads
 │           ├── check_dangles.py     # Dangling last lines, over the typeset page
 │           ├── check_informality.py # Colloquial register in a technical text
 │           ├── check_llm_tells.py   # Vocabulary and rhythms that read as machine-written
