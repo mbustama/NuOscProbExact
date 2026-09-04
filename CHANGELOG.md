@@ -5,9 +5,34 @@ All notable changes to **NuOscProbExact** are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project uses [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.14.0] - 2026-09-02
 
 ### Added
+
+- **A profile can be refined to a tolerance for a whole stack at once.**
+  `probabilities_{2,3,4}nu_profile` accepted a `hamiltonian_of` that
+  returned exactly one Hamiltonian per position, shape `(n, d, d)`.  It
+  now also accepts a leading batch axis, `(k, n, d, d)` -- one profile
+  per energy, say -- and refines the whole stack in a single call.  The
+  probabilities come back as an array of shape `(k, d**2)`, one row per
+  entry, as `probabilities_{2,3,4}nu_slabs` already returned them; an
+  unbatched call still returns a tuple of floats and is unchanged to the
+  last bit.
+
+  The refinement is **all-entries-at-once**: the tolerance tests are
+  `numpy.all`, so the slab count is set by the hardest entry in the
+  stack and every entry is returned at that count.  A batched answer is
+  therefore never coarser than the same entry computed alone, and may be
+  finer.  The stack must keep its length across refinements, since
+  consecutive evaluations are differenced against each other.
+
+  Twelve energies through one call cost about a third of twelve calls at
+  the same slab count, measured from 64 to 4096 slabs, which is the
+  point: a tolerance sweep no longer has to choose between the tolerance
+  and the batching.  That factor is the solve alone.  It is only
+  realised if `hamiltonian_of` builds the stack in one vectorised pass;
+  a callable that loops over the batch in `Python` to assemble it gives
+  the loop back and can end up slower than calling per entry.
 
 - **The electron fraction inside the Earth can now vary with radius.**
   PREM is a density model and carries no composition, so `Y_e` has to be

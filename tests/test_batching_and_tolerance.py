@@ -693,6 +693,140 @@ def test_a_profile_without_a_tolerance_uses_the_slab_count(backend):
     assert len(got) == 9
 
 
+def batched_varying_profile(baseline, scales):
+    r"""Returns `varying_profile` stacked, one entry per scale.
+
+    The stack stands in for the case this exists to serve: one profile
+    per energy, differing only by a factor that the energy sets.
+    """
+    one = varying_profile(baseline)
+
+    def hamiltonian_of(positions):
+        return np.stack([one(positions)*s for s in scales])
+
+    return hamiltonian_of
+
+
+SCALES = (0.7, 1.0, 1.45, 2.1)
+
+
+def test_a_batched_profile_equals_looping_at_a_fixed_slab_count(backend):
+    r"""With no tolerance, batching is a pure rearrangement.
+
+    Refinement is what makes a batch differ from a loop (the count is
+    shared); at a fixed count there is nothing to share, so the two must
+    agree to round-off.  This is the test that would catch the batch
+    axis being folded into the slab axis.
+    """
+    baseline = 1.0e4*gd.CONV_KM_TO_INV_EV
+    one = varying_profile(baseline)
+
+    batched = np.asarray(slabs.probabilities_3nu_profile(
+        batched_varying_profile(baseline, SCALES), baseline, n_slabs=64))
+    looped = np.array([
+        slabs.probabilities_3nu_profile(
+            lambda pos, s=s: one(pos)*s, baseline, n_slabs=64)
+        for s in SCALES])
+
+    assert batched.shape == (len(SCALES), 9)
+    assert np.max(np.abs(batched - looped)) < 1.0e-14
+
+
+def test_an_unbatched_profile_still_returns_a_tuple_of_floats(backend):
+    r"""The old contract survives the new one.
+
+    A caller who never batches must not be able to tell that batching
+    was added: the same type, the same length, the same values.
+    """
+    baseline = 1.0e4*gd.CONV_KM_TO_INV_EV
+    got = slabs.probabilities_3nu_profile(varying_profile(baseline),
+                                          baseline, n_slabs=64)
+
+    assert isinstance(got, tuple)
+    assert len(got) == 9
+    assert all(isinstance(x, float) for x in got)
+
+
+def test_a_batched_profile_refines_for_its_hardest_entry(backend):
+    r"""One slab count serves the stack, set by the worst entry.
+
+    The tolerance tests are `numpy.all`, so a batched answer is never
+    coarser than the same entry computed alone.  Asserting equality
+    would be wrong: the batch is refined further than the easy entries
+    need.
+    """
+    baseline = 1.0e4*gd.CONV_KM_TO_INV_EV
+    one = varying_profile(baseline)
+    atol = 1.0e-6
+
+    _, n_batched = slabs.probabilities_3nu_profile(
+        batched_varying_profile(baseline, SCALES), baseline, atol=atol,
+        return_n_slabs=True)
+    counts = [slabs.probabilities_3nu_profile(
+        lambda pos, s=s: one(pos)*s, baseline, atol=atol,
+        return_n_slabs=True)[1] for s in SCALES]
+
+    assert isinstance(n_batched, int)
+    assert n_batched == max(counts)
+
+
+def test_a_batched_profile_meets_the_tolerance_for_every_entry(backend):
+    r"""Every row of the stack satisfies what was asked, not just one."""
+    baseline = 1.0e4*gd.CONV_KM_TO_INV_EV
+    one = varying_profile(baseline)
+    atol = 1.0e-6
+
+    got = np.asarray(slabs.probabilities_3nu_profile(
+        batched_varying_profile(baseline, SCALES), baseline, atol=atol))
+    reference = np.array([
+        (4.0*np.array(slabs.probabilities_3nu_profile(
+            lambda pos, s=s: one(pos)*s, baseline, n_slabs=2048))
+         - np.array(slabs.probabilities_3nu_profile(
+             lambda pos, s=s: one(pos)*s, baseline, n_slabs=1024)))/3.0
+        for s in SCALES])
+
+    assert np.max(np.abs(got - reference)) <= atol
+
+
+@pytest.mark.parametrize('shape_of, message', [
+    (lambda n: (n, 3), 'must end in'),
+    (lambda n: (3, 3, n), 'must end in'),
+    (lambda n: (n + 1, 3, 3), 'must end in'),
+    (lambda n: (n, 2, 2), 'must return one 3x3 Hamiltonian'),
+])
+def test_the_profile_routine_still_refuses_a_wrong_shape(shape_of, message):
+    r"""Relaxing the guard to a suffix match must not disarm it.
+
+    Everything the exact comparison rejected it still rejects; only a
+    leading batch axis is newly admitted.
+    """
+    def wrong_shape(positions):
+        return np.zeros(shape_of(len(positions)), dtype=complex)
+
+    with pytest.raises(ValueError, match=message):
+        slabs.probabilities_3nu_profile(wrong_shape, 1.0, n_slabs=8)
+
+
+@pytest.mark.parametrize('n_flavors, routine, width', [
+    (2, 'probabilities_2nu_profile', 4),
+    (4, 'probabilities_4nu_profile', 16),
+])
+def test_batching_reaches_two_and_four_flavors(n_flavors, routine, width):
+    r"""The change is in the shared body, so all three routines get it."""
+    baseline = 1.0e3*gd.CONV_KM_TO_INV_EV
+    h = np.asarray(h_vacuum(n_flavors), dtype=complex)/1.0e10
+
+    def hamiltonian_of(positions):
+        one = np.broadcast_to(h, (len(positions), n_flavors,
+                                  n_flavors)).copy()
+        return np.stack([one*s for s in SCALES])
+
+    got = np.asarray(getattr(slabs, routine)(hamiltonian_of, baseline,
+                                             n_slabs=16))
+
+    assert got.shape == (len(SCALES), width)
+
+
 @pytest.mark.parametrize('kwargs, message', [
     ({'baseline': 0.0}, 'baseline must be positive'),
     ({'baseline': -1.0}, 'baseline must be positive'),

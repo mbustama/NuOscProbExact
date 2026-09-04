@@ -1023,7 +1023,7 @@ def _probabilities_profile(
     n_max: int,
     return_n_slabs: bool,
     caller: str
-) -> Union[Tuple[float, ...], tuple]:
+) -> Union[Tuple[float, ...], np.ndarray, tuple]:
     r"""Returns the probabilities across a continuously varying profile.
 
     The common body of the three public profile routines.
@@ -1032,7 +1032,8 @@ def _probabilities_profile(
     ----------
     hamiltonian_of : callable
         Takes an array of positions and returns one Hamiltonian per
-        position.
+        position, of shape ``(n, n_flavors, n_flavors)``, or a stack of
+        them, of shape ``(k, n, n_flavors, n_flavors)``.
     baseline : int or float
         Total length of the trajectory, in units of eV\ :sup:`-1`.
     n_flavors : int
@@ -1052,9 +1053,12 @@ def _probabilities_profile(
 
     Returns
     -------
-    tuple
+    tuple or numpy.ndarray
         The probabilities, paired with the slab count when
-        `return_n_slabs` is set.
+        `return_n_slabs` is set.  A stacked `hamiltonian_of` gives an
+        array of shape ``(k, n_flavors**2)`` in place of the tuple; the
+        slab count stays a single integer, because the refinement is
+        all-entries-at-once.
     """
     if not callable(hamiltonian_of):
         raise ValueError('%s: hamiltonian_of must be callable, got %s'
@@ -1079,12 +1083,18 @@ def _probabilities_profile(
         edges = np.linspace(0.0, baseline, n+1)
         midpoints = (edges[:-1] + edges[1:])/2.0
         h = np.asarray(hamiltonian_of(midpoints), dtype=complex)
-        if h.shape != (n, n_flavors, n_flavors):
+        # A suffix match, so that a leading batch axis passes.  Everything
+        # the exact comparison rejected it still rejects: (n, d), a
+        # transposed (d, d, n), and the wrong n or the wrong d all fail on
+        # the last three axes.  What it newly admits is (..., n, d, d),
+        # which `probabilities_Nnu_slabs` below already evaluates.
+        if h.shape[-3:] != (n, n_flavors, n_flavors):
             raise ValueError(
                 '%s: hamiltonian_of returned shape %s for %d positions; it '
-                'must return one %dx%d Hamiltonian per position, of shape '
-                '(%d, %d, %d)' % (caller, (h.shape,), n, n_flavors,
-                                  n_flavors, n, n_flavors, n_flavors))
+                'must return one %dx%d Hamiltonian per position, so its '
+                'shape must end in (%d, %d, %d)' % (caller, (h.shape,), n,
+                                                    n_flavors, n_flavors, n,
+                                                    n_flavors, n_flavors))
         return np.asarray(routine(h, np.diff(edges)), dtype=float)
 
     if rtol is None and atol is None:
@@ -1094,7 +1104,13 @@ def _probabilities_profile(
         n_used, p = _n_for_tolerance(evaluate, rtol, atol, int(n_slabs),
                                      n_max, caller)
 
-    probabilities = tuple(float(x) for x in p)
+    # An unbatched call returns a tuple of floats however the answer was
+    # reached, which the array the search works in does not preserve; a
+    # batched one keeps the array, one row per entry, as
+    # `probabilities_Nnu_slabs` does.  `earth.py` makes the same
+    # distinction, on the dimension of its energy argument rather than on
+    # the shape the caller's profile returned.
+    probabilities = tuple(float(x) for x in p) if p.ndim == 1 else p
 
     return (probabilities, n_used) if return_n_slabs else probabilities
 
@@ -1107,20 +1123,26 @@ def probabilities_2nu_profile(
     atol: Optional[float] = None,
     n_max: int = N_SLABS_MAX,
     return_n_slabs: bool = False
-) -> Union[Tuple[float, ...], tuple]:
+) -> Union[Tuple[float, ...], np.ndarray, tuple]:
     r"""Returns the two-flavor probabilities across a varying profile.
 
     .. versionadded:: 1.12.0
 
+    .. versionchanged:: 1.14.0
+       `hamiltonian_of` may return a leading batch axis, and the
+       probabilities then come back as an array rather than a tuple.
+
     See `probabilities_3nu_profile`, of which this is the two-flavor
-    counterpart in every respect.
+    counterpart in every respect, batching and the all-at-once
+    refinement it implies included.
 
     Parameters
     ----------
     hamiltonian_of : callable
         Takes an array of positions along the trajectory, in units of
         eV\ :sup:`-1`, and returns the Hamiltonian at each, as an array
-        of shape ``(len(positions), 2, 2)`` in units of eV.
+        of shape ``(len(positions), 2, 2)`` in units of eV, or a stack
+        of them, of shape ``(k, len(positions), 2, 2)``.
     baseline : int or float
         Total length of the trajectory, in units of eV\ :sup:`-1`.
     n_slabs : int, optional
@@ -1139,10 +1161,12 @@ def probabilities_2nu_profile(
 
     Returns
     -------
-    tuple of float
+    tuple of float or numpy.ndarray
         The probabilities
         :math:`P_{ee}, P_{e\mu}, P_{\mu e}, P_{\mu\mu}`, paired with the
-        number of slabs used when `return_n_slabs` is set.
+        number of slabs used when `return_n_slabs` is set.  A stacked
+        `hamiltonian_of` returns an array of shape ``(k, 4)`` instead,
+        one row per entry.
 
     Raises
     ------
@@ -1187,7 +1211,7 @@ def probabilities_3nu_profile(
     atol: Optional[float] = None,
     n_max: int = N_SLABS_MAX,
     return_n_slabs: bool = False
-) -> Union[Tuple[float, ...], tuple]:
+) -> Union[Tuple[float, ...], np.ndarray, tuple]:
     r"""Returns the three-flavor probabilities across a varying profile.
 
     The general counterpart of `earth.probabilities_3nu_earth`: where
@@ -1210,7 +1234,29 @@ def probabilities_3nu_profile(
     pieces to `probabilities_3nu_slabs` directly; that is exactly what
     :mod:`earth` does with the PREM shells.
 
+    `hamiltonian_of` may return a *stack* of profiles rather than one,
+    of shape ``(k, len(positions), 3, 3)`` --- one profile per energy,
+    say --- and then the whole stack is refined in a single call.  Two
+    things follow, and neither is what per-entry refinement would do.
+    The slab count is chosen for the stack as a whole: the tolerance
+    tests are `numpy.all`, so refinement continues until the *hardest*
+    entry passes and every entry is returned at that count.  A batched
+    answer is therefore never coarser than the same entry computed
+    alone, and may be finer.  And the stack must keep its length across
+    refinements, since consecutive evaluations are differenced against
+    each other; `k` is fixed by the caller, not by the subdivision.
+
+    What batching buys is the solve: a stack of twelve costs about a
+    third of twelve separate calls at the same slab count.  It is worth
+    that only if `hamiltonian_of` builds the whole stack in one
+    vectorised pass.  A callable that loops over the batch in `Python`
+    to assemble it spends there what the solve saves.
+
     .. versionadded:: 1.12.0
+
+    .. versionchanged:: 1.14.0
+       `hamiltonian_of` may return a leading batch axis, and the
+       probabilities then come back as an array rather than a tuple.
 
     Parameters
     ----------
@@ -1218,7 +1264,8 @@ def probabilities_3nu_profile(
         Takes an array of positions along the trajectory, in units of
         eV\ :sup:`-1`, measured from the start, and returns the
         Hamiltonian at each, as an array of shape
-        ``(len(positions), 3, 3)`` in units of eV.  It is called once
+        ``(len(positions), 3, 3)`` in units of eV, or a stack of them,
+        of shape ``(k, len(positions), 3, 3)``.  It is called once
         per refinement, with all the midpoints at once, so it should be
         vectorised rather than called in a loop.
     baseline : int or float
@@ -1243,10 +1290,14 @@ def probabilities_3nu_profile(
 
     Returns
     -------
-    tuple of float
+    tuple of float or numpy.ndarray
         The nine probabilities, with the initial flavor varying slowest,
         paired with the number of slabs used when `return_n_slabs` is
-        set.
+        set.  A stacked `hamiltonian_of` returns an array of shape
+        ``(k, 9)`` instead, one row per entry, as
+        `probabilities_3nu_slabs` does; note that ``prob[0]`` is then
+        the first entry's nine probabilities rather than
+        :math:`P_{ee}`.  The slab count is a single integer either way.
 
     Raises
     ------
@@ -1294,20 +1345,26 @@ def probabilities_4nu_profile(
     atol: Optional[float] = None,
     n_max: int = N_SLABS_MAX,
     return_n_slabs: bool = False
-) -> Union[Tuple[float, ...], tuple]:
+) -> Union[Tuple[float, ...], np.ndarray, tuple]:
     r"""Returns the four-flavor probabilities across a varying profile.
 
     .. versionadded:: 1.12.0
 
+    .. versionchanged:: 1.14.0
+       `hamiltonian_of` may return a leading batch axis, and the
+       probabilities then come back as an array rather than a tuple.
+
     See `probabilities_3nu_profile`, of which this is the four-flavor
-    counterpart in every respect.
+    counterpart in every respect, batching and the all-at-once
+    refinement it implies included.
 
     Parameters
     ----------
     hamiltonian_of : callable
         Takes an array of positions along the trajectory, in units of
         eV\ :sup:`-1`, and returns the Hamiltonian at each, as an array
-        of shape ``(len(positions), 4, 4)`` in units of eV.
+        of shape ``(len(positions), 4, 4)`` in units of eV, or a stack
+        of them, of shape ``(k, len(positions), 4, 4)``.
     baseline : int or float
         Total length of the trajectory, in units of eV\ :sup:`-1`.
     n_slabs : int, optional
@@ -1326,10 +1383,11 @@ def probabilities_4nu_profile(
 
     Returns
     -------
-    tuple of float
+    tuple of float or numpy.ndarray
         The sixteen probabilities, with the initial flavor varying
         slowest, paired with the number of slabs used when
-        `return_n_slabs` is set.
+        `return_n_slabs` is set.  A stacked `hamiltonian_of` returns an
+        array of shape ``(k, 16)`` instead, one row per entry.
 
     Raises
     ------
