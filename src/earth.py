@@ -382,6 +382,8 @@ def electron_fraction_prem(
     baseline: a neutrino arriving at a detector under rock crosses none
     of it.  For a land chord, pass ``ocean=`` the crust's value.
 
+    .. versionadded:: 1.13.1
+
     Nothing calls this by default.  The Earth routines assume
     `globaldefs.ELECTRON_FRACTION_EARTH_CRUST`, one half throughout,
     unless an electron fraction is passed to them explicitly; see
@@ -457,6 +459,8 @@ def earth_slab_radii(
     `electron_fraction_prem` needs to give a per-slab electron fraction.
     Call both with the same `costhz` and `n_slabs_per_segment`, or the
     arrays will not correspond.
+
+    .. versionadded:: 1.13.1
 
     Parameters
     ----------
@@ -574,6 +578,14 @@ def matter_potential(
 
     .. versionadded:: 1.8.0
 
+    .. versionchanged:: 1.13.1
+       ``electron_fraction`` takes one value for the chord, one per
+       slab, or a callable of radius such as `electron_fraction_prem`,
+       and the mean nucleon mass now follows it as
+       :math:`Y_e m_p + (1 - Y_e) m_n` rather than assuming the
+       isoscalar value.  At one half both are what they were, bit for
+       bit.
+
     Parameters
     ----------
     density : int, float, list or numpy.ndarray
@@ -631,6 +643,14 @@ def matter_potential_nc(
     entry; see :func:`hamiltonians4nu.hamiltonian_4nu_matter`.
 
     .. versionadded:: 1.11.0
+
+    .. versionchanged:: 1.13.1
+       ``electron_fraction`` takes one value for the chord, one per
+       slab, or a callable of radius such as `electron_fraction_prem`,
+       and the mean nucleon mass now follows it as
+       :math:`Y_e m_p + (1 - Y_e) m_n` rather than assuming the
+       isoscalar value.  At one half both are what they were, bit for
+       bit.
 
     Parameters
     ----------
@@ -1584,6 +1604,14 @@ def slabs_for_tolerance(
 
     .. versionadded:: 1.12.0
 
+    .. versionchanged:: 1.13.1
+       ``electron_fraction`` takes one value for the chord, one per
+       slab, or a callable of radius such as `electron_fraction_prem`,
+       and the mean nucleon mass now follows it as
+       :math:`Y_e m_p + (1 - Y_e) m_n` rather than assuming the
+       isoscalar value.  At one half both are what they were, bit for
+       bit.
+
     Parameters
     ----------
     h_vacuum_energy_independent : array_like
@@ -1922,6 +1950,14 @@ def probabilities_2nu_earth(
        Takes ``antineutrino``, so an antineutrino crossing needs no
        hand-built slab sequence and keeps the batched PREM path.
 
+    .. versionchanged:: 1.13.1
+       ``electron_fraction`` takes one value for the chord, one per
+       slab, or a callable of radius such as `electron_fraction_prem`,
+       and the mean nucleon mass now follows it as
+       :math:`Y_e m_p + (1 - Y_e) m_n` rather than assuming the
+       isoscalar value.  At one half both are what they were, bit for
+       bit.
+
     Parameters
     ----------
     h_vacuum_energy_independent : array_like
@@ -2050,6 +2086,14 @@ def probabilities_3nu_earth(
     .. versionchanged:: 1.13.1
        Takes ``antineutrino``, so an antineutrino crossing needs no
        hand-built slab sequence and keeps the batched PREM path.
+
+    .. versionchanged:: 1.13.1
+       ``electron_fraction`` takes one value for the chord, one per
+       slab, or a callable of radius such as `electron_fraction_prem`,
+       and the mean nucleon mass now follows it as
+       :math:`Y_e m_p + (1 - Y_e) m_n` rather than assuming the
+       isoscalar value.  At one half both are what they were, bit for
+       bit.
 
     Parameters
     ----------
@@ -2180,6 +2224,14 @@ def probabilities_2nu_between_locations(
        Takes ``antineutrino``, passed through to the routine it
        wraps.
 
+    .. versionchanged:: 1.13.1
+       ``electron_fraction`` takes one value for the chord, one per
+       slab, or a callable of radius such as `electron_fraction_prem`,
+       and the mean nucleon mass now follows it as
+       :math:`Y_e m_p + (1 - Y_e) m_n` rather than assuming the
+       isoscalar value.  At one half both are what they were, bit for
+       bit.
+
     Parameters
     ----------
     h_vacuum_energy_independent : array_like
@@ -2297,6 +2349,14 @@ def probabilities_3nu_between_locations(
     .. versionchanged:: 1.13.1
        Takes ``antineutrino``, passed through to the routine it
        wraps.
+
+    .. versionchanged:: 1.13.1
+       ``electron_fraction`` takes one value for the chord, one per
+       slab, or a callable of radius such as `electron_fraction_prem`,
+       and the mean nucleon mass now follows it as
+       :math:`Y_e m_p + (1 - Y_e) m_n` rather than assuming the
+       isoscalar value.  At one half both are what they were, bit for
+       bit.
 
     Parameters
     ----------
@@ -2457,6 +2517,14 @@ def probabilities_4nu_earth(
        Takes ``antineutrino``, so an antineutrino crossing needs no
        hand-built slab sequence and keeps the batched PREM path.
 
+    .. versionchanged:: 1.13.1
+       ``electron_fraction`` takes one value for the chord, one per
+       slab, or a callable of radius such as `electron_fraction_prem`,
+       and the mean nucleon mass now follows it as
+       :math:`Y_e m_p + (1 - Y_e) m_n` rather than assuming the
+       isoscalar value.  At one half both are what they were, bit for
+       bit.
+
     Parameters
     ----------
     h_vacuum_energy_independent : array_like
@@ -2583,6 +2651,14 @@ def probabilities_4nu_between_locations(
     .. versionchanged:: 1.13.1
        Takes ``antineutrino``, passed through to the routine it
        wraps.
+
+    .. versionchanged:: 1.13.1
+       ``electron_fraction`` takes one value for the chord, one per
+       slab, or a callable of radius such as `electron_fraction_prem`,
+       and the mean nucleon mass now follows it as
+       :math:`Y_e m_p + (1 - Y_e) m_n` rather than assuming the
+       isoscalar value.  At one half both are what they were, bit for
+       bit.
 
     Parameters
     ----------
