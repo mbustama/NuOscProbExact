@@ -465,6 +465,8 @@ def _n_for_tolerance(
     p_coarse = np.asarray(evaluate(n), dtype=float)
     coarse_untested = True
     worst = np.inf
+    previous = np.inf
+    best_worst, best_n = np.inf, None
 
     while 2*n <= n_max:
         p_fine = np.asarray(evaluate(2*n), dtype=float)
@@ -484,14 +486,43 @@ def _n_for_tolerance(
         # The error of the finest evaluation made, kept for the message
         # below: once the loop ends, the coarse and fine values are the
         # same array and the gap can no longer be recovered from them.
-        worst = float(np.max(gap/3.0))
+        # The one before it is kept too, to tell a budget that ran out
+        # from a refinement that has stopped paying.
+        previous, worst = worst, float(np.max(gap/3.0))
         n, p_coarse = 2*n, p_fine
+        if worst < best_worst:
+            best_worst, best_n = worst, n
+
+    # Refining quarters the estimate while the discretisation error is
+    # what the estimate measures.  One that did not improve when the
+    # count doubled is therefore not a budget that ran out: it is the
+    # round-off accumulated over the product overtaking the
+    # discretisation error, and past that turn more slabs return a worse
+    # answer.  Only there is `raise n_max` -- the right advice
+    # everywhere else -- advice to spend time making it worse.
+    if worst >= previous:
+        remedy = (
+            'doubling to %d did not improve it (%.3e there against %.3e at '
+            '%d), so the discretisation error has fallen below the round-off '
+            'accumulated over the product and more slabs will not help.  '
+            'Give atol as well as rtol: a relative tolerance alone is set by '
+            'the smallest value asked for' % (n, worst, previous, n//2))
+    else:
+        remedy = ('raise n_max if the tolerance is genuinely wanted, or '
+                  'loosen the tolerance')
+
+    # Only worth saying when it is not the estimate already quoted, which
+    # is to say only when refining made things worse somewhere along the
+    # way.  It is what the caller wants next: the setting to ask for.
+    best = ('' if best_n is None or best_n == n else
+            '  The lowest estimate reached was %.3e, at %d slabs.'
+            % (best_worst, best_n))
 
     raise ValueError(
         '%s: could not meet rtol=%s, atol=%s with at most %d slabs per '
-        'segment; the largest error estimate at %d was %.3e.  Raise n_max '
-        'if the tolerance is genuinely wanted, or loosen the tolerance'
-        % (caller, rtol, atol, n_max, n, worst))
+        'segment; the largest error estimate at %d was %.3e.%s  %s'
+        % (caller, rtol, atol, n_max, n, worst, best,
+           remedy[0].upper() + remedy[1:]))
 
 
 def _evolution_operator_slabs(

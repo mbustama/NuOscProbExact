@@ -526,6 +526,71 @@ def test_invalid_tolerances_are_refused(rtol, atol, message):
                                   rtol=rtol, atol=atol)
 
 
+def _sequence_evaluator(values):
+    r"""An `evaluate` whose error estimates are chosen, not computed.
+
+    The predicate under test reads a sequence of estimates, so the
+    honest way to test it is to hand it a sequence.  Driving it with
+    real physics would need a hundred thousand slabs and a quarter of a
+    gigabyte to reach the turn, and would test the profile rather than
+    the arithmetic that reads it.
+    """
+    def evaluate(n):
+        return np.array([values[n]])
+
+    return evaluate
+
+
+def test_an_exhausted_budget_still_says_to_raise_n_max():
+    r"""While the estimate is falling, more slabs are the answer."""
+    # Estimates 1e-6, 1e-7, 1e-8: quartering and then some, so nothing
+    # here suggests refinement has stopped paying.
+    values = {8: 0.0, 16: 3.0e-6, 32: 3.3e-6, 64: 3.33e-6}
+
+    with pytest.raises(ValueError) as excinfo:
+        slabs._n_for_tolerance(_sequence_evaluator(values), None, 1.0e-12,
+                               8, 64, 'caller')
+
+    message = str(excinfo.value)
+    assert 'Raise n_max' in message
+    assert 'more slabs will not help' not in message
+    assert 'lowest estimate reached' not in message
+
+
+def test_a_refinement_that_stopped_paying_says_so_instead():
+    r"""Once the estimate rises, `raise n_max` is the wrong advice.
+
+    Second-order refinement quarters the estimate, so one that did not
+    improve when the count doubled has hit the round-off accumulated
+    over the product.  More slabs there return a worse answer, and the
+    message must say that rather than ask for a bigger budget.
+    """
+    # Estimates 1e-6, 1e-7, then 2e-7: the turn.
+    values = {8: 0.0, 16: 3.0e-6, 32: 3.3e-6, 64: 3.9e-6}
+
+    with pytest.raises(ValueError) as excinfo:
+        slabs._n_for_tolerance(_sequence_evaluator(values), None, 1.0e-12,
+                               8, 64, 'caller')
+
+    message = str(excinfo.value)
+    assert 'more slabs will not help' in message
+    assert 'Give atol as well as rtol' in message
+    assert 'Raise n_max' not in message
+    # And it reports the setting the caller actually wants next.
+    assert 'lowest estimate reached was 1.000e-07, at 32 slabs' in message
+
+
+def test_one_comparison_is_not_enough_to_diagnose_a_turn():
+    r"""A single estimate is no evidence that refinement has stalled."""
+    values = {8: 0.0, 16: 3.0e-6}
+
+    with pytest.raises(ValueError) as excinfo:
+        slabs._n_for_tolerance(_sequence_evaluator(values), None, 1.0e-12,
+                               8, 16, 'caller')
+
+    assert 'Raise n_max' in str(excinfo.value)
+
+
 def test_an_unreachable_tolerance_raises():
     r"""Clamping silently would be the dangerous answer.
 
