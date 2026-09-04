@@ -1,0 +1,46 @@
+{
+  "admissible": {
+    "block_cv": 0.008443245888286974,
+    "ok": true,
+    "why": "ok"
+  },
+  "batched": {
+    "energy": true,
+    "symbol": "earth.probabilities_3nu_earth(E array, costhz array) / oscprob3nu.probabilities_3nu(H stack)",
+    "zenith": true
+  },
+  "checksum": 763602.9786494705,
+  "code": "NuOscProbExact",
+  "conventions": "own-reference",
+  "environment": {
+    "available": true,
+    "batched_energy_and_zenith": true,
+    "have_numba": true,
+    "kernel_entered": "earth_chords_3nu_kernel",
+    "numba_threads": 1,
+    "use_numba": true
+  },
+  "knob": {
+    "n_slabs_per_segment(knob>0) | rtol=10^knob(knob<0)": 8
+  },
+  "manifest_sha256": "1d6d4978d3dff95e9802a10ddbdc2cbb3c6d3e8dd572e27abe8ec56cab9fd8a4",
+  "n_points": 12,
+  "profile_basis": "continuous",
+  "protocol": {
+    "grid": "CHORD/12x1",
+    "name": "amortized"
+  },
+  "scan": "dcp",
+  "timing": {
+    "block_reps": 1965,
+    "block_seconds": 0.3135430770012538,
+    "min_block_s": 0.25,
+    "samples": 79
+  },
+  "us_per_point": {
+    "mean": 13.296992239238923,
+    "min": 13.147822986661037,
+    "n": 79,
+    "sd": 0.11226977505053784
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "admissible": {
+    "block_cv": 0.01318432779343614,
+    "ok": true,
+    "why": "ok"
+  },
+  "batched": {
+    "energy": false,
+    "symbol": "interface-only -- CalcWeights takes a particle list but loops over it internally",
+    "zenith": false
+  },
+  "checksum": 557.0565140509356,
+  "code": "nuCraft",
+  "conventions": "own-reference",
+  "environment": {},
+  "knob": {
+    "log10_numPrec": 5
+  },
+  "manifest_sha256": "d758e1935f45312b4ce1e66dd1a89cff9dab7678629b66fe70a6a48e9cbee6fa",
+  "n_points": 12,
+  "profile_basis": "continuous",
+  "protocol": {
+    "grid": "CHORD/12x1",
+    "name": "amortized"
+  },
+  "scan": "dcp",
+  "timing": {
+    "block_reps": 2,
+    "block_seconds": 0.4148338523269298,
+    "min_block_s": 0.25,
+    "samples": 56
+  },
+  "us_per_point": {
+    "mean": 17284.74384695541,
+    "min": 16841.74937448309,
+    "n": 56,
+    "sd": 227.88772870383855
+  }
+}

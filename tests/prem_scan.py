@@ -77,11 +77,24 @@ Skip any of these and the comparison measures bookkeeping, not physics.
   ``earth.distance_traveled_inside_earth(-0.9)`` = 11467.8 km exactly.
 
 * **Length unit.**  nuSQuIDS' km is 5.0677307162e9 eV^-1 against this
-  library's 5.06773e9, a relative excess of 1.413e-7.  The chord is
-  L = -2 R cos th_z, so nuSQuIDS is handed cos th_z shrunk by that ratio
-  -- the Earth analogue of handing NuFast 1299.999945 km instead of 1300.
-  With that correction, and in vacuum, the two codes agree to **1.0e-15**;
-  without it they differ by 3.8e-7.
+  library's 5.06773e9, a relative excess of 1.413e-7.  An earlier revision
+  absorbed that by shrinking the cos th_z it was handed, and that trick is
+  wrong on a chord: the cosine sets the geometry, so the turning point
+  moved 1.7 km shallower and every PREM crossing moved with it, and
+  nuSQuIDS integrated the matter term through a measurably different
+  Earth -- 5.1e-7 of probability at these energies, half of a 1.03e-6
+  floor that was blamed on the discontinuities.  A km mismatch is a
+  phase-per-length mismatch, so it is absorbed in the phases instead:
+  every Delta m^2 nuSQuIDS receives is scaled by 1/1.000000141317, the
+  density scale carries the same power for the matter term, and the
+  cosine goes in raw.  In vacuum over this chord the two codes then agree
+  to **1.3e-15**; with no correction at all they differ by 1.5e-6.
+
+  nuCraft's km is 5.067732e9 eV^-1 -- the ``-2.533866j`` hard-coded in
+  its right-hand side is -2j*(km in 1/eV)/2e9 -- an excess of 3.947e-7,
+  and it is treated identically: its Delta m^2 are scaled, its density
+  scale carries the matching power, and the cosine goes in raw.  In
+  vacuum at 3+1 it then agrees with this library to **3.8e-15**.
 
 * **Profile.**  Both external codes ship their own PREM tabulation --
   nuSQuIDS a 201-point table with ye = 0.4656/0.4957, nuCraft a 58-point
@@ -92,8 +105,12 @@ Skip any of these and the comparison measures bookkeeping, not physics.
   grid whose points land exactly on the PREM shell boundaries.  That
   matters: a uniform grid can only place a density discontinuity to within
   half a spacing, and the chord crosses ten of them, which holds nuSQuIDS
-  at 3.4e-6 no matter how dense the table.  Boundary-aligned, it settles
-  at 9.1e-7 from 200 points per shell onward.
+  at 3.4e-6 no matter how dense the table.  Boundary-aligned, its error
+  follows the table -- 2.7e-9 at 200 points per shell, 2.8e-10 at the
+  12800 used here -- because ``EarthAtm`` fits an Akima spline through
+  the points and the spline, not the solver, is what converges.  (An
+  earlier revision saw no node sensitivity at all, 9.1e-7 from 200 points
+  onward; that was the two convention errors above swamping it.)
 
   nuCraft has no such constructor, and its documented file route calls the
   Python-2 builtin ``file()``, so it cannot run at all on Python 3.  The
@@ -104,17 +121,36 @@ Skip any of these and the comparison measures bookkeeping, not physics.
   sqrt(2) G_F rho/m_N with m_N = 0.939 GeV, but the constant it actually
   carries, 15.256e-5, is the atomic-mass-unit value: this library's
   equivalent constant is 15.14423e-5, and 15.14423/15.256 = 0.9926737.
-  Scanning the density for the minimum residual -- the technique that
-  pinned the GLoBES factor -- gives 0.9926748, agreeing with the derived
-  number to 1.1e-6, and at constant density the two codes then agree to
-  3e-11.  nuSQuIDS takes rho N_A Y_e and gets the usual 0.99209 mass
-  defect; scanning it independently returns 1.0000000.
+  One power of its km excess rides on top, exactly as for nuSQuIDS,
+  giving 0.9926733.  An earlier revision stopped at the bare constant
+  ratio, 3.9e-7 high, and that -- with the same power missing from the
+  mass splittings -- held nuCraft's three-flavor curve at 2.5e-6 however
+  small its numPrec; with both carried, the same run follows its dial
+  down to 3.6e-10, and at constant density the two codes agree to
+  1.7e-11.  (The residual scan that pinned the GLoBES factor gave
+  0.9926748 here; like nuSQuIDS' unity scan, it sat beside standing
+  convention errors, so this factor too is derived, not scanned.)
+  nuSQuIDS takes rho N_A Y_e in its own constants, so its factor
+  is derived from its own ``Const``: its G_F and N_A match `globaldefs`
+  bit for bit, but three powers of its hbar c live in its cm^-3 and a
+  fourth rides on the km bridge, giving 0.9920927 where the bare mass
+  defect built from this library's masses is 0.9920924.  That 4.24e-7 gap
+  cost 5.3e-7 of probability here, and the residual scan that pinned the
+  other codes' factors did not catch it: scanned with the old cosine
+  trick's geometry error standing beside it, the minimum sat at 1.0000000
+  with the floor intact.  So this factor is derived, not scanned.
 
 Per-code traps
 --------------
-* nuSQuIDS' error on this problem does **not** improve below ~9e-7 with
-  tolerance, stepper (RK4/RKF45/RKCK/RK8PD/MSADAMS all identical) or
-  h_max.  That floor is the PREM discontinuities, not the integrator.
+* nuSQuIDS once appeared to floor at ~1e-6 here regardless of tolerance,
+  stepper (RK4/RKF45/RKCK/RK8PD/MSADAMS all identical) or h_max, and the
+  floor was blamed on the PREM discontinuities.  Both halves of it were
+  this harness's own bookkeeping: 5.3e-7 from a density scale built out
+  of this library's masses alone (see **Matter potential**) and 5.1e-7
+  from the cosine shrink (see **Length unit**), summing to the measured
+  1.0314e-6.  With both conventions carried exactly, the same solver
+  follows its tolerance dial down to 2.8e-10 at three flavors and
+  1.3e-10 at 3+1 on the 12800-point table.
 * nuCraft's ``CalcWeights`` takes the **zenith angle in radians**, though
   ``ConstructMixingMatrix`` takes its angles in degrees.  Passing degrees
   to both leaves a disagreement of 0.198 that no convention matching
@@ -189,7 +225,6 @@ from NuCraft import NuCraft, EarthModel                       # noqa: E402
 warnings.showwarning = _SHOWWARNING
 
 UNITS = nsq.Const()
-AVOGADRO = 6.02214076e23
 
 COSTHZ = -0.9
 YE = 0.5
@@ -217,24 +252,79 @@ TH34 = 0.0
 # 1 makes the two coextensive, and these tolerances then select 1, 2, 8, 16,
 # 32, 64, 256, 512 and 1024 slabs per segment.
 #
-# Below 1e-5 the tolerance cannot be met within `slabs.N_SLABS_MAX`: rtol is
-# relative, and the smallest probability in this stack is 0.026, so 1e-6 of
-# it is 2.6e-8 against an error estimate of 7.1e-8 at 1024 slabs.
-RTOLS = (3e0, 1e0, 3e-1, 3e-2, 1e-2, 1e-3, 1e-4, 3e-5, 1e-5)
+# The dial used to stop at 1e-5, and the reason given was that tighter
+# tolerances "cannot be met within `slabs.N_SLABS_MAX`".  That ceiling is a
+# guardrail, not a limit: it is the DEFAULT of the `n_max` argument, and the
+# constant's own docstring says to pass `n_max` to move it.  Raising it here
+# rather than shipping a larger default leaves every other caller alone.
+# The tolerance dial and the slab dial are then the same curve -- measured,
+# rtol 3e-5 and 512 slabs return an identical 2.1875e-07, as do 1e-5 and
+# 1024 -- so the two are coextensive rather than one being a truncation of
+# the other.
+N_MAX_TOLERANCE = 65536
+RTOLS = (3e0, 1e0, 3e-1, 3e-2, 1e-2, 1e-3, 1e-4, 3e-5, 1e-5,
+         1e-6, 1e-7, 1e-8)
 
 E_GEV_3NU = np.logspace(np.log10(3.0), np.log10(40.0), 12)
 E_GEV_4NU = np.logspace(np.log10(300.0), np.log10(30000.0), 12)
 
-# rho N_A Y_e against Y_e rho / m_bar: the nuclear mass defect.
-_ELECTRONS_PER_GRAM = gd.CONV_G_TO_EV/((gd.MASS_PROTON+gd.MASS_NEUTRON)/2.0)
-DENSITY_SCALE_NUSQUIDS = _ELECTRONS_PER_GRAM/AVOGADRO
-
-# This library's normalisation constant against the one nuCraft carries.
+# This library's normalisation constant, A = k rho Y_e / 2e9, derived from
+# its own matter potential rather than transcribed.
 _OUR_A_CONST = 2.0*1.0e9*earth.matter_potential(1.0, 0.5)/0.5
-DENSITY_SCALE_NUCRAFT = _OUR_A_CONST/15.256e-5
 
-# nuSQuIDS' km in eV^-1 against ours; the chord is L = -2 R cos th_z.
-COSTHZ_NUSQUIDS = COSTHZ/((UNITS.km*UNITS.eV)/gd.CONV_KM_TO_INV_EV)
+# nuSQuIDS' km in eV^-1 against ours: one power of hbar c, 1 + 1.413e-7.
+_KM_NUSQUIDS_OVER_OURS = (UNITS.km*UNITS.eV)/gd.CONV_KM_TO_INV_EV
+
+# The factor nuSQuIDS' density must carry so that the potential it builds,
+# sqrt(2) G_F N_A rho Y_e / cm^3 in ITS constants, integrates to this
+# library's V_CC phase over ITS km.  Its G_F and N_A are bit-identical to
+# `globaldefs`', but its cm^-3 carries THREE powers of its hbar c, and a
+# fourth power rides on the Delta m^2 bridge below.  Deriving this factor
+# from this library's masses alone -- the bare nuclear mass defect,
+# 0.9920924 -- misses those powers: it is 4.24e-7 low, which cost 5.3e-7
+# of probability and was half of the 1.03e-6 floor this figure carried
+# for a while.
+DENSITY_SCALE_NUSQUIDS = (
+    _OUR_A_CONST
+    / (np.sqrt(2.0)*UNITS.GF*UNITS.Na*UNITS.cm**-3.0*2.0e9)
+    / _KM_NUSQUIDS_OVER_OURS)
+
+# The other half of that floor was the old length matching, which shrank
+# the cosine handed to nuSQuIDS by the km ratio.  On a chord the cosine is
+# geometry, not bookkeeping: shrinking it moved the turning point 1.7 km
+# shallower and every PREM crossing with it, so nuSQuIDS propagated
+# through a measurably different Earth -- 5.1e-7 of probability at these
+# energies.  A km mismatch is a phase-per-length mismatch, so it is
+# absorbed where it lives instead: every Delta m^2 handed to nuSQuIDS is
+# scaled by this factor, the density scale above carries the same power
+# for the matter term, and the cosine goes in raw.  In vacuum over this
+# chord the two codes then agree to 1.3e-15.
+DM_SCALE_NUSQUIDS = 1.0/_KM_NUSQUIDS_OVER_OURS
+
+# nuCraft's km in eV^-1 against ours: the -2.533866j hard-coded in its
+# right-hand side is -2j*(km in 1/eV)/2e9, so its km is 5.067732e9 against
+# this library's 5.06773e9, an excess of 3.947e-7.  Same treatment as
+# nuSQuIDS: every Delta m^2 it receives carries this factor, the density
+# scale below carries the same power for the matter term, and the cosine
+# goes in raw.
+_KM_NUCRAFT_OVER_OURS = 2.533866*2.0e9/gd.CONV_KM_TO_INV_EV
+DM_SCALE_NUCRAFT = 1.0/_KM_NUCRAFT_OVER_OURS
+
+# The factor nuCraft's density must carry so that the CC potential it
+# builds from its own constant, 15.256e-5 (NuCraft.py:212), integrates to
+# this library's V_CC phase over ITS km.  Stopping at the bare constant
+# ratio, 0.9926737, misses the km power -- the same class of error that
+# cost nuSQuIDS 5.3e-7 -- and held nuCraft's three-flavor curve at 2.5e-6
+# however small its numPrec.
+DENSITY_SCALE_NUCRAFT = _OUR_A_CONST/15.256e-5*DM_SCALE_NUCRAFT
+
+# nuCraft's sterile matter entry against its charged-current one, both
+# from NuCraft.py:212: 7.6525e-5/15.256e-5 = 0.5016059, where its own
+# formula -- one constant times (2*Y_e, 0, 0, 1-Y_e) -- makes the
+# isoscalar value exactly 1/2.  A dimensionless internal inconsistency,
+# 0.32% high, not a convention.  Its 3+1 referee is built with THIS ratio,
+# so the plotted error measures its solver; see the module docstring.
+NUCRAFT_NC_OVER_CC = 7.6525e-5/15.256e-5
 
 H_VAC_3NU = np.asarray(
     hamiltonians3nu.hamiltonian_3nu_vacuum_energy_independent(
@@ -251,23 +341,33 @@ H_VAC_4NU = np.asarray(
 # The referee
 # --------------------------------------------------------------------------
 
-def _slab_hamiltonians(energy_ev, n, n_flavors):
-    """Per-slab Hamiltonians and widths, exactly as `earth` builds them."""
+def _slab_hamiltonians(energy_ev, n, n_flavors, nc_over_cc=None):
+    """Per-slab Hamiltonians and widths, exactly as `earth` builds them.
+
+    `nc_over_cc` overrides the sterile-to-CC potential ratio |V_NC|/V_CC;
+    the default None takes `earth.matter_potential_nc`, which at
+    Y_e = 1/2 is exactly one half.  nuCraft's referee passes its own
+    0.5016059.  At three flavors the NC term is common to all active
+    flavors and drops out, so the parameter has nothing to act on.
+    """
     widths_km, densities = earth.earth_slabs(COSTHZ, n_slabs_per_segment=n)
     vcc = earth.matter_potential(densities, YE)
     if n_flavors == 3:
         h = hamiltonians3nu.hamiltonian_3nu_matter(H_VAC_3NU, energy_ev, vcc)
     else:
+        if nc_over_cc is None:
+            vnc = earth.matter_potential_nc(densities, electron_fraction=YE)
+        else:
+            vnc = -nc_over_cc*vcc
         h = hamiltonians4nu.hamiltonian_4nu_matter(
-            H_VAC_4NU, energy_ev, vcc,
-            earth.matter_potential_nc(densities, electron_fraction=YE))
+            H_VAC_4NU, energy_ev, vcc, vnc)
     return np.asarray(h), widths_km
 
 
-def mp_probability(energy_ev, n, n_flavors, dps=DPS):
+def mp_probability(energy_ev, n, n_flavors, dps=DPS, nc_over_cc=None):
     r"""P(nu_mu -> nu_mu) from a `dps`-digit slab product."""
     mp.mp.dps = dps
-    h, widths_km = _slab_hamiltonians(energy_ev, n, n_flavors)
+    h, widths_km = _slab_hamiltonians(energy_ev, n, n_flavors, nc_over_cc)
     u = mp.eye(n_flavors)
     for hk, wk in zip(h, widths_km):
         m = mp.matrix(n_flavors, n_flavors)
@@ -279,14 +379,32 @@ def mp_probability(energy_ev, n, n_flavors, dps=DPS):
     return float(abs(u[1, 1])**2.0)
 
 
-def reference(energy_ev, n_flavors):
+#: Slab counts the Richardson referee is built from, per flavor count.
+#:
+#: Three flavors converge fast enough that 128 and 256 leave a referee that
+#: agrees with the independent ODE integration to 2.3e-11, some three
+#: decades below the smallest error plotted against it.
+#:
+#: 3+1 does not.  A 1 eV^2 splitting oscillates far faster along the same
+#: chord, so the same pair leaves 1.2e-9 -- and every code in that panel now
+#: reaches 1.2e-9 to 1.8e-9, which is to say they were all measuring the
+#: referee rather than themselves.  Measured at 300 GeV against the ODE
+#: integration: Richardson(128,256) 1.169e-09, Richardson(256,512)
+#: 6.674e-11, Richardson(512,1024) 1.998e-12.  The last is three decades
+#: clear of the codes and costs about 68 s per energy instead of 18 s.
+_REFEREE_SLABS = {3: (128, 256), 4: (512, 1024)}
+
+
+def reference(energy_ev, n_flavors, nc_over_cc=None):
     """Second-order Richardson extrapolation of the slab product."""
-    fine = mp_probability(energy_ev, 256, n_flavors)
-    coarse = mp_probability(energy_ev, 128, n_flavors)
+    n_coarse, n_fine = _REFEREE_SLABS[n_flavors]
+    fine = mp_probability(energy_ev, n_fine, n_flavors, nc_over_cc=nc_over_cc)
+    coarse = mp_probability(energy_ev, n_coarse, n_flavors,
+                            nc_over_cc=nc_over_cc)
     return (4.0*fine - coarse)/3.0
 
 
-def ode_reference(energy_ev, n_flavors, tol=1.0e-13):
+def ode_reference(energy_ev, n_flavors, tol=1.0e-13, nc_over_cc=None):
     """The same limit, from a discretisation with nothing in common.
 
     Integrates dpsi/dx = -i H(x) psi through the *continuous* profile,
@@ -304,9 +422,12 @@ def ode_reference(energy_ev, n_flavors, tol=1.0e-13):
             h = hamiltonians3nu.hamiltonian_3nu_matter(
                 H_VAC_3NU, energy_ev, vcc)
         else:
+            if nc_over_cc is None:
+                vnc = earth.matter_potential_nc(rho, electron_fraction=YE)
+            else:
+                vnc = -nc_over_cc*vcc
             h = hamiltonians4nu.hamiltonian_4nu_matter(
-                H_VAC_4NU, energy_ev, vcc,
-                earth.matter_potential_nc(rho, electron_fraction=YE))
+                H_VAC_4NU, energy_ev, vcc, vnc)
         psi = y[:n_flavors] + 1j*y[n_flavors:]
         d = -1j*np.asarray(h).dot(psi)*gd.CONV_KM_TO_INV_EV
         return np.concatenate((d.real, d.imag))
@@ -365,7 +486,13 @@ def _aligned_radii(n_per_shell):
     return np.unique(r)
 
 
-def nusquids_body(n_per_shell=200):
+def nusquids_body(n_per_shell=12800):
+    # 12800 for the same reason as in tests/bench/adapters/nusquids.py: at
+    # 200 points per shell the Akima spline EarthAtm fits through the table,
+    # not the solver, sets the floor -- 2.7e-9 here against 2.8e-10 at
+    # 12800.  (An earlier revision measured no node sensitivity at all and
+    # kept 200; that was the two convention errors described above
+    # swamping it.)
     r = _aligned_radii(n_per_shell)
     rho = earth.density_prem(np.clip(r, 0.0, gd.EARTH_RADIUS))
     body = nsq.EarthAtm((r/gd.EARTH_RADIUS).tolist(),
@@ -386,27 +513,29 @@ def nusquids(energies_ev, body, tol, n_flavors):
     interface they expose.
 
     The multiple-energy mode shares its adaptive stepping across the stack,
-    so at a loose tolerance it does not return quite what the one-at-a-time
-    mode does -- 2.5e-2 apart at 1e-3.  By 1e-10 they agree to 1.8e-8, well
-    under the floor either reaches here.
+    so it does not return quite what the one-at-a-time mode does -- 2.5e-2
+    apart at tolerance 1e-3, 1.8e-8 at 1e-10, both measured under the old
+    conventions.  The batched mode is the one scored here.
     """
     e = np.asarray(energies_ev, dtype=float)/1.0e9*UNITS.GeV
     s = nsq.nuSQUIDS(e, n_flavors, nsq.NeutrinoType.neutrino, False)
     s.Set_MixingAngle(0, 1, TH12)
     s.Set_MixingAngle(0, 2, TH13)
     s.Set_MixingAngle(1, 2, TH23)
-    s.Set_SquareMassDifference(1, DM21)
-    s.Set_SquareMassDifference(2, DM31)
+    # Every Delta m^2 carries the km bridge, so that phase per handed km
+    # equals phase per this library's km; the cosine goes in raw.
+    s.Set_SquareMassDifference(1, DM21*DM_SCALE_NUSQUIDS)
+    s.Set_SquareMassDifference(2, DM31*DM_SCALE_NUSQUIDS)
     s.Set_CPPhase(0, 2, DCP)
     if n_flavors == 4:
         s.Set_MixingAngle(0, 3, TH14)
         s.Set_MixingAngle(1, 3, TH24)
         s.Set_MixingAngle(2, 3, TH34)
-        s.Set_SquareMassDifference(3, DM41)
+        s.Set_SquareMassDifference(3, DM41*DM_SCALE_NUSQUIDS)
     s.Set_rel_error(tol)
     s.Set_abs_error(tol)
     s.Set_Body(body)
-    s.Set_Track(body.MakeTrackWithCosine(COSTHZ_NUSQUIDS))
+    s.Set_Track(body.MakeTrackWithCosine(COSTHZ))
     state = np.zeros((e.size, n_flavors))
     state[:, 1] = 1.0
     s.Set_initial_state(state, nsq.Basis.flavor)
@@ -420,11 +549,13 @@ def nucraft_instance(n_flavors):
     em.profInt = lambda r: (
         earth.density_prem(min(float(r), gd.EARTH_RADIUS))
         * DENSITY_SCALE_NUCRAFT)
-    masses = [1.0, DM21, DM31]
+    # Every Delta m^2 carries nuCraft's km bridge, exactly as nuSQuIDS';
+    # the cosine goes in raw so the geometry is untouched.
+    masses = [1.0, DM21*DM_SCALE_NUCRAFT, DM31*DM_SCALE_NUCRAFT]
     angles = [(1, 2, np.degrees(TH12)), (1, 3, np.degrees(TH13), 217.0),
               (2, 3, np.degrees(TH23))]
     if n_flavors == 4:
-        masses.append(DM41)
+        masses.append(DM41*DM_SCALE_NUCRAFT)
         angles += [(1, 4, np.degrees(TH14)), (2, 4, np.degrees(TH24)),
                    (3, 4, np.degrees(TH34))]
     return NuCraft(masses, angles, earthModel=em,
@@ -612,7 +743,8 @@ def build(n_flavors, energies_gev):
         return call
 
     pts = [[] for _ in variants]
-    for n in (1, 2, 4, 8, 16, 32, 64, 128, 256):
+    for n in (1, 2, 4, 8, 16, 32, 64, 128, 256,
+              512, 1024, 2048, 4096, 8192):
         calls = [with_strategy(strategy, n) for _, strategy in variants]
         # accuracy first: order cannot affect it
         errors = []
@@ -640,7 +772,8 @@ def build(n_flavors, energies_gev):
         for rtol in RTOLS:
             p, n_used = earth.probabilities_3nu_earth(
                 H_VAC_3NU, energies, COSTHZ, electron_fraction=YE,
-                n_slabs_per_segment=1, rtol=rtol, return_n_slabs=True)
+                n_slabs_per_segment=1, rtol=rtol, n_max=N_MAX_TOLERANCE,
+                return_n_slabs=True)
             p = np.asarray(p)[..., 4].ravel()
             pts.append({
                 'label': '%.0e' % rtol,
@@ -650,14 +783,16 @@ def build(n_flavors, energies_gev):
                 'us_per_probability': timed_batch(
                     lambda r=rtol: earth.probabilities_3nu_earth(
                         H_VAC_3NU, energies, COSTHZ, electron_fraction=YE,
-                        n_slabs_per_segment=1, rtol=r), len(energies))})
+                        n_slabs_per_segment=1, rtol=r,
+                        n_max=N_MAX_TOLERANCE), len(energies))})
         out.append(series('NuOscProbExact (tolerance)', pts))
     else:
         pts = []
         for rtol in RTOLS:
             p, n_used = earth.probabilities_4nu_earth(
                 H_VAC_4NU, energies, COSTHZ, electron_fraction=YE,
-                n_slabs_per_segment=1, rtol=rtol, return_n_slabs=True)
+                n_slabs_per_segment=1, rtol=rtol, n_max=N_MAX_TOLERANCE,
+                return_n_slabs=True)
             p = np.asarray(p)[..., 5].ravel()
             pts.append({
                 'label': '%.0e' % rtol,
@@ -667,7 +802,8 @@ def build(n_flavors, energies_gev):
                 'us_per_probability': timed_batch(
                     lambda r=rtol: earth.probabilities_4nu_earth(
                         H_VAC_4NU, energies, COSTHZ, electron_fraction=YE,
-                        n_slabs_per_segment=1, rtol=r), len(energies))})
+                        n_slabs_per_segment=1, rtol=r,
+                        n_max=N_MAX_TOLERANCE), len(energies))})
         out.append(series('NuOscProbExact (tolerance)', pts))
     if n_flavors == 4:
         oscprob4nu.ROOT_STRATEGY = 'double-double'      # back to the default
@@ -685,13 +821,26 @@ def build(n_flavors, energies_gev):
                 len(energies))})
     out.append(series('nuSQuIDS', pts))
 
-    # nuCraft runs at both, but at 3+1 it cannot get below 3.7e-4: its
-    # sterile and charged-current entries come from two independently
-    # rounded constants whose ratio is 0.5016 where the isoscalar value is
-    # exactly 0.5, and rescaling the density scales both together.  The
-    # curve is shown anyway, because that floor is what a user of released
-    # nuCraft actually gets and the caption says where it comes from;
-    # forcing the ratio by hand drops the same run to 2.8e-7.
+    # nuCraft is judged, like every code here, against a referee in its
+    # own conventions.  At three flavors the NC term is common to the
+    # active flavors and drops out, so the shared referee already is that
+    # referee.  At 3+1 it is not: nuCraft's sterile matter entry is an
+    # independently rounded constant whose ratio to its CC entry is
+    # 0.5016059 where its own formula makes the isoscalar value exactly
+    # 1/2 (see the module docstring), and scored against an exact-ratio
+    # referee it sits flat at 2.8e-3 however small numPrec is.  So its
+    # 3+1 referee carries its own ratio, the plotted error measures its
+    # solver -- 3.2e-4 down to 1.2e-9 across the dial -- and the 0.32%
+    # inconsistency is reported in the caption, not in the curve.
+    if n_flavors == 4:
+        ref_nucraft = np.array([
+            reference(e, n_flavors, nc_over_cc=NUCRAFT_NC_OVER_CC)
+            for e in energies])
+        ode_nucraft = np.array([
+            ode_reference(e, n_flavors, nc_over_cc=NUCRAFT_NC_OVER_CC)
+            for e in energies])
+    else:
+        ref_nucraft, ode_nucraft = ref, ode
     inst = nucraft_instance(n_flavors)
     pts = []
     for prec in (1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 1e-8, 1e-10):
@@ -699,7 +848,7 @@ def build(n_flavors, energies_gev):
         pts.append({
             'label': '%.0e' % prec,
             'num_prec': prec,
-            'max_abs_error': float(np.max(np.abs(p-ref))),
+            'max_abs_error': float(np.max(np.abs(p-ref_nucraft))),
             'us_per_probability': timed_batch(
                 lambda q=prec: nucraft(energies, inst, q), len(energies),
                 repeat=3)})
@@ -716,13 +865,19 @@ def build(n_flavors, energies_gev):
         out.append(compiled_series('GLoBES', 'globes_prem.txt', ref))
         out.append(compiled_series('Prob3++', 'prob3_prem.txt', ref))
 
-    return {
+    panel = {
         'energy_gev': energies_gev.tolist(),
         'reference': ref.tolist(),
         'reference_ode_crosscheck': ode.tolist(),
         'reference_vs_ode_max_abs': float(np.max(np.abs(ref-ode))),
         'series': out,
     }
+    if n_flavors == 4:
+        panel['reference_nucraft'] = ref_nucraft.tolist()
+        panel['reference_nucraft_ode_crosscheck'] = ode_nucraft.tolist()
+        panel['reference_nucraft_vs_ode_max_abs'] = float(
+            np.max(np.abs(ref_nucraft-ode_nucraft)))
+    return panel
 
 
 def main():
@@ -738,15 +893,22 @@ def main():
             'continuous profile. The y-axis is therefore error against a '
             'CONVERGED PREM solution, not an exact one, and each code sits '
             'where its treatment of the profile puts it rather than where '
-            'the accuracy of its probability formula would. See the module '
-            'docstring of tests/prem_scan.py for every convention matched.'),
+            'the accuracy of its probability formula would. Every code is '
+            'judged in its own conventions; for nuCraft at 3+1 that means '
+            'a referee built with its own sterile-to-CC potential ratio, '
+            '0.5016059 (reference_nucraft), so its curve measures its '
+            'solver and the 0.32% inconsistency of that ratio is reported '
+            'in the caption instead. See the module docstring of '
+            'tests/prem_scan.py for every convention matched.'),
         'costhz': COSTHZ,
         'baseline_km': earth.distance_traveled_inside_earth(COSTHZ),
         'electron_fraction': YE,
         'mpmath_dps': DPS,
         'density_scale_nusquids': DENSITY_SCALE_NUSQUIDS,
         'density_scale_nucraft': DENSITY_SCALE_NUCRAFT,
-        'costhz_handed_to_nusquids': COSTHZ_NUSQUIDS,
+        'dm2_scale_nusquids': DM_SCALE_NUSQUIDS,
+        'dm2_scale_nucraft': DM_SCALE_NUCRAFT,
+        'nucraft_nc_over_cc': NUCRAFT_NC_OVER_CC,
         'nusquids_version': '1.13.3',
         'nucraft_version': 'r22',
         'three_flavor': build(3, E_GEV_3NU),

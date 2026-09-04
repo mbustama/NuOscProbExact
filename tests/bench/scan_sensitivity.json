@@ -1,0 +1,289 @@
+{
+ "generated_by": "tests/bench/emit_figures.py",
+ "grids": {
+  "CHORD/12x1": [
+   {
+    "code": "NuFast-Earth",
+    "dcp_sd": 0.0011522,
+    "dcp_us": 0.0616268,
+    "dmsq31_sd": 452.617,
+    "dmsq31_us": 33958,
+    "knob": -1,
+    "ratio": 551026.5014571582
+   },
+   {
+    "code": "NuFast-Earth",
+    "dcp_sd": 0.000452034,
+    "dcp_us": 0.0590079,
+    "dmsq31_sd": 274.202,
+    "dmsq31_us": 26130,
+    "knob": -1,
+    "ratio": 442822.0628085392
+   },
+   {
+    "code": "NuFast-Earth",
+    "dcp_sd": 0.000555301,
+    "dcp_us": 0.058959,
+    "dmsq31_sd": 235.155,
+    "dmsq31_us": 16679.8,
+    "knob": -1,
+    "ratio": 282905.0696246544
+   },
+   {
+    "code": "NuFast-Earth",
+    "dcp_sd": 0.000509791,
+    "dcp_us": 0.0589553,
+    "dmsq31_sd": 151.841,
+    "dmsq31_us": 12740.4,
+    "knob": -1,
+    "ratio": 216102.70832308545
+   },
+   {
+    "code": "NuFast-Earth",
+    "dcp_sd": 0.000620508,
+    "dcp_us": 0.058798,
+    "dmsq31_sd": 92.2612,
+    "dmsq31_us": 6223.68,
+    "knob": -1,
+    "ratio": 105848.49824823973
+   },
+   {
+    "code": "NuFast-Earth",
+    "dcp_sd": 0.0011136,
+    "dcp_us": 0.0597958,
+    "dmsq31_sd": 42.5419,
+    "dmsq31_us": 3995.25,
+    "knob": -1,
+    "ratio": 66814.89335371381
+   },
+   {
+    "code": "NuFast-Earth",
+    "dcp_sd": 0.000410702,
+    "dcp_us": 0.0581733,
+    "dmsq31_sd": 34.1705,
+    "dmsq31_us": 1990.54,
+    "knob": -1,
+    "ratio": 34217.415893545665
+   },
+   {
+    "code": "NuFast-Earth",
+    "dcp_sd": 0.00088444,
+    "dcp_us": 0.0582821,
+    "dmsq31_sd": 5.77981,
+    "dmsq31_us": 459.195,
+    "knob": -1,
+    "ratio": 7878.834153196264
+   },
+   {
+    "code": "NuFast-Earth",
+    "dcp_sd": 0.000825476,
+    "dcp_us": 0.0582244,
+    "dmsq31_sd": 1.5553,
+    "dmsq31_us": 108.787,
+    "knob": -1,
+    "ratio": 1868.4091205748794
+   },
+   {
+    "code": "NuFast-Earth",
+    "dcp_sd": 0.000863752,
+    "dcp_us": 0.0579125,
+    "dmsq31_sd": 2.6177,
+    "dmsq31_us": 108.041,
+    "knob": -1,
+    "ratio": 1865.5903302395855
+   },
+   {
+    "code": "NuFast-Earth",
+    "dcp_sd": 0.000473074,
+    "dcp_us": 0.060247,
+    "dmsq31_sd": 0.134192,
+    "dmsq31_us": 25.8326,
+    "knob": -1,
+    "ratio": 428.7781964247182
+   },
+   {
+    "code": "NuFast-Earth",
+    "dcp_sd": 0.000392207,
+    "dcp_us": 0.0604779,
+    "dmsq31_sd": 0.0550415,
+    "dmsq31_us": 5.71933,
+    "knob": -1,
+    "ratio": 94.56892517762687
+   },
+   {
+    "code": "NuFast-Earth",
+    "dcp_sd": 0.00113787,
+    "dcp_us": 0.0606696,
+    "dmsq31_sd": 0.0198233,
+    "dmsq31_us": 1.68045,
+    "knob": -1,
+    "ratio": 27.698386012104912
+   },
+   {
+    "code": "NuFast-Earth",
+    "dcp_sd": 0.000750862,
+    "dcp_us": 0.0568319,
+    "dmsq31_sd": 0.0252693,
+    "dmsq31_us": 0.574001,
+    "knob": -1,
+    "ratio": 10.0999790610555
+   },
+   {
+    "code": "nuCraft",
+    "dcp_sd": 786.7810711459379,
+    "dcp_us": 24116.440702992906,
+    "dmsq31_sd": 6939.1009332619915,
+    "dmsq31_us": 29407.562949291372,
+    "knob": 6,
+    "ratio": 1.2193989698339616
+   },
+   {
+    "code": "nuSQuIDS",
+    "dcp_sd": 38.130278533443175,
+    "dcp_us": 1317.7421592655055,
+    "dmsq31_sd": 174.53911909151918,
+    "dmsq31_us": 1493.8000410828474,
+    "knob": 12,
+    "ratio": 1.1336057138184563
+   },
+   {
+    "code": "Prob3++",
+    "dcp_sd": 4.97853,
+    "dcp_us": 553.848,
+    "dmsq31_sd": 2.6023,
+    "dmsq31_us": 550.857,
+    "knob": 256,
+    "ratio": 0.9945996013346623
+   },
+   {
+    "code": "GLoBES",
+    "dcp_sd": 21.4901,
+    "dcp_us": 1949.92,
+    "dmsq31_sd": 28.1617,
+    "dmsq31_us": 1927.22,
+    "knob": 256,
+    "ratio": 0.9883584967588414
+   },
+   {
+    "code": "NuOscProbExact",
+    "dcp_sd": 18.30178855978275,
+    "dcp_us": 119.72424572409858,
+    "dmsq31_sd": 15.764703011347535,
+    "dmsq31_us": 113.57499111171619,
+    "knob": 256,
+    "ratio": 0.9486381845616034
+   }
+  ],
+  "CONST/60E": [
+   {
+    "code": "NuFast-Earth",
+    "dcp_sd": 0.000448834,
+    "dcp_us": 0.0638579,
+    "dmsq31_sd": 0.0032421,
+    "dmsq31_us": 0.211316,
+    "knob": -1,
+    "ratio": 3.3091598690216877
+   },
+   {
+    "code": "Prob3++",
+    "dcp_sd": 0.00496344,
+    "dcp_us": 0.52357,
+    "dmsq31_sd": 0.0072163,
+    "dmsq31_us": 0.527241,
+    "knob": 256,
+    "ratio": 1.0070114788853448
+   },
+   {
+    "code": "NuOscProbExact",
+    "dcp_sd": 0.004025759411679588,
+    "dcp_us": 1.1796159767297871,
+    "dmsq31_sd": 0.023908312710468994,
+    "dmsq31_us": 1.1854540197297654,
+    "knob": 256,
+    "ratio": 1.0049491047214898
+   },
+   {
+    "code": "NuFast-LBL",
+    "dcp_sd": 0.000505741,
+    "dcp_us": 0.0688773,
+    "dmsq31_sd": 0.000537427,
+    "dmsq31_us": 0.0689354,
+    "knob": -1,
+    "ratio": 1.0008435290001203
+   },
+   {
+    "code": "GLoBES",
+    "dcp_sd": 0.00417394,
+    "dcp_us": 0.379069,
+    "dmsq31_sd": 0.00188143,
+    "dmsq31_us": 0.377761,
+    "knob": 256,
+    "ratio": 0.9965494408669663
+   },
+   {
+    "code": "nuSQuIDS",
+    "dcp_sd": 0.35328093650510256,
+    "dcp_us": 98.21160259401151,
+    "dmsq31_sd": 2.3489920697997038,
+    "dmsq31_us": 96.79931635568335,
+    "knob": 12,
+    "ratio": 0.9856199654518796
+   }
+  ],
+  "OSC/100x100": [
+   {
+    "code": "NuFast-Earth",
+    "dcp_sd": 0.00369068,
+    "dcp_us": 0.0565448,
+    "dmsq31_sd": 0.0559886,
+    "dmsq31_us": 17.6939,
+    "knob": -1,
+    "ratio": 312.91825242993167
+   },
+   {
+    "code": "nuSQuIDS",
+    "dcp_sd": 11.867438650994874,
+    "dcp_us": 740.1288066854855,
+    "dmsq31_sd": 51.3314424048644,
+    "dmsq31_us": 796.8163214127222,
+    "knob": 12,
+    "ratio": 1.0765914178926503
+   },
+   {
+    "code": "Prob3++",
+    "dcp_sd": 2.39929,
+    "dcp_us": 294.764,
+    "dmsq31_sd": 1.80977,
+    "dmsq31_us": 296.233,
+    "knob": 256,
+    "ratio": 1.0049836479352974
+   },
+   {
+    "code": "GLoBES",
+    "dcp_sd": 9.06654,
+    "dcp_us": 1499.59,
+    "dmsq31_sd": 9.76343,
+    "dmsq31_us": 1502.9,
+    "knob": 256,
+    "ratio": 1.0022072699871298
+   },
+   {
+    "code": "NuOscProbExact",
+    "dcp_sd": 10.145332212738213,
+    "dcp_us": 81.34216364269378,
+    "dmsq31_sd": 9.27608266449928,
+    "dmsq31_us": 79.05381960765226,
+    "knob": 256,
+    "ratio": 0.9718676768287924
+   }
+  ]
+ },
+ "manifest_note": "Inputs were measured under more than one manifest; the hashes are listed in manifest_sha256_inputs.",
+ "manifest_sha256": "d758e1935f45312b4ce1e66dd1a89cff9dab7678629b66fe70a6a48e9cbee6fa",
+ "manifest_sha256_inputs": [
+  "1d6d4978d3dff95e9802a10ddbdc2cbb3c6d3e8dd572e27abe8ec56cab9fd8a4",
+  "d758e1935f45312b4ce1e66dd1a89cff9dab7678629b66fe70a6a48e9cbee6fa",
+  "eeafd394213687ce52d8b453a250f51637dc7411cac4497ac223c126ec3672b4"
+ ],
+ "note": "Cost per probability when a fit moves delta_CP against when it moves Dmsq31, at the same knob, differing in nothing else. Regenerated from measured artifacts by tests/bench/emit_figures.py. Every point pairs a timed measurement with the accuracy the SAME setting reached against that code's own 50-digit reference, in that code's own conventions, on the continuous PREM."
+}

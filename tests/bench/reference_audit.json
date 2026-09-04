@@ -1,0 +1,98 @@
+{
+  "codes": {
+    "GLoBES": {
+      "km_in_inv_ev": 5067730214.314311,
+      "matter_constant": 0.00015264939999999998,
+      "matter_constant_source": "own pinned source",
+      "profile_kind": "the same uniform sub-shells, chord-decomposed",
+      "reference_error": 1e-45,
+      "reference_kind": "exact finite product over uniform shells",
+      "reference_value": "0.80090229764912701076096657701634764999483788825364",
+      "seconds": 5.4,
+      "ye": 0.5,
+      "ye_shared_with_every_code": true
+    },
+    "NuFast-Earth": {
+      "km_in_inv_ev": 5067730214.314311,
+      "matter_constant": 0.0001526493231029146,
+      "matter_constant_source": "own pinned source",
+      "profile_kind": "four major PREM layers, each cut into n uniform sub-shells held at their midpoint density",
+      "reference_error": 1e-45,
+      "reference_kind": "exact finite product over uniform shells",
+      "reference_value": "0.80090175373696407751215919549751741518455876180918",
+      "seconds": 5.9,
+      "ye": 0.5,
+      "ye_shared_with_every_code": true
+    },
+    "NuFast-LBL": {
+      "km_in_inv_ev": 5067730214.314311,
+      "matter_constant": 0.000152588,
+      "matter_constant_source": "own pinned source",
+      "profile_kind": "none -- constant density only",
+      "reference_error": 1e-45,
+      "reference_kind": "exact matrix exponential",
+      "reference_value": "0.84716803212005278485463422172147592866931865066266",
+      "ye": 0.5,
+      "ye_shared_with_every_code": true
+    },
+    "NuOscProbExact": {
+      "km_in_inv_ev": 5067730000.0,
+      "matter_constant": 0.00015144229641334377,
+      "matter_constant_source": "derived from globaldefs",
+      "profile_kind": "the continuous PREM",
+      "reference_error": 2.0316801939052764e-18,
+      "reference_kind": "Romberg-extrapolated slab product",
+      "reference_value": "0.79244519220739645501180045151763742571868879181728",
+      "seconds": 122.9,
+      "ye": 0.5,
+      "ye_shared_with_every_code": true
+    },
+    "Prob3++": {
+      "km_in_inv_ev": 5068000000.0,
+      "matter_constant": 0.000152588,
+      "matter_constant_source": "own pinned source",
+      "profile_kind": "the same uniform sub-shells, through a profile file",
+      "reference_error": 1e-45,
+      "reference_kind": "exact finite product over uniform shells",
+      "reference_value": "0.8004084398311038563731731648484221034071290455228",
+      "seconds": 6.0,
+      "ye": 0.5,
+      "ye_shared_with_every_code": true
+    },
+    "nuCraft": {
+      "km_in_inv_ev": 5067732000.000001,
+      "matter_constant": 0.00015256,
+      "matter_constant_source": "own pinned source",
+      "profile_fidelity_g_per_cm3": 0.0,
+      "profile_kind": "a k=1 spline, the object the adapter hands it",
+      "reference_error": 1.9097537703250847e-13,
+      "reference_kind": "Romberg-extrapolated slab product",
+      "reference_value": "0.80026997177562346672082630278453172065818556318317",
+      "seconds": 355.6,
+      "ye": 0.5,
+      "ye_shared_with_every_code": true
+    },
+    "nuSQuIDS": {
+      "km_in_inv_ev": 5067730716.156396,
+      "matter_constant": 0.0001526493244949947,
+      "matter_constant_source": "own Const()",
+      "profile_fidelity_g_per_cm3": 5.329070518200751e-15,
+      "profile_kind": "an Akima spline that EarthAtm builds itself over the nodes it is handed",
+      "reference_error": 4.988730386605101e-14,
+      "reference_kind": "Romberg-extrapolated slab product",
+      "reference_value": "0.80090210887592636420069657192615447427009350662759",
+      "seconds": 346.1,
+      "ye": 0.5,
+      "ye_shared_with_every_code": true
+    }
+  },
+  "generated_at": "2026-08-19T18:57:42+0200",
+  "generated_by": "tests/bench/audit_reference.py",
+  "probe": {
+    "costhz": -0.9,
+    "energy_gev": 10.0,
+    "ye": 0.5
+  },
+  "schema": "bench-reference-audit/1",
+  "working_digits": 50
+}

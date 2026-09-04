@@ -1,0 +1,39 @@
+{
+  "admissible": {
+    "block_cv": 0.03814218074843034,
+    "ok": true,
+    "why": "ok"
+  },
+  "batched": {
+    "energy": true,
+    "symbol": "numpy expression over the energy array",
+    "zenith": false
+  },
+  "checksum": 2753984.8213654193,
+  "code": "Second-order expansion",
+  "conventions": "own-reference",
+  "environment": {},
+  "knob": {
+    "none": 0
+  },
+  "manifest_sha256": "d758e1935f45312b4ce1e66dd1a89cff9dab7678629b66fe70a6a48e9cbee6fa",
+  "n_points": 60,
+  "profile_basis": "continuous",
+  "protocol": {
+    "grid": "CONST/60E",
+    "name": "amortized"
+  },
+  "scan": "dcp",
+  "timing": {
+    "block_reps": 14261,
+    "block_seconds": 0.2952809970710969,
+    "min_block_s": 0.25,
+    "samples": 79
+  },
+  "us_per_point": {
+    "mean": 0.34509150488639984,
+    "min": 0.32979077556255704,
+    "n": 79,
+    "sd": 0.013162542554124896
+  }
+}

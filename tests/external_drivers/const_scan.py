@@ -11,6 +11,7 @@ GLoBES and Prob3++ scans produced by the two drivers beside it.
 """
 
 import json
+import os
 import sys
 
 import numpy as np
@@ -49,8 +50,20 @@ def read(path):
 
 
 if __name__ == '__main__':
-    S = ('/tmp/claude-1000/-home-mbustamante-Research-magnus/'
-         'f96380be-3cdc-4ce8-b4fd-4183e3e2b76d/scratchpad/')
+    # Where globes_scan.c and prob3_scan.cpp leave their tables.  This was
+    # an absolute path into one session's scratch directory, which made the
+    # dataset unreproducible by anyone else; it now defaults beside this
+    # script and is overridden with NUOSC_CONST_SCAN_DIR.
+    S = os.environ.get(
+        'NUOSC_CONST_SCAN_DIR',
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), 'scans')) + os.sep
+    for name in ('globes_scan.txt', 'prob3_scan.txt'):
+        if not os.path.exists(S + name):
+            raise SystemExit(
+                '%s not found.  Build and run globes_scan.c and '
+                'prob3_scan.cpp as the README beside this file describes, '
+                'then point NUOSC_CONST_SCAN_DIR at their output.'
+                % (S + name))
     payload = {
         'generated_by': 'tests/external_drivers/const_scan.py',
         'note': (

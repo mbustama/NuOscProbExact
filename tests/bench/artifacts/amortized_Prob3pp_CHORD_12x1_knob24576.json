@@ -1,0 +1,42 @@
+{
+  "admissible": {
+    "block_cv": 0.009844067001839735,
+    "ok": true,
+    "why": "ok"
+  },
+  "batched": {
+    "energy": false,
+    "symbol": "none",
+    "zenith": false
+  },
+  "checksum": 196.87568705029162,
+  "code": "Prob3++",
+  "conventions": "own-reference",
+  "knob": {
+    "n_shells": 24576
+  },
+  "looped": false,
+  "manifest_sha256": "d758e1935f45312b4ce1e66dd1a89cff9dab7678629b66fe70a6a48e9cbee6fa",
+  "n_layers": 256,
+  "n_points": 12,
+  "profile_basis": "continuous",
+  "protocol": {
+    "grid": "CHORD/12x1",
+    "name": "amortized"
+  },
+  "scan": "dcp",
+  "shell_density": "midpoint",
+  "shells_total": 1024,
+  "timing": {
+    "block_reps": 1,
+    "block_seconds": 0.634658,
+    "min_block_s": 0.25,
+    "samples": 39
+  },
+  "us_per_point": {
+    "mean": 52888.1,
+    "min": 51900.6,
+    "n": 39,
+    "sd": 520.634
+  }
+}

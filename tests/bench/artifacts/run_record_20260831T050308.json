@@ -1,0 +1,40 @@
+{
+  "artifacts_reused": 0,
+  "artifacts_written": 6,
+  "believable": false,
+  "canary": {
+    "after": 0.07791779935359955,
+    "baseline_us_per_probability": 0.0508,
+    "before": 0.05677030421793461
+  },
+  "cells": 6,
+  "cells_measured_this_run": [
+    "amortized_NuFast_Earth_CHORD_12x1_knob-1_scan-dmsq31.json",
+    "amortized_Prob3pp_CHORD_12x1_knob256_scan-dmsq31.json",
+    "amortized_GLoBES_CHORD_12x1_knob256_scan-dmsq31.json",
+    "amortized_nuSQuIDS_CHORD_12x1_knob12_scan-dmsq31.json",
+    "amortized_nuCraft_CHORD_12x1_knob6_scan-dmsq31.json",
+    "amortized_NuOscProbExact_CHORD_12x1_knob256_scan-dmsq31.json"
+  ],
+  "environment": {
+    "captured_at": "2026-08-31T05:03:08+0200",
+    "cores": 12,
+    "cpu": "13th Gen Intel(R) Core(TM) i5-1334U",
+    "cxx": "g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+    "governor": "performance",
+    "load_average": {
+      "15min": 1.12841796875,
+      "1min": 5.3525390625,
+      "5min": 1.95458984375
+    },
+    "python": "3.12.7",
+    "thread_policy": "natural per code; counts recorded per series"
+  },
+  "failures": [],
+  "generated_at": "2026-08-31T05:03:08+0200",
+  "generated_by": "tests/bench/run_all.py",
+  "manifest_sha256": "1d6d4978d3dff95e9802a10ddbdc2cbb3c6d3e8dd572e27abe8ec56cab9fd8a4",
+  "schema": "bench-run/1",
+  "timed_cells": 6,
+  "why": "canary drifted 37.3% across the session"
+}

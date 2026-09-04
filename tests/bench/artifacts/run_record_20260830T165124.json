@@ -1,0 +1,40 @@
+{
+  "artifacts_reused": 222,
+  "artifacts_written": 223,
+  "believable": false,
+  "canary": {
+    "after": 0.058068300131708384,
+    "baseline_us_per_probability": 0.0508,
+    "before": 0.04674330120906234
+  },
+  "cells": 224,
+  "cells_measured_this_run": [
+    "amortized_nuCraft_OSC_100x100_knob6.json"
+  ],
+  "environment": {
+    "captured_at": "2026-08-30T16:51:24+0200",
+    "cores": 12,
+    "cpu": "13th Gen Intel(R) Core(TM) i5-1334U",
+    "cxx": "g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+    "governor": "performance",
+    "load_average": {
+      "15min": 0.9794921875,
+      "1min": 1.3251953125,
+      "5min": 1.19580078125
+    },
+    "python": "3.12.7",
+    "thread_policy": "natural per code; counts recorded per series"
+  },
+  "failures": [
+    {
+      "cell": "amortized_NuOscProbExact_OSC_100x100_knob-5.json",
+      "reason": "ValueError: probabilities_3nu_earth: could not meet rtol=1e-"
+    }
+  ],
+  "generated_at": "2026-08-30T16:51:24+0200",
+  "generated_by": "tests/bench/run_all.py",
+  "manifest_sha256": "eeafd394213687ce52d8b453a250f51637dc7411cac4497ac223c126ec3672b4",
+  "schema": "bench-run/1",
+  "timed_cells": 224,
+  "why": "canary drifted 24.2% across the session"
+}

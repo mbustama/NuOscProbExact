@@ -1,0 +1,46 @@
+{
+  "admissible": {
+    "block_cv": 0.07659029166947229,
+    "ok": true,
+    "why": "ok"
+  },
+  "batched": {
+    "energy": true,
+    "symbol": "earth.probabilities_3nu_earth(E array, costhz array) / oscprob3nu.probabilities_3nu(H stack)",
+    "zenith": true
+  },
+  "checksum": 53641100.70015007,
+  "code": "NuOscProbExact",
+  "conventions": "own-reference",
+  "environment": {
+    "available": true,
+    "batched_energy_and_zenith": false,
+    "have_numba": true,
+    "kernel_entered": "probabilities_3nu_kernel",
+    "numba_threads": 12,
+    "use_numba": true
+  },
+  "knob": {
+    "n_slabs_per_segment(knob>0) | rtol=10^knob(knob<0)": 256
+  },
+  "manifest_sha256": "1d6d4978d3dff95e9802a10ddbdc2cbb3c6d3e8dd572e27abe8ec56cab9fd8a4",
+  "n_points": 300,
+  "profile_basis": "continuous",
+  "protocol": {
+    "grid": "CONST/N-sweep",
+    "name": "throughput"
+  },
+  "scan": "dcp",
+  "timing": {
+    "block_reps": 4136,
+    "block_seconds": 0.3696465407648295,
+    "min_block_s": 0.25,
+    "samples": 76
+  },
+  "us_per_point": {
+    "mean": 0.2979098491012488,
+    "min": 0.2489286967790983,
+    "n": 76,
+    "sd": 0.02281700223387312
+  }
+}

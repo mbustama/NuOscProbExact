@@ -1,120 +1,824 @@
 {
- "note": "Speed-accuracy comparison at L = 1300 km, rho = 3 g/cm^3, three flavors, channel P(nu_mu -> nu_e). Accuracy is max |P - P_ref| over 60 energies spanning 0.6-20 GeV, against a 50-digit mpmath matrix exponential of the same Hamiltonian, so that no code serves as its own reference. Timing is per probability over a 2000-point scan, best of several runs, on one laptop: Intel Core i5-1334U, 10 cores / 12 threads, 16 GB RAM. Every code is given the same V_CC and the same baseline in eV^-1; see the provenance comments in notebooks/10_paper_figures.ipynb.",
+ "generated_by": "tests/bench/emit_figures.py",
+ "manifest_note": "Inputs were measured under more than one manifest; the hashes are listed in manifest_sha256_inputs.",
+ "manifest_sha256": "d758e1935f45312b4ce1e66dd1a89cff9dab7678629b66fe70a6a48e9cbee6fa",
+ "manifest_sha256_inputs": [
+  "1d6d4978d3dff95e9802a10ddbdc2cbb3c6d3e8dd572e27abe8ec56cab9fd8a4",
+  "d758e1935f45312b4ce1e66dd1a89cff9dab7678629b66fe70a6a48e9cbee6fa",
+  "eeafd394213687ce52d8b453a250f51637dc7411cac4497ac223c126ec3672b4"
+ ],
+ "note": "Constant density, L = 1300 km, rho = 3 g/cm^3, three flavors, nu_mu row. Regenerated from measured artifacts by tests/bench/emit_figures.py. Every point pairs a timed measurement with the accuracy the SAME setting reached against that code's own 50-digit reference, in that code's own conventions, on the continuous PREM.",
  "series": [
   {
-   "name": "NuOscProbExact",
-   "dial": "batch mode (speed only; accuracy is fixed)",
-   "points": [
-    {
-     "label": "Array + kernel",
-     "us_per_probability": 0.23,
-     "max_abs_error": 9.71e-16
-    },
-    {
-     "label": "Array",
-     "us_per_probability": 0.955,
-     "max_abs_error": 9.85e-16
-    },
-    {
-     "label": "One at a time",
-     "us_per_probability": 31.235,
-     "max_abs_error": 8.88e-16
-    }
-   ]
-  },
-  {
-   "name": "nuSQuIDS",
-   "version": "1.13.3",
-   "dial": "solver tolerance",
-   "points": [
-    {
-     "label": "1e-4",
-     "us_per_probability": 51.61,
-     "max_abs_error": 0.000183
-    },
-    {
-     "label": "1e-6",
-     "us_per_probability": 56.96,
-     "max_abs_error": 1.16e-06
-    },
-    {
-     "label": "1e-8",
-     "us_per_probability": 62.1,
-     "max_abs_error": 3.1e-08
-    },
-    {
-     "label": "1e-10",
-     "us_per_probability": 102.36,
-     "max_abs_error": 1.89e-08
-    },
-    {
-     "label": "1e-12",
-     "us_per_probability": 189.37,
-     "max_abs_error": 1.89e-08
-    }
-   ]
-  },
-  {
-   "name": "NuFast-LBL",
-   "version": "arXiv:2405.02400",
-   "dial": "Newton refinement steps",
-   "points": [
-    {
-     "label": "0",
-     "us_per_probability": 0.044,
-     "max_abs_error": 1.53e-05
-    },
-    {
-     "label": "1",
-     "us_per_probability": 0.052,
-     "max_abs_error": 4.87e-09
-    },
-    {
-     "label": "2",
-     "us_per_probability": 0.06,
-     "max_abs_error": 8.3e-12
-    },
-    {
-     "label": "3",
-     "us_per_probability": 0.066,
-     "max_abs_error": 8.3e-12
-    }
-   ]
-  },
-  {
+   "code": "GLoBES",
+   "dial": "n_shells",
    "name": "GLoBES",
-   "version": "3.2.18",
-   "dial": "none exposed",
    "points": [
     {
-     "label": "glbConstantDensityProbability",
-     "us_per_probability": 0.739,
-     "max_abs_error": 1.04e-07
+     "best_at_this_accuracy": false,
+     "block_cv": 0.010497860856973604,
+     "knob": 1,
+     "label": "1",
+     "max_abs_error": 5.844298591234631e-15,
+     "us_per_probability": 0.379825,
+     "us_sd": 0.00398735
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.006249511064289179,
+     "knob": 2,
+     "label": "2",
+     "max_abs_error": 5.844298591234631e-15,
+     "us_per_probability": 0.383486,
+     "us_sd": 0.0023966
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.007368822299282632,
+     "knob": 4,
+     "label": "4",
+     "max_abs_error": 5.844298591234631e-15,
+     "us_per_probability": 0.37777,
+     "us_sd": 0.00278372
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.008918479854399065,
+     "knob": 8,
+     "label": "8",
+     "max_abs_error": 5.844298591234631e-15,
+     "us_per_probability": 0.378569,
+     "us_sd": 0.00337626
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.0017489728405795566,
+     "knob": 16,
+     "label": "16",
+     "max_abs_error": 5.844298591234631e-15,
+     "us_per_probability": 0.377254,
+     "us_sd": 0.000659807
+    },
+    {
+     "best_at_this_accuracy": true,
+     "block_cv": 0.001408530000928616,
+     "knob": 32,
+     "label": "32",
+     "max_abs_error": 5.844298591234631e-15,
+     "us_per_probability": 0.376905,
+     "us_sd": 0.000530882
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.006313610657016946,
+     "knob": 64,
+     "label": "64",
+     "max_abs_error": 5.844298591234631e-15,
+     "us_per_probability": 0.378042,
+     "us_sd": 0.00238681
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.008088241511986808,
+     "knob": 128,
+     "label": "128",
+     "max_abs_error": 5.844298591234631e-15,
+     "us_per_probability": 0.378416,
+     "us_sd": 0.00306072
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.011011029654231817,
+     "knob": 256,
+     "label": "256",
+     "max_abs_error": 5.844298591234631e-15,
+     "us_per_probability": 0.379069,
+     "us_sd": 0.00417394
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.025155738583532965,
+     "knob": 512,
+     "label": "512",
+     "max_abs_error": 5.844298591234631e-15,
+     "us_per_probability": 0.401153,
+     "us_sd": 0.0100913
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.1733314288564523,
+     "knob": 1024,
+     "label": "1024",
+     "max_abs_error": 5.844298591234631e-15,
+     "us_per_probability": 0.441066,
+     "us_sd": 0.0764506
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.010027209634150389,
+     "knob": 2048,
+     "label": "2048",
+     "max_abs_error": 5.844298591234631e-15,
+     "us_per_probability": 0.391773,
+     "us_sd": 0.00392839
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.011286868837037625,
+     "knob": 4096,
+     "label": "4096",
+     "max_abs_error": 5.844298591234631e-15,
+     "us_per_probability": 0.390133,
+     "us_sd": 0.00440338
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.010007739718429044,
+     "knob": 8192,
+     "label": "8192",
+     "max_abs_error": 5.844298591234631e-15,
+     "us_per_probability": 0.387611,
+     "us_sd": 0.00387911
     }
-   ]
+   ],
+   "threads": null
   },
   {
+   "code": "NuFast-Earth",
+   "dial": "N_Newton",
+   "name": "NuFast-Earth",
+   "points": [
+    {
+     "best_at_this_accuracy": true,
+     "block_cv": 0.007028637020634879,
+     "knob": -1,
+     "label": "-1",
+     "max_abs_error": 7.08969023721357e-16,
+     "us_per_probability": 0.0638579,
+     "us_sd": 0.000448834
+    },
+    {
+     "best_at_this_accuracy": true,
+     "block_cv": 0.011623074696733274,
+     "knob": 0,
+     "label": "0",
+     "max_abs_error": 8.727180823106759e-06,
+     "us_per_probability": 0.0635744,
+     "us_sd": 0.00073893
+    },
+    {
+     "best_at_this_accuracy": true,
+     "block_cv": 0.006407525028838348,
+     "knob": 1,
+     "label": "1",
+     "max_abs_error": 2.5741177032414213e-09,
+     "us_per_probability": 0.0631971,
+     "us_sd": 0.000404937
+    },
+    {
+     "best_at_this_accuracy": true,
+     "block_cv": 0.012710870084782007,
+     "knob": 2,
+     "label": "2",
+     "max_abs_error": 3.5161595846187873e-16,
+     "us_per_probability": 0.0635984,
+     "us_sd": 0.000808391
+    },
+    {
+     "best_at_this_accuracy": true,
+     "block_cv": 0.0041673559656244885,
+     "knob": 3,
+     "label": "3",
+     "max_abs_error": 7.08969023721357e-16,
+     "us_per_probability": 0.0629867,
+     "us_sd": 0.000262488
+    }
+   ],
+   "threads": null
+  },
+  {
+   "code": "NuFast-LBL",
+   "dial": "N_Newton",
+   "name": "NuFast-LBL",
+   "points": [
+    {
+     "best_at_this_accuracy": true,
+     "block_cv": 0.0073426368339060905,
+     "knob": -1,
+     "label": "-1",
+     "max_abs_error": 7.607154169472119e-16,
+     "us_per_probability": 0.0688773,
+     "us_sd": 0.000505741
+    },
+    {
+     "best_at_this_accuracy": true,
+     "block_cv": 0.002881543013789494,
+     "knob": 0,
+     "label": "0",
+     "max_abs_error": 1.537958147367926e-05,
+     "us_per_probability": 0.0385946,
+     "us_sd": 0.000111212
+    },
+    {
+     "best_at_this_accuracy": true,
+     "block_cv": 0.014338738318476776,
+     "knob": 1,
+     "label": "1",
+     "max_abs_error": 4.539760929040161e-09,
+     "us_per_probability": 0.0454457,
+     "us_sd": 0.000651634
+    },
+    {
+     "best_at_this_accuracy": true,
+     "block_cv": 0.00198417518213967,
+     "knob": 2,
+     "label": "2",
+     "max_abs_error": 1.2519293399488334e-15,
+     "us_per_probability": 0.0512107,
+     "us_sd": 0.000101611
+    },
+    {
+     "best_at_this_accuracy": true,
+     "block_cv": 0.012007098946770033,
+     "knob": 3,
+     "label": "3",
+     "max_abs_error": 7.607154169472119e-16,
+     "us_per_probability": 0.0576987,
+     "us_sd": 0.000692794
+    }
+   ],
+   "threads": null
+  },
+  {
+   "code": "NuOscProbExact",
+   "dial": "n_slabs_per_segment | rtol",
+   "name": "NuOscProbExact",
+   "points": [
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.023425512022495647,
+     "knob": -5,
+     "label": "1e-05",
+     "max_abs_error": 7.817220918395789e-15,
+     "us_per_probability": 1.1832264267673394,
+     "us_sd": 0.02771768488557287
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.022983016466631236,
+     "knob": -4,
+     "label": "1e-04",
+     "max_abs_error": 7.817220918395789e-15,
+     "us_per_probability": 1.2589731471762617,
+     "us_sd": 0.028935000572598575
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.0051880452735113755,
+     "knob": -3,
+     "label": "1e-03",
+     "max_abs_error": 7.817220918395789e-15,
+     "us_per_probability": 1.2341456039489602,
+     "us_sd": 0.006402803267392245
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.025832463578182696,
+     "knob": 1,
+     "label": "1",
+     "max_abs_error": 7.817220918395789e-15,
+     "us_per_probability": 1.2158071811610127,
+     "us_sd": 0.03140729472543483
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.023113132968329893,
+     "knob": 2,
+     "label": "2",
+     "max_abs_error": 7.817220918395789e-15,
+     "us_per_probability": 1.1842385810500617,
+     "us_sd": 0.027371463790036396
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.026700268052486698,
+     "knob": 4,
+     "label": "4",
+     "max_abs_error": 7.817220918395789e-15,
+     "us_per_probability": 1.2011648297352793,
+     "us_sd": 0.0320714229291515
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.02772364613082967,
+     "knob": 8,
+     "label": "8",
+     "max_abs_error": 7.817220918395789e-15,
+     "us_per_probability": 1.2073512103807251,
+     "us_sd": 0.03347217771222411
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.022660684619353125,
+     "knob": 16,
+     "label": "16",
+     "max_abs_error": 7.817220918395789e-15,
+     "us_per_probability": 1.1803295846715982,
+     "us_sd": 0.026747076465135147
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.01612077136508304,
+     "knob": 32,
+     "label": "32",
+     "max_abs_error": 7.817220918395789e-15,
+     "us_per_probability": 1.1869520305738208,
+     "us_sd": 0.019134582306201617
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.024824592608442525,
+     "knob": 64,
+     "label": "64",
+     "max_abs_error": 7.817220918395789e-15,
+     "us_per_probability": 1.2520911054438866,
+     "us_sd": 0.031082651601298937
+    },
+    {
+     "best_at_this_accuracy": true,
+     "block_cv": 0.0034087821873375283,
+     "knob": 128,
+     "label": "128",
+     "max_abs_error": 7.817220918395789e-15,
+     "us_per_probability": 1.1703095453009238,
+     "us_sd": 0.003989330331692871
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.003412771182397916,
+     "knob": 256,
+     "label": "256",
+     "max_abs_error": 7.817220918395789e-15,
+     "us_per_probability": 1.1796159767297871,
+     "us_sd": 0.004025759411679588
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.09235776539520033,
+     "knob": 512,
+     "label": "512",
+     "max_abs_error": 7.817220918395789e-15,
+     "us_per_probability": 1.3801135431055764,
+     "us_sd": 0.1274642028328835
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.031850738267400175,
+     "knob": 1024,
+     "label": "1024",
+     "max_abs_error": 7.817220918395789e-15,
+     "us_per_probability": 1.3216859475886982,
+     "us_sd": 0.04209667318834841
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.023585913633496502,
+     "knob": 2048,
+     "label": "2048",
+     "max_abs_error": 7.817220918395789e-15,
+     "us_per_probability": 1.233149144243689,
+     "us_sd": 0.02908494921335177
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.005291850663787803,
+     "knob": 4096,
+     "label": "4096",
+     "max_abs_error": 7.817220918395789e-15,
+     "us_per_probability": 1.2060300502243513,
+     "us_sd": 0.006382130921827771
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.028835525891843888,
+     "knob": 8192,
+     "label": "8192",
+     "max_abs_error": 7.817220918395789e-15,
+     "us_per_probability": 1.2348835646490934,
+     "us_sd": 0.03560851700185141
+    }
+   ],
+   "threads": null
+  },
+  {
+   "code": "NuOscProbExact",
+   "dial": "n_slabs_per_segment | rtol",
+   "name": "NuOscProbExact (1 thread)",
+   "points": [
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.02593527646684132,
+     "knob": -5,
+     "label": "1e-05",
+     "max_abs_error": 7.817220918395789e-15,
+     "us_per_probability": 1.1862461848009285,
+     "us_sd": 0.03076562276054782
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.004089479424972179,
+     "knob": -4,
+     "label": "1e-04",
+     "max_abs_error": 7.817220918395789e-15,
+     "us_per_probability": 1.1785632638327925,
+     "us_sd": 0.0048197102184722625
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.024379853585088075,
+     "knob": -3,
+     "label": "1e-03",
+     "max_abs_error": 7.817220918395789e-15,
+     "us_per_probability": 1.2143140713574048,
+     "us_sd": 0.029604799266005722
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.009732279624504766,
+     "knob": 1,
+     "label": "1",
+     "max_abs_error": 7.817220918395789e-15,
+     "us_per_probability": 1.1750687815520995,
+     "us_sd": 0.01143609796009114
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.024090367363568944,
+     "knob": 2,
+     "label": "2",
+     "max_abs_error": 7.817220918395789e-15,
+     "us_per_probability": 1.2163376830521695,
+     "us_sd": 0.029302021622879048
+    },
+    {
+     "best_at_this_accuracy": true,
+     "block_cv": 0.0034248346531153247,
+     "knob": 4,
+     "label": "4",
+     "max_abs_error": 7.817220918395789e-15,
+     "us_per_probability": 1.1704293784850375,
+     "us_sd": 0.0040085270944597885
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.025711142028714523,
+     "knob": 8,
+     "label": "8",
+     "max_abs_error": 7.817220918395789e-15,
+     "us_per_probability": 1.1890154879389907,
+     "us_sd": 0.03057094608474069
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.022412808466265772,
+     "knob": 16,
+     "label": "16",
+     "max_abs_error": 7.817220918395789e-15,
+     "us_per_probability": 1.1936551961736623,
+     "us_sd": 0.026753165286603188
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.019008179728952343,
+     "knob": 32,
+     "label": "32",
+     "max_abs_error": 7.817220918395789e-15,
+     "us_per_probability": 1.2445472241708115,
+     "us_sd": 0.023656577318207528
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.004953612805631965,
+     "knob": 64,
+     "label": "64",
+     "max_abs_error": 7.817220918395789e-15,
+     "us_per_probability": 1.173963088345503,
+     "us_sd": 0.005815358587767534
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.017760229794594438,
+     "knob": 128,
+     "label": "128",
+     "max_abs_error": 7.817220918395789e-15,
+     "us_per_probability": 1.2481461949559471,
+     "us_sd": 0.02216736323966629
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.027555318678862434,
+     "knob": 256,
+     "label": "256",
+     "max_abs_error": 7.817220918395789e-15,
+     "us_per_probability": 1.1971252640444812,
+     "us_sd": 0.032987168149263016
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.026785037023804536,
+     "knob": 512,
+     "label": "512",
+     "max_abs_error": 7.817220918395789e-15,
+     "us_per_probability": 1.2613161874039875,
+     "us_sd": 0.03378440077833979
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.047390572946668895,
+     "knob": 1024,
+     "label": "1024",
+     "max_abs_error": 7.817220918395789e-15,
+     "us_per_probability": 1.4217355382296275,
+     "us_sd": 0.06737686173534273
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.02994970139547837,
+     "knob": 2048,
+     "label": "2048",
+     "max_abs_error": 7.817220918395789e-15,
+     "us_per_probability": 1.331459423297043,
+     "us_sd": 0.039876812147942274
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.040844043468033574,
+     "knob": 4096,
+     "label": "4096",
+     "max_abs_error": 7.817220918395789e-15,
+     "us_per_probability": 1.2413342567768422,
+     "us_sd": 0.05070111034215249
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.009943812597598512,
+     "knob": 8192,
+     "label": "8192",
+     "max_abs_error": 7.817220918395789e-15,
+     "us_per_probability": 1.207432982234639,
+     "us_sd": 0.012006487299500743
+    }
+   ],
+   "threads": 1
+  },
+  {
+   "code": "Prob3++",
+   "dial": "n_shells",
    "name": "Prob3++",
-   "version": "github.com/rogerwendell/Prob3plusplus",
-   "dial": "none exposed",
    "points": [
     {
-     "label": "propagateLinear",
-     "us_per_probability": 1.06,
-     "max_abs_error": 4.49e-05
+     "best_at_this_accuracy": false,
+     "block_cv": 0.0014261576719637493,
+     "knob": 1,
+     "label": "1",
+     "max_abs_error": 1.1928254619713566e-15,
+     "us_per_probability": 0.522363,
+     "us_sd": 0.000744972
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.002744039061544109,
+     "knob": 2,
+     "label": "2",
+     "max_abs_error": 1.1928254619713566e-15,
+     "us_per_probability": 0.523072,
+     "us_sd": 0.00143533
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.013611821001463595,
+     "knob": 4,
+     "label": "4",
+     "max_abs_error": 1.1928254619713566e-15,
+     "us_per_probability": 0.527468,
+     "us_sd": 0.0071798
+    },
+    {
+     "best_at_this_accuracy": true,
+     "block_cv": 0.0028680525441225567,
+     "knob": 8,
+     "label": "8",
+     "max_abs_error": 1.1928254619713566e-15,
+     "us_per_probability": 0.521162,
+     "us_sd": 0.00149472
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.0078069990936590564,
+     "knob": 16,
+     "label": "16",
+     "max_abs_error": 1.1928254619713566e-15,
+     "us_per_probability": 0.522982,
+     "us_sd": 0.00408292
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.001516328921525462,
+     "knob": 32,
+     "label": "32",
+     "max_abs_error": 1.1928254619713566e-15,
+     "us_per_probability": 0.522386,
+     "us_sd": 0.000792109
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.0038382698151660484,
+     "knob": 64,
+     "label": "64",
+     "max_abs_error": 1.1928254619713566e-15,
+     "us_per_probability": 0.523551,
+     "us_sd": 0.00200953
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.015282261887155917,
+     "knob": 128,
+     "label": "128",
+     "max_abs_error": 1.1928254619713566e-15,
+     "us_per_probability": 0.527418,
+     "us_sd": 0.00806014
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.00947999312412858,
+     "knob": 256,
+     "label": "256",
+     "max_abs_error": 1.1928254619713566e-15,
+     "us_per_probability": 0.52357,
+     "us_sd": 0.00496344
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.016463015640678653,
+     "knob": 512,
+     "label": "512",
+     "max_abs_error": 1.1928254619713566e-15,
+     "us_per_probability": 0.543135,
+     "us_sd": 0.00894164
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.1154933861930891,
+     "knob": 1024,
+     "label": "1024",
+     "max_abs_error": 1.1928254619713566e-15,
+     "us_per_probability": 0.604871,
+     "us_sd": 0.0698586
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.016937464216422667,
+     "knob": 2048,
+     "label": "2048",
+     "max_abs_error": 1.1928254619713566e-15,
+     "us_per_probability": 0.557169,
+     "us_sd": 0.00943703
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.03615737305157045,
+     "knob": 4096,
+     "label": "4096",
+     "max_abs_error": 1.1928254619713566e-15,
+     "us_per_probability": 0.551149,
+     "us_sd": 0.0199281
+    },
+    {
+     "best_at_this_accuracy": false,
+     "block_cv": 0.008790370439488661,
+     "knob": 8192,
+     "label": "8192",
+     "max_abs_error": 1.1928254619713566e-15,
+     "us_per_probability": 0.53585,
+     "us_sd": 0.00471032
     }
-   ]
+   ],
+   "threads": null
   },
   {
+   "code": "Second-order expansion",
+   "dial": "n_slabs_per_segment | rtol",
    "name": "Second-order expansion",
-   "dial": "none",
    "points": [
     {
-     "label": "analytic",
-     "us_per_probability": 0.2495,
-     "max_abs_error": 0.00651
+     "best_at_this_accuracy": true,
+     "block_cv": 0.03814218074843034,
+     "knob": 0,
+     "label": "0",
+     "max_abs_error": 0.004963861275097094,
+     "us_per_probability": 0.34509150488639984,
+     "us_sd": 0.013162542554124896
     }
-   ]
+   ],
+   "threads": null
+  },
+  {
+   "code": "nuSQuIDS",
+   "dial": "solver tolerance",
+   "name": "nuSQuIDS",
+   "points": [
+    {
+     "best_at_this_accuracy": true,
+     "block_cv": 0.007516082828550838,
+     "knob": 3,
+     "label": "1e-03",
+     "max_abs_error": 0.0009263929765084555,
+     "us_per_probability": 23.67104455917289,
+     "us_sd": 0.1779135315450611
+    },
+    {
+     "best_at_this_accuracy": true,
+     "block_cv": 0.007039951326504729,
+     "knob": 4,
+     "label": "1e-04",
+     "max_abs_error": 0.0001829993794054687,
+     "us_per_probability": 24.37409778456283,
+     "us_sd": 0.17159246203078907
+    },
+    {
+     "best_at_this_accuracy": true,
+     "block_cv": 0.009152155829028468,
+     "knob": 5,
+     "label": "1e-05",
+     "max_abs_error": 5.997111817835563e-06,
+     "us_per_probability": 25.811394402282666,
+     "us_sd": 0.23622990373420408
+    },
+    {
+     "best_at_this_accuracy": true,
+     "block_cv": 0.007961728560714764,
+     "knob": 6,
+     "label": "1e-06",
+     "max_abs_error": 1.7432460794628523e-06,
+     "us_per_probability": 27.255074967127783,
+     "us_sd": 0.2169975087902033
+    },
+    {
+     "best_at_this_accuracy": true,
+     "block_cv": 0.010066040843347746,
+     "knob": 7,
+     "label": "1e-07",
+     "max_abs_error": 2.6609812356285223e-07,
+     "us_per_probability": 30.431893664970538,
+     "us_sd": 0.30632868457200896
+    },
+    {
+     "best_at_this_accuracy": true,
+     "block_cv": 0.014413934974171864,
+     "knob": 8,
+     "label": "1e-08",
+     "max_abs_error": 3.0699893169289566e-08,
+     "us_per_probability": 35.12057408929153,
+     "us_sd": 0.5062256711786334
+    },
+    {
+     "best_at_this_accuracy": true,
+     "block_cv": 0.008993834315006817,
+     "knob": 9,
+     "label": "1e-09",
+     "max_abs_error": 3.424664343289563e-09,
+     "us_per_probability": 41.44919508136934,
+     "us_sd": 0.37278719305223135
+    },
+    {
+     "best_at_this_accuracy": true,
+     "block_cv": 0.008189183475242818,
+     "knob": 10,
+     "label": "1e-10",
+     "max_abs_error": 3.894593122895626e-10,
+     "us_per_probability": 52.682885143937725,
+     "us_sd": 0.43142981244885015
+    },
+    {
+     "best_at_this_accuracy": true,
+     "block_cv": 0.012018827788951627,
+     "knob": 11,
+     "label": "1e-11",
+     "max_abs_error": 4.0989461289562636e-11,
+     "us_per_probability": 70.6613705303796,
+     "us_sd": 0.849266843735934
+    },
+    {
+     "best_at_this_accuracy": true,
+     "block_cv": 0.0035971405330335582,
+     "knob": 12,
+     "label": "1e-12",
+     "max_abs_error": 4.100511289562636e-12,
+     "us_per_probability": 98.21160259401151,
+     "us_sd": 0.35328093650510256
+    }
+   ],
+   "threads": null
   }
  ]
 }

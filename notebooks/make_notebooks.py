@@ -24,6 +24,7 @@ first.
 import pathlib
 import time
 
+import os
 import nbformat as nbf
 
 OUT = pathlib.Path('notebooks')
@@ -390,7 +391,7 @@ books['03_matter_nsi_liv.ipynb'] = notebook(
              'ax.legend()\n'
              'plt.show()'),
         md('## Lorentz-invariance violation\n\n'
-           'A CPT-odd Lorentz-invariance-violating (LIV) background couples '
+           'A CPT-even Lorentz-invariance-violating (LIV) background couples '
            'to neutrinos through a term that is *added* to the Hamiltonian '
            'with its own mixing structure. The physically important point is '
            'the energy dependence: the vacuum term falls as $1/E$ and this '
@@ -1458,18 +1459,863 @@ books['09_performance.ipynb'] = notebook(
     ])
 
 # ------------------------------------------------------- 10 the paper figures
+def external_code_provenance():
+    """Returns a markdown table of exactly which external codes were measured.
+
+    Generated from ``tests/bench/manifest.json`` rather than written out, so
+    that the notebook cannot drift from what the benchmark pipeline actually
+    builds.  The manifest is the single source: it pins every code by commit
+    or by tarball hash, and records how each was verified to be the latest
+    official release.
+    """
+    import json
+
+    manifest = json.load(open('tests/bench/manifest.json'))
+    rows = []
+    for code in manifest['codes']:
+        pin = code.get('pin', {})
+        if 'commit' in pin:
+            what = '`%s`' % pin['commit'][:12]
+            kind = 'tag `%s`' % pin['tag'] if pin.get('tag') else 'commit only'
+        elif 'sha256' in pin:
+            what = 'sha256 `%s`' % pin['sha256'][:12]
+            kind = pin.get('version', 'tarball')
+        else:
+            what = '_this repository_'
+            kind = 'stamped at run time'
+        url = code.get('url', '')
+        rows.append('| %s | %s | %s | %s |'
+                    % (code['name'], kind, what,
+                       ('[source](%s)' % url) if url else '--'))
+
+    lines = [
+        '## Which codes these comparisons measured',
+        '',
+        'Every external code is pinned. A version recorded as a month --- which',
+        'is how three of them were once recorded --- cannot be rebuilt, so each',
+        'entry below is a commit or a tarball hash, verified on',
+        '%s to be the latest *official* release rather than merely'
+        % manifest['codes'][1]['latest_check']['verified_on'],
+        'the version that happened to be installed.',
+        '',
+        '| Code | Release | Pinned at | Where from |',
+        '|---|---|---|---|',
+    ] + rows + [
+        '',
+        '### How they are built',
+        '',
+        'Two profiles, because one flag set cannot serve both axes:',
+        '',
+        '- **speed** --- each project\'s own upstream flags, so no code is ever',
+        '  published slower than its authors publish it.',
+        '- **accuracy** --- `-O3 -std=c++17` for everyone, no `-Ofast` and no',
+        '  `-ffast-math`, because value-changing flags make an accuracy',
+        '  measurement measure the flag instead of the code.',
+        '',
+        'Threads are whatever each code naturally uses; none is forced to one,',
+        'and the effective count is recorded per run, so a cross-code speed',
+        'claim always carries both numbers.',
+        '',
+        'One exception, recorded rather than hidden: **nuSQuIDS** is measured as',
+        'distributed, from its upstream wheel with GSL, HDF5 and SQuIDS bundled,',
+        'so its flags are the wheel\'s and the two-profile rule cannot apply.',
+        '',
+        '`tests/bench/build.sh` clones, hash-verifies and builds all of it and',
+        'writes a build record with the compiler, the CPU and the manifest hash.',
+        '`tests/bench/OBJECTIONS.md` records what each measurement answers.',
+        '',
+        '### Exactly which script produces each code\'s timings',
+        '',
+        'One row per script, so a number in a figure can be traced to the file',
+        'that made it. A script recorded as `MISSING` was never committed ---',
+        'which is itself the reason this table exists.',
+        '',
+        '| Code | Script run | What it writes | Figure |',
+        '|---|---|---|---|',
+    ] + [
+        '| %s | `%s` | `%s` | %s |' % (code['name'], t['script'],
+                                       t['produces'], t['figure'])
+        for code in manifest['codes'] for t in code.get('timing_scripts', [])
+    ] + [
+        '',
+        'These are the drivers the pipeline in `tests/bench/` replaces with',
+        'adapters, so that one harness owns every clock and no driver can time',
+        'itself.',
+    ]
+    return '\n'.join(lines)
+
+
+def convention_matching():
+    """Returns markdown on how each code's problem and its reference are built.
+
+    Everything printed here is computed by ``tests/bench/conversions.py`` from
+    the constant in each code's own pinned source, so the cell cannot drift
+    from what the benchmark applies.  Three different values of one factor
+    once coexisted in the repository; a fourth, typed here, would have been
+    the obvious way to make it four.
+    """
+    import os
+    import sys
+
+    sys.path.insert(0, os.path.join('tests', 'bench'))
+    import conversions
+
+    codes = ('NuFast-LBL', 'NuFast-Earth', 'Prob3++', 'GLoBES', 'nuCraft')
+    rows = []
+    for code in codes:
+        theirs, path = conversions.extract(code)
+        rows.append('| %s | `%r` | %.9g | `%s` |'
+                    % (code, theirs, conversions.hbar_c(code),
+                       os.path.basename(path)))
+    osc = conversions.oscillation_parameters()
+    p3 = conversions.for_code('Prob3++')
+    nc_cc, _ = conversions.extract('nuCraft')
+    nc_nc = conversions.nucraft_nc_constant()
+
+    return '\n'.join([
+        '## Each code is handed its own problem, and judged against its own reference',
+        '',
+        'Comparing a code against a reference says something about its',
+        'propagation only if the two agree on what a kilometre is and what the',
+        'matter potential is. They do not agree natively: each code carries its',
+        'own rounding of $2\\sqrt{2} G_F N_A$ and its own $\\hbar c$.',
+        '',
+        'An earlier version of this comparison rescaled every code\'s density',
+        'and baseline so that all of them reproduced *our* potential and *our*',
+        'kilometre, and then differenced them against one shared reference.',
+        'That made this library the only code receiving the problem it was',
+        'designed for, and it capped the whole figure at the size of the',
+        'largest deliberate mismatch. It is not what is done here.',
+        '',
+        'Instead each code is handed honest physical inputs --- the density in',
+        'g cm$^{-3}$, the baseline in km, the same mixing parameters --- and is',
+        'differenced against a reference built in **its own** convention, using',
+        'the constants below and the profile it was actually given. The',
+        'residual then measures how well that code solves the problem it was',
+        'handed, which is the same kind of quantity for every code and is why',
+        'they may share one axes. Every caption has to say that the reference',
+        'differs per code.',
+        '',
+        '| Code | Its matter constant | Its $\\hbar c$ / eV m | Read from |',
+        '|---|---|---|---|',
+    ] + rows + [
+        '',
+        'NuFast-LBL and Prob3++ share a matter constant because they genuinely',
+        'carry the same rounding, `1.52588e-4` --- a coincidence that once',
+        'looked like a bug in our own bookkeeping and was not. The two NuFast',
+        'codes, by contrast, do *not* share one: they differ in the fifth digit,',
+        'so a reference built for one is wrong for the other.',
+        '',
+        '$\\hbar c$ is where the codes are least alike. Three of them agree on',
+        '$1.97327 \\times 10^{-7}$ eV m. Prob3++ does not: it hard-codes the',
+        'combination as `2.534` in `mosc.c`, four significant figures, implying',
+        '$1.9731650 \\times 10^{-7}$. That is a relative difference of',
+        '$5 \\times 10^{-5}$ in every length, and while a single shared cosine',
+        'scale was applied to all three it left exactly that error in place for',
+        'Prob3++ alone, where it showed up as an accuracy floor near',
+        '$3 \\times 10^{-4}$ that had nothing to do with the algorithm. Each',
+        'code now gets its own value, read from its own source.',
+        '',
+        '### One parameter set, converted rather than retyped',
+        '',
+        'Every code is handed the same physics: $\\sin^2\\theta_{12} = %s$,'
+        % osc['s12sq'],
+        '$\\sin^2\\theta_{13} = %s$, $\\sin^2\\theta_{23} = %s$,'
+        % (osc['s13sq'], osc['s23sq']),
+        '$\\delta_{\\rm CP} = %g^\\circ$, $\\Delta m^2_{21} = %s$ eV$^2$,'
+        % (osc['dcp_deg'], osc['dmsq21_ev2']),
+        '$\\Delta m^2_{31} = %s$ eV$^2$, normal ordering.'
+        % osc['dmsq31_ev2'],
+        '',
+        'The mixing parameters are the one thing that is *shared* rather than',
+        'per code, and each reference is built with the same set. Where a code',
+        'wants a different *parameterisation* of that same physics, the',
+        'conversion is derived and the reference is built from the very number',
+        'the code received. Prob3++ takes $\\Delta m^2_{32}$, so it is handed',
+        '`%.7e` eV$^2$, which is $\\Delta m^2_{31} - \\Delta m^2_{21}$'
+        % p3['dmsq32_ev2'],
+        'rather than a second number typed by hand; nuCraft takes angles, so it',
+        'is handed $\\arcsin\\sqrt{\\sin^2\\theta}$. A hand-typed `2.4511e-3`',
+        'sitting beside a `2.525e-3` is indistinguishable from a physics',
+        'difference, which is why neither is typed.',
+        '',
+        '### The one convention that is deliberately not absorbed',
+        '',
+        'nuCraft\'s charged-current and sterile matter entries are two',
+        'independently rounded constants, `%r` and `%r`, whose ratio is'
+        % (nc_cc, nc_nc),
+        '$%.5f$ where the isoscalar value is exactly $1/2$.' % (nc_nc/nc_cc),
+        'That is an error rather than a convention, so its reference uses',
+        'nuCraft\'s constants for the units but the correct ratio. A reference',
+        'that absorbed the rounding too would forgive the defect and the floor',
+        'it causes would silently vanish. It bites only at four flavors: at',
+        'three the sterile entry never enters.',
+        '',
+        'Because no convention mismatch is left anywhere else, no figure here',
+        'has a floor that is an artifact of one. Each code can reach round-off',
+        'if its algorithm can, which is what makes the reference\'s own',
+        'precision the thing that has to be argued rather than assumed.',
+    ])
+
+
+def reference_precision():
+    """Returns markdown on the per-code references and how good each one is.
+
+    The table is rendered from ``tests/bench/reference_audit.json``, which is
+    produced by ``tests/bench/audit_reference.py``.  Nothing here is typed:
+    six published numbers about external codes once existed only in
+    docstrings with no stored run, and this is the shape that mistake takes
+    when it is avoided.  The audit also disagreed with what would have been
+    written by hand, which is the argument for generating it.
+    """
+    import json
+    import os
+
+    path = os.path.join('tests', 'bench', 'reference_audit.json')
+    if not os.path.exists(path):
+        return ('## The references\n\n`tests/bench/reference_audit.json` has '
+                'not been generated; run `python tests/bench/'
+                'audit_reference.py`.')
+    audit = json.load(open(path))
+    probe = audit['probe']
+
+    order = ['NuOscProbExact', 'NuFast-LBL', 'NuFast-Earth', 'Prob3++',
+             'GLoBES', 'nuSQuIDS', 'nuCraft']
+    rows = []
+    for name in order:
+        entry = audit['codes'].get(name)
+        if entry is None:
+            continue
+        fidelity = entry.get('profile_fidelity_g_per_cm3')
+        if isinstance(fidelity, float):
+            fidelity = ('exact' if fidelity == 0.0 else '%.1e' % fidelity)
+        else:
+            fidelity = 'built identically'
+        rows.append('| {\\tt %s} | %.9e | %.2f | %s | %s | %.0e |'
+                    % (name, entry['matter_constant'], entry['km_in_inv_ev'],
+                       entry['profile_kind'], fidelity,
+                       entry['reference_error']))
+
+    return '\n'.join([
+        '## How good each reference is, and what it had to match',
+        '',
+        'Each code is differenced against its own 50-digit reference, so the',
+        'reference has to solve the problem that code was handed and not a',
+        'neighbouring one. That means matching, per code, the matter',
+        'constant, $\\hbar c$, the electron fraction, the chord, and --- the',
+        'one that turned out to be hardest --- the discretised profile.',
+        '',
+        'Every number below is measured by',
+        '`tests/bench/audit_reference.py` and read from the artifact it',
+        'writes, at $\\cos\\theta_z = %g$ and $E = %g$ GeV with $Y_e = %g$,'
+        % (probe['costhz'], probe['energy_gev'], probe['ye']),
+        'at %d working digits.' % audit['working_digits'],
+        '',
+        '| Code | Matter constant | km / eV$^{-1}$ | Profile it is handed | Profile match | Reference error |',
+        '|---|---|---|---|---|---|',
+    ] + rows + [
+        '',
+        '$Y_e$ is shared by every code and every reference, and so are the',
+        'mixing parameters; everything else in that table is per code.',
+        '',
+        '### Why the errors differ by thirty-five orders of magnitude',
+        '',
+        'The three compiled Earth codes are handed a stack of uniform',
+        'shells. A stack of uniform shells has an exact answer --- a finite',
+        'product of matrix exponentials --- so their references carry no',
+        'discretisation error at all and are limited only by the arithmetic.',
+        'The same is true of every constant-density reference, which is one',
+        'exponential. Those are the entries near $10^{-45}$.',
+        '',
+        'The remaining codes are handed a profile that varies continuously,',
+        'so their references are slab products extrapolated to zero slab',
+        'width. That extrapolation is where the work is, and it failed twice',
+        'before it worked.',
+        '',
+        '### Which Earth each reference is built on',
+        '',
+        'There is one physical Earth --- the continuous PREM, whose density',
+        'varies smoothly inside each shell --- and every reference here is',
+        'built on it. Each code is then scored by how far its answer sits from',
+        'that Earth, in its own $\\hbar c$ and its own matter normalisation,',
+        'with the same $Y_e$ and the same mixing parameters as every other.',
+        '',
+        'Most of these codes cannot represent that Earth. Only three see a',
+        'density that varies inside an interval at all:',
+        '',
+        '| Code | Density inside an interval | Set by |',
+        '|---|---|---|',
+        '| {\\tt NuOscProbExact} | varies --- PREM polynomial | the physics |',
+        '| {\\tt nuSQuIDS} | varies --- Akima spline | the code itself |',
+        '| {\\tt nuCraft} | varies --- linear spline | its own interpolator type |',
+        '| {\\tt Prob3++} | constant per layer | its interface takes (radius, density) rows |',
+        '| {\\tt GLoBES} | constant per layer | its interface takes (length, density) pairs |',
+        '| {\\tt NuFast-Earth} | constant per slab | its geometry makes one slab per declared discontinuity |',
+        '',
+        'NuFast-Earth is worth stating precisely, because its interface',
+        'suggests otherwise. It accepts an arbitrary density callback, which',
+        'reads like an invitation to hand it the continuous profile, and it',
+        'carries a flag named as though it selected between constant and',
+        'varying shells. It does not. The engine always builds piecewise',
+        'constant slabs, one per interval between the discontinuities it is',
+        'given; the flag chooses only whether each slab carries the midpoint',
+        'density or the mean over its interval. There is no mode in which the',
+        'density varies inside a slab.',
+        '',
+        'That distinction is not academic. Handing it the nine PREM boundaries',
+        'and the varying-shell flag --- which looks like asking for continuous',
+        'treatment --- gives ten slabs for the whole chord and an error of',
+        '$3 \\times 10^{-2}$, five orders worse than the fine discretisation',
+        'it replaced. The discretisation is set by the discontinuity list, not',
+        'by the flag.',
+        '',
+        'So three of these codes must discretise the Earth to compute at all,',
+        'and their distance from the true PREM is a real error a user pays',
+        'rather than an artifact of how they are scored. Measured on one chord,',
+        'at 1024 slabs for the compiled codes and 256 slabs per segment for',
+        'this library, all four land in the same place: about',
+        '$4 \\times 10^{-7}$. That is the discretisation they share, not a',
+        'property of any one of them.',
+        '',
+        '### The alternative, and why it was rejected',
+        '',
+        'The other option was to score each code against a reference built on',
+        'its own discretised profile --- the shell stack it was actually',
+        'handed. Measured, that puts Prob3++ and GLoBES at $10^{-13}$ while',
+        'this library, which cuts the continuous profile itself, sits at',
+        '$4 \\times 10^{-7}$: an apparent six-order advantage that is entirely',
+        'an artifact of a reference sharing its code\'s approximation.',
+        '',
+        'Applied consistently that basis is not unfair --- every code lands at',
+        'round-off --- but it is empty. It measures whether a code evaluates',
+        'its own discretisation self-consistently, which they all do, and it',
+        'says nothing about which code is closer to the Earth. It also makes',
+        'every discretisation dial flat by construction, since the reference',
+        'moves with the dial. The continuous basis keeps those dials',
+        'meaningful, and convergence toward the true profile is what the',
+        'accuracy figure is for.',
+        '',
+        '### One code needs two configurations',
+        '',
+        'NuFast-Earth caches its eigenvalues across zenith angles when its',
+        'slabs carry midpoint densities, and that caching is the whole subject',
+        'of one of the objections raised against the earlier comparison: on an',
+        'oscillogram grid it is worth roughly a factor of eight per',
+        'probability. Asking instead for mean densities defeats it --- the',
+        'engine then computes one eigendecomposition per energy, zenith and',
+        'layer rather than one per energy and shell reused across every zenith.',
+        '',
+        'Neither configuration is uniformly more accurate. Measured on one',
+        'chord at three energies, the mean-density slabs are better at two of',
+        'them --- $3.7 \\times 10^{-7}$ against $4.1 \\times 10^{-7}$, and',
+        '$2.7 \\times 10^{-8}$ against $3.6 \\times 10^{-7}$ --- and about',
+        'three times worse at the third, $3.0 \\times 10^{-8}$ against',
+        '$8.8 \\times 10^{-9}$. Three points do not establish a winner and',
+        'this text will not claim one; both sit in the same',
+        '$10^{-8}$ to $10^{-7}$ band, which is the discretisation they share.',
+        '',
+        'The reason both are recorded is therefore the caching, not the',
+        'accuracy. The speed axis uses the midpoint configuration because that',
+        'is where the code\'s zenith caching lives and running it otherwise',
+        'would measure it below its best. The accuracy axis uses whichever is',
+        'stated on the series. Both are legitimate ways to run the code and',
+        'neither is a handicap, but they are different configurations and no',
+        'figure may put them on one axes.',
+        '',
+        '### Two things that limited it, neither of them obvious',
+        '',
+        'The first was **arithmetic**. In double precision the extrapolated',
+        'slab product floors near $2 \\times 10^{-12}$: the first Richardson',
+        'pass converges cleanly at fourth order, but a second pass gains',
+        'nothing, because by then the error is accumulated round-off over the',
+        'ten thousand matrix products rather than discretisation. No amount',
+        'of extrapolation gets past that, which is why the references are',
+        'built in arbitrary precision.',
+        '',
+        'The second was **geometry**. With the arithmetic fixed, the',
+        'extrapolation still stalled near $10^{-17}$. Extrapolating the slab',
+        'count to infinity is a statement about the continuous profile, so',
+        'the chord crossing radii are part of the answer rather than an input',
+        'to it, and their double-precision representation error breaks the',
+        'smooth expansion the extrapolation assumes. Computing the chord in',
+        'arbitrary precision too --- the total path length then matches',
+        '$-2R\\cos\\theta_z$ to twenty-two digits --- removed it.',
+        '',
+        '### A third, and the two faults that were hiding each other',
+        '',
+        'Two codes are handed a *spline* rather than a stack of shells:',
+        'nuCraft gets a linear one, and nuSQuIDS builds an Akima spline',
+        'inside its own Earth model. Their references appeared to stall eight',
+        'orders short, near $5 \\times 10^{-10}$, with everything else',
+        'already correct. Two separate things were wrong, and each concealed',
+        'the other; the sequence is worth setting out, because the first',
+        'repair looked like a failure and was not.',
+        '',
+        'The first fault was real. A spline is only piecewise smooth: its',
+        'density has a kink at every knot, and a slab that straddles a kink',
+        'sees a profile with no convergent expansion in the slab width, so',
+        'the extrapolation has nothing to extrapolate. The repair is the rule',
+        'the library already applies to PREM boundaries, which are mandatory',
+        'slab edges for exactly this reason --- every spline knot became a',
+        'mandatory slab edge too, putting each slab inside a single',
+        'polynomial piece.',
+        '',
+        'That repair appeared to accomplish almost nothing. The quoted error',
+        'moved from $5.8 \\times 10^{-10}$ to $3.3 \\times 10^{-10}$ for',
+        'nuCraft, a factor of under two, and the natural reading was that the',
+        'kinks had never been the problem.',
+        '',
+        'The natural reading was wrong, and what established it was printing',
+        'the whole extrapolation table instead of the single number at its',
+        'corner. Every level of that table falls by exactly the factor it',
+        'should --- 4, then 16, then 64 --- which is what a smooth expansion',
+        'looks like and is not what a straddled kink produces. Measured',
+        'against the value now established, the pre-repair corner was',
+        '$9.6 \\times 10^{-10}$ from the truth and the post-repair corner is',
+        '$1.9 \\times 10^{-13}$: the kink repair bought three orders, not a',
+        'factor of two.',
+        '',
+        'The second fault was the *error estimate*, and it was hiding the',
+        'first. The estimate is the standard Romberg one --- how far the',
+        'corner moves when the last rung of the ladder is added --- which',
+        'bounds the error of the corner one level shallower. That is',
+        'conservative and correct, but only informative when the shallower',
+        'corner is itself good. With a four-rung ladder the shallower corner',
+        'sits two extrapolation levels back, and its error was',
+        '$3 \\times 10^{-10}$ while the returned corner was already at',
+        '$2 \\times 10^{-13}$. The number being quoted was never the',
+        'reference\'s error. It was the error of a corner that had been',
+        'computed and discarded, and it overstated the truth by a factor of',
+        'about seventeen hundred. A fifth rung moves the comparison one level',
+        'deeper and the quoted figure becomes the measured',
+        '$2 \\times 10^{-13}$ and $5 \\times 10^{-14}$.',
+        '',
+        'This is worth recording because of how it would have failed. The',
+        'profiles themselves were right the whole time --- the audit measures',
+        'nuCraft\'s as exact, since the adapter hands it the very spline',
+        'object the reference uses, and nuSQuIDS\' as agreeing to double',
+        'round-off --- so every check aimed at *whether the reference matches',
+        'the code* passed, correctly. What was wrong sat on top of a correct',
+        'profile, and its residual would have been read as those two codes\'',
+        'solver error. The general lesson is narrower than "check your work":',
+        'a single summary number can be wrong in a way the quantity it',
+        'summarises is not, and the table it came from is what says so.',
+        '',
+        '### The Akima variant, which is not a detail',
+        '',
+        'nuSQuIDS does not accept a profile; it accepts nodes and builds its',
+        'own Akima spline over them. Substituting a different library\'s',
+        'Akima looks harmless and is not: the two agree *exactly* at the data',
+        'nodes and differ by about $2 \\times 10^{-8}$ between them, which put',
+        'a relative error near $10^{-9}$ into the profile --- three orders',
+        'above the tight end of nuSQuIDS\' own tolerance dial, and shaped',
+        'exactly like solver error. Its own construction is reproduced',
+        'instead, and the reference profile now agrees with what nuSQuIDS',
+        'reports along the chord to double round-off.',
+        '',
+        'The general point is the one the whole per-code reference scheme',
+        'rests on: a reference that is subtly wrong does not announce itself.',
+        'It produces a residual of a plausible size, and that residual gets',
+        'read as the code\'s accuracy.',
+    ])
+
+
+
+def external_code_methods():
+    """Returns markdown documenting exactly how each external code was driven.
+
+    The pins, flags and entry points come from ``tests/bench/manifest.json``
+    and the build profiles from ``tests/bench/build.sh``, so this cell cannot
+    drift from what was actually built.  The configuration decisions --- which
+    mode, which setter, what was hoisted --- are prose, because they are
+    judgements rather than data, and a referee checking this comparison will
+    want them stated rather than inferred from adapter source.
+    """
+    import json
+    import os
+
+    manifest = json.load(open(os.path.join('tests', 'bench', 'manifest.json')))
+    by_name = {c['name']: c for c in manifest['codes']}
+
+    def pin(name):
+        p = by_name[name].get('pin', {})
+        if 'commit' in p:
+            return 'tag `%s`, commit `%s`' % (p.get('tag', '--'),
+                                              p['commit'][:12])
+        if 'sha256' in p:
+            return 'version `%s`, sha256 `%s`' % (p.get('version', '--'),
+                                                  p['sha256'][:12])
+        return 'this repository, stamped at run time'
+
+    def flags(name):
+        return by_name[name].get('flags_speed', 'n/a')
+
+    def source(name):
+        return by_name[name].get('flags_speed_source', '')
+
+    def knob(name):
+        k = by_name[name].get('capabilities', {}).get('precision_knobs', {})
+        return ', '.join('`%s`' % n for n in k) or 'none'
+
+    out = [
+        '## Exactly how each code was driven',
+        '',
+        'A speed or accuracy number is only checkable if the configuration',
+        'that produced it is written down. Everything in this section is what',
+        'the benchmark actually did: the pins and flags are read from the',
+        'manifest the build script consumes, and the configuration choices are',
+        'stated so that a reader who disagrees with one can see precisely what',
+        'to change.',
+        '',
+        'Two rules were applied throughout. Each code is built with **its own',
+        'upstream flags** for the speed axis, so no code is published slower',
+        'than its authors publish it. Each is driven through **its own batched',
+        'entry point** where it has one, and looped in its own language where',
+        'it does not --- a loop that its interface requires is not a handicap',
+        'imposed from outside, and it is labelled as a loop.',
+        '',
+        '### Build profiles',
+        '',
+        'Two, because one flag set cannot serve both axes. The speed profile',
+        'uses each project\'s own flags. The accuracy profile uses',
+        '`-O3 -std=c++17` with no `-Ofast` and no `-ffast-math`, because a',
+        'value-changing flag makes an accuracy measurement measure the flag.',
+        'The previous generation of this comparison used `-Ofast -ffast-math`',
+        'for one dataset and `-O3` for another and presented them as one',
+        'methodology.',
+        '',
+        '| Code | Pin | Speed flags | Flags from |',
+        '|---|---|---|---|',
+    ]
+    for name in ('NuFast-LBL', 'NuFast-Earth', 'Prob3++', 'GLoBES',
+                 'nuSQuIDS', 'nuCraft'):
+        out.append('| {\\tt %s} | %s | `%s` | %s |'
+                   % (name, pin(name), flags(name), source(name) or '--'))
+
+    out += [
+        '',
+        '### {\\tt NuFast-LBL}',
+        '',
+        'Driven through `Probability_Matter_LBL`, the one batched entry point',
+        'in the release: it takes the whole energy vector by const reference',
+        'and fills a vector of 3x3 matrices, so `evaluate` makes exactly one',
+        'call however many energies the grid holds. The author\'s own',
+        'benchmark harness calls it the same way. There is no persistent',
+        'engine, so nothing can be cached between calls and the per-call setup',
+        'cost is paid inside the timed region, where the code itself pays it.',
+        '',
+        'The released source ships no header and carries its own demo',
+        '`main()`, so the object is compiled with `-Dmain=` renaming that',
+        'entry point --- otherwise it collides with the harness\'s `main` and',
+        'the translation unit will not link.',
+        '',
+        'Precision knob: %s, swept over `{-1, 0, 1, 2, 3}`. The negative value'
+        % knob('NuFast-LBL'),
+        'is not a sentinel for "off": it selects exact eigenvalues through the',
+        'trigonometric root rather than Newton refinement. It was absent from',
+        'the earlier comparison, which is what made the claim that no code was',
+        'more accurate "at any setting it exposes" false.',
+        '',
+        '### {\\tt NuFast-Earth}',
+        '',
+        'Driven through `Set_Spectra` followed by `Get_Probabilities`, which',
+        'batches over energy **and** zenith angle together and returns the',
+        'whole grid from one call. Everything invariant under a $\\delta_{\\rm',
+        'CP}$ scan is built once before any clock starts: the Earth model, the',
+        'engine, the profile, the production height, the eigenvalue precision,',
+        'and both spectra. The scan moves `Set_delta` alone.',
+        '',
+        'The Earth model handed to it is this library\'s PREM, cut into four',
+        'major layers of 256 uniform sub-shells each --- 1024 in total ---',
+        'declared to the engine as its discontinuity list. That list *is* the',
+        'discretisation: the engine builds one slab per interval between',
+        'consecutive entries. Its electron fraction is the shared $Y_e = 1/2$,',
+        'not the 0.466/0.494 split its own `PREM_Full` carries, so that its',
+        'matter potential matches every other code\'s.',
+        '',
+        'The detector depth is zero and the production height is zero, so the',
+        'trajectory is surface to surface, matching what the other Earth codes',
+        'are given.',
+        '',
+        'Constant-density problems use `Set_E_Spectra` with `Set_Trajectory`',
+        '--- the single-trajectory mode added in v1.1.0 --- rather than a',
+        'chord. The two modes are mutually exclusive in the engine and the',
+        'choice is made once at setup. `Set_Production_Height` must not be',
+        'called in that mode; it asserts against it, and the constructor',
+        'already defaults the height to zero.',
+        '',
+        'Precision knob: %s, swept over `{-1, 0, 1, 2, 3}` with the negative'
+        % knob('NuFast-Earth'),
+        'value selecting exact eigenvalues.',
+        '',
+        '### {\\tt Prob3++}',
+        '',
+        'Looped, one energy at a time, because that is the shape of its',
+        'interface: `SetMNS` takes the energy as an argument and `propagate`',
+        'takes no grid. The loop is in C++ inside the adapter\'s own',
+        'translation unit and the capability registry says the code does not',
+        'batch, so no reader can mistake the loop for a choice.',
+        '',
+        'It is handed a profile file holding the same 1024 sub-shells the',
+        'other Earth codes receive, with rows of outer radius, density and',
+        'electron fraction. On the spherical path the electron fraction is',
+        'read from that file\'s $Y_p$ column rather than from',
+        '`SetDensityConversion`, which reaches only the linear path.',
+        '`propagate` re-derives the per-trajectory profile on every call by',
+        'its own design, and that cost is timed as part of the code.',
+        '',
+        '`SetMNS` is called with squared-sine inputs and the neutrino type,',
+        'and takes $\\Delta m^2_{32}$ rather than $\\Delta m^2_{31}$ --- derived',
+        'from the shared parameters, never typed a second time. Warnings are',
+        'suppressed and the profile loader\'s announcement on standard output',
+        'is silenced for the one untimed constructor call, so that it cannot',
+        'land in front of the harness\'s JSON.',
+        '',
+        'Its `mosc.c` and `mosc3.c` must be compiled as C rather than C++.',
+        'Precision knob: %s, the sub-shell count per major layer.'
+        % knob('Prob3++'),
+        '',
+        '### {\\tt GLoBES}',
+        '',
+        'Looped, one energy at a time: `glb_probability_matrix` takes an',
+        'arbitrary layered profile and a single energy, and the library exposes',
+        'no batched alternative at that level. The filter is disabled by',
+        'passing a negative width, so the exact per-layer diagonalisation runs',
+        'rather than the low-pass approximation.',
+        '',
+        'It is handed the chord decomposition of the same 1024 sub-shells,',
+        'computed once in setup and never inside a clock. GLoBES multiplies',
+        'the density it is given by its own `GLB_V_FACTOR` and its own',
+        '`GLB_Ne_MANTLE` internally, so the density handed over carries the',
+        'ratio of the shared $Y_e$ to that internal electron fraction --- and',
+        'nothing else. Its `GLB_V_FACTOR` is absorbed into its own reference',
+        'instead of being applied to its input.',
+        '',
+        'The $\\delta_{\\rm CP}$ scan calls `glbSetOscParams` followed by',
+        '`glbSetOscillationParameters`, so the mixing-matrix rebuild is inside',
+        'the timed region, which is the cost the amortized protocol is defined',
+        'to include. Built once at the upstream configure default `-O2`: the',
+        'measured code lives in the installed library, so relinking the thin',
+        'adapter at other flags would not change what is being measured.',
+        'Precision knob: %s.' % knob('GLoBES'),
+        '',
+        '### {\\tt nuSQuIDS}',
+        '',
+        'Driven through the multiple-energy constructor, which is its batched',
+        'entry point, with interactions disabled. The body, the tracks, the',
+        'solver, every mixing angle and mass splitting and the tolerance are',
+        'all built in setup; the scan moves `Set_CPPhase` alone. Zenith is not',
+        'batched --- the constructor takes energies only --- so multiple angles',
+        'are looped, and the registry says so.',
+        '',
+        'Two configuration points matter and neither is a default.',
+        '',
+        'First, **the solver tolerance is always set explicitly**. Left at its',
+        'constructor defaults the GSL integrator fails outright on both Earth',
+        'grids used here, at $\\cos\\theta_z = -1$ and $-0.9$, while every',
+        'explicit tolerance from $10^{-6}$ to $10^{-10}$ succeeds. Leaving it',
+        'at "its own defaults" is therefore not a runnable configuration for',
+        'this comparison, and the knob\'s zero setting means an explicit',
+        'mid-sweep tolerance rather than whatever the constructor chose.',
+        '',
+        'Second, **constant-density problems use its exact algebraic mode**.',
+        'With `Set_AllowConstantDensityOscillationOnlyEvolution`, the solver',
+        'skips the ODE entirely and evolves each energy node in closed form,',
+        'which is what a practised user of this code would do rather than',
+        'integrate through a constant. That mode is not an unqualified',
+        'improvement and the figure says so: it is exact at 59 of 60 nodes,',
+        'with a median error of $4 \\times 10^{-16}$, but carries a',
+        'tolerance-independent excursion of $7 \\times 10^{-7}$ between roughly',
+        '3.4 and 6.5 GeV, where the tight ODE reaches $3 \\times 10^{-12}$',
+        'everywhere. Whichever produced a number, the series records it.',
+        '',
+        'Probabilities are read out at the solver\'s own nodes rather than',
+        'through the interpolating overload, since the grid energies are those',
+        'nodes: the interpolating call would charge an interpolation inside the',
+        'timed region for nothing. The Earth model is built from a table',
+        'aligned on every PREM boundary, which nuSQuIDS interpolates with an',
+        'Akima spline of its own construction; the atmosphere height is set to',
+        'zero so the chord is surface to surface. Precision knob: %s.'
+        % knob('nuSQuIDS'),
+        '',
+        '### {\\tt nuCraft}',
+        '',
+        'Its `CalcWeights` takes a particle list but loops over it internally,',
+        'so the registry records the batching as interface-only. The whole',
+        '(energy, zenith) grid is still handed over in one call, so that no',
+        'code here is looped from outside when its own interface would take the',
+        'stack.',
+        '',
+        'There is no setter for the CP phase --- it rides on the mixing-angle',
+        'list given to the constructor --- so the scan rebuilds the instance',
+        'around a hoisted Earth model. That reconstruction is the cost this',
+        'interface charges a scan, and the amortized protocol is defined to',
+        'include it.',
+        '',
+        'Mixing angles are passed in degrees, derived from the shared squared',
+        'sines rather than retyped. The profile is installed through the',
+        'model\'s interpolator, because its file route is Python 2 only, and',
+        'it is given the same object type the code builds for itself: a linear',
+        'spline over this library\'s PREM. Passing a plain Python callback',
+        'instead would put this library\'s scalar density lookup inside',
+        'nuCraft\'s integrator, which is our cost charged to its measurement.',
+        '',
+        'Its own model dictionary carries an inner-core radius of 1121.5 km',
+        'against its own profile table, which steps at 1221.5; the adapter',
+        'overrides it with the boundary from this library\'s PREM. The',
+        'trajectory is surface to surface with the atmosphere mode that takes',
+        'the zenith angle in radians rather than its cosine. Constant-density',
+        'problems are refused rather than faked: this code propagates through',
+        'its Earth model only. Precision knob: %s.' % knob('nuCraft'),
+        '',
+        '### What is hoisted, for every code alike',
+        '',
+        'The harness owns every clock; an adapter supplies physics and cannot',
+        'time anything. Before a scan is timed, each code has already built',
+        'its body or Earth model, constructed its engine, installed its',
+        'profile, allocated the grid and called every setter except the one the',
+        'scan moves. That contract is enforced rather than trusted, because the',
+        'previous generation of drivers put an engine construction, an Earth',
+        'object and five setters inside a timed loop over twelve energies.',
+    ]
+    return '\n'.join(out)
+
+
+def timing_protocols():
+    """Returns markdown on what each timing protocol measures, and why.
+
+    The distinction this cell draws -- caching left standing versus every
+    repetition started afresh -- changed one code's throughput number by
+    roughly a factor of six thousand, so it is written down here rather than
+    left to be inferred from the harness.
+    """
+    return '\n'.join([
+        '## What is timed, and why each repetition starts afresh',
+        '',
+        'Two protocols are reported, and they answer different questions. The',
+        'difference between them is not a detail of the harness: applied to one',
+        'of the codes it moves the number by about a factor of 6000, so which',
+        'one a figure reports has to be stated on the figure.',
+        '',
+        '### The scan, with caching left standing',
+        '',
+        'The first protocol times a scan over $\\delta_{\\rm CP}$: each step',
+        'sets the one parameter that moves and asks for the whole grid.',
+        'Everything invariant under that scan --- the Earth model, the engine,',
+        'the profile, the grid arrays, every other setter --- is built once',
+        'before the clock starts. Each code\'s own caching is left switched on',
+        'and working, so a code that can reuse eigenvalues across zenith angles',
+        'does reuse them here. This is the cost a fit or a scan actually pays,',
+        'and the definition is taken from the NuFast-Earth author\'s own',
+        'harness rather than invented for this comparison.',
+        '',
+        '### One request, started afresh each time',
+        '',
+        'The second protocol asks a different question: what does it cost to',
+        'ask for $N$ points once? A single such call is far too fast to put a',
+        'clock around, so it is repeated until the block is long enough to',
+        'measure. Those repetitions are a measuring device, not a workload ---',
+        'nobody asks the same question thousands of times against unchanged',
+        'state --- and the average is the cost of a request only if every',
+        'repetition costs what the first one cost.',
+        '',
+        'So **every repetition starts afresh**, which is closer to what a user',
+        'does in practice: a person with a new question asks it from a standing',
+        'start, and does not inherit the intermediate results of the previous',
+        'one. Before each repetition the driver is returned to the state a',
+        'fresh request would find. What that means is drawn at the same line',
+        'for every code: the geometry and the profile were installed once and',
+        'stay installed, exactly as a user would not rebuild the Earth between',
+        'two questions about it, while everything that depends on the',
+        'oscillation parameters is computed again.',
+        '',
+        'For six of the seven codes this changes nothing, because they already',
+        'recompute everything on every call --- their reset is empty, and',
+        'honestly so. The seventh, NuFast-Earth, caches its eigenvalues and its',
+        'internal amplitudes between calls. Left alone, its second and every',
+        'later repetition timed nothing but a rotation of amplitudes that an',
+        'earlier, untimed call had left lying around, and the reported cost per',
+        'point fell by about a factor of 6000 below what one request costs.',
+        'Published unchanged, that would have shown a throughput advantage of',
+        'four orders of magnitude which was very largely an artifact of how the',
+        'measurement was taken.',
+        '',
+        'Making each repetition cold does not take that code\'s advantage away.',
+        'It is still several times faster than the other compiled codes on the',
+        'same grid, which is a claim that survives being looked at. And the',
+        'caching itself is not discarded from the comparison: it is exactly',
+        'what the first protocol measures, on its own author\'s definition, and',
+        'both numbers are reported. The gap between them *is* what the caching',
+        'buys.',
+        '',
+        'Every timed series therefore carries which protocol produced it, and',
+        'series from the two protocols are never drawn on one axes.',
+    ])
+
+
+
 books['10_paper_figures.ipynb'] = notebook(
     "The paper's figures",
     r'''Every figure in [arXiv:1904.12391](https://arxiv.org/abs/1904.12391) is produced here, and only here.
 
 The plotting style is the group's standard `matplotlibrc`, inlined into the setup cell below rather than shipped as a separate file, with its sizes set for figures included at the paper's `\columnwidth`.
 
-Running this notebook writes all fourteen PDFs. Set `NUOSC_PAPER_FIGDIR` to write them straight into the paper's directory.''',
+Running this notebook writes all fifteen PDFs. Set `NUOSC_PAPER_FIGDIR` to write them straight into the paper's directory.''',
     [
+        md(external_code_provenance()),
+        md(convention_matching()),
+        md(reference_precision()),
+        md(external_code_methods()),
+        md(timing_protocols()),
+        code(r'''# The artifacts every figure below is drawn from.
+#
+# These come from the rebuilt pipeline: tests/bench/sweep_accuracy.py for the
+# accuracy axis and tests/bench/run_all.py for the timed axes.  The figures
+# used to read six frozen files written before that pipeline existed, under a
+# shared reference, with one code's Earth model mis-initialised and another's
+# hbar c wrong.  Re-running the notebook would have faithfully reproduced
+# those figures, which is the failure this cell exists to prevent: a missing
+# artifact now raises rather than letting a stale one be plotted.
+import json
+import os
+
+BENCH = os.path.join('..', 'tests', 'bench')
+
+
+def artifact(name, what):
+    """Loads a pipeline artifact, or says exactly how to produce it."""
+    path = os.path.join(BENCH, name)
+    if not os.path.exists(path):
+        raise FileNotFoundError(
+            "%s is missing, so %s cannot be drawn from measured data.\n"
+            "Produce it with:  %s\n"
+            "The figures are deliberately NOT falling back to the pre-rebuild "
+            "files: those were taken under a shared reference and with two "
+            "codes misconfigured." % (path, what,
+                                      'python tests/bench/sweep_accuracy.py'
+                                      if name.startswith('accuracy')
+                                      else 'python tests/bench/run_all.py'))
+    with open(path) as handle:
+        return json.load(handle)
+
+
+#: Channel order in every accuracy artifact, from bench.hpp's contract.
+NUE, NUMU, NUTAU = 0, 1, 2
+
+
+def channel(record, code, knob, which):
+    """Returns one channel of one code's series, as an array."""
+    series = record['series'][code]['by_knob'][str(knob)]
+    return np.array(series['probabilities'])[which::3]
+
+
+ACC_CONST = artifact('accuracy_const.json', 'the constant-density accuracy figure')
+print('accuracy artifacts loaded; basis =', ACC_CONST['profile_basis'],
+      '| codes =', len(ACC_CONST['series']))
+'''),
         code(r'''import earth
 import slabs
 from scipy.linalg import expm
-import json
 import shutil
 from matplotlib.patches import (Rectangle, FancyArrowPatch,
                                 Wedge, Polygon, Circle)
@@ -1621,7 +2467,7 @@ plt.show()'''),
         md('''## Three flavors, four scenarios
 
 Vacuum, constant-density matter, matter with non-standard interactions, and a
-CPT-odd Lorentz invariance-violating background, at $L = 1300$ km. All four use
+CPT-even Lorentz invariance-violating background, at $L = 1300$ km. All four use
 the default parameters in `globaldefs`, so the figure is reproducible from the
 repository alone.'''),
         code(r'''L = 1300.0*KM
@@ -1637,7 +2483,7 @@ p = {
     "NSI": oscprob3nu.probabilities_3nu(
         hamiltonians3nu.hamiltonian_3nu_nsi(
             H_VAC_3NU, E, gd.VCC_EARTH_CRUST, gd.EPS_3), L),
-    "CPT-odd LIV": oscprob3nu.probabilities_3nu(
+    "CPT-even LIV": oscprob3nu.probabilities_3nu(
         hamiltonians3nu.hamiltonian_3nu_liv(
             H_VAC_3NU, E, gd.SXI12, gd.SXI23, gd.SXI13,
             gd.DXICP, gd.B1, gd.B2, gd.B3, gd.LAMBDA), L),
@@ -2230,62 +3076,196 @@ disputed without guessing what was run.'''),
 
 import json
 
+# ---------------------------------------------------------------------------
+# HOW THE REFERENCES IN THESE THREE FIGURES ARE BUILT
+#
+# Every point below is an error against a 50-digit reference.  One procedure
+# builds all of them, and it is applied separately to each code, in that
+# code's OWN constants -- its hbar c, and the normalization it builds V_CC
+# from.  No code is handed rescaled inputs chosen to imitate another code's
+# reference: that matches V_CC but misses the three powers of hbar c that
+# enter through cm^-3, and distorts the chord, which together leave a floor
+# near 1e-6 belonging to neither the code nor its solver.
+#
+# The code is quoted rather than run here: rebuilding these at 50 digits
+# takes minutes per point, and the figures read the frozen JSON instead.
+# Uncomment to regenerate.
+#
+# Constant density (the top panel).  Nothing is approximated -- one matrix
+# exponential in arbitrary precision -- so the reference is exact and the
+# only error a code can show is its own arithmetic:
+#
+#     import sys; sys.path.insert(0, os.path.join('..', 'tests', 'bench'))
+#     import reference, conversions
+#     params = conversions.for_code('nuSQuIDS')      # that code's constants
+#     exact = reference.constant_density(
+#         'nuSQuIDS', energies_gev, l_km=1300.0, density_g_cm3=3.0,
+#         ye=0.5, params=params)
+#
+# Through the Earth (the middle panel).  No exact answer exists, because
+# every code must first approximate the profile.  The reference is a
+# CONVERGED one: the slab product is composed at a ladder of slab counts and
+# Romberg-extrapolated, the error falling as 1/N^2 so that consecutive pairs
+# combine as [4 P(2N) - P(N)]/3:
+#
+#     value, err, table = reference.earth_chord_romberg(
+#         'nuSQuIDS', energy_gev, costhz=-0.9, ye=0.5, params=params,
+#         ladder=(32, 64, 128, 256, 512))
+#
+# The 3+1 panel is built by tests/prem_scan.py, which carries a second,
+# independent referee: an adaptive integration of dnu/dx = -i H(x) nu along
+# the continuous profile, restarted at every density jump so that no step
+# straddles one.  It shares no machinery with the slab product, so agreement
+# between the two is a check on both:
+#
+#     import prem_scan
+#     a = prem_scan.reference(energy_ev, n_flavors)        # Richardson
+#     b = prem_scan.ode_reference(energy_ev, n_flavors)    # independent ODE
+#     assert abs(a - b) < 1.0e-10
+# ---------------------------------------------------------------------------
+
 with open(os.path.join('..', 'tests', 'speed_accuracy.json')) as handle:
     sa = json.load(handle)
+
+# The second-order expansion is measured here now, like everything else in
+# this figure: tests/bench/adapters/second_order.py evaluates the alpha-s13
+# series the paper cites, in this library's conventions, against this
+# library's reference.  It used to be a hand-carried point with no
+# generator, no version and no formula recorded.
 
 # The same colours, markers and layout as the two Earth planes, so that a
 # code keeps its identity across all three.  This library shows only the
 # batched-plus-kernel point: the other two routes are what the performance
 # figure is for, and here they would be three labels on one horizontal line.
+# This library first, then the rest.  dict order is legend order.
+#
+# NuFast-Earth is measured at constant density -- it does have that mode,
+# and the artifact is kept -- but it is not drawn here: this figure is the
+# constant-density comparison and an Earth propagator does not belong on
+# it.  The one thread variant is not drawn either, for a plainer reason:
+# at constant density it lands at 1.1704 us against 1.1703, so it was a
+# second legend entry sitting exactly underneath the first marker.
 STYLE = {"NuOscProbExact": ("-o", "C3", 4.0),
          "nuSQuIDS": ("-v", "C2", 3.6),
          "NuFast-LBL": ("-D", "C4", 3.2),
          "GLoBES": ("-*", "C6", 6.0),
          "Prob3++": ("-P", "C5", 4.4),
          "Second-order expansion": ("-s", "C1", 3.6)}
-DRAWN = {"NuOscProbExact": ("Array + kernel",)}
+
+# Only the fastest point at each accuracy is drawn.  Four of these codes
+# have an INERT dial here: at constant density there is no profile to
+# subdivide, so every shell or slab setting returns the same answer and the
+# sweep is a stack of points at one height.  Drawing all of them would say
+# nothing; drawing the slowest would report the code as slower than anyone
+# would ever run it.  NuFast-LBL and NuFast-Earth keep their curves, since
+# their dial is the eigenvalue solve and does move the accuracy.
+def const_points(name):
+    r"""The points drawn for `name` on the constant-density plane.
+
+    Which points are shown, and in what order, lives here rather than in
+    the plotting loop because two figures draw this panel -- this one and
+    the stacked three-panel figure -- and they must agree about the data.
+    The drawing differs between them; the selection must not.
+
+    Ordered along the curve by error, not by knob value.  Sorting by knob
+    put N_Newton = -1 -- the exact mode, at the accurate end -- before 0,
+    the least accurate, so the polyline ran bottom, top, bottom and drew a
+    closed loop that read as two separate NuFast-LBL curves.
+    """
+    series = next((x for x in sa["series"] if x["name"] == name), None)
+    if series is None:
+        return []
+    points = [q for q in series["points"]
+              if q.get("best_at_this_accuracy", True)
+              and q["max_abs_error"] is not None]
+    points.sort(key=lambda q: (-q["max_abs_error"], q["us_per_probability"]))
+    return points
+
 
 fig, ax = plt.subplots(figsize=FIGSIZE_SQUARE)
-for series in sa["series"]:
-    marker, colour, size = STYLE[series["name"]]
-    keep = DRAWN.get(series["name"])
-    points = [q for q in series["points"]
-              if keep is None or q["label"] in keep]
+anchor = {}
+for name in STYLE:
+    points = const_points(name)
+    if not points:
+        continue
+    marker, colour, size = STYLE[name]
     t = [q["us_per_probability"] for q in points]
     e = [q["max_abs_error"] for q in points]
-    kw = dict(ms=size, color=colour, label=series["name"], zorder=4)
-    if series["name"] == "NuOscProbExact":
+    kw = dict(ms=size, color=colour, label=name, zorder=4)
+    if name.startswith("NuOscProbExact"):
         kw.update(mfc="white", mew=1.0, zorder=5)
     ax.loglog(t, e, marker, **kw)
+    for q in points:
+        anchor[(name, q["label"])] = (
+            q["us_per_probability"], q["max_abs_error"], colour)
 
 # What is varied along each curve, at both ends where there are two.
-for lab, x, y, dx, dy, c, ha in (
-        (r"tol $10^{-4}$", 51.61, 1.83e-04, 0, 7, "C2", "center"),
-        (r"$10^{-12}$", 189.37, 1.89e-08, 7, -1, "C2", "left"),
-        (r"$N_{\rm Newton} = 0$", 0.044, 1.53e-05, 7, -2, "C4", "left"),
-        (r"$3$", 0.066, 8.30e-12, 7, -2, "C4", "left")):
+# Anchored to the measured points rather than to typed coordinates: the
+# previous version of this figure carried four pairs of numbers copied from
+# a run nobody could reproduce, and one of them -- NuFast-LBL at
+# N_Newton = 3 -- said 8.3e-12 where the measurement says 7.6e-16.
+for (name, label), lab, dx, dy, ha in (
+        # The dial's own values, as the paper labels them.  "LBL exact" and
+        # "Earth exact" were wording invented here, and the second existed
+        # only because NuFast-Earth had been added to this figure.
+        # 2 and 3 to the left of their markers, -1 to the right: the three
+        # sit within a hair of each other and overlap if placed the same way.
+        (("NuFast-LBL", "0"), r"$N_{\rm Newton} = 0$", 7, -2, "left"),
+        (("NuFast-LBL", "1"), "1", 7, -2, "left"),
+        (("NuFast-LBL", "2"), "2", -7, 3, "right"),
+        (("NuFast-LBL", "3"), "3", -7, -7, "right"),
+        (("NuFast-LBL", "-1"), r"$-1$", 7, -2, "left"),
+        (("nuSQuIDS", "1e-03"), r"tol $10^{-3}$", 6, 2, "left"),
+        # Left of its marker: at the tight end of the curve this label ran
+        # off the right edge of the axes.
+        (("nuSQuIDS", "1e-12"), r"$10^{-12}$", -7, -1, "right")):
+    if (name, label) not in anchor:
+        continue
+    x, y, c = anchor[(name, label)]
     ax.annotate(lab, xy=(x, y), xytext=(dx, dy), textcoords="offset points",
                 fontsize=5.2, color=c, ha=ha)
 
 ax.axhline(2.2e-16, color="0.5", ls=":", lw=0.7, zorder=1)
-ax.text(2.6e-2, 3.2e-16, "Double precision", fontsize=5.4, color="0.4")
+ax.text(2.0e-1, 3.0e-16, "Double precision", fontsize=5.4, color="0.4")
 # This panel's data does not leave the same corners free as the Earth ones:
-# the single NuOscProbExact point sits at the bottom left and nuSQuIDS runs
-# along the top right, so the subtitle goes just above the former and the
-# legend into the empty bottom right.
-ax.text(0.03, 0.17, "Constant density:  $L = 1300$ km,\n"
+# Placed against where the points actually are, which the measurement
+# decides and not this cell: five codes cluster along the double-precision
+# floor at the bottom left, NuFast-LBL climbs the left edge as its Newton
+# steps are removed, and nuSQuIDS sits alone in the middle right.  That
+# leaves the top right empty for the legend.  The previous version of this
+# block placed both from a layout the old data had, and also carried an
+# "Array + kernel" label pinned to a point -- 0.230 us, 9.71e-16 -- that no
+# longer exists in any measurement.
+# Middle left.  The upper right was chosen when nuSQuIDS was a single
+# point; restoring its tolerance dial turned it into a curve that climbs
+# straight through that corner, and the caption sat on it.  This band --
+# right of NuFast-LBL, above the three codes whose dial is inert here, left
+# of where nuSQuIDS descends -- is the one region nothing occupies.
+ax.text(0.15, 0.94, "Constant density:  $L = 1300$ km,\n"
         r"$E = 0.6$--$20$ GeV,  $\rho = 3$ g cm$^{-3}$",
-        transform=ax.transAxes, ha="left", va="bottom", fontsize=6.0,
-        color="0.2", linespacing=1.4)
-ax.annotate("Array + kernel", xy=(0.230, 9.71e-16), xytext=(8, -1),
-            textcoords="offset points", fontsize=5.2, color="C3", ha="left")
+        transform=ax.transAxes, ha="left", va="top", fontsize=6.0,
+        color="0.2", linespacing=1.4,
+        bbox=dict(boxstyle="round,pad=0.35", facecolor="white",
+                  edgecolor="black", linewidth=0.6))
+ax.set_yticks([10.0**k for k in range(-16, -1, 2)])
 ax.set_xlabel(r"Time per probability [$\mu$s]")
+# The axis named ONE channel and the code plotted the largest of
+# three.  Measured, the two are not close: the appearance channel is
+# the largest for none of GLoBES's nine settings, none of this
+# library's twelve and none of Prob3++'s nine -- GLoBES plots
+# 5.84e-15 where its appearance error is 1.76e-16, a factor of
+# thirty-three.  The label is corrected rather than the data,
+# because the largest of the three is the stricter test and the one
+# every number in these figures was measured against.
 ax.set_ylabel(r"Error vs.\ a 50-digit reference,  "
-              r"max $|\Delta P_{\nu_\mu \to \nu_e}|$")
-ax.set_xlim(2.0e-2, 1.0e3)
+              r"$\max_\alpha |\Delta P_{\nu_\mu \to \nu_\alpha}|$")
+ax.set_xlim(3.0e-2, 2.0e2)
+# To 2e-2, not 3e-4.  The second-order expansion sits at 6.5e-3 and
+# nuSQuIDS's loosest tolerance at 9.3e-4 -- BOTH were above the old top,
+# so nuSQuIDS's first point was being clipped off the figure entirely.
 ax.set_ylim(1.0e-16, 1.0e-2)
 leg = ax.legend(loc="lower right", bbox_to_anchor=(0.995, 0.02),
-                fontsize=6.0)
+                fontsize=5.6, framealpha=0.85)
 leg.get_frame().set_linewidth(0.7)
 fig.tight_layout(pad=0.3)
 fig.savefig(os.path.join(FIGDIR, "speed_accuracy.pdf"))
@@ -2361,8 +3341,15 @@ The external numbers are frozen in `tests/prem_speed_accuracy.json`.'''),
 #   figure that no installation of nuCraft returns.
 # ---------------------------------------------------------------------------
 
+# The 3+1 panel only: four flavors are measured by tests/prem_scan.py and
+# by nothing else.  The three-flavor panel below comes from the benchmark
+# pipeline instead, and the two are kept in separate files on purpose --
+# they are different measurement sets, against different references, and a
+# single file holding both invites them being read as one.
 with open(os.path.join('..', 'tests', 'prem_speed_accuracy.json')) as handle:
     prem = json.load(handle)
+with open(os.path.join('..', 'tests', 'bench', 'earth_plane.json')) as handle:
+    earth_plane_data = json.load(handle)
 
 # The colours and markers of the constant-density plane, so that a code
 # keeps its identity between the two figures.
@@ -2378,16 +3365,59 @@ PREM_STYLE = {"NuOscProbExact (tolerance)": ("-o", "C3", 4.0),
               "NuOscProbExact (double-double)": ("--s", "C3", 3.2),
               "NuOscProbExact (eigensolver)": (":^", "C1", 3.8),
               "nuSQuIDS": ("-v", "C2", 3.6),
+              # Two lines for one code, because one number cannot describe
+              # it here.  The solid one is the cost when a fit moves a
+              # parameter its cache does not cover; the broken one is a
+              # delta_CP scan, which invalidates none of the layer work and
+              # so is flat at 0.057 us however finely the Earth is cut.
+              # Same colour and marker: it is the same code either way.
               "NuFast-Earth": ("-D", "C4", 3.2),
+              # A hexagon, not a diamond: sharing NuFast-Earth's colour
+              # AND its marker made the two curves hard to tell apart.
+              "NuFast-Earth (dCP only)": ("--h", "C4", 3.4),
               "GLoBES": ("-*", "C6", 6.0),
               "Prob3++": ("-P", "C5", 4.4),
               "nuCraft": ("-s", "C0", 3.4)}
 
 
-def prem_plane(panel, annotations, subtitle, xlim, ylim, outfile,
-               dial_at=None, legend_loc="lower left",
-               legend_anchor=None, only=None, relabel=None):
-    """One speed-accuracy plane: time across, error against the referee up.
+def by_dial(points):
+    r"""Returns `points` in the order the DIAL sets, not the order of cost.
+
+    The stored order is by cost, which is right whenever the cost actually
+    moves: it puts a curve's cheap end on the left and keeps it there.  It
+    is wrong for a series whose cost does not move.  NuFast-Earth's
+    delta_CP curve spans 1.1x in cost -- 0.05745 to 0.06301 us -- against
+    15x to 7880x for every other series here, and consecutive points are
+    separated by less than their own standard deviations.  Sorting that by
+    cost sorts it by measurement noise: it scrambled the layer counts into
+    16, 4, 64, 256, 8192, 4096, 1024, 1, so the line ran down to 8.0e-8 and
+    back up to 1.8e-1 -- a U that reads as two curves and is entirely an
+    artifact of the ordering.  By the dial it is what it should be, a
+    vertical line: the cost pinned while the error falls six orders.
+
+    A tolerance runs loose to tight and so sorts descending; a shell or
+    slab count sorts ascending.  Labels that are not numbers keep the order
+    they came in.
+    """
+    try:
+        values = [float(q["label"]) for q in points]
+    except (ValueError, KeyError):
+        return list(points)
+    return sorted(points, key=lambda q: float(q["label"]),
+                  reverse=min(values) < 1.0)
+
+
+def prem_axes(ax, panel, annotations, subtitle, ylim, dial_at=None,
+              legend_loc="lower left", legend_anchor=None, only=None,
+              relabel=None, label_at=(0.03, 0.03, "left", "bottom"),
+              legend_ncol=1, legend_fontsize=6.0, annot_fontsize=5.2):
+    r"""Draws one speed-accuracy plane onto `ax`, and sets only its y range.
+
+    Split out of `prem_plane` so the stacked three-panel figure and the
+    single-panel figures draw through ONE routine.  They are the same
+    measurements shown twice, and two copies of this code would eventually
+    disagree about which.  The caller owns the x range, because the stacked
+    figure shares one across all three panels.
 
     `only` restricts which series are drawn, and `relabel` renames them in
     the legend.  Both exist for the four-flavor panel, where the two root
@@ -2395,7 +3425,6 @@ def prem_plane(panel, annotations, subtitle, xlim, ylim, outfile,
     curves coincide to the last bit, so plotting both put two labels on one
     line.
     """
-    fig, ax = plt.subplots(figsize=FIGSIZE_SQUARE)
     wanted = {}
     relabel = relabel or {}
     order = list(PREM_STYLE)
@@ -2404,23 +3433,31 @@ def prem_plane(panel, annotations, subtitle, xlim, ylim, outfile,
         if only is not None and series["name"] not in only:
             continue
         marker, colour, size = PREM_STYLE[series["name"]]
-        t = [q["us_per_probability"] for q in series["points"]]
-        e = [q["max_abs_error"] for q in series["points"]]
+        pts = by_dial(series["points"])
+        t = [q["us_per_probability"] for q in pts]
+        e = [q["max_abs_error"] for q in pts]
         kw = dict(ms=size, color=colour,
                   label=relabel.get(series["name"], series["name"]), zorder=4)
         if series["name"].startswith("NuOscProbExact"):
             kw.update(mfc="white", mew=1.0, zorder=5)
         ax.loglog(t, e, marker, **kw)
-        for q in series["points"]:
+        for q in pts:
             key = relabel.get(series["name"], series["name"])
             wanted[(key, q["label"])] = (
                 q["us_per_probability"], q["max_abs_error"], colour)
 
-    for (name, label), text, dx, dy, ha in annotations:
+    for item in annotations:
+        (name, label), text, dx, dy, ha = item[:5]
         x, y, colour = wanted[(name, label)]
+        extra = {}
+        # A sixth element asks for a thin leader line, for a label that has
+        # to sit well away from its marker to stay off the curves.
+        if len(item) > 5 and item[5]:
+            extra["arrowprops"] = dict(arrowstyle="-", linewidth=0.5,
+                                       color=colour, shrinkA=1.0, shrinkB=2.5)
         ax.annotate(text, xy=(x, y), xytext=(dx, dy),
-                    textcoords="offset points", fontsize=5.2, color=colour,
-                    ha=ha)
+                    textcoords="offset points", fontsize=annot_fontsize,
+                    color=colour, ha=ha, **extra)
 
     # What the numbers along this library's curve are, said once -- but only
     # where they are unambiguous.  In the three-flavor panel three other
@@ -2431,39 +3468,73 @@ def prem_plane(panel, annotations, subtitle, xlim, ylim, outfile,
     # Bottom left is the one corner no curve reaches in either panel, and
     # the legend needs the top right: with four to seven entries it was
     # otherwise sitting on top of nuCraft.
-    ax.text(0.03, 0.03, subtitle, transform=ax.transAxes, ha="left",
-            va="bottom", fontsize=6.0, color="0.2", linespacing=1.4)
-    ax.set_xlabel(r"Time per probability [$\mu$s]")
-    ax.set_ylabel(r"Error vs.\ converged solution,  "
-                  r"max $|\Delta P_{\nu_\mu \to \nu_\mu}|$")
-    ax.set_xlim(*xlim)
+    lx, ly, lha, lva = label_at
+    ax.text(lx, ly, subtitle, transform=ax.transAxes, ha=lha,
+            va=lva, fontsize=6.0, color="0.2", linespacing=1.4,
+            bbox=dict(boxstyle="round,pad=0.35", facecolor="white",
+                      edgecolor="black", linewidth=0.6))
     ax.set_ylim(*ylim)
     leg = ax.legend(loc=legend_loc, bbox_to_anchor=legend_anchor,
-                    fontsize=6.0)
+                    fontsize=legend_fontsize, framealpha=0.85,
+                    ncol=legend_ncol)
     leg.get_frame().set_linewidth(0.7)
+
+
+def prem_plane(panel, annotations, subtitle, xlim, ylim, outfile,
+               dial_at=None, legend_loc="lower left",
+               legend_anchor=None, only=None, relabel=None):
+    r"""One speed-accuracy plane on its own axes, written to `outfile`."""
+    fig, ax = plt.subplots(figsize=FIGSIZE_SQUARE)
+    prem_axes(ax, panel, annotations, subtitle, ylim, dial_at=dial_at,
+              legend_loc=legend_loc, legend_anchor=legend_anchor,
+              only=only, relabel=relabel)
+    ax.set_xlabel(r"Time per probability [$\mu$s]")
+    ax.set_ylabel(r"Error vs.\ converged solution,  "
+                  r"$\max_\alpha |\Delta P_{\nu_\mu \to \nu_\alpha}|$")
+    ax.set_xlim(*xlim)
     fig.tight_layout(pad=0.3)
     fig.savefig(os.path.join(FIGDIR, outfile))
     plt.show()
 
 
 prem_plane(
-    prem["three_flavor"],
-    [(("NuOscProbExact, rtol", "3e+00"), r"rtol $=3$", 7, -2, "left"),
+    earth_plane_data,
+    [(("NuOscProbExact, rtol", "1e-03"), r"rtol $=10^{-3}$", 7, -2, "left"),
      (("NuOscProbExact, rtol", "1e-05"), r"$10^{-5}$", 5, -6, "left"),
      ((r"NuOscProbExact, $N_{\rm slabs}$", "1"), r"$N_{\rm slabs}=1$",
       2, 7, "left"),
      ((r"NuOscProbExact, $N_{\rm slabs}$", "256"), "256", -5, -4, "right"),
-     (("nuSQuIDS", "1e-03"), r"tol $10^{-3}$", 6, -1, "left"),
-     (("nuSQuIDS", "1e-12"), r"$10^{-12}$", 7, -1, "left"),
-     (("NuFast-Earth", "1"), r"$N_{\rm shells}=1$", 2, 3, "left"),
-     (("NuFast-Earth", "256"), "256", 4, 4, "left")],
+     # Only the tight end is labelled: nuSQuIDS's loosest points all fall
+     # inside the legend's footprint, so no offset rescues a label there
+     # while the legend stays on the axes.  The dial's name travels with
+     # the surviving label instead.
+     (("nuSQuIDS", "1e-12"), r"tol $10^{-12}$", 7, -1, "left"),
+     (("NuFast-Earth", "1"), r"$N_{\rm layers}=1$", 2, 3, "left"),
+     (("NuFast-Earth", "256"), "256", 4, 4, "left"),
+     # Keyed by the RELABELLED name: prem_plane builds its annotation table
+     # after relabel is applied, so asking for the raw series name raises.
+     ((r"NuFast-Earth ($\delta_{\rm CP}$ only)", "256"),
+      r"$\delta_{\rm CP}$ only", 6, 0, "left")],
     "PREM, three flavors:  " + r"$\cos\theta_z = -0.9$," + "\n"
     r"$E = 3$--$40$ GeV,  $L = 11468$ km",
-    (1.0e0, 1.0e5), (2.0e-8, 2.0e-1),
+    # Down to 3e-2 because NuFast-Earth belongs there.  At 1e0 its whole
+    # series -- five points between 0.057 and 0.066 us -- fell off the left
+    # edge, so the code appeared in the legend and nowhere on the plot.
+    # Bottom at 8e-11.  The ladder now runs past 8192, and two of the
+    # curves turn around there: NuOscProbExact is best at 1.6e-10 (24576
+    # slabs) and GLoBES at 3.5e-10 (12288), and both then bend back up
+    # AND to the right -- more slabs, more time, worse answer.  Once the
+    # discretisation error falls below the round-off accumulated over N
+    # slab products, refining costs and measures worse.  The reference is
+    # 3.3e-17, seven orders below either turn, so that bend is the codes'
+    # own double arithmetic and not the yardstick.
+    (3.0e-2, 1.0e5), (8.0e-11, 2.0e-1),
     "prem_speed_accuracy.pdf", None,
     legend_loc="upper right", legend_anchor=(0.995, 0.995),
     relabel={"NuOscProbExact": r"NuOscProbExact, $N_{\rm slabs}$",
-             "NuOscProbExact (tolerance)": "NuOscProbExact, rtol"})
+             "NuOscProbExact (tolerance)": "NuOscProbExact, rtol",
+             "NuFast-Earth (dCP only)":
+                 r"NuFast-Earth ($\delta_{\rm CP}$ only)"})
 
 prem_plane(
     prem["sterile_3plus1"],
@@ -2476,7 +3547,11 @@ prem_plane(
      (("nuSQuIDS", "1e-12"), r"$10^{-12}$", 7, -1, "left")],
     r"PREM, $3+1$:  $\cos\theta_z = -0.9$," + "\n"
     r"$E = 0.3$--$30$ TeV,  $\Delta m_{41}^2 = 1$ eV$^2$",
-    (1.0e1, 1.0e5), (2.0e-8, 2.0e-1),
+    # Bottom at 2e-11.  Scoring each code against a referee in its own
+    # constants, and building the sterile referee from 512 slabs rather than
+    # 128, moved this panel's floor from 1e-9 to 4e-11: at 2e-8 the lower
+    # half of every curve fell off the axis.
+    (1.0e1, 1.0e5), (2.0e-11, 2.0e-1),
     "prem_speed_accuracy_3plus1.pdf", None,
     legend_loc="upper right", legend_anchor=(0.995, 0.995),
     # Both root strategies are frozen in the data; only the default is
@@ -2487,6 +3562,83 @@ prem_plane(
     relabel={"NuOscProbExact (double-double)":
              r"NuOscProbExact, $N_{\rm slabs}$",
              "NuOscProbExact (tolerance)": "NuOscProbExact, rtol"})'''),
+    md(r'''## What it costs to move a different parameter
+
+A speed-accuracy plane assumes one number describes a code's cost. For most
+of these codes it does. For one it does not, and the difference is nearly
+four orders of magnitude.
+
+Each of these codes is timed over a scan, with everything invariant hoisted
+out before the clock starts, so what remains inside the timed region is the
+one parameter a fit is moving. Which parameter that is turns out to matter.
+A code that caches work keyed on the oscillation parameters does not have to
+redo the same work for every one of them: `delta_CP` enters only through the
+mixing matrix, while `Dmsq31` enters the eigenvalues of every layer.
+
+So a scan over `delta_CP` alone is the most favourable measurement such a
+code can be given, and reporting it as *the* amortized cost would flatter it
+in the same way that timing a batched code one point at a time would
+penalise it. Both are measured here, at the same precision setting, differing
+in nothing else.'''),
+    code(r'''# Paired at the same code, grid and knob: the two cells differ only in
+# which parameter moves inside the timed region.
+with open(os.path.join('..', 'tests', 'bench',
+                       'scan_sensitivity.json')) as handle:
+    sens = json.load(handle)
+
+GRID_TITLE = {"CHORD/12x1": r"PREM chord, $\cos\theta_z=-0.9$, 12 energies",
+              "OSC/100x100": r"Oscillogram, $100\times100$",
+              "CONST/60E": r"Constant density, 60 energies"}
+ORDER = ["CHORD/12x1", "OSC/100x100", "CONST/60E"]
+grids = [g for g in ORDER if sens["grids"].get(g)]
+
+fig, axes = plt.subplots(len(grids), 1, figsize=(COLW, 0.95*COLW*len(grids)),
+                         squeeze=False)
+for ax, grid in zip(axes[:, 0], grids):
+    rows = sens["grids"][grid]
+    y = np.arange(len(rows))
+    # Sorted by ratio, so the code the effect belongs to is the top row and
+    # the reader does not have to hunt for it.
+    ax.barh(y + 0.19, [r["dcp_us"] for r in rows], height=0.36,
+            color="C0", label=r"scanning $\delta_{\rm CP}$")
+    ax.barh(y - 0.19, [r["dmsq31_us"] for r in rows], height=0.36,
+            color="C3", label=r"scanning $\Delta m^2_{31}$")
+    for i, r in enumerate(rows):
+        # The ratio is the whole point, so it is written on the figure
+        # rather than left to be read off a log axis.
+        ax.text(max(r["dcp_us"], r["dmsq31_us"])*1.6, i,
+                (r"$%.0f\times$" % r["ratio"]) if r["ratio"] >= 10
+                else (r"$%.2f\times$" % r["ratio"]),
+                va="center", fontsize=5.0,
+                color="C3" if r["ratio"] > 2 else "0.35")
+    ax.set_yticks(y)
+    ax.set_yticklabels([r["code"] for r in rows], fontsize=5.4)
+    # Sorted by ratio, and inverted so that the largest is the TOP row:
+    # barh puts index zero at the bottom, which buried the one code the
+    # figure exists to show under the five that show nothing.
+    ax.invert_yaxis()
+    ax.set_xscale("log")
+    ax.set_xlim(min(r["dcp_us"] for r in rows)*0.30,
+                max(r["dmsq31_us"] for r in rows)*12)
+    ax.tick_params(axis="x", labelsize=5.4)
+    # As a title rather than inside the axes, where it landed on top of the
+    # ratio of whichever code sat in the corner.
+    ax.set_title(GRID_TITLE.get(grid, grid), fontsize=5.4, color="0.2",
+                 pad=2.0)
+    ax.grid(axis="x", lw=0.4, alpha=0.35)
+    ax.set_axisbelow(True)
+
+axes[-1, 0].set_xlabel(r"Time per probability [$\mu$s]", fontsize=6.0)
+leg = axes[0, 0].legend(loc="lower right", fontsize=5.4, framealpha=0.95)
+leg.get_frame().set_linewidth(0.7)
+fig.tight_layout(pad=0.3)
+fig.savefig(os.path.join(FIGDIR, "scan_sensitivity.pdf"))
+plt.show()
+
+worst = max((r for g in sens["grids"].values() for r in g),
+            key=lambda r: r["ratio"])
+print("largest parameter sensitivity: %s, %.0fx" % (worst["code"],
+                                                    worst["ratio"]))'''),
     md(r'''## Performance
 
 Three ways of evaluating the same scan: one point at a time, the whole stack
@@ -2504,41 +3656,23 @@ point is what a parameter scan actually pays.'''),
 # of two different on a workstation.  The ratios between routes, which is
 # what these cells are actually about, are far more stable than the
 # absolute numbers and are what the text quotes.
-import time
-import fastkernels
+# Read, not measured.  These curves used to be timed as the notebook ran,
+# which meant the figure moved every time it was redrawn: over one evening's
+# rebuilds the same measurement gave array gains of 29, 33 and 35 times and
+# kernel gains between 8.0 and 9.6, while the text quoted fixed numbers.  A
+# figure that changes when nothing changed cannot be shipped, and no prose
+# can be kept true against it.  So the measurement is made deliberately, by
+# tests/measure_performance_scaling.py on a machine chosen to be quiet, and
+# frozen beside the other datasets the figures read.  Re-running that script
+# is how these numbers change; redrawing the figure is not.
+with open(os.path.join('..', 'tests', 'performance_scaling.json')) as handle:
+    scaling = json.load(handle)
 
-
-def best_of(func, repeat=5):
-    # The minimum, not the mean: timing noise is one-sided, so the fastest
-    # run is the one least polluted by whatever else the machine was doing.
-    best = float("inf")
-    for _ in range(repeat):
-        t0 = time.perf_counter()
-        func()
-        best = min(best, time.perf_counter()-t0)
-    return best
-
-
-L = 1300.0*KM
-sizes = [1, 3, 10, 30, 100, 300, 1000, 3000, 10000, 30000]
-rows = []
-for n in sizes:
-    Hs = hamiltonians3nu.hamiltonian_3nu_matter(
-        H_VAC_3NU, np.logspace(-1.0, 1.5, n)*GEV, gd.VCC_EARTH_CRUST)
-    fastkernels.USE_NUMBA = False
-    t_loop = best_of(lambda: [oscprob3nu.probabilities_3nu(h, L)
-                              for h in Hs], repeat=3)
-    t_array = best_of(lambda: oscprob3nu.probabilities_3nu(Hs, L))
-    if fastkernels.HAVE_NUMBA:
-        fastkernels.USE_NUMBA = True
-        oscprob3nu.probabilities_3nu(Hs, L)          # warm the compiler
-        t_numba = best_of(lambda: oscprob3nu.probabilities_3nu(Hs, L))
-        fastkernels.USE_NUMBA = False
-    else:
-        t_numba = np.nan
-    rows.append((n, t_loop, t_array, t_numba))
-rows = np.array(rows)
-fastkernels.USE_NUMBA = fastkernels.HAVE_NUMBA
+rows = np.array([[n,
+                  scaling["seconds"]["loop"][i],
+                  scaling["seconds"]["array"][i],
+                  scaling["seconds"]["numba"][i]]
+                 for i, n in enumerate(scaling["sizes"])], dtype=float)
 
 print("%8s %12s %12s %12s" % ("N", "loop [us/pt]", "array [us/pt]",
                               "numba [us/pt]"))
@@ -2561,31 +3695,41 @@ fig, (axt, ax) = plt.subplots(
 # left out to keep the legend readable.  Marker and colour match the two
 # Earth planes, so a reader tracks one code across three figures.
 for col, style, size, lab in (
-        (3, "-o", 3.4, "NuOscProbExact, array + kernel"),
-        (1, "-^", 3.6, "NuOscProbExact, one at a time")):
-    if col == 3 and not fastkernels.HAVE_NUMBA:
+        (3, "-o", 3.4, "NuOscProbExact, batched"),
+        (1, "-^", 3.6, r"NuOscProbExact, 1 $E$ / call")):
+    # Keyed off the frozen run, not this machine: the curve belongs to
+    # the measurement, not to whoever is redrawing it.
+    if col == 3 and not scaling["environment"]["have_numba"]:
         continue
     kw = dict(ms=size, color="C3", mfc="white", mew=0.9, zorder=5)
     axt.loglog(rows[:, 0], rows[:, col]*1e3, style, label=lab, **kw)
     ax.loglog(rows[:, 0], rows[:, col]/rows[:, 0]*1e6, style, **kw)
 
-# The external codes.  None of them batches: GLoBES, Prob3++ and NuFast-LBL
-# take one energy per call, so their cost per probability is flat in N, and
-# that flatness is the point of the lower panel.  nuSQuIDS has a
-# multiple-energy mode and still does not fall, because what it amortises is
-# the solver setup and not the integration.
+# The external codes.  GLoBES and Prob3++ take one energy per call, so
+# their cost per probability is flat in N, and that flatness is what the
+# lower panel is for.  NuFast-LBL is NOT among them: it has taken a vector
+# of energies since v2.0.0, and the earlier version of this figure timed it
+# one energy at a time and then said in this comment that it could not do
+# otherwise.  Both curves are drawn now -- the batched entry point and the
+# same code called in a loop -- so what batching is worth to it is measured
+# here rather than asserted.  nuSQuIDS has a multiple-energy mode and still
+# does not fall, because what it amortises is the solver setup and not the
+# integration.
 for key, style, col, size, lab in (
-        ("nusquids", "-v", "C2", 2.6, "nuSQuIDS"),
-        ("nufast_lbl", "-D", "C4", 2.4,
-         r"NuFast-LBL, $N_{\rm Newton} = 0$"),
-        ("nufast_lbl_n2", "--D", "C4", 2.4,
-         r"NuFast-LBL, $N_{\rm Newton} = 2$"),
-        ("globes", "-*", "C6", 4.4, "GLoBES"),
-        ("prob3pp", "-P", "C5", 3.2, "Prob3++")):
-    n = np.array(other[key]["sizes"], dtype=float)
-    t = np.array(other[key]["seconds"])
+        ("nuSQuIDS", "-v", "C2", 2.6, "nuSQuIDS"),
+        ("NuFast-LBL", "-D", "C4", 2.4,
+         r"NuFast-LBL, batched"),
+        ("NuFast-LBL (looped)", "--D", "C4", 2.4,
+         r"NuFast-LBL, 1 $E$ / call"),
+        ("NuFast-Earth", "-X", "C7", 3.0, "NuFast-Earth"),
+        ("GLoBES", "-*", "C6", 4.4, "GLoBES"),
+        ("Prob3++", "-P", "C5", 3.2, "Prob3++")):
+    if key not in other["series"]:
+        continue
+    n = np.array(other["series"][key]["sizes"], dtype=float)
+    t = np.array(other["series"][key]["seconds"])
     kw = dict(ms=size, color=col)
-    if key == "nufast_lbl_n2":
+    if key.endswith("(looped)"):
         kw.update(mfc="white", mew=0.8)
     axt.loglog(n, t*1e3, style, label=lab, **kw)
     ax.loglog(n, t/n*1e6, style, **kw)
@@ -2714,7 +3858,7 @@ p2 = {
     "NSI": oscprob2nu.probabilities_2nu(
         hamiltonians2nu.hamiltonian_2nu_nsi(
             H2_VAC, E, gd.VCC_EARTH_CRUST, gd.EPS_2), L),
-    "CPT-odd LIV": oscprob2nu.probabilities_2nu(
+    "CPT-even LIV": oscprob2nu.probabilities_2nu(
         hamiltonians2nu.hamiltonian_2nu_liv(
             H2_VAC, E, gd.SXI12, gd.B1, gd.B3, gd.LAMBDA), L),
 }
@@ -2734,6 +3878,188 @@ framed(axes[0], loc="lower right")
 axes[-1].set_xlabel("Neutrino energy [GeV]")
 fig.tight_layout(pad=0.3)
 fig.savefig(os.path.join(FIGDIR, "prob_2nu_vs_energy_compare.pdf"))
+plt.show()'''),
+    md(r'''## The three speed-accuracy planes together
+
+The same three measurements as above, stacked on one common time axis so
+that a cost can be read across the three setups rather than within one.
+Nothing is re-measured: the panels draw from the same files and, for the
+selection and the ordering, through the same routines.'''),
+    code(r'''# The paper's \textwidth for elsarticle 5p twocolumn, so this is a
+# figure* spanning both columns.  COLW above is \columnwidth.
+FIGW_WIDE = 469.75/72.27
+
+# One x range for all three, the union of what the panels reach.  It costs
+# the outer two panels some width -- constant density fills 47% of it and
+# the 3+1 panel 61%, against 95% for the PREM panel -- and buys the thing
+# the separate figures cannot show: 0.06 us for a cached NuFast-Earth and
+# 6e4 us for nuCraft are the same distance apart in every panel.
+#
+# It runs to 6e5 and not 1e5 because 1e5 silently dropped six MEASURED
+# points off the right edge: Prob3++ at 49152 and 65536 (1.1e5 and 1.5e5
+# us), GLoBES at 32768, 49152 and 65536 (2.5e5 to 5.0e5), and the sterile
+# panel's rtol 1e-8 (3.2e5).  Three of those are GLoBES's most accurate
+# settings, so the cut was not cosmetic.
+XLIM_ALL = (3.0e-2, 6.0e5)
+LABEL_TR = (0.985, 0.95, "right", "top")
+
+fig, axes = plt.subplots(3, 1, sharex=True, figsize=(FIGW_WIDE, 6.46))
+
+anchor = {}
+for name in STYLE:
+    points = const_points(name)
+    if not points:
+        continue
+    marker, colour, size = STYLE[name]
+    kw = dict(ms=size, color=colour, label=name, zorder=4)
+    if name.startswith("NuOscProbExact"):
+        kw.update(mfc="white", mew=1.0, zorder=5)
+    axes[0].loglog([q["us_per_probability"] for q in points],
+                   [q["max_abs_error"] for q in points], marker, **kw)
+    for q in points:
+        anchor[(name, q["label"])] = (
+            q["us_per_probability"], q["max_abs_error"], colour)
+for (name, label), lab, dx, dy, ha in (
+        (("NuFast-LBL", "0"), r"$N_{\rm Newton} = 0$", 6.0, -1.5, "left"),
+        (("NuFast-LBL", "1"), "1", 7, -2, "left"),
+        (("NuFast-LBL", "2"), "2", -4, 2, "right"),
+        (("NuFast-LBL", "3"), "3", 4.2, 4.1, "right"),
+        (("NuFast-LBL", "-1"), r"$-1$", 5.6, -2.0, "left"),
+        (("nuSQuIDS", "1e-03"), r"tol $= 10^{-3}$", 6.0, -1.8, "left"),
+        (("nuSQuIDS", "1e-12"), r"$10^{-12}$", 21.3, -2.9, "right")):
+    if (name, label) not in anchor:
+        continue
+    x, y, c = anchor[(name, label)]
+    axes[0].annotate(lab, xy=(x, y), xytext=(dx, dy),
+                     textcoords="offset points", fontsize=6.6, color=c, ha=ha)
+axes[0].axhline(2.2e-16, color="0.5", ls=":", lw=0.7, zorder=1)
+axes[0].text(5.0e1, 3.2e-16, "Double precision", fontsize=6.0, color="0.4")
+axes[0].set_yticks([10.0**k for k in range(-16, -1)])
+axes[0].set_ylim(1.0e-16, 1.0e-2)
+axes[0].tick_params(axis="y", labelsize=6.2)
+axes[0].text(LABEL_TR[0], LABEL_TR[1],
+             "Constant density:  $L = 1300$ km,\n"
+             r"$E = 0.6$--$20$ GeV,  $\rho = 3$ g cm$^{-3}$",
+             transform=axes[0].transAxes, ha="right", va="top", fontsize=6.0,
+             color="0.2", linespacing=1.4,
+             bbox=dict(boxstyle="round,pad=0.35", facecolor="white",
+                       edgecolor="black", linewidth=0.6))
+leg = axes[0].legend(loc="lower right", bbox_to_anchor=(0.995, 0.03),
+                     fontsize=5.6, framealpha=0.85, ncol=2)
+leg.get_frame().set_linewidth(0.7)
+
+prem_axes(
+    axes[1], earth_plane_data,
+    # rtol is labelled on the FIRST rung of its curve, 3, rather than on
+    # 1e-3 partway along it.  N_slabs is pulled clear of the Prob3++ and
+    # GLoBES markers it was sitting on and given a leader line back.  Both
+    # NuFast-Earth curves are dialed by N_layers, so both say so, and the
+    # "delta_CP only" tag is gone: the legend already carries it.
+    [(("NuOscProbExact, rtol", "3e+00"), r"rtol $= 3$", 5.1, -2.0, "left"),
+     (("NuOscProbExact, rtol", "1e-05"), r"$10^{-5}$", 3.1, 0.7, "left"),
+     ((r"NuOscProbExact, $N_{\rm slabs}$", "1"), r"$N_{\rm slabs} = 1$",
+      -5.8, -29.0, "right", True),
+     ((r"NuOscProbExact, $N_{\rm slabs}$", "256"), "256", -5, -4, "right"),
+     (("nuSQuIDS", "1e-12"), r"tol $= 10^{-12}$", -42.5, 2.8, "left"),
+     ((r"NuFast-Earth ($\delta_{\rm CP}$ only)", "1"),
+      r"$N_{\rm layers} = 1$", 18.0, -14.3, "left"),
+     # Both ends of every other curve, so no dial is left unnamed.
+     (("Prob3++", "1"), r"$N_{\rm shells} = 1$", -59.3, -29.6, "left", True),
+     (("Prob3++", "65536"), "65536", 6, -2, "left"),
+     (("GLoBES", "1"), r"$N_{\rm shells} = 1$", -31.0, -36.3, "left", True),
+     (("GLoBES", "65536"), "65536", -14.6, 17.8, "left", True),
+     (("nuCraft", "1e-02"), r"numPrec $= 10^{-2}$", -7.0, -1.8, "right"),
+     (("nuCraft", "1e-10"), r"$10^{-10}$", 0.2, 3.7, "left"),
+     (("nuSQuIDS", "1e-03"), r"tol $= 10^{-3}$", 5.0, 2.5, "left"),
+     (("NuFast-Earth", "65536"), "65536", 1.7, 32.1, "left", True),
+     ((r"NuFast-Earth ($\delta_{\rm CP}$ only)", "65536"), "65536",
+      7.4, -9.8, "right"),
+     ((r"NuOscProbExact, $N_{\rm slabs}$", "65536"), "65536",
+      -19.0, 3.3, "left"),
+     (("NuOscProbExact, rtol", "1e+00"), "1", 6, -2, "left"),
+     (("NuOscProbExact, rtol", "1e-08"), r"$10^{-8}$", 3.1, -0.9, "left")],
+    "PREM, three flavors:  " + r"$\cos\theta_z = -0.9$," + "\n"
+    r"$E = 3$--$40$ GeV,  $L = 11468$ km", (1.0e-10, 2.0e-1),
+    legend_loc="lower left", legend_anchor=(0.0716, 0.03), legend_ncol=2,
+    legend_fontsize=5.6, annot_fontsize=6.6, label_at=LABEL_TR,
+    relabel={"NuOscProbExact": r"NuOscProbExact, $N_{\rm slabs}$",
+             "NuOscProbExact (tolerance)": "NuOscProbExact, rtol",
+             "NuFast-Earth (dCP only)":
+                 r"NuFast-Earth ($\delta_{\rm CP}$ only)"})
+
+prem_axes(
+    axes[2], prem["sterile_3plus1"],
+    [(("NuOscProbExact, rtol", "3e+00"), r"rtol $=3$", 7.5, -2.5, "left"),
+     (("NuOscProbExact, rtol", "1e-05"), r"$10^{-5}$", -0.8, 3.1, "left"),
+     ((r"NuOscProbExact, $N_{\rm slabs}$", "1"), r"$N_{\rm slabs}=1$",
+      -37.8, -1.2, "left"),
+     ((r"NuOscProbExact, $N_{\rm slabs}$", "256"), "256", 8.4, -9.8, "right"),
+     (("nuSQuIDS", "1e-03"), r"tol $= 10^{-3}$", 20.4, 1.9, "left", True),
+     (("nuSQuIDS", "1e-12"), r"$10^{-12}$", 5.1, -2.9, "left"),
+     (("nuCraft", "1e-02"), r"numPrec $= 10^{-2}$", 3.6, 4.0, "right"),
+     (("nuCraft", "1e-10"), r"$10^{-10}$", 2.1, 4.2, "left"),
+     ((r"NuOscProbExact, $N_{\rm slabs}$", "8192"), "8192",
+      -16.6, -7.3, "left"),
+     (("NuOscProbExact, rtol", "1e+00"), "1", -7.4, -5.8, "left"),
+     (("NuOscProbExact, rtol", "1e-08"), r"$10^{-8}$", -2.6, 5.4, "left")],
+    r"PREM, $3+1$:  $\cos\theta_z = -0.9$," + "\n"
+    r"$E = 0.3$--$30$ TeV,  $\Delta m_{41}^2 = 1$ eV$^2$", (2.0e-11, 1.0e-1),
+    legend_loc="lower left", legend_anchor=(0.012, 0.03), legend_ncol=1,
+    legend_fontsize=5.6, annot_fontsize=6.6, label_at=LABEL_TR,
+    only={"NuOscProbExact (double-double)", "NuOscProbExact (tolerance)",
+          "nuSQuIDS", "nuCraft"},
+    relabel={"NuOscProbExact (double-double)":
+             r"NuOscProbExact, $N_{\rm slabs}$",
+             "NuOscProbExact (tolerance)": "NuOscProbExact, rtol"})
+
+axes[1].set_yticks([10.0**k for k in range(-10, 0)])
+axes[2].set_yticks([10.0**k for k in range(-11, 0)])
+for ax in axes:
+    ax.tick_params(axis="y", labelsize=6.2)
+for ax in axes:
+    ax.set_xlim(*XLIM_ALL)
+    # A vertical rule per decade of time, so a cost can be carried by eye
+    # from one panel to the next -- which is the whole point of the shared
+    # axis.  Behind the data, and light enough not to compete with it.
+    ax.set_axisbelow(True)
+    ax.grid(True, axis="both", which="major", color="0.78", lw=1.0,
+            zorder=0)
+# One "N_layers = 1" now serves both NuFast-Earth curves, so it gets a
+# leader to each: out of its left edge to the delta_CP-only curve's first
+# marker, out of its right edge to the full curve's.  Drawn only after the
+# limits are set, since the label's box is only known once it is rendered.
+def _first_marker(series_name):
+    series = next(x for x in earth_plane_data["series"]
+                  if x["name"] == series_name)
+    point = by_dial(series["points"])[0]
+    return point["us_per_probability"], point["max_abs_error"]
+
+
+_label = next(t for t in axes[1].texts
+              if hasattr(t, "xyann")
+              and t.get_text() == r"$N_{\rm layers} = 1$")
+# Each leader leaves the vertical middle of one edge of the label's own box.
+# Anchoring them to the LABEL (textcoords=_label puts (0, 0.5) at the middle
+# of its left edge and (1, 0.5) at its right) rather than converting a
+# rendered box to data coordinates: savefig re-lays the figure out with a
+# tight bounding box, which moves the axes under any data-space endpoint and
+# leaves the line detached from the text it is supposed to touch.
+for _side, _target in (((0.0, 0.5), _first_marker("NuFast-Earth (dCP only)")),
+                       ((1.0, 0.5), _first_marker("NuFast-Earth"))):
+    axes[1].annotate("", xy=_target, xycoords="data",
+                     xytext=_side, textcoords=_label, zorder=6,
+                     arrowprops=dict(arrowstyle="-", linewidth=0.5,
+                                     color="C4", shrinkA=2.0, shrinkB=2.5))
+
+axes[2].set_xlabel(r"Time per probability [$\mu$s]")
+# One label for all three.  x is set by hand because the default sits on
+# the tick labels of a figure this wide.
+fig.supylabel(r"Error vs.\ the reference of each panel,  "
+              r"$\max_\alpha |\Delta P_{\nu_\mu \to \nu_\alpha}|$",
+              fontsize=9, x=0.030)
+fig.subplots_adjust(hspace=0.06, left=0.10, right=0.995, top=0.995,
+                    bottom=0.055)
+fig.savefig(os.path.join(FIGDIR, "speed_accuracy_combined.pdf"))
 plt.show()'''),
     ])
 
@@ -6028,8 +7354,22 @@ def build():
     for name, nb in books.items():
         nbf.write(nb, OUT / name)
 
+    # Iterating on a single figure does not need all twenty notebooks
+    # executed.  NUOSC_ONLY restricts execution to the notebooks whose name
+    # contains it, which turns a seventy-second cycle into a fifteen-second
+    # one.  It leaves every other notebook written BARE, which CI rejects,
+    # so it is a development shortcut and never the state you commit: the
+    # partial build says so and skips the checks that would pass vacuously.
+    only = os.environ.get('NUOSC_ONLY', '')
+    if only:
+        print('  NUOSC_ONLY=%r -- PARTIAL BUILD.  Every other notebook is '
+              'written without outputs and will fail CI.  Re-run with no '
+              'NUOSC_ONLY before committing.' % only)
+
     failed = []
     for path in sorted(OUT.glob('*.ipynb')):
+        if only and only not in path.name:
+            continue
         nb = nbf.read(path, as_version=4)
         started = time.perf_counter()
         try:
@@ -6046,6 +7386,11 @@ def build():
     if failed:
         raise SystemExit('notebooks failed to execute: %s'
                          % ', '.join(failed))
+
+    if only:
+        print('  partial build finished; bare-notebook check and gallery '
+              'skipped, since the unexecuted notebooks would fail both.')
+        return
 
     # The same check CI applies, run here so a stripped notebook is caught
     # before it is committed rather than after it is pushed.

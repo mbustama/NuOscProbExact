@@ -1,6 +1,6 @@
 {
  "generated_by": "NuFast-LBL, github.com/PeterDenton/NuFast-LBL, arXiv:2405.02400",
- "driver": "tests/nufast_scan.md documents how this was produced",
+ "driver": "tests/external_drivers/nufast_scan.cpp, verified against this file to 4e-12 in probability",
  "channel": "P(nu_mu -> nu_e)",
  "baseline_km": 1300.0,
  "density_g_cm3": 3.0,

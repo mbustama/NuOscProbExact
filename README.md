@@ -283,32 +283,89 @@ NuOscProbExact/
 ├── tools/                           # Scripts that are not part of the package
 │   └── make_demo_video.py           # Joins and shrinks the clips notebook 19 renders
 ├── resources/                       # Things the repository carries but does not install
-│   └── paper/                       # Source of the paper that documents this library
-│       ├── README.md                # How to build it, and what each file is
-│       ├── main.tex                 # The paper; BibTeX, no inlined bibliography
-│       ├── make_versions.py         # Derives the clean and the diffed versions
-│       ├── baseline_cpc_v1.tex      # The published version, for the diff
-│       ├── refs.bib                 # The bibliography, read by BibTeX at build
-│       ├── elsarticle.cls
-│       ├── elsarticle-num.bst
-│       └── figs/                    # Every figure, fourteen of them from notebook 10
-│           ├── validation.pdf
-│           ├── prob_2nu_vs_energy_compare.pdf
-│           ├── prob_3nu_vs_energy_compare.pdf
-│           ├── slabs_composition.pdf
-│           ├── earth_oscillogram.pdf
-│           ├── density_arrangement.pdf
-│           ├── sterile_earth_oscillogram.pdf
-│           ├── architecture.pdf
-│           ├── performance.pdf
-│           ├── exact_vs_approximations.pdf
-│           ├── speed_accuracy.pdf
-│           ├── prem_speed_accuracy.pdf
-│           ├── prem_speed_accuracy_3plus1.pdf
-│           ├── lri_earth.pdf
-│           └── Notes_on_SU_n__probability_relations.pdf
+│   ├── paper/                       # Source of the paper that documents this library
+│   │   ├── README.md                # How to build it, and what each file is
+│   │   ├── HANDOVER-magnus-fig11.md # What another paper needs to redraw Figure 11 with its own code on it
+│   │   ├── main.tex                 # The paper; BibTeX, no inlined bibliography
+│   │   ├── make_versions.py         # Derives the clean and the diffed versions
+│   │   ├── baseline_cpc_v1.tex      # The published version, for the diff
+│   │   ├── refs.bib                 # The bibliography, read by BibTeX at build
+│   │   ├── elsarticle.cls
+│   │   ├── elsarticle-num.bst
+│   │   └── figs/                    # Every figure, fourteen of them from notebook 10
+│   │       ├── validation.pdf
+│   │       ├── prob_2nu_vs_energy_compare.pdf
+│   │       ├── prob_3nu_vs_energy_compare.pdf
+│   │       ├── slabs_composition.pdf
+│   │       ├── earth_oscillogram.pdf
+│   │       ├── density_arrangement.pdf
+│   │       ├── sterile_earth_oscillogram.pdf
+│   │       ├── architecture.pdf
+│   │       ├── performance.pdf
+│   │       ├── exact_vs_approximations.pdf
+│   │       ├── speed_accuracy.pdf
+│   │       ├── scan_sensitivity.pdf
+│   │       ├── prem_speed_accuracy.pdf
+│   │       ├── prem_speed_accuracy_3plus1.pdf
+│   │       ├── speed_accuracy_combined.pdf
+│   │       ├── lri_earth.pdf
+│   │       └── Notes_on_SU_n__probability_relations.pdf
+│   └── tools/                       # Tooling for the paper, not for the library
+│       └── manuscript/              # Checks the prose of main.tex against the criteria beside them
+│           ├── CHECKLIST.md         # The audit criteria the paper is held to
+│           ├── audit_section.py     # The mechanical criteria, one section at a time
+│           ├── check_apparatus_prose.py  # Prose about the manuscript rather than about neutrinos
+│           ├── check_convolution.py # Sentence shapes a reader has to unpick: abstract predicates and echoed heads
+│           ├── check_dangles.py     # Dangling last lines, over the typeset page
+│           ├── check_informality.py # Colloquial register in a technical text
+│           ├── check_llm_tells.py   # Vocabulary and rhythms that read as machine-written
+│           ├── check_numerals.py    # Every quoted number, ranked by how badly it could be wrong
+│           ├── check_oxford.py      # Three-item lists missing the serial comma
+│           ├── check_paragraphs.py  # Paragraph length and sentence count, from the source
+│           ├── check_scale_words.py # Adjectives of scale standing where a number should
+│           ├── check_voice.py       # Passive rate and first-person density, by section
+│           └── check_weak_prose.py  # Hedges, nominalizations, filler and vague reference
 └── tests/                           # Regression suite, run with pytest
     ├── conftest.py                  # Shared fixtures and path setup
+    ├── bench/                       # Fair-comparison benchmark pipeline
+    │   ├── artifacts/               # One JSON per measured cell, written by the run and replaced by the next one
+    │   ├── manifest.json            # Pinned versions, build profiles, thread policy, capabilities
+    │   ├── README.md                # Entry point: state of play and where each decision is recorded
+    │   ├── ADVERSARIAL.md           # What the adversarial check must try to break
+    │   ├── FINDINGS.md              # What that check broke, and how each claim was verified
+    │   ├── OBJECTIONS.md            # Each objection, the measurement answering it, and its test
+    │   ├── requirements.lock        # Exact Python versions the benchmark venv installs
+    │   ├── build.sh                 # Clones, hash-verifies and builds all seven at their pins
+    │   ├── bench.hpp                # The C++ harness: owns main(), every clock, the statistics
+    │   ├── machine.py               # Environment capture, the canary, and the rejection rule
+    │   ├── conversions.py           # The one place a physical conversion factor is computed
+    │   ├── gen_conversions.py       # Emits conversions.h so no adapter carries a physical literal
+    │   ├── adapters/                # One adapter per code, physics only
+    │   │   ├── nufast_earth.cpp     # NuFast-Earth, batched over energy and zenith, invariants hoisted
+    │   │   ├── nufast_lbl.cpp       # NuFast-LBL, one batched call over the whole energy vector
+    │   │   ├── prob3.cpp            # Prob3++, looped in C++ because that is its interface
+    │   │   ├── globes.cpp           # GLoBES, looped, chord decomposition hoisted
+    │   │   ├── nuoscprobexact.py    # This library, batched
+    │   │   ├── second_order.py      # The second-order expansion in alpha and s13, as a measured point
+    │   │   ├── nusquids.py          # nuSQuIDS through its multiple-energy constructor
+    │   │   └── nucraft.py           # nuCraft, whose batching is interface-only
+    │   ├── runner.py                # The Python harness; the only place Python timing happens
+    │   ├── reference.py             # One 50-digit reference per code, in that code's own convention
+    │   ├── audit_reference.py       # Measures whether each reference matches the code it judges
+    │   ├── sweep_accuracy.py        # Every code against its own reference, over every precision knob
+    │   ├── run_all.py               # The run matrix: which code, which grid, which protocol, which knob
+    │   ├── check_neutrality.py      # Checks that a harness change moved the spread and not the speed
+    │   ├── emit_figures.py          # Turns the measured artifacts into the files the paper figures draw
+    │   ├── audit_objections.py      # Checks the measured output against each objection, one at a time
+    │   ├── accuracy_const.json      # Accuracy of every code on the constant-density grid, per knob
+    │   ├── accuracy_chord.json      # Accuracy of every code on the Earth chord, per knob
+    │   ├── accuracy_discretisation.json  # Accuracy against the layer count, for the code whose precision knob is something else
+    │   ├── earth_plane.json         # The Earth speed-accuracy plane, three flavors, for the figure
+    │   ├── scan_sensitivity.json    # What each code costs when a fit moves Dmsq31 rather than delta_CP
+    │   ├── speed_accuracy_plane.json  # Every timed point paired with the accuracy its own setting reached
+    │   └── reference_audit.json     # What that audit measured; the notebook renders it, never types it
+    ├── test_bench_pipeline.py       # The benchmark pipeline's fairness invariants
+    ├── test_bench_behaviour.py      # What an adapter does, not where its constants came from
     ├── gen_stiff_reference.py       # Regenerates the fifty-digit four-flavor oracle
     ├── stiff_reference.json         # That oracle, frozen: nine Hamiltonians in hexadecimal floats
     ├── test_su3_algebra.py          # d tensor, star product, SU(3) invariants
@@ -341,10 +398,13 @@ NuOscProbExact/
     ├── nufast_scan.json             # NuFast-LBL at two Newton settings
     ├── speed_accuracy.json          # The six-code constant-density speed-accuracy plane
     ├── timing_other_codes.json      # Timings behind the performance figure
+    ├── measure_performance_scaling.py  # Freezes the three call routes against stack size, on a quiet machine
+    ├── performance_scaling.json     # That measurement, which the performance figure reads
     ├── prem_scan.py                 # Regenerates the two Earth speed-accuracy planes
     ├── prem_speed_accuracy.json     # Those planes, at three flavors and at 3+1
     ├── const_density_scan.json      # The exact reference for the comparison figure
     ├── external_drivers/            # Drivers for the codes that cannot be called from Python
+    │   ├── nufast_scan.cpp          # Regenerates the NuFast-LBL curve of the comparison figure
     │   ├── README.md                # Every convention each one had to be told, and why
     │   ├── gen_prem_header.py       # Emits this library's PREM as a C header
     │   ├── nufast_drv.cpp           # NuFast-Earth on the PREM chord

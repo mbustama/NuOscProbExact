@@ -1,143 +1,307 @@
 {
- "note": "Frozen timings of two independent codes, for the paper performance figure. Measured on one laptop: Intel Core i5-1334U, 10 cores / 12 threads, 16 GB RAM; absolute values are machine-dependent, the ratios much less so. Both solve the same problem: P(nu_mu -> nu_e) at L = 1300 km in constant matter of 3 g/cm^3, three flavors. nuCraft is absent: its interface is (PDG type, energy, zenith angle) through its own Earth model, with no constant-density mode, so it has no way to answer this question.  It appears in the Earth figures instead.",
- "nufast_lbl": {
-  "version": "github.com/PeterDenton/NuFast-LBL, arXiv:2405.02400",
-  "how": "N_Newton = 0, its default, which is a truncation at 1.5e-5; timed inside C++, best of nine, no Python involved.  The two Newton settings are timed in ALTERNATED pairs, not in blocks: run as two blocks this reported N_Newton = 2 as faster than N_Newton = 0, which is not something more Newton steps can be.  Alternated, the ratio is 1.14 to 1.38.  Baseline 1299.999945 km and rhoYe = 1.4881386 carry the hbar*c and mass-defect conventions.",
-  "sizes": [
-   1,
-   3,
-   10,
-   30,
-   100,
-   300,
-   1000,
-   3000,
-   10000,
-   30000
-  ],
-  "seconds": [
-   1.4e-07,
-   2.67e-07,
-   7.76e-07,
-   2.184e-06,
-   7.222e-06,
-   2.1624e-05,
-   7.2003e-05,
-   0.000105748,
-   0.000353419,
-   0.001054119
-  ]
- },
- "nusquids": {
-  "version": "1.13.3",
-  "how": "timed through the Python interface, best of three runs, multiple-energy mode, rel and abs error 1e-12; includes constructing the solver and reading the results back",
-  "sizes": [
-   1,
-   3,
-   10,
-   30,
-   100,
-   300,
-   1000,
-   3000,
-   10000,
-   30000
-  ],
-  "seconds": [
-   7.497001206502318e-05,
-   0.001005235011689365,
-   0.0030623130151070654,
-   0.009482021006988361,
-   0.03199317498365417,
-   0.09260351199191064,
-   0.3181910210114438,
-   0.9768224750005174,
-   5.184502366988454,
-   18.48386986803962
-  ]
- },
- "globes": {
-  "version": "GLoBES 3.2.18",
-  "how": "glbConstantDensityProbability(2, 1, +1, E, 1300, rho), one energy at a time because it exposes no batched entry point; timed inside C, best of five, no Python involved.  Density carries the 0.992093 mass defect and no electron fraction, since GLoBES applies its own GLB_Ne_MANTLE = 0.5.",
-  "sizes": [
-   1,
-   3,
-   10,
-   30,
-   100,
-   300,
-   1000,
-   3000,
-   10000,
-   30000
-  ],
-  "seconds": [
-   5.61e-07,
-   1.476e-06,
-   5.039e-06,
-   1.5234e-05,
-   5.0969e-05,
-   0.000152745,
-   0.00050594,
-   0.001518188,
-   0.005139274,
-   0.015721054
-  ]
- },
- "prob3pp": {
-  "version": "Prob3++, github.com/rogerwendell/prob3plusplus",
-  "how": "SetMNS then propagateLinear(1, 1300, 3) and GetProb(2, 1), one energy at a time; timed inside C++, best of five.  SetMNS is given Dm2_32, and SetDensityConversion carries 0.5 times the 0.9924922 ratio to this library's normalisation constant.",
-  "sizes": [
-   1,
-   3,
-   10,
-   30,
-   100,
-   300,
-   1000,
-   3000,
-   10000,
-   30000
-  ],
-  "seconds": [
-   1.38e-06,
-   3.99e-06,
-   1.3373e-05,
-   3.9965e-05,
-   0.000132455,
-   0.000394514,
-   0.001312734,
-   0.003927994,
-   0.007654418,
-   0.020142938
-  ]
- },
- "nufast_lbl_n2": {
-  "version": "github.com/PeterDenton/NuFast-LBL, arXiv:2405.02400",
-  "how": "N_Newton = 2, which reaches 8.3e-12; timed inside C++, best of nine, no Python involved.  The two Newton settings are timed in ALTERNATED pairs, not in blocks: run as two blocks this reported N_Newton = 2 as faster than N_Newton = 0, which is not something more Newton steps can be.  Alternated, the ratio is 1.14 to 1.38.  Baseline 1299.999945 km and rhoYe = 1.4881386 carry the hbar*c and mass-defect conventions.",
-  "sizes": [
-   1,
-   3,
-   10,
-   30,
-   100,
-   300,
-   1000,
-   3000,
-   10000,
-   30000
-  ],
-  "seconds": [
-   1.6e-07,
-   3.28e-07,
-   9.77e-07,
-   2.794e-06,
-   9.332e-06,
-   2.7943e-05,
-   9.2328e-05,
-   0.000144528,
-   0.000484449,
-   0.001452357
-  ]
+ "generated_by": "tests/bench/emit_figures.py",
+ "manifest_note": "Inputs were measured under more than one manifest; the hashes are listed in manifest_sha256_inputs.",
+ "manifest_sha256": "d758e1935f45312b4ce1e66dd1a89cff9dab7678629b66fe70a6a48e9cbee6fa",
+ "manifest_sha256_inputs": [
+  "1d6d4978d3dff95e9802a10ddbdc2cbb3c6d3e8dd572e27abe8ec56cab9fd8a4",
+  "d758e1935f45312b4ce1e66dd1a89cff9dab7678629b66fe70a6a48e9cbee6fa",
+  "eeafd394213687ce52d8b453a250f51637dc7411cac4497ac223c126ec3672b4"
+ ],
+ "note": "One request for N energies at constant density, every repetition cold. Regenerated from measured artifacts by tests/bench/emit_figures.py. Every point pairs a timed measurement with the accuracy the SAME setting reached against that code's own 50-digit reference, in that code's own conventions, on the continuous PREM.",
+ "series": {
+  "GLoBES": {
+   "batch_symbol": "none",
+   "batched": false,
+   "code": "GLoBES",
+   "knob": 256,
+   "seconds": [
+    4.18438e-07,
+    1.106073e-06,
+    3.7937500000000003e-06,
+    1.1462879999999999e-05,
+    3.83969e-05,
+    0.0001162449,
+    0.000381566,
+    0.001149645,
+    0.00378067,
+    0.011330309999999998
+   ],
+   "sizes": [
+    1,
+    3,
+    10,
+    30,
+    100,
+    300,
+    1000,
+    3000,
+    10000,
+    30000
+   ],
+   "us_per_probability": [
+    0.418438,
+    0.368691,
+    0.379375,
+    0.382096,
+    0.383969,
+    0.387483,
+    0.381566,
+    0.383215,
+    0.378067,
+    0.377677
+   ]
+  },
+  "NuFast-Earth": {
+   "batch_symbol": "Probability_Engine::Set_Spectra + Get_Probabilities",
+   "batched": true,
+   "code": "NuFast-Earth",
+   "knob": -1,
+   "seconds": [
+    2.31075e-07,
+    5.84232e-07,
+    1.96601e-06,
+    6.00351e-06,
+    2.1133799999999997e-05,
+    6.24183e-05,
+    0.000206265,
+    0.0006383519999999999,
+    0.00224357,
+    0.007473270000000001
+   ],
+   "sizes": [
+    1,
+    3,
+    10,
+    30,
+    100,
+    300,
+    1000,
+    3000,
+    10000,
+    30000
+   ],
+   "us_per_probability": [
+    0.231075,
+    0.194744,
+    0.196601,
+    0.200117,
+    0.211338,
+    0.208061,
+    0.206265,
+    0.212784,
+    0.224357,
+    0.249109
+   ]
+  },
+  "NuFast-LBL": {
+   "batch_symbol": "NuFast::Probability_Matter_LBL(double,double,double,double,double,double,double,const std::vector<double>&,double,int,std::vector<std::array<std::array<double,3>,3>>&)",
+   "batched": true,
+   "code": "NuFast-LBL",
+   "knob": -1,
+   "seconds": [
+    9.9743e-08,
+    2.2767959999999996e-07,
+    7.41219e-07,
+    2.1337529999999996e-06,
+    7.01884e-06,
+    2.1563669999999996e-05,
+    7.167579999999998e-05,
+    0.00021336389999999998,
+    0.000716251,
+    0.00217308
+   ],
+   "sizes": [
+    1,
+    3,
+    10,
+    30,
+    100,
+    300,
+    1000,
+    3000,
+    10000,
+    30000
+   ],
+   "us_per_probability": [
+    0.099743,
+    0.0758932,
+    0.0741219,
+    0.0711251,
+    0.0701884,
+    0.0718789,
+    0.0716758,
+    0.0711213,
+    0.0716251,
+    0.072436
+   ]
+  },
+  "NuFast-LBL (looped)": {
+   "batch_symbol": "NuFast::Probability_Matter_LBL(double,double,double,double,double,double,double,const std::vector<double>&,double,int,std::vector<std::array<std::array<double,3>,3>>&)",
+   "batched": false,
+   "code": "NuFast-LBL",
+   "knob": -1,
+   "seconds": [
+    1.1466e-07,
+    2.89107e-07,
+    9.235509999999999e-07,
+    2.7309809999999995e-06,
+    9.03386e-06,
+    2.7249149999999996e-05,
+    9.18924e-05,
+    0.0002742942,
+    0.000906956,
+    0.0027076830000000002
+   ],
+   "sizes": [
+    1,
+    3,
+    10,
+    30,
+    100,
+    300,
+    1000,
+    3000,
+    10000,
+    30000
+   ],
+   "us_per_probability": [
+    0.11466,
+    0.096369,
+    0.0923551,
+    0.0910327,
+    0.0903386,
+    0.0908305,
+    0.0918924,
+    0.0914314,
+    0.0906956,
+    0.0902561
+   ]
+  },
+  "NuOscProbExact": {
+   "batch_symbol": "earth.probabilities_3nu_earth(E array, costhz array) / oscprob3nu.probabilities_3nu(H stack)",
+   "batched": true,
+   "code": "NuOscProbExact",
+   "knob": 256,
+   "seconds": [
+    4.9926141119537384e-05,
+    4.818475397341579e-05,
+    5.2095738840345955e-05,
+    5.638896022156307e-05,
+    6.900255110927349e-05,
+    8.937295473037464e-05,
+    0.00017951230052840205,
+    0.0005518389193201611,
+    0.001730482294348651,
+    0.00457480837772562
+   ],
+   "sizes": [
+    1,
+    3,
+    10,
+    30,
+    100,
+    300,
+    1000,
+    3000,
+    10000,
+    30000
+   ],
+   "us_per_probability": [
+    49.926141119537384,
+    16.061584657805263,
+    5.2095738840345955,
+    1.8796320073854358,
+    0.6900255110927349,
+    0.2979098491012488,
+    0.17951230052840206,
+    0.18394630644005372,
+    0.1730482294348651,
+    0.152493612590854
+   ]
+  },
+  "Prob3++": {
+   "batch_symbol": "none",
+   "batched": false,
+   "code": "Prob3++",
+   "knob": 256,
+   "seconds": [
+    5.35745e-07,
+    1.5507899999999998e-06,
+    5.192589999999999e-06,
+    1.564845e-05,
+    5.2760700000000005e-05,
+    0.0001587996,
+    0.000525688,
+    0.001565223,
+    0.005251179999999999,
+    0.01589001
+   ],
+   "sizes": [
+    1,
+    3,
+    10,
+    30,
+    100,
+    300,
+    1000,
+    3000,
+    10000,
+    30000
+   ],
+   "us_per_probability": [
+    0.535745,
+    0.51693,
+    0.519259,
+    0.521615,
+    0.527607,
+    0.529332,
+    0.525688,
+    0.521741,
+    0.525118,
+    0.529667
+   ]
+  },
+  "nuSQuIDS": {
+   "batch_symbol": "nuSQUIDS(E vector, ...) multiple-energy constructor + EvolveState",
+   "batched": true,
+   "code": "nuSQuIDS",
+   "knob": 12,
+   "seconds": [
+    0.00044230069382707117,
+    0.0011568054634610212,
+    0.0036256620428104184,
+    0.01086525583993611,
+    0.03667822288303658,
+    0.1046730385968493,
+    0.3530399031820707,
+    1.0991383119835518,
+    5.3676285835254625,
+    19.284743050466446
+   ],
+   "sizes": [
+    1,
+    3,
+    10,
+    30,
+    100,
+    300,
+    1000,
+    3000,
+    10000,
+    30000
+   ],
+   "us_per_probability": [
+    442.3006938270712,
+    385.60182115367377,
+    362.56620428104185,
+    362.175194664537,
+    366.7822288303658,
+    348.9101286561644,
+    353.0399031820707,
+    366.3794373278506,
+    536.7628583525462,
+    642.8247683488815
+   ]
+  }
  }
 }

@@ -1,0 +1,55 @@
+{
+  "artifacts_reused": 9,
+  "artifacts_written": 29,
+  "canary": {
+    "after": 0.041224691085517406,
+    "baseline_us_per_probability": 0.0508,
+    "before": 0.05970119964331388,
+    "drift": 0.30948303665897464,
+    "enforced": false,
+    "note": "recorded for provenance; not a pass/fail test, because the canary's own spread on this machine exceeds the threshold it would enforce"
+  },
+  "cells": 29,
+  "cells_measured_this_run": [
+    "amortized_GLoBES_CHORD_12x1_knob24576.json",
+    "amortized_GLoBES_CHORD_12x1_knob32768.json",
+    "amortized_GLoBES_CHORD_12x1_knob49152.json",
+    "amortized_GLoBES_CHORD_12x1_knob65536.json",
+    "amortized_NuOscProbExact_CHORD_12x1_knob12288.json",
+    "amortized_NuOscProbExact_CHORD_12x1_knob12288_1thread.json",
+    "amortized_NuOscProbExact_CHORD_12x1_knob24576.json",
+    "amortized_NuOscProbExact_CHORD_12x1_knob24576_1thread.json",
+    "amortized_NuOscProbExact_CHORD_12x1_knob32768.json",
+    "amortized_NuOscProbExact_CHORD_12x1_knob32768_1thread.json",
+    "amortized_NuOscProbExact_CHORD_12x1_knob49152.json",
+    "amortized_NuOscProbExact_CHORD_12x1_knob49152_1thread.json",
+    "amortized_NuOscProbExact_CHORD_12x1_knob65536.json",
+    "amortized_NuOscProbExact_CHORD_12x1_knob65536_1thread.json",
+    "amortized_NuOscProbExact_CHORD_12x1_knob-6.json",
+    "amortized_NuOscProbExact_CHORD_12x1_knob-6_1thread.json",
+    "amortized_NuOscProbExact_CHORD_12x1_knob-7.json",
+    "amortized_NuOscProbExact_CHORD_12x1_knob-7_1thread.json",
+    "amortized_NuOscProbExact_CHORD_12x1_knob-8.json",
+    "amortized_NuOscProbExact_CHORD_12x1_knob-8_1thread.json"
+  ],
+  "environment": {
+    "captured_at": "2026-09-01T02:15:32+0200",
+    "cores": 12,
+    "cpu": "13th Gen Intel(R) Core(TM) i5-1334U",
+    "cxx": "g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+    "governor": "performance",
+    "load_average": {
+      "15min": 3.64306640625,
+      "1min": 6.14990234375,
+      "5min": 5.7060546875
+    },
+    "python": "3.12.7",
+    "thread_policy": "natural per code; counts recorded per series"
+  },
+  "failures": [],
+  "generated_at": "2026-09-01T02:15:32+0200",
+  "generated_by": "tests/bench/run_all.py",
+  "manifest_sha256": "d758e1935f45312b4ce1e66dd1a89cff9dab7678629b66fe70a6a48e9cbee6fa",
+  "schema": "bench-run/1",
+  "timed_cells": 29
+}

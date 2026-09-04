@@ -1,5 +1,8 @@
-This is everything since the published **v1.11.0**, which is versions 1.12.0 and 1.13.0
-together — 1.12.0 was declared but never published, so upgrading from 1.11.0 brings both.
+This is everything since the published **v1.11.0**, which is versions 1.12.0, 1.13.0 and
+1.13.1 together — 1.12.0 was declared but never published, so upgrading from 1.11.0 brings
+all three.  What follows describes 1.12.0 and 1.13.0; 1.13.1 adds a batch of chords to the
+slab routines, the electron-fraction values below, a single call for antineutrino
+oscillograms, and a mean nucleon mass that follows `Y_e`.  The changelog has each in full.
 
 It is mostly about the **Earth**. It had no compiled path at all, took one energy at a time,
 and asked for a slab count where it should have asked for an accuracy; all three are fixed
@@ -173,9 +176,10 @@ a change.
 - **The convergence order of the slab product was being quoted as first.** It is second, which
   is what the midpoint sampling gives.
 
-## Coming in a future release: the Earth's electron fraction
+## The Earth's electron fraction: the values ship now, the default changes later
 
-**The default `electron_fraction` will change from 0.5 to per-layer values.** It is announced
+**The default `electron_fraction` will change from 0.5 to per-layer values.** The values and
+the machinery to use them are in 1.13.1; only the default is deferred, and it is announced
 here so that it is not discovered later.
 
 PREM is a density model and carries no composition, so `Y_e` has to be supplied. Every `earth`

@@ -1,0 +1,42 @@
+{
+  "admissible": {
+    "block_cv": 0.004057308182535867,
+    "ok": true,
+    "why": "ok"
+  },
+  "batched": {
+    "energy": true,
+    "symbol": "NuFast::Probability_Matter_LBL(double,double,double,double,double,double,double,const std::vector<double>&,double,int,std::vector<std::array<std::array<double,3>,3>>&)",
+    "zenith": false
+  },
+  "checksum": 157450164.59691885,
+  "code": "NuFast-LBL",
+  "conventions": "own-reference",
+  "knob": {
+    "N_Newton": -1
+  },
+  "looped": true,
+  "manifest_sha256": "1d6d4978d3dff95e9802a10ddbdc2cbb3c6d3e8dd572e27abe8ec56cab9fd8a4",
+  "n_layers": 256,
+  "n_points": 10000,
+  "profile_basis": "continuous",
+  "protocol": {
+    "grid": "CONST/N-sweep",
+    "name": "throughput"
+  },
+  "scan": "dcp",
+  "shell_density": "midpoint",
+  "shells_total": 1024,
+  "timing": {
+    "block_reps": 350,
+    "block_seconds": 0.317435,
+    "min_block_s": 0.25,
+    "samples": 79
+  },
+  "us_per_point": {
+    "mean": 0.0906956,
+    "min": 0.0901377,
+    "n": 79,
+    "sd": 0.00036798
+  }
+}

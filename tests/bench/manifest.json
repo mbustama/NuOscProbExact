@@ -1,0 +1,716 @@
+{
+ "artifact_requirements": {
+  "kernel_entered": "For NuOscProbExact, record which compiled kernel was entered (probabilities_3nu_kernel for constant density, earth_chords_3nu_kernel for a chord). Nothing currently asserts this at run time, so a missing numba would have us publish the NumPy path as ours.",
+  "machine": "cpu, cores, governor, load average, and the session's three canary readings.",
+  "stamps": "protocol {name, grid} and conventions; series with different stamps may not share an axes.",
+  "statistics": "{mean, sd, min, n}; the schema has no field for a bare scalar time.",
+  "threads": "Every series must record the thread count the code actually used, not the policy. A cross-code speed claim without both counts is not a claim."
+ },
+ "build_profiles": {
+  "accuracy": {
+   "flags_cxx": "-O3 -std=c++17",
+   "policy": "Every code built -O3 -std=c++17, no -Ofast and no -ffast-math, because value-changing flags make an accuracy axis measure the flag.",
+   "used_for": [
+    "accuracy artifacts"
+   ]
+  },
+  "speed": {
+   "policy": "Each code is built with ITS OWN upstream flags, so we never publish a code slower than its authors do.",
+   "used_for": [
+    "AMORTIZED",
+    "THROUGHPUT"
+   ]
+  },
+  "why_two": "One flag set cannot serve both axes. The previous setup used -Ofast -ffast-math for one dataset and -O3 for another and presented them as one methodology."
+ },
+ "codes": [
+  {
+   "capabilities": {
+    "batches_energy": true,
+    "batches_zenith": true,
+    "max_flavors": 4,
+    "precision_knobs": {
+     "n_slabs_per_segment": "1..256",
+     "rtol": "1e-3..1e-5, which is where it actually stops: on CHORD/12x1 the slab product's error estimate bottoms out near 7e-8 at the 1024-slab ceiling, so a tighter rtol raises rather than returns. Was advertised as 1e-3..1e-15; ten of those settings crash. The small residuals are reached through n_slabs_per_segment instead."
+    }
+   },
+   "flags_speed": "n/a (interpreted; numba njit cache)",
+   "kind": "self",
+   "lang": "Python+numba",
+   "latest_check": {
+    "how": "this repository, stamped at run time",
+    "verified_on": "2026-08-07"
+   },
+   "name": "NuOscProbExact",
+   "pin": {
+    "repo_commit": "<filled at run time by run_all.py>"
+   },
+   "threads": "numba prange, NUMBA_NUM_THREADS default",
+   "timing_scripts": [
+    {
+     "figure": "Fig. 11, 3+1 panel",
+     "produces": "tests/prem_speed_accuracy.json (3+1 panel ONLY; the three-flavor panel now comes from tests/bench/earth_plane.json)",
+     "script": "tests/prem_scan.py"
+    },
+    {
+     "figure": "Fig. 9 (constant density), accuracy",
+     "produces": "tests/const_density_scan.json",
+     "script": "tests/external_drivers/const_scan.py"
+    },
+    {
+     "figure": "Figs. 8, 10 and 11 (three flavors)",
+     "note": "every point measured in this code's own conventions against its own 50-digit reference",
+     "produces": "tests/bench/speed_accuracy_plane.json, tests/speed_accuracy.json, tests/bench/earth_plane.json",
+     "script": "tests/bench/run_all.py then --join"
+    }
+   ]
+  },
+  {
+   "capabilities": {
+    "batch_symbol": "NuFast::Probability_Matter_LBL(double,double,double,double,double,double,double,const std::vector<double>&,double,int,std::vector<std::array<std::array<double,3>,3>>&)",
+    "batches_energy": true,
+    "batches_zenith": false,
+    "max_flavors": 3,
+    "precision_knobs": {
+     "N_Newton": {
+      "domain": [
+       -1,
+       0,
+       1,
+       2,
+       3
+      ],
+      "sentinel": {
+       "-1": "exact eigenvalues, added v1.1"
+      },
+      "why_3": "The author states N_Newton=3 reaches the double-precision limit; sweeping only to 2 would repeat the omission that made the 'at any setting it exposes' claim false."
+     }
+    },
+    "returns_full_matrix": true
+   },
+   "constants": [
+    {
+     "at": "NuFast_LBL.cpp:12",
+     "name": "YerhoE2a",
+     "value": "1.52588e-4"
+    }
+   ],
+   "flags_speed": "-Ofast -ffast-math -std=c++17",
+   "flags_speed_source": "Benchmarks/Makefile and compile.sh, upstream",
+   "kind": "git",
+   "lang": "C++",
+   "latest_check": {
+    "how": "latest tag v2.0.1; HEAD af8c045 is one commit ahead and changes only Readme.md (1 line), verified by git diff --stat",
+    "verified_on": "2026-08-07"
+   },
+   "name": "NuFast-LBL",
+   "objections_addressed": [
+    "LBL-1",
+    "LBL-2",
+    "LBL-3",
+    "Other-1",
+    "Other-2"
+   ],
+   "pin": {
+    "commit": "a6eec95b32842727cdcd0fee65f65fb2be1a3d02",
+    "tag": "v2.0.1"
+   },
+   "threads": "single",
+   "timing_scripts": [
+    {
+     "figure": "Fig. 8, throughput vs stack size",
+     "produces": "tests/timing_other_codes.json",
+     "script": "tests/bench/run_all.py (throughput cells) -> --join",
+     "superseded": "was tests/bench/run_all.py (throughput cells) -> --join; that driver timed NuFast-LBL one energy per call and the figure then said it could do nothing else, which is false since v2.0.0"
+    },
+    {
+     "figure": "Fig. 9 accuracy; to be replaced by an adapter",
+     "produces": "tests/nufast_scan.json",
+     "script": "MISSING -- driver not in the repository"
+    },
+    {
+     "figure": "Figs. 8, 10 and 11 (three flavors)",
+     "note": "every point measured in this code's own conventions against its own 50-digit reference",
+     "produces": "tests/bench/speed_accuracy_plane.json, tests/speed_accuracy.json, tests/bench/earth_plane.json",
+     "script": "tests/bench/run_all.py then --join"
+    }
+   ],
+   "url": "https://github.com/PeterDenton/NuFast.git"
+  },
+  {
+   "capabilities": {
+    "batch_symbol": "Probability_Engine::Set_Spectra(std::vector<double>&, std::vector<double>&) then Get_Probabilities()",
+    "batches_energy": true,
+    "batches_zenith": true,
+    "constant_density_symbol": "single_trajectory_mode, added v1.1.0",
+    "has_constant_density_mode": true,
+    "max_flavors": 3,
+    "precision_knobs": {
+     "eigenvalue_precision": {
+      "domain": [
+       -1,
+       0,
+       1,
+       2,
+       3
+      ],
+      "sentinel": {
+       "-1": "exact"
+      },
+      "why_3": "The author states N_Newton=3 reaches the double-precision limit; sweeping only to 2 would repeat the omission that made the 'at any setting it exposes' claim false."
+     },
+     "n_layers": "PREM_NUniformLayer(n)"
+    },
+    "returns_full_matrix": true
+   },
+   "constants": [
+    {
+     "at": "src/Oscillation.cpp:13",
+     "name": "YerhoE2a",
+     "value": "0.0001526493231029146"
+    }
+   ],
+   "flags_speed": "-O3 -std=c++17",
+   "flags_speed_source": "upstream Makefile (CFlags)",
+   "kind": "git",
+   "lang": "C++",
+   "latest_check": {
+    "how": "latest tag v1.2.0; HEAD 4edbad5 is two commits ahead (status output, user-guide bump), neither a capability change",
+    "verified_on": "2026-08-07"
+   },
+   "name": "NuFast-Earth",
+   "objections_addressed": [
+    "Earth-1",
+    "Earth-2",
+    "Earth-3",
+    "Earth-4",
+    "Other-1",
+    "Other-2"
+   ],
+   "pin": {
+    "commit": "499392d49f2133cf9d6859ca4532079a3f31ee35",
+    "tag": "v1.2.0"
+   },
+   "threads": "single",
+   "timing_scripts": [
+    {
+     "figure": "Fig. 11, Earth speed + accuracy",
+     "produces": "tests/external_drivers/nufast_earth_prem.txt",
+     "script": "tests/external_drivers/nufast_drv.cpp"
+    },
+    {
+     "figure": "Figs. 8, 10 and 11 (three flavors)",
+     "note": "every point measured in this code's own conventions against its own 50-digit reference",
+     "produces": "tests/bench/speed_accuracy_plane.json, tests/speed_accuracy.json, tests/bench/earth_plane.json",
+     "script": "tests/bench/run_all.py then --join"
+    }
+   ],
+   "url": "https://github.com/PeterDenton/NuFast-Earth.git"
+  },
+  {
+   "capabilities": {
+    "batches_energy": true,
+    "batches_zenith": false,
+    "max_flavors": 6,
+    "precision_knobs": {
+     "abs_error": "1e-3..1e-12",
+     "rel_error": "1e-3..1e-12"
+    }
+   },
+   "flags_speed": "upstream configure defaults",
+   "kind": "git",
+   "lang": "C++ (Python iface)",
+   "latest_check": {
+    "how": "latest tag v1.13.3, confirmed against the full tag list rather than a 1.13.x filter",
+    "verified_on": "2026-08-07"
+   },
+   "name": "nuSQuIDS",
+   "pin": {
+    "commit": "104914da5a25cb0d1548d19dd9f3161c693ce153",
+    "tag": "v1.13.3"
+   },
+   "threads": "single per propagation; BLAS threads captured at run time",
+   "timing_scripts": [
+    {
+     "figure": "Fig. 8, throughput vs stack size",
+     "produces": "tests/timing_other_codes.json",
+     "script": "tests/bench/run_all.py (throughput cells) -> --join",
+     "superseded": "was tests/bench/run_all.py (throughput cells) -> --join; that driver timed NuFast-LBL one energy per call and the figure then said it could do nothing else, which is false since v2.0.0"
+    },
+    {
+     "figure": "Fig. 11, 3+1 panel",
+     "produces": "tests/prem_speed_accuracy.json (3+1 panel ONLY; the three-flavor panel now comes from tests/bench/earth_plane.json)",
+     "script": "tests/prem_scan.py"
+    },
+    {
+     "figure": "Figs. 8, 10 and 11 (three flavors)",
+     "note": "every point measured in this code's own conventions against its own 50-digit reference",
+     "produces": "tests/bench/speed_accuracy_plane.json, tests/speed_accuracy.json, tests/bench/earth_plane.json",
+     "script": "tests/bench/run_all.py then --join"
+    }
+   ],
+   "url": "https://github.com/arguelles/nuSQuIDS.git"
+  },
+  {
+   "capabilities": {
+    "batched": "interface-only -- CalcWeights takes a particle list but loops over it internally",
+    "batches_energy": false,
+    "batches_zenith": false,
+    "max_flavors": "3+n",
+    "precision_knobs": {
+     "numPrec": "1e-2..1e-10"
+    }
+   },
+   "constants": [
+    {
+     "at": "NuCraft.py:212",
+     "name": "sterile/CC matter entries",
+     "value": "15.256e-5 and 7.6525e-5, ratio 0.50161 where isoscalar is exactly 1/2"
+    }
+   ],
+   "kind": "tarball",
+   "lang": "Python",
+   "latest_check": {
+    "how": "r22 is the only version published on nucraft.hepforge.org",
+    "verified_on": "2026-08-07"
+   },
+   "measured_floor": {
+    "costhz": -0.9,
+    "energy_gev": 10.0,
+    "error_by_numprec": {
+     "1e-10": 7.9e-11,
+     "1e-2": 0.00016,
+     "1e-3": 6.3e-05,
+     "1e-4": 8.4e-06,
+     "1e-5": 1.5e-06,
+     "1e-6": 1.3e-06,
+     "1e-7": 1.6e-08,
+     "1e-8": 3.6e-08,
+     "1e-9": 2.3e-10,
+     "5e-4 (default)": 7.2e-06
+    },
+    "error_by_numprec_10gev_measured": {
+     "1e-10": 4.029e-07,
+     "1e-2": 0.0005344,
+     "1e-4": 8.02e-06,
+     "1e-6": 9.312e-07,
+     "1e-8": 3.669e-07
+    },
+    "flavors": 3,
+    "generated_by": "probe driving the adapter in process; see FINDINGS.md",
+    "note": [
+     "CORRECTED.  This entry twice asserted something it had not measured.",
+     "It first claimed nuCraft floors at 3e-3 because of its constants --",
+     "an inherited claim nobody had tested.  The correction that replaced",
+     "it claimed the error tracks numPrec the whole way down with no floor",
+     "above 7.9e-11.  That is also wrong.  Driven in process at cos = -0.9",
+     "against a reference good to 2.4e-18, the error falls 5.3e-4, 8.0e-6,",
+     "9.3e-7, 3.7e-7 and then STOPS: 4.0e-7 at numPrec 1e-10, no better",
+     "than at 1e-8.  The same shape at 9.74 GeV (4.1e-7) and at 4.80 GeV",
+     "(1.7e-6).  So there IS a floor, near 4e-7, four orders above the",
+     "figure this entry used to give and four orders below its first one.",
+     "The solver is not the limit: nuCraft closes unitarity to 5e-11 and",
+     "the reference sits eleven orders below the floor, so what remains is",
+     "a systematic difference between the problem nuCraft solves and the",
+     "problem the reference solves.  That difference is NOT yet identified.",
+     "It is not the profile (fidelity 0.0, they share one spline), not the",
+     "matter constant, and not the Earth radius (6371.0 both).  Recorded as",
+     "unexplained rather than attributed."
+    ],
+    "reference_error": 2.402e-18
+   },
+   "name": "nuCraft",
+   "pin": {
+    "bytes": 31914,
+    "sha256": "f406750025f8f0220d8bad0f521eaadb4f522ef13601479104cebd6ff3fb4490",
+    "version": "r22"
+   },
+   "threads": "numpy/BLAS, captured at run time",
+   "timing_scripts": [
+    {
+     "figure": "Fig. 11, 3+1 panel",
+     "produces": "tests/prem_speed_accuracy.json (3+1 panel ONLY; the three-flavor panel now comes from tests/bench/earth_plane.json)",
+     "script": "tests/prem_scan.py"
+    },
+    {
+     "figure": "Figs. 8, 10 and 11 (three flavors)",
+     "note": "every point measured in this code's own conventions against its own 50-digit reference",
+     "produces": "tests/bench/speed_accuracy_plane.json, tests/speed_accuracy.json, tests/bench/earth_plane.json",
+     "script": "tests/bench/run_all.py then --join"
+    }
+   ],
+   "url": "https://nucraft.hepforge.org/nuCraft-r22.tar.gz"
+  },
+  {
+   "capabilities": {
+    "batches_energy": false,
+    "batches_zenith": false,
+    "max_flavors": 3,
+    "note": "hard-wires 3x3 but exposes glbRegisterProbabilityEngine",
+    "precision_knobs": {
+     "n_shells": "1..256"
+    }
+   },
+   "constants": [
+    {
+     "at": "extracted from pinned source",
+     "name": "GLB_V_FACTOR",
+     "value": "7.63247e-14"
+    }
+   ],
+   "flags_speed": "-O2",
+   "flags_speed_source": "upstream configure default",
+   "kind": "tarball",
+   "lang": "C",
+   "latest_check": {
+    "how": "3.2.18 is the newest tarball on the MPIK download page",
+    "verified_on": "2026-08-07"
+   },
+   "name": "GLoBES",
+   "pin": {
+    "bytes": 2003810,
+    "sha256": "7edd0fea67800fc1f2d5309a47aba93d4afb5710a10cb40ceddec07079041db3",
+    "version": "3.2.18"
+   },
+   "threads": "single",
+   "timing_scripts": [
+    {
+     "figure": "Fig. 8, throughput vs stack size",
+     "produces": "tests/timing_other_codes.json",
+     "script": "tests/bench/run_all.py (throughput cells) -> --join",
+     "superseded": "was tests/bench/run_all.py (throughput cells) -> --join; that driver timed NuFast-LBL one energy per call and the figure then said it could do nothing else, which is false since v2.0.0"
+    },
+    {
+     "figure": "Fig. 9",
+     "produces": "constant-density accuracy scan",
+     "script": "tests/external_drivers/globes_scan.c"
+    },
+    {
+     "figure": "Fig. 11, Earth",
+     "produces": "tests/external_drivers/globes_prem.txt",
+     "script": "tests/external_drivers/globes_drv.c"
+    },
+    {
+     "figure": "Figs. 8, 10 and 11 (three flavors)",
+     "note": "every point measured in this code's own conventions against its own 50-digit reference",
+     "produces": "tests/bench/speed_accuracy_plane.json, tests/speed_accuracy.json, tests/bench/earth_plane.json",
+     "script": "tests/bench/run_all.py then --join"
+    }
+   ],
+   "url": "https://www.mpi-hd.mpg.de/personalhomes/globes/download/globes-3.2.18.tar.gz"
+  },
+  {
+   "capabilities": {
+    "batches_energy": false,
+    "batches_zenith": false,
+    "max_flavors": 3,
+    "note": "takes Dmsq32 rather than Dmsq31; mosc.c/mosc3.c must be compiled as C",
+    "precision_knobs": {
+     "n_shells": "1..256"
+    }
+   },
+   "constants": [
+    {
+     "at": "extracted from pinned source",
+     "name": "tworttwoGf",
+     "value": "1.52588e-4"
+    }
+   ],
+   "flags_speed": "-O2",
+   "kind": "git",
+   "lang": "C++",
+   "latest_check": {
+    "how": "v3r20 is the only tag and equals HEAD",
+    "verified_on": "2026-08-07"
+   },
+   "name": "Prob3++",
+   "pin": {
+    "commit": "fa103b1e57fbbe54ac496255adacc703b656edc6",
+    "note": "v3r20 dereferences to exactly this commit, which is also HEAD",
+    "tag": "v3r20"
+   },
+   "threads": "single",
+   "timing_scripts": [
+    {
+     "figure": "Fig. 8, throughput vs stack size",
+     "produces": "tests/timing_other_codes.json",
+     "script": "tests/bench/run_all.py (throughput cells) -> --join",
+     "superseded": "was tests/bench/run_all.py (throughput cells) -> --join; that driver timed NuFast-LBL one energy per call and the figure then said it could do nothing else, which is false since v2.0.0"
+    },
+    {
+     "figure": "Fig. 9",
+     "produces": "constant-density accuracy scan",
+     "script": "tests/external_drivers/prob3_scan.cpp"
+    },
+    {
+     "figure": "Fig. 11, Earth",
+     "produces": "tests/external_drivers/prob3_prem.txt",
+     "script": "tests/external_drivers/prob3_drv.cpp"
+    },
+    {
+     "figure": "Figs. 8, 10 and 11 (three flavors)",
+     "note": "every point measured in this code's own conventions against its own 50-digit reference",
+     "produces": "tests/bench/speed_accuracy_plane.json, tests/speed_accuracy.json, tests/bench/earth_plane.json",
+     "script": "tests/bench/run_all.py then --join"
+    }
+   ],
+   "url": "https://github.com/rogerwendell/prob3plusplus.git"
+  }
+ ],
+ "grids": {
+  "CHORD/12x1": {
+   "costhz": [
+    -0.9
+   ],
+   "energies_gev": {
+    "log": [
+     3.0,
+     40.0
+    ],
+    "n": 12
+   },
+   "energies_gev_3plus1": {
+    "log": [
+     300.0,
+     30000.0
+    ],
+    "n": 12
+   }
+  },
+  "CONST/60E": {
+   "L_km": 1300.0,
+   "density_g_cm3": 3.0,
+   "energies_gev": {
+    "log": [
+     0.6,
+     20.0
+    ],
+    "n": 60
+   }
+  },
+  "CONST/N-sweep": {
+   "L_km": 1300.0,
+   "channel": "numu->nue",
+   "density_g_cm3": 3.0,
+   "energies_gev": {
+    "log": [
+     0.1,
+     31.6
+    ],
+    "n": "swept 1..30000"
+   }
+  },
+  "OSC/100x100": {
+   "costhz": {
+    "lin": [
+     -1.0,
+     -0.1
+    ],
+    "n": 100
+   },
+   "energies_gev": {
+    "log": [
+     1.0,
+     100.0
+    ],
+    "n": 100
+   },
+   "why": "NuFast-Earth caches across zenith angles; a 12x1 grid hides an ~8x per-probability advantage it shows here. Objection Earth-3."
+  }
+ },
+ "note": [
+  "The single source of truth for what is measured and how it is built.",
+  "Nothing in tests/bench/ may hard-code a version, a compiler flag, or a",
+  "physical constant: it is read from here, or generated from here.",
+  "Written before anything was built, because a benchmark that cannot name",
+  "the commit it measured cannot be disputed -- which is how the paper came",
+  "to record three codes as version '2026-08', the month they were cloned.",
+  "Versions were verified to be the latest OFFICIAL releases on 2026-08-07, not merely the ones the paper happened to use: full tag lists, the two download pages, and a diff of each NuFast tag against its branch HEAD.",
+  "Each code's `timing_scripts` names the script that produces its numbers today. These are the drivers the new pipeline replaces with adapters under tests/bench/adapters/; one of them, the NuFast-LBL accuracy driver, is recorded as MISSING because it was never committed."
+ ],
+ "oscillation_parameters": {
+  "dcp_deg": 217.0,
+  "derived": {
+   "dcp_rad": "dcp_deg * pi / 180",
+   "dmsq32_ev2": "dmsq31 - dmsq21, for Prob3++",
+   "theta_rad": "arcsin(sqrt(sNNsq)), for codes taking angles"
+  },
+  "dmsq21_ev2": 7.39e-05,
+  "dmsq31_ev2": 0.002525,
+  "note": [
+   "The one set of mixing parameters every code is handed. NuFit values,",
+   "as the paper's appendix specifies. No adapter may contain a literal",
+   "for any of these; conversions.h carries them into C++ and runner.py",
+   "into Python, so 'the same values for all codes' is structural rather",
+   "than a thing to remember.",
+   "Where a code wants a different PARAMETERISATION of the same physics",
+   "-- Prob3++ takes Dmsq32, nuCraft takes angles rather than sin^2 --",
+   "the conversion is derived in conversions.py, never re-typed."
+  ],
+  "ordering": "normal",
+  "s12sq": 0.31,
+  "s13sq": 0.0224,
+  "s23sq": 0.582,
+  "sterile_3plus1": {
+   "dmsq41_ev2": 1.0,
+   "note": [
+    "The 3+1 point of the paper's sterile oscillogram, the same one",
+    "tests/prem_scan.py uses, so the benchmark and the paper's figure",
+    "describe one physics point rather than two.  Needed because the",
+    "CHORD/12x1 grid carries energies_gev_3plus1 and the nuCraft",
+    "never_absorbed exception bites only at four flavors -- neither",
+    "could be run while these were absent.",
+    "theta34 = 0 exactly, so no angle is invented for it."
+   ],
+   "s14sq": 0.1,
+   "s24sq": 0.1,
+   "s34sq": 0.0
+  }
+ },
+ "protocols": {
+  "ACCURACY": {
+   "claim": "how accurate this code's algorithm is on the problem it was actually handed",
+   "definition": "Untimed. Configure once, ask for the probabilities, difference them against a 50-digit reference built in THIS CODE'S OWN convention. No clock is read, so an accuracy number can never be mistaken for a speed.",
+   "normalization": "max absolute deviation over the grid",
+   "reference": "per-code; see reference_conventions below"
+  },
+  "AMORTIZED": {
+   "claim": "cost inside a fit or scan, with each code's caching working as designed",
+   "definition": "Timed region is a scan of `scan.steps` steps, each step = configure(one varying parameter) + evaluate(whole grid). Everything invariant under that scan is hoisted outside: body/Earth object, engine construction, profile installation, grid arrays, all other setters.",
+   "normalization": "microseconds per grid point = total / (steps * n_points)",
+   "rationale": "Adopted from the NuFast-Earth author's own harness, src/examples/Speed.cpp::Atmospheric_Speed, so the definition is his rather than ours.",
+   "scan": {
+    "param": "dcp",
+    "steps": 25
+   }
+  },
+  "THROUGHPUT": {
+   "claim": "what batching buys, and which interfaces expose it",
+   "definition": "Timed region is one request for N points. Codes that batch get one call; codes that cannot get a loop in their own language inside evaluate(), labelled as a loop.",
+   "normalization": "microseconds per point, as a curve in N"
+  },
+  "_dropped": {
+   "ONESHOT": "Dropped by decision. It excluded JIT and import by fiat, so it was never language-fair, and it is the protocol whose numbers started the dispute. The oneshot/amortized ratio it was to provide is not published."
+  },
+  "no_crossing_rule": "Every artifact record carries a protocol stamp {name, grid} and a conventions stamp, now 'own-reference' for the per-code references. The figure builders assert all series on one axes share both stamps, and the paper-number test refuses to bind a macro comparing two numbers with different stamps. Series differenced against per-code references may share an axes -- that is the point -- but may not be mixed with any series differenced against a shared reference."
+ },
+ "reference_conventions": {
+  "absorbed_into_the_reference": [
+   "hbar c",
+   "the code's own matter normalisation"
+  ],
+  "never_absorbed": {
+   "nuCraft": "Its charged-current and sterile entries are 15.256e-5 and 7.6525e-5. nuCraft's own derivation (NuCraft.py:205-212) defines ONE prefactor for the vector (2Ye,0,0,1-Ye), so by its own formula the two must be exactly 2:1. 15.256e-5 is exactly twice that prefactor for m = 931.5 MeV, the amu; 7.6525e-5 would need m = 928.5 MeV, which is not the amu, the proton, the neutron, or the 0.939 its own comment states. The pair is therefore inconsistent with its own documented derivation rather than expressing a different convention, most likely a digit typo for 7.6325e-5 (half the modern 7.63247e-5) -- the same defect class as its rICore = 1121.5 for 1221.5. Its reference uses its constants for the units and the exact isoscalar ratio. NOTE this bites ONLY at 3+1: at three flavors the sterile entries do not exist, so no three-flavor figure is affected by this exception either way."
+  },
+  "note": [
+   "One 50-digit reference PER CODE, each built with that code's own hbar c",
+   "and its own matter normalisation, and with the SAME mixing parameters as",
+   "every other. Each code is handed honest physical inputs and differenced",
+   "against the problem it actually solves, so the residual measures its",
+   "algorithm rather than a unit convention.",
+   "This replaces rescaling each code's density and baseline to reproduce our",
+   "potential, which made our own code the only one receiving an",
+   "apples-to-apples problem -- part of what was objected to. The mass-defect",
+   "factors therefore move from being fudges applied to codes into inputs of",
+   "the reference builder; adapters no longer carry them at all.",
+   "PLOTTING: all codes still go on ONE axes, with |P - P_ref| on y, exactly as",
+   "before -- what changes is that P_ref is now each code's own reference. The",
+   "quantity is per-code but it is the same KIND of quantity for every series,",
+   "which is what makes them comparable: how well does each code solve the",
+   "problem it was handed. Every caption must say that P_ref differs per code.",
+   "A CONSEQUENCE WORTH NOTING: no figure's floor is a convention artifact any",
+   "more. The old six-ways comparison was capped near 1e-8 by a deliberate",
+   "4.2e-8 hbar-c mismatch, which is the floor that prompted the objection that",
+   "our accuracy comparison was not apples-to-apples. That cap is gone, so that",
+   "figure's framing -- 'what a convention mismatch costs' -- is now a sentence",
+   "rather than a figure, and every code can reach round-off if it can."
+  ],
+  "plotting": {
+   "caption_must_state": "that P_ref is built in each code's own convention, with shared mixing parameters",
+   "one_axes": true,
+   "y_axis": "|P - P_ref|, P_ref per code"
+  },
+  "profile_basis": {
+   "by_knob": {
+    "N_Newton": "continuous",
+    "eigenvalue_precision": "continuous",
+    "log10_numPrec": "continuous",
+    "log10_solver_tolerance": "continuous",
+    "n_shells": "continuous",
+    "n_slabs_per_segment": "continuous",
+    "rtol": "continuous"
+   },
+   "note": [
+    "CONTINUOUS for every code. There is one physical Earth -- the continuous",
+    "PREM -- and every code is scored by how far its answer sits from it.",
+    "Codes approximate that Earth differently, and the approximation is part of",
+    "what is being measured rather than something a reference should forgive.",
+    "Prob3++ and GLoBES cannot express anything but constant layers: their",
+    "interfaces take (radius, rho) rows and (length, density) pairs. Their",
+    "discretisation is therefore intrinsic to using them, it is real error a",
+    "user pays, and it is swept via n_shells so the convergence is visible.",
+    "nuSQuIDS (Akima), nuCraft (linear spline) and this library (PREM",
+    "polynomial) all see a density that varies inside each interval.",
+    "NuFast-Earth is given a continuous profile too, on OUR PREM with the",
+    "shared Ye = 0.5, via constant_shells = false. NOT its own PREM_Full:",
+    "that polynomial is identical to ours, but PREM_Full_Ye returns 0.466",
+    "below 3480 km and 0.494 above, where every other code gets 0.5 -- it",
+    "would have handed one code a different matter potential.",
+    "MEASURED, and this is why the earlier as-handed basis was abandoned:",
+    "scoring the compiled codes against the shell stack we handed them put",
+    "Prob3++ and GLoBES at 1e-13 while this library sat at 4e-7. Against the",
+    "continuous PREM all three land at 4.06e-7 -- the same number, because it",
+    "is the discretisation and not the code. The as-handed basis was",
+    "symmetric but empty: every series flat at round-off, measuring solver",
+    "self-consistency rather than distance from the Earth."
+   ],
+   "rule": "Every accuracy artifact is differenced against the continuous PREM in that code's own hbar c and matter normalisation. The discretisation each code uses is swept where the code exposes it, and stated per series in the caption.",
+   "two_configurations": {
+    "NuFast-Earth": "ACCURACY uses constant_shells = false, so the engine integrates the continuous profile. That defeats its eigenvalue caching -- eigens_varying, one decomposition per (energy, cosz, layer). SPEED must use the stepped configuration, which is where its zenith caching and the Earth-3 advantage live. The two configurations may never share an axes."
+   },
+   "values": [
+    "continuous"
+   ]
+  }
+ },
+ "schema": "bench-manifest/1",
+ "scored_channel": {
+  "channel": "numu->numu",
+  "note": "bench.hpp says probabilities() appends 'the scored channel' and never said which. Every adapter's checksum already sums numu->numu (m[1][1], GetProb(2,2), _PMM=4, EvalFlavor(1)), so that is the channel, recorded here before the accuracy path is written. Note CONST/N-sweep's grid entry says numu->nue for the THROUGHPUT figure's problem statement; the scored channel for accuracy is numu->numu. A wrong guess here silently changes every accuracy figure."
+ },
+ "thread_policy": {
+  "both_ways": "This library is timed BOTH ways and both series are published: once with its natural parallelism, which is what a user of it actually gets, and once pinned to a single thread, which is the like-for-like algorithmic comparison against codes that have no choice. Forcing every code to one thread would have been the wrong fix -- it strips this library's parallelism while leaving the others untouched, and publishes a number nobody would ever experience. Quoting both thread counts and stopping there is also not enough: a reader given a twelvefold gap cannot tell how much is the algorithm and how much is the core count. Neither series is the honest number alone.",
+  "definition": "Each code runs with the parallelism it naturally uses; no code is forced to one thread. The effective thread count is captured per code per run and recorded in the artifact.",
+  "measured": {
+   "GLoBES": 1,
+   "NuFast-Earth": 1,
+   "NuFast-LBL": 1,
+   "NuOscProbExact": "NUMBA_NUM_THREADS, 12 on this machine",
+   "Prob3++": 1,
+   "note": [
+    "Verified rather than assumed.  The four compiled codes link no",
+    "threading library at all -- checked with ldd: no libgomp, no",
+    "threaded BLAS, no pthread -- so they are single-threaded by",
+    "construction and could not be made otherwise without editing them.",
+    "This library spreads seventeen prange kernels over every core it is",
+    "given, twelve on this machine."
+   ],
+   "nuCraft": "numpy/BLAS, captured at run time",
+   "nuSQuIDS": "single per propagation; BLAS threads captured at run time"
+  },
+  "mode": "natural",
+  "requirement": "Any cross-code speed claim must quote the thread counts of both codes.",
+  "why": "Forcing OMP_NUM_THREADS=1 would strip this library's prange kernels (16 of them) while leaving other codes' advantages intact -- not neutral, and it would silently move our own published figures."
+ },
+ "toolchain": {
+  "cc": "gcc",
+  "cxx": "g++",
+  "recorded_at_run_time": [
+   "compiler --version",
+   "cpu model",
+   "governor",
+   "load average",
+   "effective thread count per code"
+  ]
+ }
+}
