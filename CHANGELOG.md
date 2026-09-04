@@ -26,6 +26,17 @@ and the project uses [Semantic Versioning](https://semver.org/).
   finer.  The stack must keep its length across refinements, since
   consecutive evaluations are differenced against each other.
 
+  One consequence of the shared count is worth knowing before it is met.
+  Refinement is second-order only until the round-off accumulated over
+  the slab product overtakes the discretisation error; past that turn
+  each doubling roughly doubles the error instead of quartering it, so a
+  tolerance below the floor cannot be met at any `n_max` and the search
+  exhausts its budget and raises.  Reach for `atol` rather than a larger
+  budget: a pure `rtol` is set by the smallest probability in the stack,
+  and `atol + rtol*abs(P)` asks for relative accuracy only where there
+  is enough probability to have it.  The docstring says where the turn
+  fell on a test chord.
+
   Twelve energies through one call cost about a third of twelve calls at
   the same slab count, measured from 64 to 4096 slabs, which is the
   point: a tolerance sweep no longer has to choose between the tolerance

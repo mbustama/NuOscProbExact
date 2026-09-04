@@ -1227,6 +1227,29 @@ def probabilities_3nu_profile(
     let the routine do the refining: it doubles the slab count until the
     measured error meets the tolerance.
 
+    That convergence does not continue indefinitely.  Every slab
+    contributes its own round-off to the product, so refining trades
+    discretisation error for accumulated round-off, and once the second
+    is the larger the error stops falling and begins to *rise*: past the
+    turn, each doubling of the slab count roughly doubles the error
+    rather than quartering it.  Where the turn falls depends on the
+    profile and the baseline; on a :math:`10^4`-km chord it was near
+    :math:`5 \cdot 10^{-11}`, at some sixty-five thousand slabs.
+
+    A tolerance below that floor cannot be met at any `n_max`, and the
+    refinement will exhaust its budget and raise.  Its message suggests
+    raising `n_max`, which is the right advice on the near side of the
+    turn and useless beyond it --- more slabs there return a worse
+    answer, slowly.  The way through is `atol` rather than a larger
+    budget: a pure `rtol` is set by the *smallest* probability asked
+    for, so a stack containing a small entry can demand far more than
+    the largest entry needs.  Giving `atol` as well puts a floor under
+    the threshold, ``atol + rtol*abs(P)``, and asks for relative
+    accuracy only where the probability is large enough to have it.
+    Batching sharpens this: one slab count now serves the whole stack,
+    so the hardest entry carries every other entry past the turn with
+    it.
+
     Where a profile has *discontinuities* --- a wall, a shell boundary
     --- equal slabs are the wrong tool, because no amount of refinement
     recovers a jump that straddles a slab.  Split the trajectory at the
