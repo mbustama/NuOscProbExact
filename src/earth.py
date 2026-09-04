@@ -32,7 +32,12 @@ taken at the midpoint of each.
 Midpoint sampling is second-order accurate, so the result converges to
 the continuous answer as the sub-slabs are refined; the routines take
 that number as an argument so a caller can watch it converge rather than
-trust it.  Sampling at the midpoint rather than an end also matters for
+trust it.  It converges only so far.  Every sub-slab contributes its own
+round-off to the product, so refining trades discretisation error for
+accumulated round-off, and once the second is the larger the error stops
+falling and begins to rise.  A tolerance below that floor cannot be met
+at any ``n_max``; `slabs._n_for_tolerance` recognises the turn and says
+so rather than asking for a larger ceiling.  Sampling at the midpoint rather than an end also matters for
 the segment that straddles the closest approach: it enters and exits at
 the same radius, so its two ends have identical density while the
 interior differs from them by 2.5%.
