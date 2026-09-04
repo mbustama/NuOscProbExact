@@ -1,7 +1,7 @@
 # Handover: build NuOscProbExact's Figure 11 in the Magnus paper, with Magnus on it
 
 **To:** the Magnus session (`/home/mbustamante/Research/magnus`, package `magnuspy` v1.0.0)
-**From:** the NuOscProbExact session (`/home/mbustamante/Research/NuOscProb/NuOscProbExact`, branch `dev-fair-benchmarks`, commit `26a372c`, 2026-09-01)
+**From:** the NuOscProbExact session (`/home/mbustamante/Research/NuOscProb/NuOscProbExact`, branch `main`, commit `99d851b`, 2026-09-04)
 
 You are asked to reproduce **Figure 11 of the NuOscProbExact paper exactly** — same
 colours, sizes, styles, layout, annotations, data — and to **add curves for Magnus**
@@ -585,6 +585,59 @@ is missing Magnus. The Earth panels do `order.index(x["name"])` and
 `KeyError` and you find out at once. After adding Magnus, count the legend entries
 against the series you expect on every panel; do not trust that it drew.
 
+### 7.6 NuOscProbExact can now be dialled by a tolerance too (new in 1.14.0)
+
+This document was written when this library's profile routines took a slab count
+and nothing else, which is why the panels dial it by `N_slabs`. That is no longer
+the only option, and if the point of your figure is to dial both codes by the
+*same* knob, this is the part to read.
+
+`slabs.probabilities_{2,3,4}nu_profile` now accept a `hamiltonian_of` that returns
+a **leading batch axis**, `(k, len(positions), d, d)` — one profile per energy —
+and refine the whole stack to an `rtol`/`atol` in one call. Twelve energies through
+one call instead of twelve calls, so a tolerance sweep no longer costs a per-energy
+penalty on the time axis.
+
+**Three things will cost you a session if you meet them cold.**
+
+1. **Your `hamiltonian_of` must build the stack in one vectorised pass.** The
+   speed-up is about 3x through the route, measured from 64 to 4096 slabs, and it
+   is the *solve* that gets faster. A callable that loops over the batch in Python
+   to assemble it spends there exactly what the solve saves — measured at 0.9x,
+   which is to say slower than calling per entry. This is the single easiest way to
+   conclude the feature does not work.
+
+2. **`rtol=1e-10` is unreachable, at any `n_max`.** §8 of your own handover planned
+   to sweep 1e-3, 1e-4, 1e-6, 1e-8, 1e-10. The first four are fine. The last is not
+   a budget problem and no `n_max` fixes it: refinement is second-order only until
+   round-off accumulated over the slab product overtakes the discretisation error,
+   and past that turn each doubling roughly *doubles* the error. Measured against a
+   40-digit `mpmath` slab product at matched slab counts, round-off grows about 2x
+   per doubling while discretisation falls 4x; they cross near **5e-11**, at about
+   sixty-five thousand slabs. Going to 2^20 slabs spends 1.8 GB to return an answer
+   an order of magnitude worse than 2^16 gives.
+
+   The way through is `atol`, not a bigger budget. A pure `rtol` is set by the
+   *smallest* probability in the stack, so one small entry demands far more than the
+   largest needs. `rtol=1e-10` with `atol=1e-11` converges at 65536. Either pair
+   them, or stop the sweep at 1e-8.
+
+3. **Refinement is all-entries-at-once.** The tolerance tests are `numpy.all`, so
+   one slab count serves the whole stack, set by the hardest entry. A batched answer
+   is never coarser than the same entry computed alone, and may be finer. That is
+   the right semantics for a comparison — Magnus refines an array the same way — but
+   it means the batched and per-energy answers need not be identical under a
+   tolerance, only under a fixed slab count.
+
+`N_SLABS_MAX = 1024` remains the default `n_max` and is far too small here: 1e-8
+alone needs 32768. Pass an explicit `n_max`, as you planned.
+
+The exhaustion message tells the two failure modes apart and names the best result
+it reached, so if you do hit the floor it will say so rather than asking for a
+larger ceiling.
+
+---
+
 ---
 
 ## 8. Attribution — required
@@ -697,9 +750,11 @@ Handing you the tree without this would be handing you traps.
 ## 12. Source-side provenance, for the record
 
 - Repo: `/home/mbustamante/Research/NuOscProb/NuOscProbExact`
-- Branch `dev-fair-benchmarks`, commit `26a372c`, 2026-09-01
-- `notebooks/make_notebooks.py` is byte-identical between `b9c1bfd` and `26a372c`;
-  the intervening commits touch prose and the bibliography only
+- Branch `main`, commit `99d851b`, 2026-09-04.  Everything this document describes is
+  merged; the `dev-fair-benchmarks` branch it was first written against is gone.
+- Figure 11's data and figure code are unchanged since `26a372c`, which is the
+  commit the first version of this document named and is still reachable from
+  `main`.  `notebooks/make_notebooks.py` has not moved since
 - Figure 11 = `\label{fig:planes}` = `speed_accuracy_combined.pdf`
 - Code pins: NuFast-LBL `v2.0.1` `a6eec95b3284`; NuFast-Earth `v1.2.0`
   `499392d49f21`; nuSQuIDS `v1.13.3` `104914da5a25`; nuCraft `r22` sha256
