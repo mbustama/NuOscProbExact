@@ -5,7 +5,7 @@ All notable changes to **NuOscProbExact** are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project uses [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.13.1] - 2026-09-04
 
 ### Added
 
@@ -74,21 +74,6 @@ and the project uses [Semantic Versioning](https://semver.org/).
   once per probability -- 0.13 us against the 26 us the three-flavor builder
   takes.
 
-### Fixed
-
-- **The mean nucleon mass now follows the electron fraction.**  Both
-  matter potentials divided the density by `(m_p + m_n)/2`, the
-  isoscalar mass, which is the mass per nucleon only when `Y_e = 1/2`.
-  With `Y_e` free that described matter neutron-rich in its charge and
-  isoscalar in its mass at once.  It is now `Y_e m_p + (1 - Y_e) m_n`,
-  which at one half is `(m_p + m_n)/2` bit for bit, so nothing computed
-  at the default moves; away from it the shift is 5e-5 in relative terms
-  at the core's `Y_e`, carried for consistency rather than for its size.
-
-## [1.13.1] - 2026-08-09
-
-### Added
-
 - **The slab routines take a batch of chords.**  `probabilities_2nu_slabs`,
   `probabilities_3nu_slabs`, `probabilities_4nu_slabs` and the three
   `evolution_operator_*_slabs` now accept Hamiltonians of shape
@@ -126,6 +111,17 @@ and the project uses [Semantic Versioning](https://semver.org/).
   point while the neutrino one was a single call.  Both are now single
   calls, and the flag reproduces the hand-built construction exactly, at
   two, three and four flavors.
+
+### Fixed
+
+- **The mean nucleon mass now follows the electron fraction.**  Both
+  matter potentials divided the density by `(m_p + m_n)/2`, the
+  isoscalar mass, which is the mass per nucleon only when `Y_e = 1/2`.
+  With `Y_e` free that described matter neutron-rich in its charge and
+  isoscalar in its mass at once.  It is now `Y_e m_p + (1 - Y_e) m_n`,
+  which at one half is `(m_p + m_n)/2` bit for bit, so nothing computed
+  at the default moves; away from it the shift is 5e-5 in relative terms
+  at the core's `Y_e`, carried for consistency rather than for its size.
 
 ## [1.13.0] - 2026-08-06
 
@@ -288,7 +284,6 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
-
 - **The documented way to write a varying profile was quietly wrong.**  The
   example in `slabs.probabilities_3nu_profile` scaled its potential by
   `x[-1]`, the last position it was handed.  Those positions are the
@@ -319,7 +314,6 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - **`README.md`'s requirements table contradicted its own introduction.**  The
   lead-in said the rows without an extra "need nothing beyond `numpy`",
   directly above a `numba` row marked as installed by default.
-
 
 - **The copied-out-module test stripped `sys.path` by name, not by path.**
   `test_a_core_module_works_copied_out_on_its_own` removed every entry whose
