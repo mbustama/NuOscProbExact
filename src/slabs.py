@@ -56,7 +56,10 @@ Chords that share their geometry and differ only in their Hamiltonians
 an array of shape ``(..., n_slabs, n_flavors, n_flavors)`` against the
 one set of widths they share.  Every routine here takes that form and
 returns one result per chord, composing the whole batch in a single
-pass rather than one chord at a time.
+pass rather than one chord at a time.  The ``..._profile`` routines
+reach the same thing through a different door: they are handed a
+callable rather than an array, and it is what it *returns* that carries
+the leading axis.
 
 The widths are the limit of what that buys.  A batch shares them, so it
 is the right tool for varying the Hamiltonian at fixed geometry and the
